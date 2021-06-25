@@ -1,0 +1,192 @@
+miscUtils = {}
+
+function miscUtils.deepcopy(origin)
+	local orig_type = type(origin)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for origin_key, origin_value in next, origin, nil do
+            copy[miscUtils.deepcopy(origin_key)] = miscUtils.deepcopy(origin_value)
+        end
+        setmetatable(copy, miscUtils.deepcopy(getmetatable(origin)))
+    else
+        copy = origin
+    end
+    return copy
+end
+
+function miscUtils.indexValue(table, value)
+    local index={}
+    for k,v in pairs(table) do
+        index[v]=k
+    end
+    return index[value]
+end
+
+function miscUtils.has_value(tab, val)
+    for index, value in ipairs(tab) do
+        if value == val then
+            return true
+        end
+    end
+
+    return false
+end
+
+function miscUtils.getIndex(tab, val)
+    local index = nil
+    for i, v in ipairs(tab) do
+		if v == val then
+			index = i
+		end
+    end
+    return index
+end
+
+function miscUtils.hasIndex(tab, index)
+    local exists = false
+    for k, _ in pairs(tab) do
+        if k == index then
+            exists = true
+        end
+    end
+    return exists
+end
+
+function miscUtils.removeItem(tab, val)
+    table.remove(tab, miscUtils.getIndex(tab, val))
+end
+
+function miscUtils.addVector(v1, v2)
+    return Vector4.new(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z, v1.w + v2.w)
+end
+
+function miscUtils.subVector(v1, v2)
+    return Vector4.new(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z, v1.w - v2.w)
+end
+
+function miscUtils.multVector(v1, factor)
+    return Vector4.new(v1.x * factor, v1.y * factor, v1.z * factor, v1.w * factor)
+end
+
+function miscUtils.multVecXVec(v1, v2)
+    return Vector4.new(v1.x * v2.x, v1.y * v2.y, v1.z * v2.z, v1.w * v2.w)
+end
+
+function miscUtils.addEuler(e1, e2)
+    return EulerAngles.new(e1.roll + e2.roll, e1.pitch + e2.pitch, e1.yaw + e2.yaw)
+end
+
+function miscUtils.subEuler(e1, e2)
+    return EulerAngles.new(e1.roll - e2.roll, e1.pitch - e2.pitch, e1.yaw - e2.yaw)
+end
+
+function miscUtils.multEuler(e1, factor)
+    return EulerAngles.new(e1.roll * factor, e1.pitch * factor, e1.yaw * factor)
+end
+
+function miscUtils.fromVector(vector) -- Returns table with x y z w from given Vector4
+    return {x = vector.x, y = vector.y, z = vector.z, w = vector.w}
+end
+
+function miscUtils.fromQuaternion(quat) -- Returns table with i j k r from given Quaternion
+    return {i = quat.i, j = quat.j, k = quat.k, r = quat.r}
+end
+
+function miscUtils.getVector(tab) -- Returns Vector4 object from given table containing x y z w
+    return(Vector4.new(tab.x, tab.y, tab.z, tab.w))
+end
+
+function miscUtils.getQuaternion(tab) -- Returns Quaternion object from given table containing i j k r
+    return(Quaternion.new(tab.i, tab.j, tab.k, tab.r))
+end
+
+function miscUtils.fromEuler(eul) -- Returns table with roll pitch yaw from given EulerAngles
+    return {roll = eul.roll, pitch = eul.pitch, yaw = eul.yaw}
+end
+
+function miscUtils.getEuler(tab) -- Returns EulerAngles object from given table containing roll pitch yaw
+    return(EulerAngles.new(tab.roll, tab.pitch, tab.yaw))
+end
+
+function miscUtils.distanceVector(from, to)
+    return math.sqrt((to.x - from.x)^2 + (to.y - from.y)^2 + (to.z - from.z)^2)
+end
+
+function miscUtils.createFileName(name)
+    name = name:gsub("<", "_")
+    name = name:gsub(">", "_")
+    name = name:gsub(":", "_")
+    name = name:gsub("\"", "_")
+    name = name:gsub("/", "_")
+    name = name:gsub("\\", "_")
+    name = name:gsub("|", "_")
+    name = name:gsub("?", "_")
+    name = name:gsub("*", "_")
+
+    return name
+end
+
+function miscUtils.rotateRoll(vec, deg)
+    local deg = math.rad(deg)
+
+    local row1 = Vector3.new(1, 0, 0)
+    local row2 = Vector3.new(0, math.cos(deg), -math.sin(deg))
+    local row3 = Vector3.new(0, math.sin(deg), math.cos(deg))
+
+    local rotated = Vector4.new(0, 0, 0, 0)
+
+    rotated.x = row1.x * vec.x + row1.y * vec.y + row1.z * vec.z
+    rotated.y = row2.x * vec.x + row2.y * vec.y + row2.z * vec.z
+    rotated.z = row3.x * vec.x + row3.y * vec.y + row3.z * vec.z
+
+    return rotated
+end
+
+function miscUtils.rotatePitch(vec, deg)
+    local deg = math.rad(deg)
+
+    local row1 = Vector3.new(math.cos(deg), 0, math.sin(deg))
+    local row2 = Vector3.new(0, 1, 0)
+    local row3 = Vector3.new(-math.sin(deg), 0, math.cos(deg))
+
+    local rotated = Vector4.new(0, 0, 0, 0)
+
+    rotated.x = row1.x * vec.x + row1.y * vec.y + row1.z * vec.z
+    rotated.y = row2.x * vec.x + row2.y * vec.y + row2.z * vec.z
+    rotated.z = row3.x * vec.x + row3.y * vec.y + row3.z * vec.z
+
+    return rotated
+end
+
+function miscUtils.rotatePoint(vec, rot)
+    local yaw = math.rad(rot.yaw) -- α
+    local pitch = math.rad(rot.pitch) -- β
+    local roll = math.rad(rot.roll) -- γ
+
+    local r1_1 = math.cos(yaw) * math.cos(pitch)
+    local r1_2 = (math.cos(yaw) * math.sin(pitch) * math.sin(roll)) - (math.sin(yaw) * math.cos(roll))
+    local r1_3 = (math.cos(yaw) * math.sin(pitch) * math.cos(roll)) + (math.sin(yaw) * math.sin(roll))
+
+    local r2_1 = math.sin(yaw) * math.cos(pitch)
+    local r2_2 = (math.sin(yaw) * math.sin(pitch) * math.sin(roll)) + (math.cos(yaw) * math.cos(roll))
+    local r2_3 = (math.sin(yaw) * math.sin(pitch) * math.cos(roll)) - (math.cos(yaw) * math.sin(roll))
+
+    local r3_1 = -math.sin(pitch)
+    local r3_2 = math.cos(pitch) * math.sin(roll)
+    local r3_3 = math.cos(pitch) * math.cos(roll)
+
+    local row1 = Vector3.new(r1_1, r1_2, r1_3)
+    local row2 = Vector3.new(r2_1, r2_2, r2_3)
+    local row3 = Vector3.new(r3_1, r3_2, r3_3)
+
+    local rotated = Vector4.new(0, 0, 0, 0)
+
+    rotated.x = row1.x * vec.x + row1.y * vec.y + row1.z * vec.z
+    rotated.y = row2.x * vec.x + row2.y * vec.y + row2.z * vec.z
+    rotated.z = row3.x * vec.x + row3.y * vec.y + row3.z * vec.z
+
+    return rotated
+end
+
+return miscUtils

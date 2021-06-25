@@ -1,0 +1,11 @@
+
+*.md
+*.csv
+*.json
+*.log
+*.sqlite3
+dump1.txt
+dump2.txt
+dump3.txt
+dumpCmds.txt
+.VSCodeCounter/2021-06-20_11-56-27/results.txt
