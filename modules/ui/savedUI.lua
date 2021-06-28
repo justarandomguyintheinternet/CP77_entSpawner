@@ -27,6 +27,9 @@ function savedUI.draw(spawner)
         end
     end
 
+    local _, wHeight = GetDisplayResolution()
+    ImGui.BeginChild("savedUI", 610, math.min(savedUI.getHeight(), wHeight - 150))
+
     for _, file in pairs(dir("data/objects")) do
         if file.name:match("^.+(%..+)$") == ".json" then
             local exists = false
@@ -50,6 +53,8 @@ function savedUI.draw(spawner)
             end
         end
     end
+
+    ImGui.EndChild()
 
     savedUI.handlePopUp()
 end
@@ -233,6 +238,20 @@ function savedUI.handlePopUp()
     end
 end
 
+function savedUI.getHeight()
+    local y = 0
+    for _, d in pairs(savedUI.files) do
+        if (d.name:lower():match(savedUI.filter:lower())) ~= nil then
+            if d.type == "group" then
+                y = y + savedUI.box.group.y + 4
+            else
+                y = y + savedUI.box.object.y + 4
+            end
+        end
+    end
+    return y
+end
+
 function savedUI.reload()
     savedUI.files = {}
 
@@ -251,6 +270,7 @@ function savedUI.run(spawner)
                     local o = object:new(spawner.baseUI.spawnedUI)
                     o:load(data)
                     o.isAutoLoaded = true
+                    o.headerOpen = false
                     o:spawn()
                     table.insert(spawner.baseUI.spawnedUI.elements, o)
                     savedUI.spawned[data.name] = o
@@ -258,6 +278,7 @@ function savedUI.run(spawner)
                     local g = gr:new(spawner.baseUI.spawnedUI)
                     g:load(data)
                     g.isAutoLoaded = true
+                    g.headerOpen = false
                     g:spawn()
                     table.insert(spawner.baseUI.spawnedUI.elements, g)
                     savedUI.spawned[data.name] = g

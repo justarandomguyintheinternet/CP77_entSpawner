@@ -85,7 +85,23 @@ function spawnedUI.draw(spawner)
         g.name =utils.createFileName(spawnedUI.newGroupName)
         table.insert(spawnedUI.elements, g)
     end
+
+    if ImGui.Button("Collapse all") then
+        for _, e in pairs(spawnedUI.elements) do
+            e.headerOpen = false
+        end
+    end
+    ImGui.SameLine()
+    if ImGui.Button("Expand all") then
+        for _, e in pairs(spawnedUI.elements) do
+            e.headerOpen = true
+        end
+    end
+
     ImGui.Separator()
+
+    local _, wHeight = GetDisplayResolution()
+    ImGui.BeginChild("spawnedUI", spawnedUI.getWidth(), math.min(spawnedUI.getHeight(), wHeight - 150))
 
     for _, f in pairs(spawnedUI.elements) do
         if spawnedUI.filter == "" then
@@ -104,6 +120,36 @@ function spawnedUI.draw(spawner)
             end
         end
     end
+
+    ImGui.EndChild()
+end
+
+function spawnedUI.getHeight()
+    local y = 0
+    for _, e in pairs(spawnedUI.elements) do
+        if e.parent == nil then
+            y = e:getHeight(y)
+        end
+    end
+
+    local _, wHeight = GetDisplayResolution()
+    if spawnedUI.filter ~= "" then y = wHeight - 150 end
+    return y
+end
+
+function spawnedUI.getWidth()
+    local x = 0
+    for _, e in pairs(spawnedUI.elements) do
+        if e.parent == nil then
+            if e.type == "object" then
+                x = math.max(x, e.box.x)
+            else
+                x = math.max(x, e.box.x)
+                x = math.max(x, e:getWidth(x))
+            end
+        end
+    end
+    return x
 end
 
 function spawnedUI.despawnAll()

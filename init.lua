@@ -26,6 +26,7 @@ spawner = {
     defaultSettings = {
         spawnPos = 1,
         spawnDist = 3,
+        spawnNewSortAlphabetical = false,
         posSteps = 0.05,
         rotSteps = 0.05,
         despawnOnReload = true,
@@ -48,7 +49,7 @@ function spawner:new()
         config.tryCreateConfig("data/config.json", spawner.defaultSettings)
         config.backwardComp("data/config.json", spawner.defaultSettings)
         spawner.settings = config.loadFile("data/config.json")
-        spawner.baseUI.spawnUI.loadPaths()
+        spawner.baseUI.spawnUI.loadPaths(spawner)
         spawner.baseUI.favUI.load(spawner)
         spawner.baseUI.spawnedUI.spawner = spawner
         spawner.baseUI.spawnedUI.getGroups()

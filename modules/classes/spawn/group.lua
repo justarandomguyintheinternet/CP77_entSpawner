@@ -537,4 +537,41 @@ function group:export()
 	config.saveFile("export/" .. self.name .. "_export.json", data)
 end
 
+function group:getHeight(yy)
+	local y = yy
+	if self.headerOpen then
+		y = y + self.box.y + 30
+		for _, c in pairs(self.childs) do
+			y = c:getHeight(y)
+		end
+		return y
+	else
+		return y + 28
+	end
+end
+
+function group:getWidth(x)
+	if self.headerOpen then
+		if self.parent ~= nil then
+			x = math.max(x, x + 35)
+		else
+			if x ~= self.box.x + 35 then
+				x = math.max(x, x + 35)
+			end
+		end
+		local once = false
+		for _, c in pairs(self.childs) do
+			if c.type == "object" then
+				if not once then
+					x = math.max(x, x + 35)
+				end
+				once = true
+			else
+				x = math.max(x, c:getWidth(x))
+			end
+		end
+	end
+	return x
+end
+
 return group

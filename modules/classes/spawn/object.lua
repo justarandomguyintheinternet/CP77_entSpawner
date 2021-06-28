@@ -390,8 +390,24 @@ function object:getOwnPath(first)
 end
 
 function object:export()
-	local data = {path = self.path, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot)}
+	local data = {{path = self.path, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot)}}
 	config.saveFile("export/" .. self.name .. "_export.json", data)
+end
+
+function object:getHeight(y)
+	if self.headerOpen then
+		return y + self.box.y + 32
+	else
+	    return y + 28
+    end
+end
+
+function object:getWidth(x)
+    if self.headerOpen then
+        return math.max(x, x + 35)
+    else
+        return x
+    end
 end
 
 return object
