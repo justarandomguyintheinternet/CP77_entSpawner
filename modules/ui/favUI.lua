@@ -89,10 +89,11 @@ function favUI.draw(spawner)
     end
 end
 
-function favUI.createNewFav(path, name)
+function favUI.createNewFav(object)
     local fav = favorite:new(favUI)
-    fav.path = path
-    fav.name = name
+    fav.path = object.path
+    fav.name = object.name
+    fav.app = object.app
     fav:generateName()
     table.insert(favUI.elements, fav)
     fav:save()

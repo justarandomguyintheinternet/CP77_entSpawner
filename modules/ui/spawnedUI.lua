@@ -15,10 +15,6 @@ function spawnedUI.init(spawner)
     spawnedUI.spawner = spawner
 end
 
-function spawnedUI.loadFile(path)
-
-end
-
 function spawnedUI.spawnNewObject(path, parent)
     local new = object:new(spawnedUI)
     new.path = path
@@ -60,7 +56,7 @@ function spawnedUI.getGroups()
 end
 
 function spawnedUI.draw(spawner)
-    if spawnedUI.spawer == nil then spawnedUI.init(spawner) end
+    if spawnedUI.spawner == nil then spawnedUI.init(spawner) end
 
     spawnedUI.getGroups()
 
@@ -97,6 +93,12 @@ function spawnedUI.draw(spawner)
             e.headerOpen = true
         end
     end
+    ImGui.SameLine()
+    if ImGui.Button("Fetch all Apps (LAG)") then
+        for _, object in pairs(spawnedUI.getAllObjects()) do
+            spawnedUI.spawner.fetcher.queueFetching(object)
+        end
+    end
 
     ImGui.Separator()
 
@@ -122,6 +124,20 @@ function spawnedUI.draw(spawner)
     end
 
     ImGui.EndChild()
+end
+
+function spawnedUI.getAllObjects()
+    local allObjects = {}
+    for _, e in pairs(spawnedUI.elements) do
+        if e.type == "object" then
+            table.insert(allObjects, e)
+        else
+            for _, obj in pairs(e:getObjects()) do
+                table.insert(allObjects, obj)
+            end
+        end
+    end
+    return allObjects
 end
 
 function spawnedUI.getHeight()
@@ -156,6 +172,39 @@ function spawnedUI.despawnAll()
     for _, e in pairs(spawnedUI.elements) do
         e:despawn()
     end
+end
+
+function spawnedUI.hotkey()
+    local allObjects = {}
+    for _, data in pairs(spawnedUI.elements) do
+        if data.type == "group" then
+            for _, obj in pairs(data:getObjects()) do
+                table.insert(allObjects, obj)
+            end
+        else
+            table.insert(allObjects, data)
+        end
+    end
+
+    local closest = 999
+    local closestObj = nil
+
+    for _, obj in pairs(allObjects) do
+
+        targetDir = utils.subVector(obj.pos, Game.GetPlayer():GetWorldPosition())
+        targetDir = Vector4.Normalize(targetDir)
+
+        dot = Vector4.Dot(targetDir, Game.GetPlayer():GetWorldForward())
+
+        angle =  math.deg(math.acos(dot))
+        print(180-angle, obj.name)
+        if (180 - angle) < closest then
+            closest = 180 - angle
+            closestObj = obj
+        end
+    end
+
+    spawnedUI.filter = closestObj.name
 end
 
 return spawnedUI

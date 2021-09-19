@@ -35,12 +35,14 @@ spawner = {
         deleteConfirm = true,
         moveCloneToParent = 1,
         groupExport = false,
-        autoSpawnRange = 500,
-        spawnUIOnlyNames = false
+        autoSpawnRange = 1000,
+        spawnUIOnlyNames = false,
+        appFetchTrys = 150
     },
 
     settings = {},
     baseUI = require("modules/ui/baseUI"),
+    fetcher = require("modules/utils/appFetcher"),
     GameUI = require("modules/utils/GameUI")
 }
 
@@ -48,6 +50,7 @@ function spawner:new()
     registerForEvent("onInit", function()
         config.tryCreateConfig("data/config.json", spawner.defaultSettings)
         config.backwardComp("data/config.json", spawner.defaultSettings)
+        config.tryCreateConfig("data/apps.json", {})
         spawner.settings = config.loadFile("data/config.json")
         spawner.baseUI.spawnUI.loadPaths(spawner)
         spawner.baseUI.favUI.load(spawner)
@@ -74,6 +77,7 @@ function spawner:new()
     registerForEvent("onUpdate", function ()
         if spawner.runtimeData.inGame and not spawner.runtimeData.inMenu then
             spawner.baseUI.savedUI.run(spawner)
+            spawner.fetcher.update()
         end
     end)
 

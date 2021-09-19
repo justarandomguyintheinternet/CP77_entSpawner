@@ -532,7 +532,7 @@ end
 function group:export()
 	local data = {}
 	for _, obj in pairs(self:getObjects()) do
-		table.insert(data, {path = obj.path, pos = utils.fromVector(obj.pos), rot = utils.fromEuler(obj.rot)})
+		table.insert(data, {path = obj.path, pos = utils.fromVector(obj.pos), rot = utils.fromEuler(obj.rot), app = obj.app})
 	end
 	config.saveFile("export/" .. self.name .. "_export.json", data)
 end

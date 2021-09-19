@@ -20,7 +20,7 @@ function miscUtils.indexValue(table, value)
     for k,v in pairs(table) do
         index[v]=k
     end
-    return index[value]
+    return index[value] or 1
 end
 
 function miscUtils.has_value(tab, val)

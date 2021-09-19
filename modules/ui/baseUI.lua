@@ -20,7 +20,7 @@ end
 
 function baseUI.draw(spawner)
     CPS:setThemeBegin()
-    ImGui.Begin("Object Spawner 1.2", ImGuiWindowFlags.AlwaysAutoResize)
+    ImGui.Begin("Object Spawner 1.3", ImGuiWindowFlags.AlwaysAutoResize)
 
     if ImGui.BeginTabBar("Tabbar", ImGuiTabItemFlags.NoTooltip) then
         CPS.styleBegin("TabRounding", 0)

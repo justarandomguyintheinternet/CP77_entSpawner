@@ -31,6 +31,9 @@ function settingsUI.draw(spawner)
     spawner.settings.autoSpawnRange, changed = ImGui.InputFloat("Default auto spawn range", spawner.settings.autoSpawnRange, -9999, 9999, "%.1f")
     if changed then config.saveFile("data/config.json", spawner.settings) end
 
+    spawner.settings.appFetchTrys, changed = ImGui.InputInt("Appearance Fetching Tries", spawner.settings.appFetchTrys, -9999, 9999)
+    if changed then config.saveFile("data/config.json", spawner.settings) end
+
     spawner.settings.headerState, changed = CPS.CPToggle("Collapsible headers default state", "Closed", "Open", spawner.settings.headerState, 100 , 25)
     if changed then config.saveFile("data/config.json", spawner.settings) end
 
@@ -52,7 +55,7 @@ function settingsUI.draw(spawner)
         config.saveFile("data/config.json", spawner.settings)
     end
 
-    spawner.settings.groupExport, changed = ImGui.Checkbox("For mod creators: Export option", spawner.settings.groupExport)
+    spawner.settings.groupExport, changed = ImGui.Checkbox("For mod creators: Export option (Output in /export folder)", spawner.settings.groupExport)
     if changed then config.saveFile("data/config.json", spawner.settings) end
 
     spawner.settings.groupRot, changed = ImGui.Checkbox("EXPERIMENTAL: Group Rotation", spawner.settings.groupRot)

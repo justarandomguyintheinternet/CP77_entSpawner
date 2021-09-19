@@ -11,6 +11,7 @@ function favorite:new(fUI)
     o.name = ""
     o.path = ""
     o.parent = nil
+    o.app = ""
 
     o.type = "favorite"
     o.newName = ""
@@ -43,17 +44,18 @@ end
 function favorite:save() -- Either save to file or return self as table to parent
     if self.parent == nil then
         self:generateName()
-        local fav = {path = self.path, name = self.name, type = self.type}
+        local fav = {path = self.path, name = self.name, type = self.type, app = self.app}
         config.tryCreateConfig("data/favorites/" .. fav.name .. ".json", fav)
         config.saveFile("data/favorites/" .. fav.name .. ".json", fav)
     else
-        return {path = self.path, name = self.name, type = self.type}
+        return {path = self.path, name = self.name, type = self.type, app = self.app}
     end
 end
 
 function favorite:load(data)
     self.name = data.name
     self.path = data.path
+    self.app = data.app or ""
 end
 
 function favorite:tryMainDraw()
@@ -146,6 +148,8 @@ function favorite:draw()
             new.rot = GetSingleton('Quaternion'):ToEulerAngles(Game.GetPlayer():GetWorldOrientation())
             new.path = self.path
             new.name = self.name
+            new.app = self.app
+            new.apps = config.loadFile("data/apps.json")[new.path] or {}
             new:spawn()
             table.insert(self.fUI.spawner.baseUI.spawnedUI.elements, new)
         end

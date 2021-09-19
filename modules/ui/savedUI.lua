@@ -4,6 +4,8 @@ local object = require("modules/classes/spawn/object")
 local gr = require("modules/classes/spawn/group")
 local utils = require("modules/utils/utils")
 
+local debug = true
+
 savedUI = {
     filter = "",
     color = {group = {0, 255, 0}, object = {0, 50, 255}},
@@ -123,6 +125,23 @@ function savedUI.drawGroup(group, spawner)
     ImGui.SameLine()
     if CPS.CPButton("Delete", 50, 25) then
         savedUI.deleteData(group)
+    end
+
+    if debug then
+        ImGui.SameLine()
+        if CPS.CPButton("TSE", 50, 25) then
+            local g = gr:new(spawner.baseUI.spawnedUI)
+            g:load(group)
+
+            local data = {objs = {}}
+            for _, obj in pairs(g:getObjects()) do
+                table.insert(data.objs, {path = obj.path, pos = utils.fromVector(obj.pos), rot = utils.fromEuler(obj.rot)})
+            end
+            data.pos = utils.fromVector(g:getCenter())
+            data.range = g.loadRange
+
+            config.saveFile("export/" .. g.name .. "_TSE.json", data)
+        end
     end
 
     ImGui.EndChild()

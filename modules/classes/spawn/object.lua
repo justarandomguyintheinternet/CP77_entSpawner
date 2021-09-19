@@ -10,6 +10,7 @@ function object:new(sUI)
 
     o.name = "" -- Base stuff
     o.path = ""
+    o.app = ""
     o.parent = nil
     o.spawned = false
 
@@ -17,9 +18,12 @@ function object:new(sUI)
     o.newName = ""
     o.selectedGroup = -1
     o.color = {0, 50, 255}
-    o.box = {x = 600, y = 210}
+    o.box = {x = 600, y = 218}
     o.id = math.random(1, 1000000000) -- Id for imgui child rng gods bls have mercy
     o.headerOpen = sUI.spawner.settings.headerState
+
+    o.apps = {}
+    o.appIndex = -1
 
     o.entID = nil -- Actual object stuff
     o.pos = Vector4.new(0, 0, 0, 0)
@@ -39,18 +43,23 @@ function object:spawn()
     local transform = Game.GetPlayer():GetWorldTransform()
     transform:SetOrientation(GetSingleton('EulerAngles'):ToQuat(self.rot))
     transform:SetPosition(self.pos)
-    self.entID = WorldFunctionalTests.SpawnEntity(self.path, transform, '')
+    self.entID = exEntitySpawner.Spawn(self.path, transform, self.app)
     self.entity = Game.FindEntityByID(self.entID)
     self.spawned = true
 end
 
 function object:update()
     if self.spawned then
-        Game.FindEntityByID(self.entID):GetEntity():Destroy()
-        local transform = Game.GetPlayer():GetWorldTransform()
-        transform:SetOrientation(GetSingleton('EulerAngles'):ToQuat(self.rot))
-        transform:SetPosition(self.pos)
-        self.entID = WorldFunctionalTests.SpawnEntity(self.path, transform, '')
+        local tpSuccess = pcall(function ()
+            Game.GetTeleportationFacility():Teleport(Game.FindEntityByID(self.entID), self.pos,  self.rot)
+        end)
+        if not tpSuccess then
+            Game.FindEntityByID(self.entID):GetEntity():Destroy()
+            local transform = Game.GetPlayer():GetWorldTransform()
+            transform:SetOrientation(GetSingleton('EulerAngles'):ToQuat(self.rot))
+            transform:SetPosition(self.pos)
+            self.entID = exEntitySpawner.Spawn(self.path, transform, self.app)
+        end
     end
 end
 
@@ -82,12 +91,12 @@ end
 function object:save() -- Either save to file or return self as table to parent
     if self.parent == nil then
         self:generateName()
-        local obj = {path = self.path, name = self.name, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
+        local obj = {path = self.path, app = self.app, name = self.name, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
         config.tryCreateConfig("data/objects/" .. obj.name .. ".json", obj)
         config.saveFile("data/objects/" .. obj.name .. ".json", obj)
         self.sUI.spawner.baseUI.savedUI.reload()
     else
-        return {path = self.path, name = self.name, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
+        return {path = self.path, app = self.app, name = self.name, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
     end
 end
 
@@ -99,6 +108,9 @@ function object:load(data)
     self.headerOpen = data.headerOpen
     self.autoLoad = data.autoLoad
     self.loadRange = data.loadRange
+
+    self.app = data.app or ""
+    self.apps = config.loadFile("data/apps.json")[self.path] or {}
 end
 
 function object:tryMainDraw()
@@ -149,11 +161,17 @@ function object:draw()
             self:checkSpawned()
             ImGui.Text(tostring("Spawned: " .. tostring(self.spawned):upper()))
 
+            ImGui.SameLine()
+
             if ImGui.Button("Copy Path to clipboard") then
                 ImGui.SetClipboardText(self.path)
             end
 
             self:drawGroup()
+
+            ImGui.Separator()
+
+            self:drawApp()
 
             ImGui.Separator()
 
@@ -177,6 +195,7 @@ function object:draw()
                 obj.rot = EulerAngles.new(self.rot.roll, self.rot.pitch, self.rot.yaw)
                 obj.path = self.path
                 obj.name = self.name .. " Clone"
+                obj.apps = self.apps
                 obj:spawn()
                 table.insert(self.sUI.elements, obj)
                 if self.parent ~= nil then
@@ -195,7 +214,7 @@ function object:draw()
             end
             ImGui.SameLine()
             if CPS.CPButton("Make Favorite", 100, 25) then
-                self.sUI.spawner.baseUI.favUI.createNewFav(self.path, self.name)
+                self.sUI.spawner.baseUI.favUI.createNewFav(self)
             end
             ImGui.SameLine()
             if self.parent == nil then
@@ -345,6 +364,53 @@ function object:drawRot()
     end
 end
 
+function object:drawApp()
+    ImGui.PushItemWidth(100)
+    self.app, changed = ImGui.InputTextWithHint('##App', 'Appearance...', self.app, 100)
+    if changed then self:getEntitiy():ScheduleAppearanceChange(self.app) end
+    ImGui.PopItemWidth()
+
+    if #self.apps ~= 0 then
+        ImGui.SameLine()
+
+        local as = {}
+        table.insert(as, "-- Default Appearance --")
+        for _, app in pairs(self.apps) do
+            table.insert(as, app)
+        end
+        if self.appIndex == -1 then
+            self.appIndex = utils.indexValue(self.apps, self.app)
+        end
+        if self.apps[1] == "default" then self.appIndex = 1 end
+        if self.appIndex == -1 then
+            self.appIndex = 0
+        end
+        ImGui.PushItemWidth(200)
+
+        local numItems = #as
+        if self.apps[1] == "default" then numItems = numItems - 1 end
+
+        self.appIndex, changed = ImGui.Combo("##app", self.appIndex, as, numItems)
+        if changed and self.appIndex ~= 0 then
+            self.app = self.apps[self.appIndex]
+            self:despawn()
+            self:getEntitiy():ScheduleAppearanceChange(self.app)
+            self:spawn()
+        elseif changed and self.appIndex == 0 then
+            self.app = ""
+            self:despawn()
+            self:getEntitiy():ScheduleAppearanceChange(self.apps[1])
+            self:spawn()
+        end
+        ImGui.PopItemWidth()
+    end
+
+    ImGui.SameLine()
+    if ImGui.Button("Fetch Apps") then
+        self.sUI.spawner.fetcher.queueFetching(self)
+    end
+end
+
 function object:getEntitiy()
     return Game.FindEntityByID(self.entID)
 end
@@ -390,7 +456,7 @@ function object:getOwnPath(first)
 end
 
 function object:export()
-	local data = {{path = self.path, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot)}}
+	local data = {{path = self.path, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), app = self.app}}
 	config.saveFile("export/" .. self.name .. "_export.json", data)
 end
 
