@@ -9,3 +9,16 @@ dump2.txt
 dump3.txt
 dumpCmds.txt
 .VSCodeCounter/2021-06-20_11-56-27/results.txt
+*.ent
+*.cpmodproj
+*.xml
+*.archive
+patch1_5Paths.txt
+data/allPathsWMeshes.txt
+data/allPaths_broken.txt
+data/allPaths_1.5.txt
+data/allPaths_1.3.txt
+d1.txt
+d2.txt
+d3.txt
+d4.txt

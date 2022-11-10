@@ -73,7 +73,9 @@ function favorite:draw()
 
     CPS.colorBegin("Border", self.color)
     CPS.colorBegin("Separator", self.color)
-    ImGui.BeginChild("fav_" .. self.path, self.box.x, self.box.y, true)
+
+	local h = 4 * ImGui.GetFrameHeight() + 6 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 2 + 2
+    ImGui.BeginChild("fav_" .. self.path, self.box.x, h, true)
 
         if self.newName == "" then self.newName = self.name end
         ImGui.PushItemWidth(300)
@@ -135,7 +137,7 @@ function favorite:draw()
 
         ImGui.Separator()
 
-        if CPS.CPButton("Spawn", 50, 25) then
+        if CPS.CPButton("Spawn") then
             local new = object:new(self.fUI.spawner.baseUI.spawnedUI)
             new.pos = Game.GetPlayer():GetWorldPosition()
 
@@ -154,7 +156,7 @@ function favorite:draw()
             table.insert(self.fUI.spawner.baseUI.spawnedUI.elements, new)
         end
         ImGui.SameLine()
-        if CPS.CPButton("Delete", 50, 25) then
+        if CPS.CPButton("Delete") then
             if self.parent ~= nil then
                 utils.removeItem(self.parent.childs, self)
                 self.parent:saveAfterMove()

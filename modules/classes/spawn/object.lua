@@ -18,9 +18,10 @@ function object:new(sUI)
     o.newName = ""
     o.selectedGroup = -1
     o.color = {0, 50, 255}
-    o.box = {x = 600, y = 218}
+    o.box = {x = 600, y = 282}
     o.id = math.random(1, 1000000000) -- Id for imgui child rng gods bls have mercy
     o.headerOpen = sUI.spawner.settings.headerState
+    o.dynSize = nil
 
     o.apps = {}
     o.appIndex = -1
@@ -140,7 +141,9 @@ function object:draw()
 
         CPS.colorBegin("Border", self.color)
         CPS.colorBegin("Separator", self.color)
-        ImGui.BeginChild("obj_" .. tostring(self.name .. self.id), self.box.x, self.box.y, true)
+
+        local h = 8 * ImGui.GetFrameHeight() + 9 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 4 + 4
+        ImGui.BeginChild("obj_" .. tostring(self.name .. self.id), self.box.x, h, true)
 
         if not self.isAutoLoaded then
             if self.newName == "" then self.newName = self.name end
@@ -180,16 +183,16 @@ function object:draw()
 
             ImGui.Separator()
 
-            if CPS.CPButton("Spawn", 50, 25) then
+            if CPS.CPButton("Spawn") then
                 self:despawn()
                 self:spawn()
             end
             ImGui.SameLine()
-            if CPS.CPButton("Despawn", 60, 25) then
+            if CPS.CPButton("Despawn") then
                 self:despawn()
             end
             ImGui.SameLine()
-            if CPS.CPButton("Clone", 50, 25) then
+            if CPS.CPButton("Clone") then
                 local obj = object:new(self.sUI)
                 obj.pos = Vector4.new(self.pos.x, self.pos.y, self.pos.z, self.pos.w)
                 obj.rot = EulerAngles.new(self.rot.roll, self.rot.pitch, self.rot.yaw)
@@ -204,7 +207,7 @@ function object:draw()
                 end
             end
             ImGui.SameLine()
-            if CPS.CPButton("Remove", 50, 25) then
+            if CPS.CPButton("Remove") then
                 self:despawn()
                 if self.parent ~= nil then
                     utils.removeItem(self.parent.childs, self)
@@ -213,24 +216,25 @@ function object:draw()
                 utils.removeItem(self.sUI.elements, self)
             end
             ImGui.SameLine()
-            if CPS.CPButton("Make Favorite", 100, 25) then
+            if CPS.CPButton("Make Favorite") then
                 self.sUI.spawner.baseUI.favUI.createNewFav(self)
             end
             ImGui.SameLine()
             if self.parent == nil then
-                if CPS.CPButton("Save to file", 100, 25) then
+                if CPS.CPButton("Save to file") then
                     self:save()
                     self.sUI.spawner.baseUI.savedUI.files[self.name] = nil
                 end
                 if self.sUI.spawner.settings.groupExport then
                     ImGui.SameLine()
-                    if CPS.CPButton("Export", 60, 25) then
+                    if CPS.CPButton("Export") then
                         self:export()
                     end
                 end
             end
 
-        ImGui.EndChild()
+            ImGui.EndChild()
+
         CPS.colorEnd(2)
     end
 

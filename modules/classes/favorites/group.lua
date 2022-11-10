@@ -66,7 +66,9 @@ function group:draw() -- Draw func if this is just a sub group
 	end
 	if ImGui.TreeNodeEx(self.name, ImGuiTreeNodeFlags.CollapsingHeader) then
 		CPS.colorBegin("Border", self.color)
-    	ImGui.BeginChild("group" .. self.name, self.box.x, self.box.y, true)
+
+		local h = 3 * ImGui.GetFrameHeight() + 5 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 1 + 1
+    	ImGui.BeginChild("group" .. self.name, self.box.x, h, true)
 
 		if self.newName == nil then self.newName = "" end
         ImGui.PushItemWidth(300)
@@ -119,7 +121,7 @@ function group:draw() -- Draw func if this is just a sub group
 		ImGui.Separator()
 		CPS.colorEnd()
 
-		if CPS.CPButton("Delete", 50, 25) then
+		if CPS.CPButton("Delete") then
             if self.parent ~= nil then
                 utils.removeItem(self.parent.childs, self)
 				self.parent:saveAfterMove()

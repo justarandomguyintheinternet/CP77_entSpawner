@@ -4,7 +4,7 @@ local object = require("modules/classes/spawn/object")
 local gr = require("modules/classes/spawn/group")
 local utils = require("modules/utils/utils")
 
-local debug = true
+local debug = false
 
 savedUI = {
     filter = "",
@@ -64,7 +64,9 @@ end
 function savedUI.drawGroup(group, spawner)
     CPS.colorBegin("Border", savedUI.color.group)
     CPS.colorBegin("Separator", savedUI.color.group)
-    ImGui.BeginChild("group_" .. group.name, savedUI.box.group.x, savedUI.box.group.y, true)
+
+	local h = 4 * ImGui.GetFrameHeight() + 4 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 3 + 3
+    ImGui.BeginChild("group_" .. group.name, savedUI.box.group.x, h, true)
 
     if group.newName == nil then group.newName = group.name end
     ImGui.PushItemWidth(300)
@@ -106,30 +108,30 @@ function savedUI.drawGroup(group, spawner)
 
     ImGui.Separator()
 
-    if CPS.CPButton("Spawn", 50, 25) then
+    if CPS.CPButton("Spawn") then
         local g = gr:new(spawner.baseUI.spawnedUI)
         g:load(group)
         g:spawn()
         table.insert(spawner.baseUI.spawnedUI.elements, g)
     end
     ImGui.SameLine()
-    if CPS.CPButton("Load", 60, 25) then
+    if CPS.CPButton("Load") then
         local g = gr:new(spawner.baseUI.spawnedUI)
         g:load(group)
         table.insert(spawner.baseUI.spawnedUI.elements, g)
     end
     ImGui.SameLine()
-    if CPS.CPButton("TP to pos", 75, 25) then
+    if CPS.CPButton("TP to pos") then
         Game.GetTeleportationFacility():Teleport(Game.GetPlayer(), utils.getVector(group.pos), GetSingleton('Quaternion'):ToEulerAngles(Game.GetPlayer():GetWorldOrientation()))
     end
     ImGui.SameLine()
-    if CPS.CPButton("Delete", 50, 25) then
+    if CPS.CPButton("Delete") then
         savedUI.deleteData(group)
     end
 
     if debug then
         ImGui.SameLine()
-        if CPS.CPButton("TSE", 50, 25) then
+        if CPS.CPButton("TSE") then
             local g = gr:new(spawner.baseUI.spawnedUI)
             g:load(group)
 
@@ -151,7 +153,9 @@ end
 function savedUI.drawObject(obj, spawner)
     CPS.colorBegin("Border", savedUI.color.object)
     CPS.colorBegin("Separator", savedUI.color.object)
-    ImGui.BeginChild("group_" .. obj.name, savedUI.box.object.x, savedUI.box.object.y, true)
+
+	local h = 5 * ImGui.GetFrameHeight() + 4 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 3 + 3
+    ImGui.BeginChild("group_" .. obj.name, savedUI.box.object.x, h, true)
 
     if obj.newName == nil then obj.newName = obj.name end
     ImGui.PushItemWidth(300)
@@ -194,24 +198,24 @@ function savedUI.drawObject(obj, spawner)
 
     ImGui.Separator()
 
-    if CPS.CPButton("Spawn", 50, 25) then
+    if CPS.CPButton("Spawn") then
         local o = object:new(spawner.baseUI.spawnedUI)
         o:load(obj)
         o:spawn()
         table.insert(spawner.baseUI.spawnedUI.elements, o)
     end
     ImGui.SameLine()
-    if CPS.CPButton("Load", 60, 25) then
+    if CPS.CPButton("Load") then
         local o = object:new(spawner.baseUI.spawnedUI)
         o:load(obj)
         table.insert(spawner.baseUI.spawnedUI.elements, o)
     end
     ImGui.SameLine()
-    if CPS.CPButton("TP to pos", 75, 25) then
+    if CPS.CPButton("TP to pos") then
         Game.GetTeleportationFacility():Teleport(Game.GetPlayer(),  utils.getVector(obj.pos), GetSingleton('Quaternion'):ToEulerAngles(Game.GetPlayer():GetWorldOrientation()))
     end
     ImGui.SameLine()
-    if CPS.CPButton("Delete", 50, 25) then
+    if CPS.CPButton("Delete") then
         savedUI.deleteData(obj)
     end
 

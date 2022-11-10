@@ -5,7 +5,8 @@ spawnUI = {
     filter = "",
     selectedGroup = 0,
     paths = {},
-    sizeX = 0
+    sizeX = 0,
+    fPaths = nil
 }
 
 function spawnUI.loadPaths(spawner)
@@ -13,13 +14,30 @@ function spawnUI.loadPaths(spawner)
     spawnUI.sort(spawner)
 end
 
+function spawnUI.updateFPaths()
+    spawnUI.fPaths = {}
+    for _, value in pairs(spawnUI.paths) do
+        local path = value.path
+        if spawner.settings.spawnUIOnlyNames then
+            path = value.name
+        end
+        if (path:lower():match(spawnUI.filter:lower())) ~= nil then
+            table.insert(spawnUI.fPaths, value)
+        end
+    end
+end
+
 function spawnUI.draw(spawner)
-    spawnUI.filter = ImGui.InputTextWithHint('##Filter', 'Search for object...', spawnUI.filter, 100)
+    spawnUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search for object...', spawnUI.filter, 100)
+    if changed then
+        spawnUI.updateFPaths()
+    end
 
     if spawnUI.filter ~= '' then
         ImGui.SameLine()
         if ImGui.Button('X') then
             spawnUI.filter = ''
+            spawnUI.updateFPaths()
         end
     end
 
@@ -54,16 +72,21 @@ function spawnUI.draw(spawner)
 
     local _, wHeight = GetDisplayResolution()
 
-    ImGui.BeginChild("list", spawnUI.sizeX, wHeight - 150)
+    ImGui.BeginChild("list", spawnUI.sizeX, wHeight - wHeight * 0.175)
 
     spawnUI.sizeX = 0
 
-    for _, p in pairs(spawnUI.paths) do
-        local path = p.path
-        if spawner.settings.spawnUIOnlyNames then
-            path = p.name
-        end
-        if (path:lower():match(spawnUI.filter:lower())) ~= nil then
+    local clipper = ImGuiListClipper.new()
+    clipper:Begin(#spawnUI.fPaths, -1)
+    while (clipper:Step()) do
+        for i = clipper.DisplayStart + 1, clipper.DisplayEnd, 1 do
+            p = spawnUI.fPaths[i]
+
+            local path = p.path
+            if spawner.settings.spawnUIOnlyNames then
+                path = p.name
+            end
+
             ImGui.PushID(path)
 
             local hasColor = false
@@ -110,6 +133,7 @@ function spawnUI.draw(spawner)
             ImGui.PopID()
         end
     end
+
     ImGui.EndChild()
 end
 
@@ -117,6 +141,7 @@ function spawnUI.sort(spawner)
     if spawner.settings.spawnNewSortAlphabetical then
         table.sort(spawnUI.paths, function(a, b) return a.name:lower() < b.name:lower() end)
     end
+    spawnUI.updateFPaths()
 end
 
 return spawnUI

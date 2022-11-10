@@ -85,11 +85,13 @@ function group:draw() -- Draw func if this is just a sub group
     self.headerOpen = ImGui.CollapsingHeader(n)
 
 	local addY = 0
-	if spawner.settings.groupRot then addY = 20 end
+	if spawner.settings.groupRot then addY = ImGui.GetFrameHeight() + ImGui.GetStyle().ItemSpacing.y end
 
 	if self.headerOpen then
 		CPS.colorBegin("Border", self.color)
-    	ImGui.BeginChild("group" .. tostring(self.name .. self.id), self.box.x, self.box.y + addY, true)
+
+		local h = 5 * ImGui.GetFrameHeight() + 7 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 2 + 2
+    	ImGui.BeginChild("group" .. tostring(self.name .. self.id), self.box.x, h + addY, true)
 
 		if not self.isAutoLoaded then
 			if self.newName == nil then self.newName = "" end
@@ -121,16 +123,16 @@ function group:draw() -- Draw func if this is just a sub group
 
 		CPS.colorEnd()
 
-		if CPS.CPButton("Spawn", 50, 25) then
+		if CPS.CPButton("Spawn") then
 			self:despawn()
 			self:spawn()
 		end
 		ImGui.SameLine()
-		if CPS.CPButton("Despawn", 60, 25) then
+		if CPS.CPButton("Despawn") then
 			self:despawn()
 		end
 		ImGui.SameLine()
-		if CPS.CPButton("Clone", 50, 25) then
+		if CPS.CPButton("Clone") then
 			local g = require("modules/classes/spawn/group"):new(self.sUI)
 
 			g:load(self:toTable())
@@ -152,18 +154,18 @@ function group:draw() -- Draw func if this is just a sub group
 			g:spawn()
 		end
 		ImGui.SameLine()
-		if CPS.CPButton("Remove", 50, 25) then
+		if CPS.CPButton("Remove") then
 			self:remove()
 		end
 		ImGui.SameLine()
 		if self.parent == nil then
-			if CPS.CPButton("Save to file", 95, 25) then
+			if CPS.CPButton("Save to file") then
 				self:save()
 				self.sUI.spawner.baseUI.savedUI.files[self.name] = nil
 			end
 			if self.sUI.spawner.settings.groupExport then
 				ImGui.SameLine()
-				if CPS.CPButton("Export", 60, 25) then
+				if CPS.CPButton("Export") then
 					self:export()
 				end
 			end
@@ -292,7 +294,7 @@ function group:drawRot()
 		roll = roll - self.rot.roll
 		local objs = self:getObjects()
 		for _, o in pairs(objs) do
-			o.pos =utils.addVector(Vector4.RotateAxis(utils.subVector(o.pos, self.pos), self:getAvgVector("forward"), math.rad(roll)), self.pos)
+			o.pos = utils.addVector(Vector4.RotateAxis(utils.subVector(o.pos, self.pos), self:getAvgVector("forward"), math.rad(roll)), self.pos)
 			o.rot.roll = o.rot.roll + roll
 		end
 
@@ -305,7 +307,7 @@ function group:drawRot()
 		pitch = pitch - self.rot.pitch
 		local objs = self:getObjects()
 		for _, o in pairs(objs) do
-			o.pos =utils.addVector(Vector4.RotateAxis(utils.subVector(o.pos, self.pos), self:getAvgVector("right"), math.rad(pitch)), self.pos)
+			o.pos = utils.addVector(Vector4.RotateAxis(utils.subVector(o.pos, self.pos), self:getAvgVector("right"), math.rad(pitch)), self.pos)
 			o.rot.pitch = o.rot.pitch + pitch
 		end
 

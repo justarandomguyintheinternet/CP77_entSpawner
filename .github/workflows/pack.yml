@@ -1,0 +1,29 @@
+name: pack
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup folders
+        run: |
+          cd ${{ github.workspace }}
+          sudo mkdir -p /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
+      - name: Copy files
+        run: |
+          sudo cp -r CPStyling /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
+          sudo cp -r data /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
+          sudo cp -r export /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
+          sudo cp -r modules /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
+          sudo cp -r init.lua /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
+      - name: Upload zip
+        uses: actions/upload-artifact@v2
+        with:
+            name: entSpawnerPacked
+            path: /entSpawnerPacked/

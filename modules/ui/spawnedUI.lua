@@ -103,7 +103,7 @@ function spawnedUI.draw(spawner)
     ImGui.Separator()
 
     local _, wHeight = GetDisplayResolution()
-    ImGui.BeginChild("spawnedUI", spawnedUI.getWidth(), math.min(spawnedUI.getHeight(), wHeight - 150))
+    ImGui.BeginChild("spawnedUI", spawnedUI.getWidth(), wHeight - wHeight * 0.175)
 
     for _, f in pairs(spawnedUI.elements) do
         if spawnedUI.filter == "" then
