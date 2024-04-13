@@ -40,7 +40,9 @@ function config.loadPaths(path)
         n = n:gsub(".ent", ""):gsub("\\", "_") -- Remove .ent, replace \ by _
         n = n:sub(2)
 
-        table.insert(paths, {path = line, obj = nil, name = n})
+    for _, file in pairs(dir(path)) do
+        if file.name:match("^.+(%..+)$") == ".txt" then
+            local data = config.loadFile(path .. file.name)
 
     end
     file:close()
