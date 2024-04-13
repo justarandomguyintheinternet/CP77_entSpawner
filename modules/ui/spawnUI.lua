@@ -1,13 +1,32 @@
 local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
 
+local types = {
+    entity = {
+        template = require("modules/classes/spawn/entity/entityTemplate"),
+        record = require("modules/classes/spawn/entity/entityRecord")
+    }
+}
+
+local spawnData = {}
+
 spawnUI = {
     filter = "",
     selectedGroup = 0,
-    paths = {},
-    sizeX = 0,
-    fPaths = nil
+    sizeX = 0
 }
+
+function spawnUI.loadSpawnData()
+    for dataName, dataType in pairs(types) do
+        for subName, sub in pairs(dataType) do
+            if sub.spawnListType == "list" then
+                spawnData[dataName][dataType] = config.loadLists(sub.spawnListPath)
+            else
+                spawnData[dataName][dataType] = config.loadFiles(sub.spawnListPath)
+            end
+        end
+    end
+end
 
 function spawnUI.loadPaths(spawner)
     spawnUI.paths = config.loadPaths("data/allPaths.txt")
@@ -68,6 +87,22 @@ function spawnUI.draw(spawner)
         config.saveFile("data/config.json", spawner.settings)
     end
 
+    ImGui.Separator()
+    ImGui.Spacing()
+
+    local types = {
+        "Entity",
+        "Mesh",
+        "Light",
+        "Occluder",
+        "Collision"
+    }
+
+    ImGui.PushItemWidth(200)
+	ImGui.Combo("Object type", 1, types, #types)
+	ImGui.PopItemWidth()
+
+    ImGui.Spacing()
     ImGui.Separator()
 
     local _, wHeight = GetDisplayResolution()

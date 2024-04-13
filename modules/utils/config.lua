@@ -28,24 +28,34 @@ function config.saveFile(path, data)
     file:close()
 end
 
-function config.loadPaths(path)
-    local paths = {}
-    file = io.open(path)
-    for line in file:lines() do
+function config.loadFiles(path)
+    local files = {}
 
-        local n = line
-        if string.find(n, "\\") then
-            n = n:match("\\[^\\]*$") -- Everything after last \
+    for _, file in pairs(dir(path)) do
+        if file.name:match("^.+(%..+)$") == ".json" then
+            local data = config.loadFile(path .. file.name)
+            table.insert(files, {data = data, lastSpawned = nil, name = data.name})
         end
-        n = n:gsub(".ent", ""):gsub("\\", "_") -- Remove .ent, replace \ by _
-        n = n:sub(2)
+    end
+
+    return files
+end
+
+function config.loadLists(path)
+    local paths = {}
 
     for _, file in pairs(dir(path)) do
         if file.name:match("^.+(%..+)$") == ".txt" then
-            local data = config.loadFile(path .. file.name)
+            local data = io.open(path .. file.name)
 
+            for line in data:lines() do
+                table.insert(paths, {path = line, lastSpawned = nil, name = line})
+            end
+
+            data:close()
+        end
     end
-    file:close()
+
     return paths
 end
 

@@ -19,12 +19,10 @@ function baseUI.getResizeFlag()
 end
 
 function baseUI.draw(spawner)
-    CPS:setThemeBegin()
+    -- CPS:setThemeBegin()
     ImGui.Begin("Object Spawner 1.4", ImGuiWindowFlags.AlwaysAutoResize)
 
     if ImGui.BeginTabBar("Tabbar", ImGuiTabItemFlags.NoTooltip) then
-        CPS.styleBegin("TabRounding", 0)
-
         if ImGui.BeginTabItem("Spawn new") then
             baseUI.currentTab = 0
             baseUI.spawnUI.draw(spawner)
@@ -57,16 +55,15 @@ function baseUI.draw(spawner)
 
         if ImGui.BeginTabItem("Settings") then
             baseUI.currentTab = 5
+            ImGui.Spacing()
             baseUI.settingsUI.draw(spawner)
             ImGui.EndTabItem()
         end
-
-        CPS.styleEnd(1)
         ImGui.EndTabBar()
     end
 
     ImGui.End()
-    CPS:setThemeEnd()
+    -- CPS:setThemeEnd()
 end
 
 return baseUI

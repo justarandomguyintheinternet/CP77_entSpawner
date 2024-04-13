@@ -44,6 +44,15 @@ function object:spawn()
     local transform = Game.GetPlayer():GetWorldTransform()
     transform:SetOrientation(GetSingleton('EulerAngles'):ToQuat(self.rot))
     transform:SetPosition(self.pos)
+
+    -- local spec = DynamicEntitySpec.new()
+    -- spec.templatePath = ResRef.FromString(self.path)
+    -- spec.position = self.pos
+    -- spec.orientation = self.rot:ToQuat()
+    -- spec.alwaysSpawned = true
+    -- spec.appearanceName = self.app
+    -- self.entID = Game.GetDynamicEntitySystem():CreateEntity(spec)
+
     self.entID = exEntitySpawner.Spawn(self.path, transform, self.app)
     self.entity = Game.FindEntityByID(self.entID)
     self.spawned = true
@@ -60,6 +69,14 @@ function object:update()
             transform:SetOrientation(GetSingleton('EulerAngles'):ToQuat(self.rot))
             transform:SetPosition(self.pos)
             self.entID = exEntitySpawner.Spawn(self.path, transform, self.app)
+
+            -- local spec = DynamicEntitySpec.new()
+            -- spec.templatePath = ResRef.FromString(self.path)
+            -- spec.position = self.pos
+            -- spec.orientation = self.rot:ToQuat()
+            -- spec.alwaysSpawned = true
+            -- spec.appearanceName = self.app
+            -- self.entID = Game.GetDynamicEntitySystem():CreateEntity(spec)
         end
     end
 end

@@ -40,6 +40,23 @@ function spawnedUI.spawnNewObject(path, parent)
     return new
 end
 
+function spawnedUI.tryAddLookAt()
+    local target = Game.GetTargetingSystem():GetLookAtObject(Game.GetPlayer(), false, false)
+    if not target then return end
+
+    local new = object:new(spawnedUI)
+    new.path = ""
+    new.name = "target"
+    new.rot = target:GetWorldOrientation():ToEulerAngles()--GetPlayer():GetWorldOrientation():ToEulerAngles()
+    new.pos = target:GetWorldPosition()--GetPlayer():GetWorldPosition()
+    new.parent = nil
+    new.spawned = true
+    new.entID = target:GetEntityID()--Game.GetDynamicEntitySystem():CreateEntity(DynamicEntitySpec.new({recordID = "Vehicle.ue_metro_train", position = GetPlayer():GetWorldPosition()}))
+    new:generateName()
+
+    table.insert(spawnedUI.elements, new)
+end
+
 function spawnedUI.getGroups()
     spawnedUI.groups = {}
     spawnedUI.groups[1] = {name = "-- No group --"}
@@ -92,6 +109,10 @@ function spawnedUI.draw(spawner)
         for _, e in pairs(spawnedUI.elements) do
             e.headerOpen = true
         end
+    end
+    ImGui.SameLine()
+    if ImGui.Button("Add Target") then
+        spawnedUI.tryAddLookAt()
     end
     ImGui.SameLine()
     if ImGui.Button("Fetch all Apps (LAG)") then

@@ -37,7 +37,10 @@ spawner = {
         groupExport = false,
         autoSpawnRange = 1000,
         spawnUIOnlyNames = false,
-        appFetchTrys = 150
+        appFetchTrys = 150,
+        editor = {
+            color = 1
+        }
     },
 
     settings = {},
@@ -58,6 +61,13 @@ function spawner:new()
         spawner.baseUI.spawnedUI.getGroups()
         spawner.baseUI.savedUI.spawner = spawner
         spawner.baseUI.savedUI.reload()
+
+        local p = require("modules/classes/spawn/parent"):new("Parent")
+        print(p:getAge(), p:getName())
+
+        local c = require("modules/classes/spawn/child"):new("Child")
+        print(c:getAge(), c:getName(), c:getOriginalAge())
+        c:isInSchool()
 
         Observe('RadialWheelController', 'OnIsInMenuChanged', function(_, isInMenu)
             spawner.runtimeData.inMenu = isInMenu
