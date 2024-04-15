@@ -25,30 +25,36 @@ function baseUI.draw(spawner)
     if ImGui.BeginTabBar("Tabbar", ImGuiTabItemFlags.NoTooltip) then
         if ImGui.BeginTabItem("Spawn new") then
             baseUI.currentTab = 0
+            ImGui.Spacing()
+            baseUI.spawnedUI.getGroups()
             baseUI.spawnUI.draw(spawner)
             ImGui.EndTabItem()
         end
 
         if ImGui.BeginTabItem("Spawned") then
             baseUI.currentTab = 1
+            ImGui.Spacing()
             baseUI.spawnedUI.draw(spawner)
             ImGui.EndTabItem()
         end
 
         if ImGui.BeginTabItem("Saved") then
             baseUI.currentTab = 2
+            ImGui.Spacing()
             baseUI.savedUI.draw(spawner)
             ImGui.EndTabItem()
         end
 
         if ImGui.BeginTabItem("Favorites") then
             baseUI.currentTab = 3
+            ImGui.Spacing()
             baseUI.favUI.draw(spawner)
             ImGui.EndTabItem()
         end
 
         if ImGui.BeginTabItem("External Mods") then
             baseUI.currentTab = 4
+            ImGui.Spacing()
             baseUI.externalUI.draw(spawner)
             ImGui.EndTabItem()
         end

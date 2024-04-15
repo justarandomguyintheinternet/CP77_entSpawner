@@ -49,7 +49,7 @@ function config.loadLists(path)
             local data = io.open(path .. file.name)
 
             for line in data:lines() do
-                table.insert(paths, {path = line, lastSpawned = nil, name = line})
+                table.insert(paths, {data = line, lastSpawned = nil, name = line})
             end
 
             data:close()

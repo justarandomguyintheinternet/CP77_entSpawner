@@ -19,8 +19,8 @@ function spawnedUI.spawnNewObject(path, parent)
     local new = object:new(spawnedUI)
     new.path = path
     new.name = path
-    new.rot = GetSingleton('Quaternion'):ToEulerAngles(Game.GetPlayer():GetWorldOrientation())
-    new.pos = Game.GetPlayer():GetWorldPosition()
+    new.rot = GetPlayer():GetWorldOrientation():ToEulerAngles()
+    new.pos = GetPlayer():GetWorldPosition()
     new.parent = parent
 
     if parent ~= nil then

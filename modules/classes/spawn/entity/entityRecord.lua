@@ -5,7 +5,7 @@ function record:new()
 	local o = entity.new(self)
 
     o.dataType = "entityRecord"
-    o.spawnDataPath = "data/spawnables/entity/templates"
+    o.spawnDataPath = "data/spawnables/entity/records/"
 
     setmetatable(o, { __index = self })
    	return o
@@ -15,4 +15,4 @@ function record:spawn()
 
 end
 
-return entity
+return record

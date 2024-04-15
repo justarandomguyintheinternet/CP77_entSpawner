@@ -6,6 +6,7 @@ function entity:new()
 
     o.boxColor = {255, 255, 0}
     o.spawnListType = "list"
+    o.dataType = "entity"
 
     setmetatable(o, { __index = self })
    	return o

@@ -83,10 +83,6 @@ function settingsUI.draw(spawner)
     spawner.settings.headerState, changed = ImGui.Checkbox("Close collapsible headers by default", spawner.settings.headerState)
     if changed then config.saveFile("data/config.json", spawner.settings) end
 
-    if ImGui.IsItemHovered() then
-        ImGui.SetTooltip("")
-    end
-
     spawner.settings.deleteConfirm, changed = ImGui.Checkbox("Show confirm to delete popup", spawner.settings.deleteConfirm)
     if changed then config.saveFile("data/config.json", spawner.settings) end
 
