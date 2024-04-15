@@ -34,6 +34,8 @@ spawnUI = {
     filteredList = {}
 }
 
+---Loads the spawn data (Either list of e.g. paths, or exported object files) for each data variant
+---@param spawner table
 function spawnUI.loadSpawnData(spawner)
     spawnUI.spawner = spawner
 
@@ -59,10 +61,13 @@ function spawnUI.loadSpawnData(spawner)
     spawnUI.refresh()
 end
 
+---Returns a table containing the currently active spawnables list, each entry being structured as {data: String|table, name: String, lastSpawned: table}
+---@return table
 function spawnUI.getActiveSpawnList()
     return spawnData[typeNames[spawnUI.selectedType + 1]][variantNames[spawnUI.selectedVariant + 1]]
 end
 
+---Regenerate the filteredList based on the active filter and the currently selected active spawn list
 function spawnUI.updateFilter()
     if spawnUI.filter == "" then
         spawnUI.filteredList = spawnUI.getActiveSpawnList().data
@@ -77,17 +82,13 @@ function spawnUI.updateFilter()
     end
 end
 
+---Refresh the sorting and the filtering
 function spawnUI.refresh()
     spawnUI.updateFilter()
     spawnUI.sort()
 end
 
 function spawnUI.draw()
-    variantNames = {}
-    for name, _ in pairs(types[typeNames[spawnUI.selectedType + 1]]) do
-        table.insert(variantNames, name)
-    end
-
     spawnUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search by name...', spawnUI.filter, 100)
     if changed then
         spawnUI.updateFilter()
@@ -115,14 +116,6 @@ function spawnUI.draw()
     tooltip("Automatically place any newly spawned object into the selected group")
 	ImGui.PopItemWidth()
 
-    -- spawner.settings.spawnUIOnlyNames, changed = ImGui.Checkbox("Hide paths, show only names", spawner.settings.spawnUIOnlyNames)
-    -- if changed then
-    --     spawnUI.sort(spawner)
-    --     config.saveFile("data/config.json", spawner.settings)
-    -- end
-
-    -- ImGui.SameLine()
-
     spawnUI.spawner.settings.spawnNewSortAlphabetical, changed = ImGui.Checkbox("Sort alphabetically", spawnUI.spawner.settings.spawnNewSortAlphabetical)
     if changed then
         config.saveFile("data/config.json", spawnUI.spawner.settings)
@@ -135,7 +128,14 @@ function spawnUI.draw()
     if changed then spawnUI.refresh() end
     ImGui.SameLine()
 	spawnUI.selectedVariant, changed = ImGui.Combo("Object variant", spawnUI.selectedVariant, variantNames, #variantNames)
-    if changed then spawnUI.refresh() end
+    if changed then
+        variantNames = {}
+        for name, _ in pairs(types[typeNames[spawnUI.selectedType + 1]]) do
+            table.insert(variantNames, name)
+        end
+
+        spawnUI.refresh()
+    end
 	ImGui.PopItemWidth()
 
     ImGui.Spacing()
@@ -154,11 +154,6 @@ function spawnUI.draw()
         for i = clipper.DisplayStart + 1, clipper.DisplayEnd, 1 do
             local entry = spawnUI.filteredList[i]
             local isSpawned = false
-
-            -- local path = p.path
-            -- if spawner.settings.spawnUIOnlyNames then
-            --     path = p.name
-            -- end
 
             ImGui.PushID(entry.name)
 
