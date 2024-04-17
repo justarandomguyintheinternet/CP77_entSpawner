@@ -9,8 +9,6 @@ function object:new(sUI)
 	local o = {}
 
     o.name = "" -- Base stuff
-    o.path = ""
-    o.app = ""
     o.parent = nil
     o.spawned = false
 
@@ -23,16 +21,11 @@ function object:new(sUI)
     o.headerOpen = sUI.spawner.settings.headerState
     o.dynSize = nil
 
-    o.apps = {}
-    o.appIndex = -1
-
-    o.entID = nil -- Actual object stuff
-    o.pos = Vector4.new(0, 0, 0, 0)
-    o.rot = EulerAngles.new(0, 0, 0)
-
     o.autoLoad = false
 	o.loadRange = sUI.spawner.settings.autoSpawnRange
     o.isAutoLoaded = false
+
+    o.spawnable = nil
 
     o.sUI = sUI
 
@@ -41,10 +34,6 @@ function object:new(sUI)
 end
 
 function object:spawn()
-    local transform = Game.GetPlayer():GetWorldTransform()
-    transform:SetOrientation(GetSingleton('EulerAngles'):ToQuat(self.rot))
-    transform:SetPosition(self.pos)
-
     -- local spec = DynamicEntitySpec.new()
     -- spec.templatePath = ResRef.FromString(self.path)
     -- spec.position = self.pos
@@ -52,10 +41,6 @@ function object:spawn()
     -- spec.alwaysSpawned = true
     -- spec.appearanceName = self.app
     -- self.entID = Game.GetDynamicEntitySystem():CreateEntity(spec)
-
-    self.entID = exEntitySpawner.Spawn(self.path, transform, self.app)
-    self.entity = Game.FindEntityByID(self.entID)
-    self.spawned = true
 end
 
 function object:update()

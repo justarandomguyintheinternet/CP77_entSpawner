@@ -7,15 +7,22 @@ function spawnable:new()
 
     o.dataType = "spawnable"
     o.spawnListType = "list"
-    o.spawnListPath = "data/spawnables/entity/"
-
-    o.name = ""
-    o.newName = ""
-    o.parent = nil
-    o.selectedGroup = -1
+    o.spawnListPath = "data/spawnables/entity/templates/"
 
 	self.__index = self
    	return setmetatable(o, self)
+end
+
+function spawnable:spawn()
+
+end
+
+function spawnable:despawn()
+
+end
+
+function spawnable:update()
+
 end
 
 function spawnable:generateNameFromPath(path) -- Generate valid name from path or if no path given current name

@@ -15,7 +15,12 @@ function spawnedUI.init(spawner)
     spawnedUI.spawner = spawner
 end
 
-function spawnedUI.spawnNewObject(path, parent)
+function spawnedUI.spawnNewObject(entry, parent)
+    -- create new object
+    -- create new variant class, load entry data
+    -- set variant instance to be used by object instance
+    -- spawn via object spawn method
+
     local new = object:new(spawnedUI)
     new.path = path
     new.name = path
