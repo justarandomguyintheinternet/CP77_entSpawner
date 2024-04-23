@@ -3,8 +3,11 @@ local utils = require("modules/utils/utils")
 
 local types = {
     ["Entity"] = {
-        ["Template"] = require("modules/classes/spawn/entity/entityTemplate"):new(),
-        ["Record"] = require("modules/classes/spawn/entity/entityRecord"):new()
+        ["Template"] = require("modules/classes/spawn/entity/entityTemplate"),
+        ["Record"] = require("modules/classes/spawn/entity/entityRecord")
+    },
+    ["Lights"] = {
+        ["Light"] = require("modules/classes/spawn/light/light")
     }
 }
 
@@ -42,10 +45,11 @@ function spawnUI.loadSpawnData(spawner)
     for dataName, dataType in pairs(types) do
         spawnData[dataName] = {}
         for variantName, variant in pairs(dataType) do
-            if variant.spawnListType == "list" then
-                spawnData[dataName][variantName] = { data = config.loadLists(variant.spawnDataPath), class = variant }
+            local variantInstance = variant:new()
+            if variantInstance.spawnListType == "list" then
+                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant }
             else
-                spawnData[dataName][variantName] = { data = config.loadFiles(variant.spawnDataPath), class = variant }
+                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant }
             end
         end
     end
@@ -125,10 +129,9 @@ function spawnUI.draw()
 
     ImGui.PushItemWidth(200)
 	spawnUI.selectedType, changed = ImGui.Combo("Object type", spawnUI.selectedType, typeNames, #typeNames)
-    if changed then spawnUI.refresh() end
-    ImGui.SameLine()
-	spawnUI.selectedVariant, changed = ImGui.Combo("Object variant", spawnUI.selectedVariant, variantNames, #variantNames)
     if changed then
+        spawnUI.selectedVariant = 0
+
         variantNames = {}
         for name, _ in pairs(types[typeNames[spawnUI.selectedType + 1]]) do
             table.insert(variantNames, name)
@@ -136,10 +139,18 @@ function spawnUI.draw()
 
         spawnUI.refresh()
     end
+
+    ImGui.SameLine()
+
+	spawnUI.selectedVariant, changed = ImGui.Combo("Object variant", spawnUI.selectedVariant, variantNames, #variantNames)
+    if changed then
+        spawnUI.refresh()
+    end
 	ImGui.PopItemWidth()
 
     ImGui.Spacing()
     ImGui.Separator()
+    ImGui.Spacing()
 
     local _, wHeight = GetDisplayResolution()
 
@@ -168,7 +179,9 @@ function spawnUI.draw()
                 if spawnUI.selectedGroup ~= 0 then
                     parent = spawnUI.spawner.baseUI.spawnedUI.groups[spawnUI.selectedGroup + 1].tab
                 end
-                entry.lastSpawned = spawnUI.spawner.baseUI.spawnedUI.spawnNewObject(entry, parent)
+
+                local class = spawnUI.getActiveSpawnList().class
+                entry.lastSpawned = spawnUI.spawner.baseUI.spawnedUI.spawnNewObject(entry, class, parent)
             end
 
             local x, _ = ImGui.GetItemRectSize()

@@ -1,8 +1,8 @@
 local entity = require("modules/classes/spawn/entity/entity")
 local template = setmetatable({}, { __index = entity })
 
-function template:new()
-	local o = entity.new(self)
+function template:new(position, rotation)
+	local o = entity.new(self, position, rotation)
 
     o.dataType = "entityTemplate"
     o.spawnDataPath = "data/spawnables/entity/templates/"

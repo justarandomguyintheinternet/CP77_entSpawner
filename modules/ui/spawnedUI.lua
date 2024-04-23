@@ -15,33 +15,29 @@ function spawnedUI.init(spawner)
     spawnedUI.spawner = spawner
 end
 
-function spawnedUI.spawnNewObject(entry, parent)
-    -- create new object
-    -- create new variant class, load entry data
-    -- set variant instance to be used by object instance
-    -- spawn via object spawn method
-
+function spawnedUI.spawnNewObject(entry, class, parent)
     local new = object:new(spawnedUI)
-    new.path = path
-    new.name = path
-    new.rot = GetPlayer():GetWorldOrientation():ToEulerAngles()
-    new.pos = GetPlayer():GetWorldPosition()
+    local rot = GetPlayer():GetWorldOrientation():ToEulerAngles()
+    local pos = GetPlayer():GetWorldPosition()
+
+    if spawnedUI.spawner.settings.spawnPos == 2 then
+        local forward = GetPlayer():GetWorldForward()
+        pos.x = pos.x + forward.x * spawnedUI.spawner.settings.spawnDist
+        pos.y = pos.y + forward.y * spawnedUI.spawner.settings.spawnDist
+    end
+
+    new.spawnable = class:new(pos, rot)
+    new.spawnable:loadSpawnData(entry.data)
+    new.name = new.spawnable:generateName(entry.name)
     new.parent = parent
 
     if parent ~= nil then
         table.insert(new.parent.childs, new)
     end
 
-    if spawnedUI.spawner.settings.spawnPos == 2 then
-        local vec = Game.GetPlayer():GetWorldForward()
-        new.pos.x = new.pos.x + vec.x * spawnedUI.spawner.settings.spawnDist
-        new.pos.y = new.pos.y + vec.y * spawnedUI.spawner.settings.spawnDist
-    end
+    -- new:spawn()
 
-    new:generateName()
-    new:spawn()
     table.insert(spawnedUI.elements, new)
-
     return new
 end
 

@@ -1,8 +1,8 @@
 local entity = require("modules/classes/spawn/entity/entity")
 local record = setmetatable({}, { __index = entity })
 
-function record:new()
-	local o = entity.new(self)
+function record:new(position, rotation)
+	local o = entity.new(self, position, rotation)
 
     o.dataType = "entityRecord"
     o.spawnDataPath = "data/spawnables/entity/records/"

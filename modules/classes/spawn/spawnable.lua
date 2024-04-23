@@ -2,12 +2,15 @@ local utils = require("modules/utils/utils")
 
 spawnable = {}
 
-function spawnable:new()
+function spawnable:new(position, rotation)
 	local o = {}
 
     o.dataType = "spawnable"
     o.spawnListType = "list"
     o.spawnListPath = "data/spawnables/entity/templates/"
+
+    o.position = position
+    o.rotation = rotation
 
 	self.__index = self
    	return setmetatable(o, self)
@@ -25,13 +28,12 @@ function spawnable:update()
 
 end
 
-function spawnable:generateNameFromPath(path) -- Generate valid name from path or if no path given current name
-    local text = path or self.name
-    if string.find(self.name, "\\") then
-        self.name = text:match("\\[^\\]*$") -- Everything after last \
+function spawnable:generateName(name) -- Generate valid name from given name / path
+    if string.find(name, "\\") then
+        name = name:match("\\[^\\]*$") -- Everything after last \
     end
-    self.name = self.name:gsub(".ent", ""):gsub("\\", "_") -- Remove .ent, replace \ by _
-    self.name = utils.createFileName(self.name)
+    name = name:gsub(".ent", ""):gsub("\\", "_") -- Remove .ent, replace \ by _
+    return utils.createFileName(name)
 end
 
 function spawnable:save()
@@ -46,33 +48,18 @@ function spawnable:drawSpawnOptions()
 
 end
 
+---Load from saved data
+---@param data table
 function spawnable:load(data)
-    self.name = data.name
+    self.position = ToVector4(data.position)
+    self.rotation = ToEulerAngles(data.rotation)
 end
 
-function spawnable:verifyMove(to)
-	local allowed = true
-
-	if to == self.parent then
-		allowed = false
-	end
-
-	return allowed
-end
-
-function spawnable:getOwnPath(first)
-    if self.parent == nil then
-        if first then
-            return "-- No group --"
-        else
-            return self.name
-        end
-    else
-        if first then
-            return self.parent:getOwnPath()
-        else
-            return tostring(self.parent:getOwnPath() .. "/" .. self.name)
-        end
+---Load and store data for when being spawned by user
+---@param data table
+function spawnable:loadSpawnData(data)
+    for key, value in pairs(data) do
+        self[key] = value
     end
 end
 
