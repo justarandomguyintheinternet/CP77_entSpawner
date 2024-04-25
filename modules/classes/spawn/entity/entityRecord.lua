@@ -19,20 +19,12 @@ function record:spawn()
     spec.orientation = self.rotation:ToQuat()
     spec.alwaysSpawned = true
     self.entityID = Game.GetDynamicEntitySystem():CreateEntity(spec)
-end
-
-function record:isSpawned()
-    if Game.GetDynamicEntitySystem():GetEntity(self.entityID) == nil then
-        return false
-    end
-
-    return true
+    self.spawned = true
 end
 
 function record:despawn()
-    if not self:isSpawned() then return end
-
     Game.GetDynamicEntitySystem():DeleteEntity(self.entityID)
+    self.spawned = false
 end
 
 function record:update()

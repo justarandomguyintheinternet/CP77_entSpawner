@@ -19,11 +19,12 @@ function entity:drawUI()
     -- Copy path / recordID
 end
 
-function entity:loadSpawnData(data, position, rotation)
+function entity:loadSpawnData(data, position, rotation, spawner)
     self.spawnData = data -- Just a simple string
 
     self.position = position
     self.rotation = rotation
+    self.spawner = spawner
 end
 
 return entity

@@ -15,7 +15,7 @@ function object:new(sUI)
     o.newName = ""
     o.selectedGroup = -1
     o.color = {0, 50, 255}
-    o.box = {x = 600, y = 282}
+    o.box = {x = 650, y = 282}
     o.id = math.random(1, 1000000000) -- Id for imgui child rng gods bls have mercy
     o.headerOpen = sUI.spawner.settings.headerState
     o.dynSize = nil
@@ -32,49 +32,15 @@ function object:new(sUI)
    	return setmetatable(o, self)
 end
 
--- obj
--- draw is spawned (state from spawnable)
-
 function object:spawn()
-    -- local spec = DynamicEntitySpec.new()
-    -- spec.templatePath = ResRef.FromString(self.path)
-    -- spec.position = self.pos
-    -- spec.orientation = self.rot:ToQuat()
-    -- spec.alwaysSpawned = true
-    -- spec.appearanceName = self.app
-    -- self.entID = Game.GetDynamicEntitySystem():CreateEntity(spec)
     self.spawnable:spawn()
 end
 
 function object:update()
-    -- if self.spawned then
-    --     local tpSuccess = pcall(function ()
-    --         Game.GetTeleportationFacility():Teleport(Game.FindEntityByID(self.entID), self.pos,  self.rot)
-    --     end)
-    --     if not tpSuccess then
-    --         Game.FindEntityByID(self.entID):GetEntity():Destroy()
-    --         local transform = Game.GetPlayer():GetWorldTransform()
-    --         transform:SetOrientation(GetSingleton('EulerAngles'):ToQuat(self.rot))
-    --         transform:SetPosition(self.pos)
-    --         self.entID = exEntitySpawner.Spawn(self.path, transform, self.app)
-
-    --         -- local spec = DynamicEntitySpec.new()
-    --         -- spec.templatePath = ResRef.FromString(self.path)
-    --         -- spec.position = self.pos
-    --         -- spec.orientation = self.rot:ToQuat()
-    --         -- spec.alwaysSpawned = true
-    --         -- spec.appearanceName = self.app
-    --         -- self.entID = Game.GetDynamicEntitySystem():CreateEntity(spec)
-    --     end
-    -- end
     self.spawnable:update()
 end
 
 function object:despawn()
-    -- if Game.FindEntityByID(self.entID) ~= nil then
-    --     Game.FindEntityByID(self.entID):GetEntity():Destroy()
-    --     self.spawned = false
-    -- end
     self.spawnable:despawn()
 end
 
@@ -143,7 +109,7 @@ function object:load(data)
     self.loadRange = data.loadRange
 
     self.spawnable = require("modules/classes/spawn/" .. data.spawnable.modulePath):new()
-    self.spawnable:loadSpawnData(data.spawnable, data.spawnable.position, data.spawnable.rotation)
+    self.spawnable:loadSpawnData(data.spawnable, data.spawnable.position, data.spawnable.rotation, self.sUI.spawner)
 
     -- self.app = data.app or ""
     -- self.apps = config.loadFile("data/apps.json")[self.path] or {}
@@ -172,24 +138,20 @@ function object:draw()
         ImGui.BeginChild("obj_" .. tostring(self.name .. self.id), self.box.x, h, true)
 
         if not self.isAutoLoaded then
-            if self.newName == "" then self.newName = self.name end
-            ImGui.PushItemWidth(300)
-            self.newName = ImGui.InputTextWithHint('##Name', 'Name...', self.newName, 100)
-            ImGui.PopItemWidth()
+            ImGui.SetNextItemWidth(250)
+            self.newName = ImGui.InputTextWithHint('##Name', 'New Name...', self.newName, 100)
             ImGui.SameLine()
-            if ImGui.Button("Apply new object name") then
+
+            if ImGui.Button("Apply", 150, 0) then
                 self:rename(self.newName)
                 self:saveAfterMove()
+                self.newName = ""
             end
         else
 			ImGui.Text(tostring(self.name .. " | AUTOSPAWNED"))
 		end
 
-        ImGui.Separator()
-
-        ImGui.Text(tostring("Spawned: " .. tostring(self.spawnable:isSpawned()):upper()))
-
-        ImGui.SameLine()
+        -- ImGui.Text(tostring("Spawned: " .. tostring(self.spawnable:isSpawned()):upper()))
 
         -- if ImGui.Button("Copy Path to clipboard") then
         --     ImGui.SetClipboardText(self.path)
@@ -197,16 +159,19 @@ function object:draw()
 
         self:drawGroup()
 
+        ImGui.Spacing()
         ImGui.Separator()
+        ImGui.Spacing()
+
+        self.spawnable:draw()
 
         -- self:drawApp()
-
-        ImGui.Separator()
-
         -- self:drawPos()
         -- self:drawRot()
 
+        ImGui.Spacing()
         ImGui.Separator()
+        ImGui.Spacing()
 
         if CPS.CPButton("Spawn") then
             self:despawn()
@@ -282,12 +247,12 @@ function object:drawGroup()
         self.selectedGroup = utils.indexValue(gs, self:getOwnPath(true)) - 1
     end
 
-    ImGui.PushItemWidth(200)
+    ImGui.SetNextItemWidth(250)
     self.selectedGroup = ImGui.Combo("##movetogroup", self.selectedGroup, gs, #gs)
-    ImGui.PopItemWidth()
 
     ImGui.SameLine()
-    if ImGui.Button("Move to group") then
+
+    if ImGui.Button("Move to group", 150, 0) then
         if self:verifyMove(self.sUI.groups[self.selectedGroup + 1].tab) then -- Dont move inside same group
             if self.selectedGroup ~= 0 then
                 if self.parent == nil then

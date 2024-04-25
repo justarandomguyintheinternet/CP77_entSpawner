@@ -26,12 +26,6 @@ local function sectionHeaderEnd(noSpacing)
     end
 end
 
-local function tooltip(text)
-    if ImGui.IsItemHovered() then
-        ImGui.SetTooltip(text)
-    end
-end
-
 function settingsUI.draw(spawner)
     sectionHeaderStart("SPAWNING")
 
@@ -47,7 +41,7 @@ function settingsUI.draw(spawner)
         spawner.settings.spawnPos = 2
         config.saveFile("data/config.json", spawner.settings)
     end
-    tooltip("Spawn position is relative to the players position and rotation, at the specified distance")
+    style.tooltip("Spawn position is relative to the players position and rotation, at the specified distance")
 
     if spawner.settings.spawnPos == 2 then
         spawner.settings.spawnDist, changed = ImGui.InputFloat("Spawn distance to player", spawner.settings.spawnDist, -9999, 9999, "%.1f")
@@ -61,7 +55,7 @@ function settingsUI.draw(spawner)
         spawner.settings.moveCloneToParent = 1
         config.saveFile("data/config.json", spawner.settings)
     end
-    tooltip("When cloning a group, place the newly created group inside the original one")
+    style.tooltip("When cloning a group, place the newly created group inside the original one")
 
     ImGui.SameLine()
 
@@ -69,7 +63,7 @@ function settingsUI.draw(spawner)
         spawner.settings.moveCloneToParent = 2
         config.saveFile("data/config.json", spawner.settings)
     end
-    tooltip("When cloning a group, place the newly created group at the same level as the the one it was cloned from")
+    style.tooltip("When cloning a group, place the newly created group at the same level as the the one it was cloned from")
 
     spawner.settings.posSteps, changed = ImGui.InputFloat("Position controls step size", spawner.settings.posSteps, -9999, 9999, "%.3f")
     if changed then config.saveFile("data/config.json", spawner.settings) end
