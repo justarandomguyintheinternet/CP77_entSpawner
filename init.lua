@@ -59,6 +59,7 @@ function spawner:new()
         self.baseUI.favUI.load(self)
         self.baseUI.spawnedUI.spawner = self
         self.baseUI.spawnedUI.getGroups()
+        self.baseUI.spawnedUI.init(self)
         self.baseUI.savedUI.spawner = self
         self.baseUI.savedUI.reload()
 

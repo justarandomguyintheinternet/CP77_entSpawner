@@ -26,8 +26,8 @@ function spawnedUI.spawnNewObject(entry, class, parent)
         pos.y = pos.y + forward.y * spawnedUI.spawner.settings.spawnDist
     end
 
-    new.spawnable = class:new(pos, rot)
-    new.spawnable:loadSpawnData(entry.data)
+    new.spawnable = class:new()
+    new.spawnable:loadSpawnData(entry.data, pos, rot)
     new.name = new.spawnable:generateName(entry.name)
     new.parent = parent
 
@@ -35,8 +35,7 @@ function spawnedUI.spawnNewObject(entry, class, parent)
         table.insert(new.parent.childs, new)
     end
 
-    -- new:spawn()
-
+    new:spawn()
     table.insert(spawnedUI.elements, new)
     return new
 end

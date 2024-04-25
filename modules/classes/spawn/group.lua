@@ -361,8 +361,7 @@ end
 
 function group:update(vec)
 	for _, obj in pairs(self:getObjects()) do
-		obj.pos = utils.addVector(obj.pos, vec)
-		obj:update()
+		obj:setPosition(utils.addVector(obj:getPosition(), vec))
 	end
 end
 
@@ -418,9 +417,9 @@ function group:getCenter()
 		local totalY = 0
 		local totalZ = 0
 		for _, o in pairs(objs) do
-			totalX = totalX + o.pos.x
-			totalY = totalY + o.pos.y
-			totalZ = totalZ + o.pos.z
+			totalX = totalX + o:getPosition().x
+			totalY = totalY + o:getPosition().y
+			totalZ = totalZ + o:getPosition().z
 		end
 		center = Vector4.new(totalX / #objs, totalY / #objs, totalZ / #objs, 0)
 	end

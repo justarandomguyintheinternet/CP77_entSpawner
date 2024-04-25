@@ -1,12 +1,13 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local entity = setmetatable({}, { __index = spawnable })
 
-function entity:new(position, rotation)
-	local o = spawnable.new(self, position, rotation)
+function entity:new()
+	local o = spawnable.new(self)
 
     o.boxColor = {255, 255, 0}
     o.spawnListType = "list"
-    o.dataType = "entity"
+    o.dataType = "Entity"
+    o.modulePath = "entity/entity"
 
     o.spawnData = ""
 
@@ -14,20 +15,15 @@ function entity:new(position, rotation)
    	return o
 end
 
-function entity:despawn()
-
-end
-
-function entity:updatePosition()
-
-end
-
 function entity:drawUI()
     -- Copy path / recordID
 end
 
-function entity:loadSpawnData(data)
-    self.spawnData = data
+function entity:loadSpawnData(data, position, rotation)
+    self.spawnData = data -- Just a simple string
+
+    self.position = position
+    self.rotation = rotation
 end
 
 return entity

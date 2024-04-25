@@ -1,13 +1,14 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local light = setmetatable({}, { __index = spawnable })
 
-function light:new(position, rotation)
-	local o = spawnable.new(self, position, rotation)
+function light:new()
+	local o = spawnable.new(self)
 
     o.boxColor = {255, 255, 0}
     o.spawnListType = "files"
-    o.dataType = "light"
+    o.dataType = "Static Light"
     o.spawnDataPath = "data/spawnables/lights/"
+    o.modulePath = "light/light"
 
     setmetatable(o, { __index = self })
    	return o

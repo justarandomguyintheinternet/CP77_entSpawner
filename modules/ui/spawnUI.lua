@@ -30,8 +30,8 @@ end
 spawnUI = {
     filter = "",
     selectedGroup = 0,
-    selectedType = 0,
-    selectedVariant = 1,
+    selectedType = 1,
+    selectedVariant = 0,
     sizeX = 0,
     spawner = nil,
     filteredList = {}
@@ -180,6 +180,7 @@ function spawnUI.draw()
                     parent = spawnUI.spawner.baseUI.spawnedUI.groups[spawnUI.selectedGroup + 1].tab
                 end
 
+                ImGui.SetClipboardText(entry.name)
                 local class = spawnUI.getActiveSpawnList().class
                 entry.lastSpawned = spawnUI.spawner.baseUI.spawnedUI.spawnNewObject(entry, class, parent)
             end

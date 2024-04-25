@@ -10,7 +10,6 @@ function object:new(sUI)
 
     o.name = "" -- Base stuff
     o.parent = nil
-    o.spawned = false
 
     o.type = "object" -- Visual stuff
     o.newName = ""
@@ -33,6 +32,9 @@ function object:new(sUI)
    	return setmetatable(o, self)
 end
 
+-- obj
+-- draw is spawned (state from spawnable)
+
 function object:spawn()
     -- local spec = DynamicEntitySpec.new()
     -- spec.templatePath = ResRef.FromString(self.path)
@@ -41,36 +43,52 @@ function object:spawn()
     -- spec.alwaysSpawned = true
     -- spec.appearanceName = self.app
     -- self.entID = Game.GetDynamicEntitySystem():CreateEntity(spec)
+    self.spawnable:spawn()
 end
 
 function object:update()
-    if self.spawned then
-        local tpSuccess = pcall(function ()
-            Game.GetTeleportationFacility():Teleport(Game.FindEntityByID(self.entID), self.pos,  self.rot)
-        end)
-        if not tpSuccess then
-            Game.FindEntityByID(self.entID):GetEntity():Destroy()
-            local transform = Game.GetPlayer():GetWorldTransform()
-            transform:SetOrientation(GetSingleton('EulerAngles'):ToQuat(self.rot))
-            transform:SetPosition(self.pos)
-            self.entID = exEntitySpawner.Spawn(self.path, transform, self.app)
+    -- if self.spawned then
+    --     local tpSuccess = pcall(function ()
+    --         Game.GetTeleportationFacility():Teleport(Game.FindEntityByID(self.entID), self.pos,  self.rot)
+    --     end)
+    --     if not tpSuccess then
+    --         Game.FindEntityByID(self.entID):GetEntity():Destroy()
+    --         local transform = Game.GetPlayer():GetWorldTransform()
+    --         transform:SetOrientation(GetSingleton('EulerAngles'):ToQuat(self.rot))
+    --         transform:SetPosition(self.pos)
+    --         self.entID = exEntitySpawner.Spawn(self.path, transform, self.app)
 
-            -- local spec = DynamicEntitySpec.new()
-            -- spec.templatePath = ResRef.FromString(self.path)
-            -- spec.position = self.pos
-            -- spec.orientation = self.rot:ToQuat()
-            -- spec.alwaysSpawned = true
-            -- spec.appearanceName = self.app
-            -- self.entID = Game.GetDynamicEntitySystem():CreateEntity(spec)
-        end
-    end
+    --         -- local spec = DynamicEntitySpec.new()
+    --         -- spec.templatePath = ResRef.FromString(self.path)
+    --         -- spec.position = self.pos
+    --         -- spec.orientation = self.rot:ToQuat()
+    --         -- spec.alwaysSpawned = true
+    --         -- spec.appearanceName = self.app
+    --         -- self.entID = Game.GetDynamicEntitySystem():CreateEntity(spec)
+    --     end
+    -- end
+    self.spawnable:update()
 end
 
 function object:despawn()
-    if Game.FindEntityByID(self.entID) ~= nil then
-        Game.FindEntityByID(self.entID):GetEntity():Destroy()
-        self.spawned = false
-    end
+    -- if Game.FindEntityByID(self.entID) ~= nil then
+    --     Game.FindEntityByID(self.entID):GetEntity():Destroy()
+    --     self.spawned = false
+    -- end
+    self.spawnable:despawn()
+end
+
+function object:getPosition()
+    return self.spawnable.position
+end
+
+function object:setPosition(position)
+    self.spawnable.position = position
+    self:update()
+end
+
+function object:getRotation()
+    return self.spawnable.rotation
 end
 
 -- Group system functions
@@ -85,48 +103,55 @@ function object:generateName(path) -- Generate valid name from path or if no pat
 end
 
 function object:rename(name) -- Update file name to new given
-    name = utils.createFileName(name)
+    name = self.spawnable:generateName(name)
     os.rename("data/objects/" .. self.name .. ".json", "data/objects/" .. name .. ".json")
     self.name = name
     self.sUI.spawner.baseUI.savedUI.reload()
 end
 
+function object:getState()
+    self.name = self.spawnable:generateName(self.name)
+
+    return {
+        name = self.name,
+        type = self.type,
+        headerOpen = self.headerOpen,
+        autoLoad = self.autoLoad,
+        loadRange = self.loadRange,
+        spawnable = self.spawnable:save()
+    }
+end
+
 function object:save() -- Either save to file or return self as table to parent
     if self.parent == nil then
-        self:generateName()
-        local obj = {path = self.path, app = self.app, name = self.name, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
-        config.tryCreateConfig("data/objects/" .. obj.name .. ".json", obj)
-        config.saveFile("data/objects/" .. obj.name .. ".json", obj)
+        local state = self:getState()
+
+        config.tryCreateConfig("data/objects/" .. state.name .. ".json", state)
+        config.saveFile("data/objects/" .. state.name .. ".json", state)
         self.sUI.spawner.baseUI.savedUI.reload()
     else
-        return {path = self.path, app = self.app, name = self.name, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
+        return self:getState()
     end
 end
 
 function object:load(data)
+    print("load")
     self.name = data.name
     self.path = data.path
-    self.pos = utils.getVector(data.pos)
-    self.rot = utils.getEuler(data.rot)
     self.headerOpen = data.headerOpen
     self.autoLoad = data.autoLoad
     self.loadRange = data.loadRange
 
-    self.app = data.app or ""
-    self.apps = config.loadFile("data/apps.json")[self.path] or {}
+    self.spawnable = require("modules/classes/spawn/" .. data.spawnable.modulePath):new()
+    self.spawnable:loadSpawnData(data.spawnable, data.spawnable.position, data.spawnable.rotation)
+
+    -- self.app = data.app or ""
+    -- self.apps = config.loadFile("data/apps.json")[self.path] or {}
 end
 
 function object:tryMainDraw()
     if self.parent == nil then
         self:draw()
-    end
-end
-
-function object:checkSpawned()
-    if Game.FindEntityByID(self.entID) == nil then
-        self.spawned = false
-    else
-        self.spawned = true
     end
 end
 
@@ -140,7 +165,6 @@ function object:draw()
 
     self.headerOpen = ImGui.CollapsingHeader(self.name)
     if self.headerOpen then
-
         CPS.colorBegin("Border", self.color)
         CPS.colorBegin("Separator", self.color)
 
@@ -161,81 +185,80 @@ function object:draw()
 			ImGui.Text(tostring(self.name .. " | AUTOSPAWNED"))
 		end
 
-            ImGui.Separator()
+        ImGui.Separator()
 
-            self:checkSpawned()
-            ImGui.Text(tostring("Spawned: " .. tostring(self.spawned):upper()))
+        ImGui.Text(tostring("Spawned: " .. tostring(self.spawnable:isSpawned()):upper()))
 
-            ImGui.SameLine()
+        ImGui.SameLine()
 
-            if ImGui.Button("Copy Path to clipboard") then
-                ImGui.SetClipboardText(self.path)
+        -- if ImGui.Button("Copy Path to clipboard") then
+        --     ImGui.SetClipboardText(self.path)
+        -- end
+
+        self:drawGroup()
+
+        ImGui.Separator()
+
+        -- self:drawApp()
+
+        ImGui.Separator()
+
+        -- self:drawPos()
+        -- self:drawRot()
+
+        ImGui.Separator()
+
+        if CPS.CPButton("Spawn") then
+            self:despawn()
+            self:spawn()
+        end
+        ImGui.SameLine()
+        if CPS.CPButton("Despawn") then
+            self:despawn()
+        end
+        ImGui.SameLine()
+        if CPS.CPButton("Clone") then
+            local obj = object:new(self.sUI)
+            obj.pos = Vector4.new(self.pos.x, self.pos.y, self.pos.z, self.pos.w)
+            obj.rot = EulerAngles.new(self.rot.roll, self.rot.pitch, self.rot.yaw)
+            obj.path = self.path
+            obj.name = self.name .. " Clone"
+            obj.apps = self.apps
+            obj:spawn()
+            table.insert(self.sUI.elements, obj)
+            if self.parent ~= nil then
+                obj.parent = self.parent
+                table.insert(self.parent.childs, obj)
             end
-
-            self:drawGroup()
-
-            ImGui.Separator()
-
-            self:drawApp()
-
-            ImGui.Separator()
-
-            self:drawPos()
-            self:drawRot()
-
-            ImGui.Separator()
-
-            if CPS.CPButton("Spawn") then
-                self:despawn()
-                self:spawn()
+        end
+        ImGui.SameLine()
+        if CPS.CPButton("Remove") then
+            self:despawn()
+            if self.parent ~= nil then
+                utils.removeItem(self.parent.childs, self)
+                self.parent:saveAfterMove()
             end
-            ImGui.SameLine()
-            if CPS.CPButton("Despawn") then
-                self:despawn()
+            utils.removeItem(self.sUI.elements, self)
+        end
+        ImGui.SameLine()
+        if CPS.CPButton("Make Favorite") then
+            self.sUI.spawner.baseUI.favUI.createNewFav(self)
+        end
+        ImGui.SameLine()
+        if self.parent == nil then
+            if CPS.CPButton("Save to file") then
+                self:save()
+                self.sUI.spawner.baseUI.savedUI.files[self.name] = nil
             end
-            ImGui.SameLine()
-            if CPS.CPButton("Clone") then
-                local obj = object:new(self.sUI)
-                obj.pos = Vector4.new(self.pos.x, self.pos.y, self.pos.z, self.pos.w)
-                obj.rot = EulerAngles.new(self.rot.roll, self.rot.pitch, self.rot.yaw)
-                obj.path = self.path
-                obj.name = self.name .. " Clone"
-                obj.apps = self.apps
-                obj:spawn()
-                table.insert(self.sUI.elements, obj)
-                if self.parent ~= nil then
-                    obj.parent = self.parent
-                    table.insert(self.parent.childs, obj)
+            if self.sUI.spawner.settings.groupExport then
+                ImGui.SameLine()
+                if CPS.CPButton("Export") then
+                    self:export()
                 end
             end
-            ImGui.SameLine()
-            if CPS.CPButton("Remove") then
-                self:despawn()
-                if self.parent ~= nil then
-                    utils.removeItem(self.parent.childs, self)
-                    self.parent:saveAfterMove()
-                end
-                utils.removeItem(self.sUI.elements, self)
-            end
-            ImGui.SameLine()
-            if CPS.CPButton("Make Favorite") then
-                self.sUI.spawner.baseUI.favUI.createNewFav(self)
-            end
-            ImGui.SameLine()
-            if self.parent == nil then
-                if CPS.CPButton("Save to file") then
-                    self:save()
-                    self.sUI.spawner.baseUI.savedUI.files[self.name] = nil
-                end
-                if self.sUI.spawner.settings.groupExport then
-                    ImGui.SameLine()
-                    if CPS.CPButton("Export") then
-                        self:export()
-                    end
-                end
-            end
+        end
 
-            ImGui.EndChild()
+        ImGui.EndChild()
 
         CPS.colorEnd(2)
     end
