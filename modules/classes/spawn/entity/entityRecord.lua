@@ -12,4 +12,39 @@ function record:new()
    	return o
 end
 
+function record:spawn()
+    local spec = DynamicEntitySpec.new()
+    spec.recordID = self.spawnData
+    spec.position = self.position
+    spec.orientation = self.rotation:ToQuat()
+    spec.alwaysSpawned = true
+    self.entityID = Game.GetDynamicEntitySystem():CreateEntity(spec)
+end
+
+function record:isSpawned()
+    if Game.GetDynamicEntitySystem():GetEntity(self.entityID) == nil then
+        return false
+    end
+
+    return true
+end
+
+function record:despawn()
+    if not self:isSpawned() then return end
+
+    Game.GetDynamicEntitySystem():DeleteEntity(self.entityID)
+end
+
+function record:update()
+    if not self:isSpawned() then return end
+
+    local handle = Game.FindEntityByID(self.entityID)
+    if not handle then
+        self:despawn()
+        self:spawn()
+    else
+        Game.GetTeleportationFacility():Teleport(handle, self.position,  self.rotation)
+    end
+end
+
 return record

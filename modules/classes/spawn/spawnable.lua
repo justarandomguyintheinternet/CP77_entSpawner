@@ -22,16 +22,14 @@ function spawnable:new()
 end
 
 function spawnable:spawn()
-    local spec = DynamicEntitySpec.new()
-    spec.templatePath = ResRef.FromString(self.spawnData)
-    spec.position = self.position
-    spec.orientation = self.rotation:ToQuat()
-    spec.alwaysSpawned = true
-    self.entityID = Game.GetDynamicEntitySystem():CreateEntity(spec)
+    local transform = WorldTransform.new()
+    transform:SetOrientation(self.rotation:ToQuat())
+    transform:SetPosition(self.position)
+    self.entityID = exEntitySpawner.Spawn(self.spawnData, transform, self.app)
 end
 
 function spawnable:isSpawned()
-    if Game.GetDynamicEntitySystem():GetEntity(self.entityID) == nil then
+    if Game.FindEntityByID(self.entityID) == nil then
         return false
     end
 
@@ -39,18 +37,20 @@ function spawnable:isSpawned()
 end
 
 function spawnable:despawn()
-    Game.GetDynamicEntitySystem():DeleteEntity(self.entityID)
+    if not self:isSpawned() then return end
+
+    Game.FindEntityByID(self.entityID):GetEntity():Destroy()
 end
 
 function spawnable:update()
     if not self:isSpawned() then return end
 
-    local handle = Game.FindEntityByID(self.entityID)
-    if not handle then
+    local tpSuccess = pcall(function ()
+        Game.GetTeleportationFacility():Teleport(Game.FindEntityByID(self.entityID), self.position,  self.rotation)
+    end)
+    if not tpSuccess then
         self:despawn()
         self:spawn()
-    else
-        Game.GetTeleportationFacility():Teleport(Game.GetDynamicEntitySystem():GetEntity(self.entityID), self.position,  self.rotation)
     end
 end
 
