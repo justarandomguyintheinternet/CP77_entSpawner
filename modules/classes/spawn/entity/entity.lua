@@ -1,3 +1,4 @@
+local style = require("modules/ui/style")
 local spawnable = require("modules/classes/spawn/spawnable")
 local entity = setmetatable({}, { __index = spawnable })
 
@@ -15,16 +16,17 @@ function entity:new()
    	return o
 end
 
-function entity:drawUI()
-    -- Copy path / recordID
-end
+function entity:draw()
+    spawnable.draw(self)
 
-function entity:loadSpawnData(data, position, rotation, spawner)
-    self.spawnData = data -- Just a simple string
+    ImGui.Spacing()
+    ImGui.Separator()
+    ImGui.Spacing()
 
-    self.position = position
-    self.rotation = rotation
-    self.spawner = spawner
+    if ImGui.Button("Copy Path to Clipboard") then
+        ImGui.SetClipboardText(self.spawnData)
+    end
+    style.tooltip("Copies the template path / record of the object to the clipboard")
 end
 
 return entity

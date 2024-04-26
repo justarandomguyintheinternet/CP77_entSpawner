@@ -69,7 +69,12 @@ function spawnable:generateName(name) -- Generate valid name from given name / p
 end
 
 function spawnable:save()
-
+    return {
+        modulePath = self.modulePath,
+        position = { x = self.position.x, y = self.position.y, z = self.position.z, 0 },
+        rotation = { roll = self.rotation.pitch, pitch = self.rotation.pitch, yaw = self.rotation.yaw },
+        spawnData = self.spawnData
+    }
 end
 
 function spawnable:drawPosition()

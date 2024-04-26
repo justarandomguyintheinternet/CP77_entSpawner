@@ -101,15 +101,13 @@ function object:save() -- Either save to file or return self as table to parent
 end
 
 function object:load(data)
-    print("load")
     self.name = data.name
-    self.path = data.path
     self.headerOpen = data.headerOpen
     self.autoLoad = data.autoLoad
     self.loadRange = data.loadRange
 
     self.spawnable = require("modules/classes/spawn/" .. data.spawnable.modulePath):new()
-    self.spawnable:loadSpawnData(data.spawnable, data.spawnable.position, data.spawnable.rotation, self.sUI.spawner)
+    self.spawnable:loadSpawnData(data.spawnable, ToVector4(data.spawnable.position), ToEulerAngles(data.spawnable.rotation), self.sUI.spawner)
 
     -- self.app = data.app or ""
     -- self.apps = config.loadFile("data/apps.json")[self.path] or {}
@@ -165,10 +163,6 @@ function object:draw()
 
         self.spawnable:draw()
 
-        -- self:drawApp()
-        -- self:drawPos()
-        -- self:drawRot()
-
         ImGui.Spacing()
         ImGui.Separator()
         ImGui.Spacing()
@@ -183,17 +177,20 @@ function object:draw()
         end
         ImGui.SameLine()
         if CPS.CPButton("Clone") then
-            local obj = object:new(self.sUI)
-            obj.pos = Vector4.new(self.pos.x, self.pos.y, self.pos.z, self.pos.w)
-            obj.rot = EulerAngles.new(self.rot.roll, self.rot.pitch, self.rot.yaw)
-            obj.path = self.path
-            obj.name = self.name .. " Clone"
-            obj.apps = self.apps
-            obj:spawn()
-            table.insert(self.sUI.elements, obj)
+            local clone = object:new(self.sUI)
+            local rot = EulerAngles.new(self.spawnable.rotation.roll, self.spawnable.rotation.pitch, self.spawnable.rotation.yaw)
+            local pos = Vector4.new(self.spawnable.position.x, self.spawnable.position.y, self.spawnable.position.z, 0)
+
+            clone.spawnable = require("modules/classes/spawn/" .. self.spawnable.modulePath):new()
+            clone.spawnable:loadSpawnData(self.spawnable:save(), pos, rot, self.sUI.spawner)
+
+            clone.name = self.name .. " Clone"
+
+            clone:spawn()
+            table.insert(self.sUI.elements, clone)
             if self.parent ~= nil then
-                obj.parent = self.parent
-                table.insert(self.parent.childs, obj)
+                clone.parent = self.parent
+                table.insert(self.parent.childs, clone)
             end
         end
         ImGui.SameLine()
@@ -275,86 +272,6 @@ function object:drawGroup()
                 self:save()
             end
         end
-    end
-end
-
-function object:drawPos()
-    ImGui.PushItemWidth(100)
-    self.pos.x, changed = ImGui.DragFloat("##x", self.pos.x, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f X")
-    if changed then
-        self:update()
-    end
-    ImGui.SameLine()
-    self.pos.y, changed = ImGui.DragFloat("##y", self.pos.y, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Y")
-    if changed then
-        self:update()
-    end
-    ImGui.SameLine()
-    self.pos.z, changed = ImGui.DragFloat("##z", self.pos.z, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Z")
-    if changed then
-        self:update()
-    end
-    ImGui.PopItemWidth()
-    ImGui.SameLine()
-    if ImGui.Button("To player") then
-        self.pos = Game.GetPlayer():GetWorldPosition()
-        self:update()
-    end
-
-    ImGui.PushItemWidth(150)
-    local x, changed = ImGui.DragFloat("##r_x", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ X")
-    if changed then
-        local v = self:getEntitiy():GetWorldRight()
-        self.pos.x = self.pos.x + (v.x * x)
-        self.pos.y = self.pos.y + (v.y * x)
-        self.pos.z = self.pos.z + (v.z * x)
-        self:update()
-        x = 0
-    end
-    ImGui.SameLine()
-    local y, changed = ImGui.DragFloat("##r_y", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ Y")
-    if changed then
-        local v = self:getEntitiy():GetWorldForward()
-        self.pos.x = self.pos.x + (v.x * y)
-        self.pos.y = self.pos.y + (v.y * y)
-        self.pos.z = self.pos.z + (v.z * y)
-        self:update()
-        y = 0
-    end
-    ImGui.SameLine()
-    local z, changed = ImGui.DragFloat("##r_z", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ Z")
-    if changed then
-        local v = self:getEntitiy():GetWorldUp()
-        self.pos.x = self.pos.x + (v.x * z)
-        self.pos.y = self.pos.y + (v.y * z)
-        self.pos.z = self.pos.z + (v.z * z)
-        self:update()
-        z = 0
-    end
-    ImGui.PopItemWidth()
-end
-
-function object:drawRot()
-    ImGui.PushItemWidth(100)
-    self.rot.roll, changed = ImGui.DragFloat("##roll", self.rot.roll, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Roll")
-    if changed then
-        self:update()
-    end
-    ImGui.SameLine()
-    self.rot.pitch, changed = ImGui.DragFloat("##pitch", self.rot.pitch, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Pitch")
-    if changed then
-        self:update()
-    end
-    ImGui.SameLine()
-    self.rot.yaw, changed = ImGui.DragFloat("##yaw", self.rot.yaw, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Yaw")
-    if changed then
-        self:update()
-    end
-    ImGui.SameLine()
-    ImGui.PopItemWidth()
-    if ImGui.Button("Player rot") then
-        self.rot = GetSingleton('Quaternion'):ToEulerAngles(Game.GetPlayer():GetWorldOrientation())
-        self:update()
     end
 end
 
@@ -450,7 +367,7 @@ function object:getOwnPath(first)
 end
 
 function object:export()
-	local data = {{path = self.path, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), app = self.app}}
+	local data = {{ spawnable = self.spawnable:save() }}
 	config.saveFile("export/" .. self.name .. "_export.json", data)
 end
 
