@@ -3,8 +3,8 @@ local utils = require("modules/utils/utils")
 
 local types = {
     ["Entity"] = {
-        ["Template"] = require("modules/classes/spawn/entity/entityTemplate"),
-        ["Record"] = require("modules/classes/spawn/entity/entityRecord")
+        ["Record"] = require("modules/classes/spawn/entity/entityRecord"),
+        ["Template"] = require("modules/classes/spawn/entity/entityTemplate")
     },
     ["Lights"] = {
         ["Light"] = require("modules/classes/spawn/light/light")
@@ -30,7 +30,7 @@ end
 spawnUI = {
     filter = "",
     selectedGroup = 0,
-    selectedType = 1,
+    selectedType = 0,
     selectedVariant = 0,
     sizeX = 0,
     spawner = nil,

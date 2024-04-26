@@ -27,6 +27,7 @@ function group:new(sUI)
 	o.isAutoLoaded = false
 
 	o.sUI = sUI
+	o.isUsingSpawnables = true
 
 	self.__index = self
    	return setmetatable(o, self)
@@ -477,14 +478,14 @@ end
 
 function group:save()
 	if self.parent == nil then
-		local data = {name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
+		local data = { isUsingSpawnables = true, name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
 		for _, c in pairs(self.childs) do
 			table.insert(data.childs, c:save())
 		end
 		config.saveFile("data/objects/" .. self.name .. ".json", data)
 		self.sUI.spawner.baseUI.savedUI.reload()
 	else
-		local data = {name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
+		local data = { isUsingSpawnables = true, name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
 		for _, c in pairs(self.childs) do
 			table.insert(data.childs, c:save())
 		end
@@ -493,7 +494,7 @@ function group:save()
 end
 
 function group:toTable()
-	local data = {name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
+	local data = { isUsingSpawnables = true, name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
 	for _, c in pairs(self.childs) do
 		table.insert(data.childs, c:save())
 	end

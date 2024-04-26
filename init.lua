@@ -55,12 +55,13 @@ function spawner:new()
         config.backwardComp("data/config.json", self.defaultSettings)
         config.tryCreateConfig("data/apps.json", {})
         self.settings = config.loadFile("data/config.json")
+        self.baseUI.savedUI.spawner = self
+        self.baseUI.savedUI.backwardComp()
         self.baseUI.spawnUI.loadSpawnData(self)
         self.baseUI.favUI.load(self)
         self.baseUI.spawnedUI.spawner = self
         self.baseUI.spawnedUI.getGroups()
         self.baseUI.spawnedUI.init(self)
-        self.baseUI.savedUI.spawner = self
         self.baseUI.savedUI.reload()
 
         local p = require("modules/classes/spawn/parent"):new("Parent")

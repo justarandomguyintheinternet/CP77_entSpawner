@@ -17,6 +17,61 @@ savedUI = {
     spawned = {}
 }
 
+function savedUI.convertObject(object)
+    local spawnable = require("modules/classes/spawn/entity/entityTemplate"):new()
+    spawnable:loadSpawnData({
+        spawnData = object.path,
+        app = object.app
+    }, ToVector4(object.pos), ToEulerAngles(object.rot), nil)
+
+    local newObject = require("modules/classes/spawn/object"):new(savedUI)
+    newObject.name = object.name
+    newObject.headerOpen = object.headerOpen
+    newObject.loadRange = object.loadRange
+    newObject.autoLoad = object.autoLoad
+    newObject.spawnable = spawnable
+
+    return newObject:getState()
+end
+
+function savedUI.convertGroup(group)
+    local data = {}
+
+    for _, child in pairs(group.childs) do
+        if child.type == "object" then
+            table.insert(data, savedUI.convertObject(child))
+        else
+            table.insert(data, savedUI.convertGroup(child))
+        end
+    end
+
+    group.childs = data
+    return group
+end
+
+function savedUI.backwardComp()
+    for _, file in pairs(dir("data/objects")) do
+        if file.name:match("^.+(%..+)$") == ".json" then
+            local data = config.loadFile("data/objects/" .. file.name)
+
+            if data.type == "object" and data.path then
+                config.saveFile("data/oldFormat/" .. file.name, data)
+
+                local new = savedUI.convertObject(data)
+                config.saveFile("data/objects/" .. file.name, new)
+                print("[ObjectSpawner] Converted \"" .. file.name .. "\" to the new file format.")
+            elseif data.type == "group" and not data.isUsingSpawnables then
+                config.saveFile("data/oldFormat/" .. file.name, data)
+
+                data = savedUI.convertGroup(data)
+                data.isUsingSpawnables = true
+                config.saveFile("data/objects/" .. file.name, data)
+                print("[ObjectSpawner] Converted \"" .. file.name .. "\" to the new file format.")
+            end
+        end
+    end
+end
+
 function savedUI.draw(spawner)
     ImGui.PushItemWidth(250)
     savedUI.filter = ImGui.InputTextWithHint('##Filter', 'Search for data...', savedUI.filter, 100)
@@ -94,7 +149,7 @@ function savedUI.drawGroup(group, spawner)
 
     ImGui.Separator()
 
-    ImGui.Text("Position: X=" .. tostring(group.pos.x) .. ", Y=" .. tostring(group.pos.y) .. ", Z=" .. tostring(group.pos.z))
+    ImGui.Text(("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(group.pos.x, group.pos.y, group.pos.z, ToVector4(group.pos):Distance(GetPlayer():GetWorldPosition())))
 
     ImGui.Separator()
 
@@ -183,8 +238,8 @@ function savedUI.drawObject(obj, spawner)
 
     ImGui.Separator()
 
-    ImGui.Text("Position: X=" .. tostring(obj.pos.x) .. ", Y=" .. tostring(obj.pos.y) .. ", Z=" .. tostring(obj.pos.z))
-    ImGui.Text("Path: " .. obj.path)
+    ImGui.Text(("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(obj.spawnable.position.x, obj.spawnable.position.y, obj.spawnable.position.z, ToVector4(obj.spawnable.position):Distance(GetPlayer():GetWorldPosition())))
+    ImGui.Text("Type: " .. obj.spawnable.dataType)
 
     ImGui.Separator()
 
@@ -286,47 +341,47 @@ function savedUI.reload()
 end
 
 function savedUI.run(spawner)
-    for _, data in pairs(savedUI.files) do
-        if (utils.distanceVector(Game.GetPlayer():GetWorldPosition(), data.pos) < data.loadRange) and data.autoLoad then
-            if not utils.hasIndex(savedUI.spawned, data.name) then
-                if data.type == "object" then
-                    local o = object:new(spawner.baseUI.spawnedUI)
-                    o:load(data)
-                    o.isAutoLoaded = true
-                    o.headerOpen = false
-                    o:spawn()
-                    table.insert(spawner.baseUI.spawnedUI.elements, o)
-                    savedUI.spawned[data.name] = o
-                else
-                    local g = gr:new(spawner.baseUI.spawnedUI)
-                    g:load(data)
-                    g.isAutoLoaded = true
-                    g.headerOpen = false
-                    g:spawn()
-                    table.insert(spawner.baseUI.spawnedUI.elements, g)
-                    savedUI.spawned[data.name] = g
-                end
-            end
-        end
-    end
+    -- for _, data in pairs(savedUI.files) do
+    --     if (utils.distanceVector(Game.GetPlayer():GetWorldPosition(), data.pos) < data.loadRange) and data.autoLoad then
+    --         if not utils.hasIndex(savedUI.spawned, data.name) then
+    --             if data.type == "object" then
+    --                 local o = object:new(spawner.baseUI.spawnedUI)
+    --                 o:load(data)
+    --                 o.isAutoLoaded = true
+    --                 o.headerOpen = false
+    --                 o:spawn()
+    --                 table.insert(spawner.baseUI.spawnedUI.elements, o)
+    --                 savedUI.spawned[data.name] = o
+    --             else
+    --                 local g = gr:new(spawner.baseUI.spawnedUI)
+    --                 g:load(data)
+    --                 g.isAutoLoaded = true
+    --                 g.headerOpen = false
+    --                 g:spawn()
+    --                 table.insert(spawner.baseUI.spawnedUI.elements, g)
+    --                 savedUI.spawned[data.name] = g
+    --             end
+    --         end
+    --     end
+    -- end
 
-    for _, obj in pairs(savedUI.spawned) do
-        if (utils.distanceVector(Game.GetPlayer():GetWorldPosition(), obj.pos) > obj.loadRange + 1) then
-            if obj.type == "group" then
-                obj:despawn()
-                savedUI.spawned[obj.name] = nil
-                utils.removeItem(spawner.baseUI.spawnedUI.elements, obj)
+    -- for _, obj in pairs(savedUI.spawned) do
+    --     if (utils.distanceVector(Game.GetPlayer():GetWorldPosition(), obj.pos) > obj.loadRange + 1) then
+    --         if obj.type == "group" then
+    --             obj:despawn()
+    --             savedUI.spawned[obj.name] = nil
+    --             utils.removeItem(spawner.baseUI.spawnedUI.elements, obj)
 
-                for _, c in pairs(obj:getObjects()) do
-                    utils.removeItem(spawner.baseUI.spawnedUI.elements, c)
-                end
-            else
-                obj:despawn()
-                savedUI.spawned[obj.name] = nil
-                utils.removeItem(spawner.baseUI.spawnedUI.elements, obj)
-            end
-        end
-    end
+    --             for _, c in pairs(obj:getObjects()) do
+    --                 utils.removeItem(spawner.baseUI.spawnedUI.elements, c)
+    --             end
+    --         else
+    --             obj:despawn()
+    --             savedUI.spawned[obj.name] = nil
+    --             utils.removeItem(spawner.baseUI.spawnedUI.elements, obj)
+    --         end
+    --     end
+    -- end
 end
 
 return savedUI

@@ -71,9 +71,10 @@ end
 function spawnable:save()
     return {
         modulePath = self.modulePath,
-        position = { x = self.position.x, y = self.position.y, z = self.position.z, 0 },
+        position = { x = self.position.x, y = self.position.y, z = self.position.z, w = 0 },
         rotation = { roll = self.rotation.pitch, pitch = self.rotation.pitch, yaw = self.rotation.yaw },
-        spawnData = self.spawnData
+        spawnData = self.spawnData,
+        dataType = self.dataType
     }
 end
 

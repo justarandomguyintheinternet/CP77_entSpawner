@@ -212,12 +212,6 @@ function object:draw()
                 self:save()
                 self.sUI.spawner.baseUI.savedUI.files[self.name] = nil
             end
-            if self.sUI.spawner.settings.groupExport then
-                ImGui.SameLine()
-                if CPS.CPButton("Export") then
-                    self:export()
-                end
-            end
         end
 
         ImGui.EndChild()
@@ -364,11 +358,6 @@ function object:getOwnPath(first)
             return tostring(self.parent:getOwnPath() .. "/" .. self.name)
         end
     end
-end
-
-function object:export()
-	local data = {{ spawnable = self.spawnable:save() }}
-	config.saveFile("export/" .. self.name .. "_export.json", data)
 end
 
 function object:getHeight(y)
