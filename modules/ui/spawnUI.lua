@@ -1,10 +1,13 @@
 local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
+local style = require("modules/ui/style")
+local object = require("modules/classes/spawn/object")
 
 local types = {
     ["Entity"] = {
         ["Record"] = require("modules/classes/spawn/entity/entityRecord"),
-        ["Template"] = require("modules/classes/spawn/entity/entityTemplate")
+        ["Template"] = require("modules/classes/spawn/entity/entityTemplate"),
+        ["Template (AMM)"] = require("modules/classes/spawn/entity/ammEntity")
     },
     ["Lights"] = {
         ["Light"] = require("modules/classes/spawn/light/light")
@@ -14,6 +17,7 @@ local types = {
 local spawnData = {}
 local typeNames = {}
 local variantNames = {}
+local AMM = GetMod("AppearanceMenuMod")
 
 local function tooltip(text)
     if ImGui.IsItemHovered() then
@@ -40,6 +44,10 @@ spawnUI = {
 ---Loads the spawn data (Either list of e.g. paths, or exported object files) for each data variant
 ---@param spawner table
 function spawnUI.loadSpawnData(spawner)
+    typeNames = {}
+    variantNames = {}
+    spawnData = {}
+
     spawnUI.spawner = spawner
 
     for dataName, dataType in pairs(types) do
@@ -148,6 +156,28 @@ function spawnUI.draw()
     end
 	ImGui.PopItemWidth()
 
+    if variantNames[spawnUI.selectedVariant + 1] == "Template (AMM)" then
+        ImGui.SameLine()
+
+        style.pushGreyedOut(not AMM)
+        if ImGui.Button("Generate AMM Props") and AMM then
+            local props = AMM.API.GetAMMProps()
+            for _, prop in pairs(props) do
+                local new = object:new(spawnUI)
+                new.spawnable = require("modules/classes/spawn/entity/ammEntity"):new()
+                new.spawnable:loadSpawnData({ spawnData = prop.path }, Vector4.new(0, 0, 0, 0), EulerAngles.new(0, 0, 0), spawnedUI.spawner)
+                new.name = new.spawnable:generateName(prop.name)
+
+                config.saveFile("data/spawnables/entity/amm/" .. prop.name .. ".json", new:getState())
+            end
+
+            spawnUI.loadSpawnData(spawnUI.spawner)
+        end
+        style.tooltip("[THIS WILL LAG] Generate files for spawning, from current list of AMM props")
+
+        style.popGreyedOut(not AMM)
+    end
+
     ImGui.Spacing()
     ImGui.Separator()
     ImGui.Spacing()
@@ -156,7 +186,7 @@ function spawnUI.draw()
 
     ImGui.BeginChild("list", spawnUI.sizeX, wHeight - wHeight * 0.2)
 
-    spawnUI.sizeX = 0
+    spawnUI.sizeX = 800
 
     local clipper = ImGuiListClipper.new()
     clipper:Begin(#spawnUI.filteredList, -1)

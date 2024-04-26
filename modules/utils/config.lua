@@ -34,7 +34,7 @@ function config.loadFiles(path)
     for _, file in pairs(dir(path)) do
         if file.name:match("^.+(%..+)$") == ".json" then
             local data = config.loadFile(path .. file.name)
-            table.insert(files, {data = data, lastSpawned = nil, name = data.name})
+            table.insert(files, {data = data.spawnable, lastSpawned = nil, name = data.name})
         end
     end
 
