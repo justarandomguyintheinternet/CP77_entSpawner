@@ -34,7 +34,10 @@ function group:new(sUI)
    	return setmetatable(o, self)
 end
 
-function group:load(data)
+---Loads the data from a given table, recursively building up the tree of child elements
+---@param data table
+---@param silent boolean
+function group:load(data, silent)
 	self.name = data.name
 	self.pos = utils.getVector(data.pos)
 	self.rot = utils.getEuler(data.rot)
@@ -48,13 +51,17 @@ function group:load(data)
 			g.parent = self
 			g:load(c)
 			table.insert(self.childs, g)
-			table.insert(self.sUI.elements, g)
+			if not silent then
+				table.insert(self.sUI.elements, g)
+			end
 		else
 			local o = object:new(self.sUI)
 			o:load(c)
 			o.parent = self
 			table.insert(self.childs, o)
-			table.insert(self.sUI.elements, o)
+			if not silent then
+				table.insert(self.sUI.elements, o)
+			end
 		end
 	end
 end

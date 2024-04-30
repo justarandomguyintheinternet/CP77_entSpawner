@@ -15,7 +15,8 @@ local sectorCategory = {
 
 exportUI = {
     projectName = "new_project",
-    groups = {}
+    groups = {},
+    spawner = nil
 }
 
 function exportUI.drawGroups()
@@ -86,7 +87,9 @@ function exportUI.drawGroups()
     end
 end
 
-function exportUI.draw()
+function exportUI.draw(spawner)
+    exportUI.spawner = spawner
+
     style.sectionHeaderStart("PROPERTIES")
 
     ImGui.Text("Project Name")
@@ -127,8 +130,53 @@ function exportUI.addGroup(name)
     table.insert(exportUI.groups, data)
 end
 
-function exportUI.export()
+function exportUI.flatExport(name)
 
+end
+
+function exportUI.exportGroup(group)
+    if not config.fileExists("data/objects/" .. group.name .. ".json") then return end
+
+    local data = config.loadFile("data/objects/" .. group.name .. ".json")
+
+    local g = require("modules/classes/spawn/group"):new(exportUI.spawner.baseUI.spawnedUI)
+    g:load(data)
+
+    local center = g:getCenter()
+    local min = { x = center.x - group.streamingX, y = center.y - group.streamingY, z = center.z - group.streamingY }
+    local max = { x = center.x + group.streamingX, y = center.y + group.streamingY, z = center.z + group.streamingY }
+
+    local exported = {
+        min = min,
+        max = max,
+        category = sectorCategory[group.category + 1],
+        level = group.level,
+        nodes = {}
+    }
+
+    local objects = g:getObjects()
+
+    for _, object in pairs(objects) do
+        table.insert(exported.nodes, object.spawnable:export())
+    end
+
+    return exported
+end
+
+function exportUI.export()
+    local project = {
+        name = utils.createFileName(exportUI.projectName):lower():gsub(" ", "_"),
+        sectors = {}
+    }
+
+    for _, group in pairs(exportUI.groups) do
+        local data = exportUI.exportGroup(group)
+        if data then
+            table.insert(project.sectors, data)
+        end
+    end
+
+    config.saveFile("export/" .. project.name .. "_exported.json", project)
 end
 
 return exportUI

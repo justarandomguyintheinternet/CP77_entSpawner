@@ -194,4 +194,11 @@ function spawnable:loadSpawnData(data, position, rotation, spawner)
     self.spawner = spawner
 end
 
+function spawnable:export()
+    return {
+        position = utils.fromVector(self.position),
+        rotation = utils.fromEuler(self.rotation)
+    }
+end
+
 return spawnable
