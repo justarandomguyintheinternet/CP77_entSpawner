@@ -17,18 +17,12 @@ local types = {
 local spawnData = {}
 local typeNames = {}
 local variantNames = {}
-local AMM = GetMod("AppearanceMenuMod")
+local AMM = nil
 
 local function tooltip(text)
     if ImGui.IsItemHovered() then
         ImGui.SetTooltip(text)
     end
-end
-
-local function spacedSeparator()
-    ImGui.Spacing()
-    ImGui.Separator()
-    ImGui.Spacing()
 end
 
 spawnUI = {
@@ -48,6 +42,7 @@ function spawnUI.loadSpawnData(spawner)
     variantNames = {}
     spawnData = {}
 
+    AMM = GetMod("AppearanceMenuMod")
     spawnUI.spawner = spawner
 
     for dataName, dataType in pairs(types) do
@@ -133,7 +128,7 @@ function spawnUI.draw()
         config.saveFile("data/config.json", spawnUI.spawner.settings)
     end
 
-    spacedSeparator()
+    style.spacedSeparator()
 
     ImGui.PushItemWidth(200)
 	spawnUI.selectedType, changed = ImGui.Combo("Object type", spawnUI.selectedType, typeNames, #typeNames)

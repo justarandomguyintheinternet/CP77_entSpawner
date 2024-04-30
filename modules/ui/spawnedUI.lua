@@ -121,7 +121,9 @@ function spawnedUI.draw(spawner)
         end
     end
 
+    ImGui.Spacing()
     ImGui.Separator()
+    ImGui.Spacing()
 
     local _, wHeight = GetDisplayResolution()
     ImGui.BeginChild("spawnedUI", spawnedUI.getWidth(), wHeight - wHeight * 0.175)

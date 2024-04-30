@@ -3,6 +3,7 @@ local CPS = require("CPStyling")
 local object = require("modules/classes/spawn/object")
 local gr = require("modules/classes/spawn/group")
 local utils = require("modules/utils/utils")
+local style = require("modules/ui/style")
 
 local debug = false
 
@@ -147,21 +148,21 @@ function savedUI.drawGroup(group, spawner)
         end
     end
 
-    ImGui.Separator()
+    style.spacedSeparator()
 
     ImGui.Text(("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(group.pos.x, group.pos.y, group.pos.z, ToVector4(group.pos):Distance(GetPlayer():GetWorldPosition())))
 
-    ImGui.Separator()
+    style.spacedSeparator()
 
-    group.autoLoad, changed = ImGui.Checkbox("Auto Spawn", group.autoLoad)
-    if changed then config.saveFile("data/objects/" .. group.name .. ".json", group) end
-    ImGui.SameLine()
-    ImGui.PushItemWidth(100)
-    group.loadRange, changed = ImGui.InputFloat("Auto Spawn Range", group.loadRange, -9999, 9999, "%.1f")
-    if changed then config.saveFile("data/objects/" .. group.name .. ".json", group) end
-    ImGui.PopItemWidth()
+    -- group.autoLoad, changed = ImGui.Checkbox("Auto Spawn", group.autoLoad)
+    -- if changed then config.saveFile("data/objects/" .. group.name .. ".json", group) end
+    -- ImGui.SameLine()
+    -- ImGui.PushItemWidth(100)
+    -- group.loadRange, changed = ImGui.InputFloat("Auto Spawn Range", group.loadRange, -9999, 9999, "%.1f")
+    -- if changed then config.saveFile("data/objects/" .. group.name .. ".json", group) end
+    -- ImGui.PopItemWidth()
 
-    ImGui.Separator()
+    -- ImGui.Separator()
 
     if CPS.CPButton("Spawn") then
         local g = gr:new(spawner.baseUI.spawnedUI)
@@ -178,6 +179,10 @@ function savedUI.drawGroup(group, spawner)
     ImGui.SameLine()
     if CPS.CPButton("TP to pos") then
         Game.GetTeleportationFacility():Teleport(Game.GetPlayer(), utils.getVector(group.pos), GetSingleton('Quaternion'):ToEulerAngles(Game.GetPlayer():GetWorldOrientation()))
+    end
+    ImGui.SameLine()
+    if CPS.CPButton("Add to Export") then
+        spawner.baseUI.exportUI.addGroup(group.name)
     end
     ImGui.SameLine()
     if CPS.CPButton("Delete") then
@@ -236,22 +241,22 @@ function savedUI.drawObject(obj, spawner)
         end
     end
 
-    ImGui.Separator()
+    style.spacedSeparator()
 
     ImGui.Text(("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(obj.spawnable.position.x, obj.spawnable.position.y, obj.spawnable.position.z, ToVector4(obj.spawnable.position):Distance(GetPlayer():GetWorldPosition())))
     ImGui.Text("Type: " .. obj.spawnable.dataType)
 
-    ImGui.Separator()
+    style.spacedSeparator()
 
-    obj.autoLoad, changed = ImGui.Checkbox("Auto Spawn", obj.autoLoad)
-    if changed then config.saveFile("data/objects/" .. obj.name .. ".json", obj) end
-    ImGui.SameLine()
-    ImGui.PushItemWidth(100)
-    obj.loadRange, changed = ImGui.InputFloat("Auto Spawn Range", obj.loadRange, -9999, 9999, "%.1f")
-    if changed then config.saveFile("data/objects/" .. obj.name .. ".json", obj) end
-    ImGui.PopItemWidth()
+    -- obj.autoLoad, changed = ImGui.Checkbox("Auto Spawn", obj.autoLoad)
+    -- if changed then config.saveFile("data/objects/" .. obj.name .. ".json", obj) end
+    -- ImGui.SameLine()
+    -- ImGui.PushItemWidth(100)
+    -- obj.loadRange, changed = ImGui.InputFloat("Auto Spawn Range", obj.loadRange, -9999, 9999, "%.1f")
+    -- if changed then config.saveFile("data/objects/" .. obj.name .. ".json", obj) end
+    -- ImGui.PopItemWidth()
 
-    ImGui.Separator()
+    -- ImGui.Separator()
 
     if CPS.CPButton("Spawn") then
         local o = object:new(spawner.baseUI.spawnedUI)

@@ -27,4 +27,38 @@ function style.tooltip(text)
     end
 end
 
+function style.spacedSeparator()
+    ImGui.Spacing()
+    ImGui.Separator()
+    ImGui.Spacing()
+end
+
+function style.sectionHeaderStart(text)
+    ImGui.PushStyleColor(ImGuiCol.Text, style.mutedColor)
+    ImGui.SetWindowFontScale(0.85)
+    ImGui.Text(text)
+    ImGui.SetWindowFontScale(1)
+    ImGui.PopStyleColor()
+    ImGui.Separator()
+    ImGui.Spacing()
+
+    ImGui.BeginGroup()
+    ImGui.AlignTextToFramePadding()
+end
+
+function style.sectionHeaderEnd(noSpacing)
+    ImGui.EndGroup()
+
+    if not noSpacing then
+        ImGui.Spacing()
+        ImGui.Spacing()
+    end
+end
+
+function style.mutedText(text)
+    ImGui.PushStyleColor(ImGuiCol.Text, style.mutedColor)
+    ImGui.Text(text)
+    ImGui.PopStyleColor()
+end
+
 return style

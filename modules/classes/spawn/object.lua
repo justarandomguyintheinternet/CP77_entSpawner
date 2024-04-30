@@ -132,7 +132,7 @@ function object:draw()
         CPS.colorBegin("Border", self.color)
         CPS.colorBegin("Separator", self.color)
 
-        local h = 8 * ImGui.GetFrameHeight() + 9 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 4 + 4
+        local h = 7 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().FramePadding.y + 12 * ImGui.GetStyle().ItemSpacing.y
         ImGui.BeginChild("obj_" .. tostring(self.name .. self.id), self.box.x, h, true)
 
         if not self.isAutoLoaded then
@@ -215,7 +215,6 @@ function object:draw()
         end
 
         ImGui.EndChild()
-
         CPS.colorEnd(2)
     end
 

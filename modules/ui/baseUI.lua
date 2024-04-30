@@ -5,6 +5,7 @@ baseUI = {
     spawnedUI = require("modules/ui/spawnedUI"),
     favUI = require("modules/ui/favUI"),
     savedUI = require("modules/ui/savedUI"),
+    exportUI = require("modules/ui/exportUI"),
     externalUI = require("modules/ui/externalUI"),
     settingsUI = require("modules/ui/settingsUI"),
     currentTab = 0
@@ -45,22 +46,29 @@ function baseUI.draw(spawner)
             ImGui.EndTabItem()
         end
 
-        if ImGui.BeginTabItem("Favorites") then
+        if ImGui.BeginTabItem("Export") then
             baseUI.currentTab = 3
+            ImGui.Spacing()
+            baseUI.exportUI.draw(spawner)
+            ImGui.EndTabItem()
+        end
+
+        if ImGui.BeginTabItem("Favorites") then
+            baseUI.currentTab = 4
             ImGui.Spacing()
             baseUI.favUI.draw(spawner)
             ImGui.EndTabItem()
         end
 
         if ImGui.BeginTabItem("External Mods") then
-            baseUI.currentTab = 4
+            baseUI.currentTab = 5
             ImGui.Spacing()
             baseUI.externalUI.draw(spawner)
             ImGui.EndTabItem()
         end
 
         if ImGui.BeginTabItem("Settings") then
-            baseUI.currentTab = 5
+            baseUI.currentTab = 6
             ImGui.Spacing()
             baseUI.settingsUI.draw(spawner)
             ImGui.EndTabItem()

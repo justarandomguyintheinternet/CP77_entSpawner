@@ -2,6 +2,7 @@ local config = require("modules/utils/config")
 local object = require("modules/classes/spawn/object")
 local utils = require("modules/utils/utils")
 local CPS = require("CPStyling")
+local style = require("modules/ui/style")
 
 group = {}
 
@@ -91,16 +92,15 @@ function group:draw() -- Draw func if this is just a sub group
 	if self.headerOpen then
 		CPS.colorBegin("Border", self.color)
 
-		local h = 5 * ImGui.GetFrameHeight() + 7 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 2 + 2
+		local h = 6 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().FramePadding.y + 7 * ImGui.GetStyle().ItemSpacing.y
     	ImGui.BeginChild("group" .. tostring(self.name .. self.id), self.box.x, h + addY, true)
 
 		if not self.isAutoLoaded then
 			if self.newName == nil then self.newName = "" end
-			ImGui.PushItemWidth(300)
+			ImGui.SetNextItemWidth(250)
 			self.newName, changed = ImGui.InputTextWithHint('##newname', 'New Name...', self.newName, 100)
-			ImGui.PopItemWidth()
 			ImGui.SameLine()
-			if ImGui.Button("Apply new group name") then
+			if ImGui.Button("Apply", 150, 0) then
 				self:rename(self.newName)
 				self:saveAfterMove()
 			end
@@ -111,7 +111,7 @@ function group:draw() -- Draw func if this is just a sub group
 		self:drawMoveGroup()
 
 		CPS.colorBegin("Separator", self.color)
-		ImGui.Separator()
+		style.spacedSeparator()
 
 		self.pos = self:getCenter()
 		self:drawPos()
@@ -120,7 +120,8 @@ function group:draw() -- Draw func if this is just a sub group
 			self:drawRot()
 		end
 
-		ImGui.Separator()
+		ImGui.Spacing()
+		style.spacedSeparator()
 
 		CPS.colorEnd()
 
@@ -199,11 +200,10 @@ function group:drawMoveGroup()
 		self.selectedGroup = utils.indexValue(gs, self:getOwnPath(true)) - 1
 	end
 
-	ImGui.PushItemWidth(200)
+	ImGui.SetNextItemWidth(250)
 	self.selectedGroup = ImGui.Combo("##moveto", self.selectedGroup, gs, #gs)
-	ImGui.PopItemWidth()
 	ImGui.SameLine()
-	if ImGui.Button("Move to group") then
+	if ImGui.Button("Move to group", 150, 0) then
 		if self:verifyMove(self.sUI.groups[self.selectedGroup + 1].tab) then
 			if self.selectedGroup ~= 0 then
 				if self.parent == nil then
@@ -230,7 +230,7 @@ function group:drawMoveGroup()
 end
 
 function group:drawPos()
-    ImGui.PushItemWidth(100)
+	ImGui.PushItemWidth(150)
 	local x = self.pos.x
     x, changed = ImGui.DragFloat("##x", x, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f X")
     if changed then
@@ -262,7 +262,7 @@ function group:drawPos()
     end
 
     ImGui.PushItemWidth(150)
-    local x, changed = ImGui.DragFloat("##r_x", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ X")
+    local x, changed = ImGui.DragFloat("##r_x", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relative X")
     if changed then
         local v = self:getAvgVector("right")
         self:update(Vector4.new((v.x * x), (v.y * x), (v.z * x), 0))
@@ -270,7 +270,7 @@ function group:drawPos()
 		x = 0
     end
     ImGui.SameLine()
-    local y, changed = ImGui.DragFloat("##r_y", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ Y")
+    local y, changed = ImGui.DragFloat("##r_y", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relative Y")
     if changed then
         local v = self:getAvgVector("forward")
         self:update(Vector4.new((v.x * y), (v.y * y), (v.z * y), 0))
@@ -278,7 +278,7 @@ function group:drawPos()
 		y = 0
     end
     ImGui.SameLine()
-    local z, changed = ImGui.DragFloat("##r_z", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ Z")
+    local z, changed = ImGui.DragFloat("##r_z", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relative Z")
     if changed then
         local v = self:getAvgVector("up")
         self:update(Vector4.new((v.x * z), (v.y * z), (v.z * z), 0))
@@ -289,14 +289,14 @@ function group:drawPos()
 end
 
 function group:drawRot()
-    ImGui.PushItemWidth(100)
+    ImGui.PushItemWidth(150)
     local roll, changed = ImGui.DragFloat("##roll", self.rot.roll, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Roll")
     if changed then
 		roll = roll - self.rot.roll
 		local objs = self:getObjects()
 		for _, o in pairs(objs) do
-			o.pos = utils.addVector(Vector4.RotateAxis(utils.subVector(o.pos, self.pos), self:getAvgVector("forward"), math.rad(roll)), self.pos)
-			o.rot.roll = o.rot.roll + roll
+			o:setPosition(utils.addVector(Vector4.RotateAxis(utils.subVector(o:getPosition(), self.pos), self:getAvgVector("forward"), math.rad(roll)), self.pos))
+			o.spawnable.rotation.roll = o.spawnable.rotation.roll + roll
 		end
 
 		self.rot.roll = self.rot.roll + roll
@@ -308,8 +308,8 @@ function group:drawRot()
 		pitch = pitch - self.rot.pitch
 		local objs = self:getObjects()
 		for _, o in pairs(objs) do
-			o.pos = utils.addVector(Vector4.RotateAxis(utils.subVector(o.pos, self.pos), self:getAvgVector("right"), math.rad(pitch)), self.pos)
-			o.rot.pitch = o.rot.pitch + pitch
+			o:setPosition(utils.addVector(Vector4.RotateAxis(utils.subVector(o:getPosition(), self.pos), self:getAvgVector("right"), math.rad(pitch)), self.pos))
+			o.spawnable.rotation.pitch = o.spawnable.rotation.pitch + pitch
 		end
 
 		self.rot.pitch = self.rot.pitch + pitch
@@ -321,8 +321,8 @@ function group:drawRot()
         yaw = yaw - self.rot.yaw
 		local objs = self:getObjects()
 		for _, o in pairs(objs) do
-			o.pos = utils.addVector(Vector4.RotateAxis(utils.subVector(o.pos, self.pos), self:getAvgVector("up"), math.rad(yaw)), self.pos)
-			o.rot.yaw = o.rot.yaw + yaw
+			o:setPosition(utils.addVector(Vector4.RotateAxis(utils.subVector(o:getPosition(), self.pos), self:getAvgVector("up"), math.rad(yaw)), self.pos))
+			o.spawnable.rotation.yaw = o.spawnable.rotation.yaw + yaw
 		end
 
 		self.rot.yaw = self.rot.yaw + yaw
@@ -330,10 +330,6 @@ function group:drawRot()
     end
     ImGui.SameLine()
     ImGui.PopItemWidth()
-    -- if ImGui.Button("Player rot") then
-    --     --self.rot =  GetSingleton('Quaternion'):ToEulerAnglesGame(GetPlayer():GetWorldOrientation())
-    --     self:update()
-    -- end
 end
 
 function group:spawn()
@@ -376,12 +372,16 @@ function group:getAvgVector(dir)
 	if #objs > 0 then
 		for _, o in pairs(objs) do
 			local dirVec = Vector4.new(0, 0, 0, 0)
-			if dir == "forward" then
-				dirVec =  o:getEntitiy():GetWorldForward()
-			elseif dir == "right" then
-				dirVec =  o:getEntitiy():GetWorldRight()
-			elseif dir == "up" then
-				dirVec =  o:getEntitiy():GetWorldUp()
+			local entity = o.spawnable:getEntity()
+
+			if entity then
+				if dir == "forward" then
+					dirVec =  entity:GetWorldForward()
+				elseif dir == "right" then
+					dirVec =  entity:GetWorldRight()
+				elseif dir == "up" then
+					dirVec =  entity:GetWorldUp()
+				end
 			end
 			if #vectors == 0 then
 				table.insert(vectors, {vec = dirVec, count = 1})

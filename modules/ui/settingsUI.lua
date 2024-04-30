@@ -4,30 +4,8 @@ local style = require("modules/ui/style")
 
 settingsUI = {}
 
-local function sectionHeaderStart(text)
-    ImGui.PushStyleColor(ImGuiCol.Text, style.mutedColor)
-    ImGui.SetWindowFontScale(0.85)
-    ImGui.Text(text)
-    ImGui.SetWindowFontScale(1)
-    ImGui.PopStyleColor()
-    ImGui.Separator()
-    ImGui.Spacing()
-
-    ImGui.BeginGroup()
-    ImGui.AlignTextToFramePadding()
-end
-
-local function sectionHeaderEnd(noSpacing)
-    ImGui.EndGroup()
-
-    if not noSpacing then
-        ImGui.Spacing()
-        ImGui.Spacing()
-    end
-end
-
 function settingsUI.draw(spawner)
-    sectionHeaderStart("SPAWNING")
+    style.sectionHeaderStart("SPAWNING")
 
     ImGui.Text("Spawn new objects: ")
     ImGui.SameLine()
@@ -48,8 +26,8 @@ function settingsUI.draw(spawner)
         if changed then config.saveFile("data/config.json", spawner.settings) end
     end
 
-    sectionHeaderEnd()
-    sectionHeaderStart("EDITING")
+    style.sectionHeaderEnd()
+    style.sectionHeaderStart("EDITING")
 
     if ImGui.RadioButton("Make cloned group original groups child", spawner.settings.moveCloneToParent == 1) then
         spawner.settings.moveCloneToParent = 1
@@ -71,8 +49,8 @@ function settingsUI.draw(spawner)
     spawner.settings.rotSteps, changed = ImGui.InputFloat("Rotation controls step size", spawner.settings.rotSteps, -9999, 9999, "%.3f")
     if changed then config.saveFile("data/config.json", spawner.settings) end
 
-    sectionHeaderEnd()
-    sectionHeaderStart("MISC")
+    style.sectionHeaderEnd()
+    style.sectionHeaderStart("MISC")
 
     spawner.settings.headerState, changed = ImGui.Checkbox("Close collapsible headers by default", spawner.settings.headerState)
     if changed then config.saveFile("data/config.json", spawner.settings) end
@@ -89,7 +67,7 @@ function settingsUI.draw(spawner)
     spawner.settings.groupRot, changed = ImGui.Checkbox("EXPERIMENTAL: Group Rotation", spawner.settings.groupRot)
     if changed then config.saveFile("data/config.json", spawner.settings) end
 
-    sectionHeaderEnd(true)
+    style.sectionHeaderEnd(true)
 end
 
 return settingsUI
