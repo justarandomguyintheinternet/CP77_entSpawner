@@ -33,8 +33,23 @@ function light:draw()
     ImGui.Separator()
     ImGui.Spacing()
 
-    self.strength, changed = ImGui.DragFloat("##strength", self.strength, 0.5, 0, 9999, "%.1f Light Strength")
+    self.strength, changed = ImGui.DragFloat("##strength", self.strength, 0.5, 0, 9999, "%.1f Light Intensity")
     self.color, changed = ImGui.ColorEdit3("##color", self.color)
+end
+
+function light:export()
+    local data = spawnable.export(self)
+    data.type = "worldStaticLightNode"
+    data.data = {
+        color = {
+            ["Red"] = math.floor(self.color[1] * 255),
+            ["Green"] = math.floor(self.color[2] * 255),
+            ["Blue"] = math.floor(self.color[3] * 255)
+        },
+        intensity = self.strength
+    }
+
+    return data
 end
 
 return light

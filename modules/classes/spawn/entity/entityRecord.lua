@@ -39,4 +39,17 @@ function record:update()
     end
 end
 
+function record:export()
+    local data = spawnable.export(self)
+    data.type = "worldPopulationSpawnerNode"
+    data.data = {
+        objectRecordId = {
+            ["$storage"] = "string",
+            ["$value"] = self.spawnData
+        }
+    }
+
+    return data
+end
+
 return record

@@ -197,7 +197,17 @@ end
 function spawnable:export()
     return {
         position = utils.fromVector(self.position),
-        rotation = utils.fromEuler(self.rotation)
+        rotation = utils.fromQuaternion(self.rotation:ToQuat()),
+        scale = { x = 1, y = 1, z = 1 },
+        type = "worldEntityNode",
+        data = {
+            entityTemplate = {
+                DepotPath = {
+                    ["$storage"] = "string",
+                    ["$value"] = self.spawnData
+                }
+            }
+        }
     }
 end
 

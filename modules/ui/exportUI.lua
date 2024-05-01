@@ -147,6 +147,7 @@ function exportUI.exportGroup(group)
     local max = { x = center.x + group.streamingX, y = center.y + group.streamingY, z = center.z + group.streamingY }
 
     local exported = {
+        name = utils.createFileName(group.name):lower():gsub(" ", "_"),
         min = min,
         max = max,
         category = sectorCategory[group.category + 1],
