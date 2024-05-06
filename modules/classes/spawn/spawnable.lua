@@ -14,6 +14,7 @@ function spawnable:new()
     o.spawner = nil
 
     o.spawnData = "base\\game_object.ent"
+    o.app = ""
 
     o.position = Vector4.new(0, 0, 0, 0)
     o.rotation = EulerAngles.new(0, 0, 0)
@@ -34,6 +35,7 @@ function spawnable:spawn()
     spec.position = self.position
     spec.orientation = self.rotation:ToQuat()
     spec.attached = true
+    spec.appearanceName = self.app
     self.entityID = Game.GetStaticEntitySystem():SpawnEntity(spec)
 
     self.spawned = true
@@ -82,7 +84,8 @@ function spawnable:save()
         position = { x = self.position.x, y = self.position.y, z = self.position.z, w = 0 },
         rotation = { roll = self.rotation.roll, pitch = self.rotation.pitch, yaw = self.rotation.yaw },
         spawnData = self.spawnData,
-        dataType = self.dataType
+        dataType = self.dataType,
+        app = self.app
     }
 end
 
@@ -214,6 +217,10 @@ function spawnable:export()
                     ["$storage"] = "string",
                     ["$value"] = self.spawnData
                 }
+            },
+            appearanceName = {
+                ["$storage"] = "string",
+                ["$value"] = self.app
             }
         }
     }

@@ -2,8 +2,10 @@ local builder = {
     callbacks = {}
 }
 
+local listener
+
 function builder.hook()
-    local inputListener = NewProxy({
+    listener = NewProxy({
             OnEntityAssemble = {
                 args = {'handle:EntityLifecycleEvent'},
                 callback = function (event)
@@ -21,14 +23,31 @@ function builder.hook()
                         builder.callbacks[tonumber(idHash)] = nil
                     end
                 end
+            },
+            OnResourceReady = {
+                args = {'handle:ResourceToken'},
+                callback = function(token)
+                    if builder.callbacks[tonumber(token:GetHash())] then
+                        builder.callbacks[tonumber(token:GetHash())](token:GetResource())
+                        builder.callbacks[tonumber(token:GetHash())] = nil
+                    end
+                end
             }
         })
-
-    Game.GetCallbackSystem():RegisterCallback('Entity/Initialize', inputListener:Target(), inputListener:Function('OnEntityAssemble'), true)
+    Game.GetCallbackSystem():RegisterCallback('Entity/Initialize', listener:Target(), listener:Function('OnEntityAssemble'), true)
 end
 
-function builder.registerCallback(entityID, callback)
+function builder.registerAssembleCallback(entityID, callback)
     builder.callbacks[tonumber(entityID.hash)] = callback
+end
+
+function builder.registerLoadResource(path, callback)
+    local token = Game.GetResourceDepot():LoadResource(path)
+
+    if not token:IsFailed() then
+        builder.callbacks[tonumber(token:GetHash())] = callback
+        token:RegisterCallback(listener:Target(), listener:Function('OnResourceReady'))
+    end
 end
 
 return builder

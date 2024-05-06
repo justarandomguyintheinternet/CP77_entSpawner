@@ -1,6 +1,7 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local mesh = setmetatable({}, { __index = spawnable })
 local builder = require("modules/utils/entityBuilder")
+local style = require("modules/ui/style")
 
 function mesh:new()
 	local o = spawnable.new(self)
@@ -23,7 +24,7 @@ function mesh:spawn()
     spawnable.spawn(self)
     self.spawnData = mesh
 
-    builder.registerCallback(self.entityID, function (entity)
+    builder.registerAssembleCallback(self.entityID, function (entity)
         local component = entMeshComponent.new()
         component.name = "mesh"
         component.mesh = ResRef.FromString(self.spawnData)
@@ -56,6 +57,11 @@ function mesh:draw()
     ImGui.Spacing()
     ImGui.Separator()
     ImGui.Spacing()
+
+    if ImGui.Button("Copy Path to Clipboard") then
+        ImGui.SetClipboardText(self.spawnData)
+    end
+    style.tooltip("Copies the mesh path to the clipboard")
 
     ImGui.PushItemWidth(150)
     self.scale.x, changed = ImGui.DragFloat("##xsize", self.scale.x, 0.01, -9999, 9999, "%.3f X Scale")

@@ -69,6 +69,12 @@ function spawner:new()
         self.baseUI.spawnedUI.init(self)
         self.baseUI.savedUI.reload()
 
+        builder.registerLoadResource("engine\\meshes\\editor\\cube.mesh", function (resource)
+            for _, app in pairs(resource.appearances) do
+                print(app.name)
+            end
+        end)
+
         local p = require("modules/classes/spawn/parent"):new("Parent")
         print(p:getAge(), p:getName())
 
