@@ -242,7 +242,6 @@ function savedUI.drawObject(obj, spawner)
     end
 
     style.spacedSeparator()
-
     ImGui.Text(("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(obj.spawnable.position.x, obj.spawnable.position.y, obj.spawnable.position.z, ToVector4(obj.spawnable.position):Distance(GetPlayer():GetWorldPosition())))
     ImGui.Text("Type: " .. obj.spawnable.dataType)
 

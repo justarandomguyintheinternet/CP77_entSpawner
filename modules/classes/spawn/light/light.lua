@@ -1,5 +1,6 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local light = setmetatable({}, { __index = spawnable })
+local builder = require("modules/utils/entityBuilder")
 
 function light:new()
 	local o = spawnable.new(self)
@@ -10,12 +11,19 @@ function light:new()
     o.spawnDataPath = "data/spawnables/lights/"
     o.modulePath = "light/light"
 
-    o.spawnData = ""
     o.color = { 1, 1, 1 }
     o.strength = 100
 
     setmetatable(o, { __index = self })
    	return o
+end
+
+function light:spawn()
+    spawnable.spawn(self)
+
+    builder.registerCallback(self.entityID, function ()
+        print("Spawned")
+    end)
 end
 
 function light:save()

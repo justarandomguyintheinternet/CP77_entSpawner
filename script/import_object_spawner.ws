@@ -19,7 +19,7 @@ const header = {
     "EmbeddedFiles": []
   }
 }
-Logger.Info(wkit.HashString("borpaSpin", "default").toString())
+
 // Helpers
 
 const createNewFile = (type) => {

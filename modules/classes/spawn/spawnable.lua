@@ -13,7 +13,7 @@ function spawnable:new()
     o.boxColor = {255, 0, 0}
     o.spawner = nil
 
-    o.spawnData = "base\\fallback\\helper_no_entity.ent"
+    o.spawnData = "base\\game_object.ent"
 
     o.position = Vector4.new(0, 0, 0, 0)
     o.rotation = EulerAngles.new(0, 0, 0)
@@ -28,7 +28,14 @@ function spawnable:spawn()
     local transform = WorldTransform.new()
     transform:SetOrientation(self.rotation:ToQuat())
     transform:SetPosition(self.position)
-    self.entityID = exEntitySpawner.Spawn(self.spawnData, transform, self.app)
+
+    local spec = StaticEntitySpec.new()
+    spec.templatePath = self.spawnData
+    spec.position = self.position
+    spec.orientation = self.rotation:ToQuat()
+    spec.attached = true
+    self.entityID = Game.GetStaticEntitySystem():SpawnEntity(spec)
+
     self.spawned = true
 end
 
@@ -47,13 +54,14 @@ end
 function spawnable:update()
     if not self:isSpawned() then return end
 
-    local tpSuccess = pcall(function ()
-        Game.GetTeleportationFacility():Teleport(Game.FindEntityByID(self.entityID), self.position,  self.rotation)
-    end)
-    if not tpSuccess then
-        self:despawn()
-        self:spawn()
-    end
+    local entity = self:getEntity()
+
+    if not entity then return end
+
+    local transform = entity:GetWorldTransform()
+    transform:SetPosition(self.position)
+    transform:SetOrientationEuler(self.rotation)
+    self:getEntity():SetWorldTransform(transform)
 end
 
 function spawnable:getEntity()
@@ -72,7 +80,7 @@ function spawnable:save()
     return {
         modulePath = self.modulePath,
         position = { x = self.position.x, y = self.position.y, z = self.position.z, w = 0 },
-        rotation = { roll = self.rotation.pitch, pitch = self.rotation.pitch, yaw = self.rotation.yaw },
+        rotation = { roll = self.rotation.roll, pitch = self.rotation.pitch, yaw = self.rotation.yaw },
         spawnData = self.spawnData,
         dataType = self.dataType
     }

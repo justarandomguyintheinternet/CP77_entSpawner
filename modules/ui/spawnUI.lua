@@ -11,6 +11,9 @@ local types = {
     },
     ["Lights"] = {
         ["Light"] = require("modules/classes/spawn/light/light")
+    },
+    ["Mesh"] = {
+        ["Mesh"] = require("modules/classes/spawn/mesh/mesh")
     }
 }
 

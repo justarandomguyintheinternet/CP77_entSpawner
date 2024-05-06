@@ -15,6 +15,7 @@
 -------------------------------------------------------------------------------------------------------------------------------
 
 local config = require("modules/utils/config")
+local builder = require("modules/utils/entityBuilder")
 
 spawner = {
     runtimeData = {
@@ -50,6 +51,10 @@ spawner = {
 }
 
 function spawner:new()
+    registerForEvent("onHook", function ()
+        builder.hook()
+    end)
+
     registerForEvent("onInit", function()
         config.tryCreateConfig("data/config.json", self.defaultSettings)
         config.backwardComp("data/config.json", self.defaultSettings)
