@@ -2,6 +2,7 @@ local spawnable = require("modules/classes/spawn/spawnable")
 local mesh = setmetatable({}, { __index = spawnable })
 local builder = require("modules/utils/entityBuilder")
 local style = require("modules/ui/style")
+local utils = require("modules/utils/utils")
 
 function mesh:new()
 	local o = spawnable.new(self)
@@ -11,10 +12,24 @@ function mesh:new()
     o.spawnDataPath = "data/spawnables/mesh/"
     o.modulePath = "mesh/mesh"
 
+    o.apps = {}
+    o.appIndex = 0
     o.scale = { x = 1, y = 1, z = 1 }
 
     setmetatable(o, { __index = self })
    	return o
+end
+
+function mesh:loadSpawnData(data, position, rotation, spawner)
+    spawnable.loadSpawnData(self, data, position, rotation, spawner)
+
+    builder.registerLoadResource(self.spawnData, function (resource)
+        for _, appearance in ipairs(resource.appearances) do
+            table.insert(self.apps, appearance.name.value)
+        end
+    end)
+
+    self.appIndex = utils.indexValue(self.apps, self.app) - 1
 end
 
 function mesh:spawn()
@@ -29,6 +44,7 @@ function mesh:spawn()
         component.name = "mesh"
         component.mesh = ResRef.FromString(self.spawnData)
         component.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
+        component.meshAppearance = self.app
         entity:AddComponent(component)
     end)
 end
@@ -80,9 +96,38 @@ function mesh:draw()
     end
     ImGui.SameLine()
     ImGui.PopItemWidth()
+
+    ImGui.SameLine()
+    style.pushGreyedOut(#self.apps == 0)
+
+    local list = self.apps
+
+    if #self.apps == 0 then
+        list = {"No apps"}
+    end
+
+    ImGui.SetNextItemWidth(150)
+    local index, changed = ImGui.Combo("##app", self.appIndex, list, #list)
+    if changed and #self.apps > 0 then
+        self.appIndex = index
+        self.app = self.apps[self.appIndex + 1]
+
+        local entity = self:getEntity()
+
+        if entity then
+            entity:FindComponentByName("mesh").meshAppearance = CName.new(self.app)
+            entity:FindComponentByName("mesh"):LoadAppearance()
+        end
+    end
+    style.popGreyedOut(#self.apps == 0)
 end
 
 function mesh:export()
+    local app = self.app
+    if app == "" then
+        app = "default"
+    end
+
     local data = spawnable.export(self)
     data.type = "worldMeshNode"
     data.scale = self.scale
@@ -91,9 +136,12 @@ function mesh:export()
             DepotPath = {
                 ["$storage"] = "string",
                 ["$value"] = self.spawnData
-            }
+            },
         },
-        intensity = self.strength
+        meshAppearance = {
+            ["$storage"] = "string",
+            ["$value"] = app
+        }
     }
 
     return data
