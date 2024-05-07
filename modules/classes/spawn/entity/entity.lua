@@ -28,9 +28,12 @@ function entity:loadSpawnData(data, position, rotation, spawner)
         for _, appearance in ipairs(resource.appearances) do
             table.insert(self.apps, appearance.name.value)
         end
+        self.appIndex = utils.indexValue(self.apps, self.app) - 1
     end)
+end
 
-    self.appIndex = utils.indexValue(self.apps, self.app) - 1
+function entity:getExtraHeight()
+    return 4 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 1
 end
 
 function entity:draw()

@@ -13,7 +13,7 @@ function spawnable:new()
     o.boxColor = {255, 0, 0}
     o.spawner = nil
 
-    o.spawnData = "base\\game_object.ent"
+    o.spawnData = "base\\entity.ent"
     o.app = ""
 
     o.position = Vector4.new(0, 0, 0, 0)
@@ -191,6 +191,10 @@ function spawnable:draw()
     self:drawPosition()
     self:drawRelativePosition()
     self:drawRotation()
+end
+
+function spawnable:getExtraHeight()
+    return 0
 end
 
 ---Load data blob, position and rotation for spawning

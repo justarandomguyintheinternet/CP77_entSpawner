@@ -27,14 +27,13 @@ function mesh:loadSpawnData(data, position, rotation, spawner)
         for _, appearance in ipairs(resource.appearances) do
             table.insert(self.apps, appearance.name.value)
         end
+        self.appIndex = utils.indexValue(self.apps, self.app) - 1
     end)
-
-    self.appIndex = utils.indexValue(self.apps, self.app) - 1
 end
 
 function mesh:spawn()
     local mesh = self.spawnData
-    self.spawnData = "base\\game_object.ent"
+    self.spawnData = "base\\entity.ent"
 
     spawnable.spawn(self)
     self.spawnData = mesh
@@ -67,17 +66,16 @@ function mesh:updateScale()
     component:Toggle(true)
 end
 
+function mesh:getExtraHeight()
+    return 5 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 2
+end
+
 function mesh:draw()
     spawnable.draw(self)
 
     ImGui.Spacing()
     ImGui.Separator()
     ImGui.Spacing()
-
-    if ImGui.Button("Copy Path to Clipboard") then
-        ImGui.SetClipboardText(self.spawnData)
-    end
-    style.tooltip("Copies the mesh path to the clipboard")
 
     ImGui.PushItemWidth(150)
     self.scale.x, changed = ImGui.DragFloat("##xsize", self.scale.x, 0.01, -9999, 9999, "%.3f X Scale")
@@ -94,10 +92,8 @@ function mesh:draw()
     if changed then
         self:updateScale()
     end
-    ImGui.SameLine()
     ImGui.PopItemWidth()
 
-    ImGui.SameLine()
     style.pushGreyedOut(#self.apps == 0)
 
     local list = self.apps
@@ -108,6 +104,7 @@ function mesh:draw()
 
     ImGui.SetNextItemWidth(150)
     local index, changed = ImGui.Combo("##app", self.appIndex, list, #list)
+    style.tooltip("Select the mesh appearance")
     if changed and #self.apps > 0 then
         self.appIndex = index
         self.app = self.apps[self.appIndex + 1]
@@ -120,6 +117,13 @@ function mesh:draw()
         end
     end
     style.popGreyedOut(#self.apps == 0)
+
+    ImGui.SameLine()
+
+    if ImGui.Button("Copy Path to Clipboard") then
+        ImGui.SetClipboardText(self.spawnData)
+    end
+    style.tooltip("Copies the mesh path to the clipboard")
 end
 
 function mesh:export()

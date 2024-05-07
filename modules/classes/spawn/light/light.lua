@@ -1,6 +1,13 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local light = setmetatable({}, { __index = spawnable })
 local builder = require("modules/utils/entityBuilder")
+local style = require("modules/ui/style")
+
+local lightTypes = {
+    "LT_Point",
+    "LT_Spot",
+    "LT_Area"
+}
 
 function light:new()
 	local o = spawnable.new(self)
@@ -12,7 +19,17 @@ function light:new()
     o.modulePath = "light/light"
 
     o.color = { 1, 1, 1 }
-    o.strength = 100
+    o.intensity = 100
+    o.innerAngle = 20
+    o.outerAngle = 60
+    o.radius = 15
+    o.capsuleLength = 1
+    o.autoHideDistance = 45
+    o.flickerStrength = 0
+    o.flickerPeriod = 0.2
+    o.flickerOffset = 0
+    o.lightType = 1
+    o.localShadows = true
 
     setmetatable(o, { __index = self })
    	return o
@@ -21,17 +38,60 @@ end
 function light:spawn()
     spawnable.spawn(self)
 
-    builder.registerCallback(self.entityID, function ()
-        print("Spawned")
+    builder.registerAssembleCallback(self.entityID, function (entity)
+        local component = gameLightComponent.new()
+        component.name = "light"
+        component.color = Color.new({ Red = math.floor(self.color[1] * 255), Green = math.floor(self.color[2] * 255), Blue = math.floor(self.color[3] * 255), Alpha = 255 })
+        component.intensity = self.intensity
+        component.turnOnByDefault = true
+        component.innerAngle = self.innerAngle
+        component.outerAngle = self.outerAngle
+        component.radius = self.radius
+        component.capsuleLength = self.capsuleLength
+        component.autoHideDistance = self.autoHideDistance
+        component:SetFlickerParams(self.flickerStrength, self.flickerPeriod, self.flickerOffset)
+        component.type = Enum.new("ELightType", self.lightType)
+        component.enableLocalShadows = self.localShadows
+        entity:AddComponent(component)
     end)
 end
 
 function light:save()
     local data = spawnable.save(self)
     data.color = self.color
-    data.strength = self.strength
+    data.intensity = self.intensity
+    data.innerAngle = self.innerAngle
+    data.outerAngle = self.outerAngle
+    data.radius = self.radius
+    data.capsuleLength = self.capsuleLength
+    data.autoHideDistance = self.autoHideDistance
+    data.flickerStrength = self.flickerStrength
+    data.flickerPeriod = self.flickerPeriod
+    data.flickerOffset = self.flickerOffset
+    data.lightType = self.lightType
 
     return data
+end
+
+function light:getExtraHeight()
+    local h = 7 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 4
+    if self.lightType == 1 then
+        h = h + ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight()
+    end
+    return h
+end
+
+function light:updateParameters()
+    local entity = self:getEntity()
+
+    if not entity then return end
+
+    local comp = entity:FindComponentByName("light")
+    comp:SetColor(Color.new({ Red = math.floor(self.color[1] * 255), Green = math.floor(self.color[2] * 255), Blue = math.floor(self.color[3] * 255) }))
+    comp:SetIntensity(math.floor(self.intensity))
+    comp:SetAngles(self.innerAngle, self.outerAngle)
+    comp:SetRadius(self.radius)
+    comp:SetFlickerParams(self.flickerStrength, self.flickerPeriod, self.flickerOffset)
 end
 
 function light:draw()
@@ -41,20 +101,114 @@ function light:draw()
     ImGui.Separator()
     ImGui.Spacing()
 
-    self.strength, changed = ImGui.DragFloat("##strength", self.strength, 0.5, 0, 9999, "%.1f Light Intensity")
+    ImGui.SetNextItemWidth(150)
+    self.intensity, changed = ImGui.DragFloat("##intensity", self.intensity, 0.1, 0, 9999, "%.1f Intensity")
+    if changed then
+        self:updateParameters()
+    end
+    ImGui.SameLine()
     self.color, changed = ImGui.ColorEdit3("##color", self.color)
+    if changed then
+        self:updateParameters()
+    end
+
+    ImGui.PushItemWidth(150)
+    if self.lightType == 1 then
+        self.innerAngle, changed = ImGui.DragFloat("##inner", self.innerAngle, 0.1, 0, 9999, "%.1f Inner Angle")
+        if changed then
+            self:updateParameters()
+        end
+        ImGui.SameLine()
+        self.outerAngle, changed = ImGui.DragFloat("##outer", self.outerAngle, 0.1, 0, 9999, "%.1f Outer Angle")
+        if changed then
+            self:updateParameters()
+        end
+        ImGui.SameLine()
+    end
+    if self.lightType == 1 or self.lightType == 2 then
+        self.radius, changed = ImGui.DragFloat("##radius", self.radius, 0.25, 0, 9999, "%.1f Radius")
+        if changed then
+            self:updateParameters()
+        end
+    end
+    if self.lightType == 2 then
+        ImGui.SameLine()
+        self.capsuleLength, _ = ImGui.DragFloat("##capsuleLength", self.capsuleLength, 0.05, 0, 9999, "%.2f Length")
+        if ImGui.IsItemDeactivatedAfterEdit() then
+            self:despawn()
+            self:spawn()
+        end
+        ImGui.SameLine()
+    end
+    if self.lightType == 1 then
+        ImGui.SameLine()
+    end
+    self.autoHideDistance, _ = ImGui.DragFloat("##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.2f Hide Dist.")
+    if ImGui.IsItemDeactivatedAfterEdit() then
+        self:despawn()
+        self:spawn()
+    end
+
+    ImGui.Text("Light Type")
+    ImGui.SameLine()
+    self.lightType, changed = ImGui.Combo("##type", self.lightType, lightTypes, #lightTypes)
+    if changed then
+        self:despawn()
+        self:spawn()
+    end
+
+    ImGui.Text("Flicker Settings")
+    style.tooltip("Controll light flickering, turn up strength to see effect")
+    ImGui.SameLine()
+    self.flickerPeriod, changed = ImGui.DragFloat("##flickerPeriod", self.flickerPeriod, 0.01, 0, 9999, "%.2f Period")
+    if changed then
+        self.flickerPeriod = math.max(self.flickerPeriod, 0.05)
+        self:updateParameters()
+    end
+    ImGui.SameLine()
+    self.flickerStrength, changed = ImGui.DragFloat("##flickerStrength", self.flickerStrength, 0.01, 0, 9999, "%.2f Strength")
+    if changed then
+        self:updateParameters()
+    end
+    ImGui.SameLine()
+    self.flickerOffset, changed = ImGui.DragFloat("##flickerOffset", self.flickerOffset, 0.01, 0, 9999, "%.2f Offset")
+    if changed then
+        self:updateParameters()
+    end
+
+    if self.lightType == 1 then
+        self.localShadows, changed = ImGui.Checkbox("Local Shadows", self.localShadows)
+        if changed then
+            self:despawn()
+            self:spawn()
+        end
+    end
+
+    ImGui.PopItemWidth()
 end
 
 function light:export()
     local data = spawnable.export(self)
     data.type = "worldStaticLightNode"
     data.data = {
+        autoHideDistance = self.autoHideDistance,
+        capsuleLength = self.capsuleLength,
         color = {
             ["Red"] = math.floor(self.color[1] * 255),
             ["Green"] = math.floor(self.color[2] * 255),
             ["Blue"] = math.floor(self.color[3] * 255)
         },
-        intensity = self.strength
+        enableLocalShadows = self.localShadows and 1 or 0,
+        flicker = {
+            ["flickerPeriod"] = self.flickerPeriod,
+            ["flickerStrength"] = self.flickerStrength,
+            ["positionOffset"] = self.flickerOffset
+        },
+        innerAngle = self.innerAngle,
+        intensity = self.intensity,
+        outerAngle = self.outerAngle,
+        radius = self.radius,
+        type = lightTypes[self.lightType + 1]
     }
 
     return data
