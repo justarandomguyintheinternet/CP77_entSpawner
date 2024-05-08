@@ -121,8 +121,8 @@ function savedUI.drawGroup(group, spawner)
     CPS.colorBegin("Border", savedUI.color.group)
     CPS.colorBegin("Separator", savedUI.color.group)
 
-	local h = 4 * ImGui.GetFrameHeight() + 4 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 3 + 3
-    ImGui.BeginChild("group_" .. group.name, savedUI.box.group.x, h, true)
+	local h = 3 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().WindowPadding.y + ImGui.GetStyle().ItemSpacing.y * 7
+    ImGui.BeginChild("group_" .. group.name, savedUI.box.group.x - 10, h, true)
 
     if group.newName == nil then group.newName = group.name end
     ImGui.PushItemWidth(300)

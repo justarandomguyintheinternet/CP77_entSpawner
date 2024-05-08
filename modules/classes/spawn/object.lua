@@ -331,17 +331,17 @@ function object:verifyMove(to)
 end
 
 function object:saveAfterMove()
-	if self.parent == nil then
-		for _, file in pairs(dir("data/objects")) do
-			if file.name:match("^.+(%..+)$") == ".json" then
-				if file.name == self.name .. ".json" then
-					self:save()
-				end
-			end
-		end
-	else
-		self.parent:saveAfterMove()
-	end
+	-- if self.parent == nil then
+	-- 	for _, file in pairs(dir("data/objects")) do
+	-- 		if file.name:match("^.+(%..+)$") == ".json" then
+	-- 			if file.name == self.name .. ".json" then
+	-- 				self:save()
+	-- 			end
+	-- 		end
+	-- 	end
+	-- else
+	-- 	self.parent:saveAfterMove()
+	-- end
 end
 
 function object:getOwnPath(first)

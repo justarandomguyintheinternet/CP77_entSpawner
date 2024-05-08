@@ -13,7 +13,8 @@ local types = {
         ["Light"] = require("modules/classes/spawn/light/light")
     },
     ["Mesh"] = {
-        ["Mesh"] = require("modules/classes/spawn/mesh/mesh")
+        ["Mesh"] = require("modules/classes/spawn/mesh/mesh"),
+        ["Rotating Mesh"] = require("modules/classes/spawn/mesh/rotatingMesh")
     }
 }
 
