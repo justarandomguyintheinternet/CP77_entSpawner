@@ -3,6 +3,22 @@ local utils = require("modules/utils/utils")
 local CPS = require("CPStyling")
 local object = require("modules/classes/object")
 
+---Class for handling the hierarchical structure and base UI, wraps a spawnable object
+---@class object
+---@field public name string
+---@field public parent group?
+---@field public type string
+---@field public newName string
+---@field public selectedGroup integer
+---@field public color table
+---@field public box table {x: number, y: number}
+---@field public id integer
+---@field public headerOpen boolean
+---@field public autoLoad boolean
+---@field public loadRange number
+---@field public isAutoLoaded boolean
+---@field public spawnable spawnable
+---@field public sUI table
 object = {}
 
 function object:new(sUI)
@@ -18,7 +34,6 @@ function object:new(sUI)
     o.box = {x = 650, y = 282}
     o.id = math.random(1, 1000000000) -- Id for imgui child rng gods bls have mercy
     o.headerOpen = sUI.spawner.settings.headerState
-    o.dynSize = nil
 
     o.autoLoad = false
 	o.loadRange = sUI.spawner.settings.autoSpawnRange
@@ -48,6 +63,7 @@ function object:getPosition()
     return self.spawnable.position
 end
 
+---@param position Vector4
 function object:setPosition(position)
     self.spawnable.position = position
     self:update()
@@ -59,7 +75,9 @@ end
 
 -- Group system functions
 
-function object:generateName(path) -- Generate valid name from path or if no path given current name
+---Generate valid name from path or if no path given current name
+---@param path string
+function object:generateName(path)
     local text = path or self.name
     if string.find(self.name, "\\") then
         self.name = text:match("\\[^\\]*$") -- Everything after last \
@@ -68,13 +86,17 @@ function object:generateName(path) -- Generate valid name from path or if no pat
     self.name = utils.createFileName(self.name)
 end
 
-function object:rename(name) -- Update file name to new given
+---Update file name to new given
+---@param name string
+function object:rename(name)
     name = self.spawnable:generateName(name)
     os.rename("data/objects/" .. self.name .. ".json", "data/objects/" .. name .. ".json")
     self.name = name
     self.sUI.spawner.baseUI.savedUI.reload()
 end
 
+---Return the object data for internal object format saving
+---@return table {name, type, headerOpen, autoLoad, loadRange, spawnable}
 function object:getState()
     self.name = self.spawnable:generateName(self.name)
 
@@ -88,7 +110,9 @@ function object:getState()
     }
 end
 
-function object:save() -- Either save to file or return self as table to parent
+---Either save to file or return self as table to parent
+---@return table?
+function object:save()
     if self.parent == nil then
         local state = self:getState()
 
@@ -100,6 +124,8 @@ function object:save() -- Either save to file or return self as table to parent
     end
 end
 
+---Load object data from table, same format as what
+---@see object.getState returns
 function object:load(data)
     self.name = data.name
     self.headerOpen = data.headerOpen
@@ -108,9 +134,6 @@ function object:load(data)
 
     self.spawnable = require("modules/classes/spawn/" .. data.spawnable.modulePath):new()
     self.spawnable:loadSpawnData(data.spawnable, ToVector4(data.spawnable.position), ToEulerAngles(data.spawnable.rotation), self.sUI.spawner)
-
-    -- self.app = data.app or ""
-    -- self.apps = config.loadFile("data/apps.json")[self.path] or {}
 end
 
 function object:tryMainDraw()
@@ -267,57 +290,6 @@ function object:drawGroup()
             end
         end
     end
-end
-
-function object:drawApp()
-    ImGui.PushItemWidth(100)
-    self.app, changed = ImGui.InputTextWithHint('##App', 'Appearance...', self.app, 100)
-    if changed then self:getEntitiy():ScheduleAppearanceChange(self.app) end
-    ImGui.PopItemWidth()
-
-    if #self.apps ~= 0 then
-        ImGui.SameLine()
-
-        local as = {}
-        table.insert(as, "-- Default Appearance --")
-        for _, app in pairs(self.apps) do
-            table.insert(as, app)
-        end
-        if self.appIndex == -1 then
-            self.appIndex = utils.indexValue(self.apps, self.app)
-        end
-        if self.apps[1] == "default" then self.appIndex = 1 end
-        if self.appIndex == -1 then
-            self.appIndex = 0
-        end
-        ImGui.PushItemWidth(200)
-
-        local numItems = #as
-        if self.apps[1] == "default" then numItems = numItems - 1 end
-
-        self.appIndex, changed = ImGui.Combo("##app", self.appIndex, as, numItems)
-        if changed and self.appIndex ~= 0 then
-            self.app = self.apps[self.appIndex]
-            self:despawn()
-            self:getEntitiy():ScheduleAppearanceChange(self.app)
-            self:spawn()
-        elseif changed and self.appIndex == 0 then
-            self.app = ""
-            self:despawn()
-            self:getEntitiy():ScheduleAppearanceChange(self.apps[1])
-            self:spawn()
-        end
-        ImGui.PopItemWidth()
-    end
-
-    ImGui.SameLine()
-    if ImGui.Button("Fetch Apps") then
-        self.sUI.spawner.fetcher.queueFetching(self)
-    end
-end
-
-function object:getEntitiy()
-    return Game.FindEntityByID(self.entID)
 end
 
 function object:verifyMove(to)

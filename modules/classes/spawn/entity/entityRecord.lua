@@ -1,4 +1,6 @@
 local entity = require("modules/classes/spawn/entity/entity")
+
+---Class for entity records spawned via worldPopulationSpawnerNode
 local record = setmetatable({}, { __index = entity })
 
 function record:new()

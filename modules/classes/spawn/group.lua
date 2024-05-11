@@ -4,6 +4,24 @@ local utils = require("modules/utils/utils")
 local CPS = require("CPStyling")
 local style = require("modules/ui/style")
 
+---Class for organizing multiple objects and or groups
+---@class group
+---@field public name string
+---@field public childs object[]
+---@field public parent group?
+---@field public selectedGroup integer
+---@field public type string
+---@field public color table
+---@field public box table {x: number, y: number}
+---@field public id integer
+---@field public headerOpen boolean
+---@field public pos Vector4
+---@field public rot EulerAngles
+---@field public autoLoad boolean
+---@field public loadRange number
+---@field public isAutoLoaded boolean
+---@field public sUI table
+---@field public isUsingSpawnables boolean Signalizes that the groups has been converted from the old format
 group = {}
 
 function group:new(sUI)
@@ -35,7 +53,7 @@ function group:new(sUI)
 end
 
 ---Loads the data from a given table, recursively building up the tree of child elements
----@param data table
+---@param data table {name, childs, type, pos, rot, headerOpen, autoLoad, loadRange}
 ---@param silent boolean
 function group:load(data, silent)
 	self.name = data.name
@@ -66,20 +84,25 @@ function group:load(data, silent)
 	end
 end
 
-function group:tryMainDraw() -- Try to draw as "main group"
+---Try to draw as "main group"
+function group:tryMainDraw()
 	if self.parent == nil then
 		self:draw()
 	end
 end
 
-function group:rename(name) -- Update file name to new given
+---Update file name to new given
+---@param name string
+function group:rename(name)
 	name = utils.createFileName(name)
     os.rename("data/objects/" .. self.name .. ".json", "data/objects/" .. name .. ".json")
     self.name = name
 	self.sUI.spawner.baseUI.savedUI.reload()
 end
 
-function group:draw() -- Draw func if this is just a sub group
+---Draw func if this is just a sub group
+---@protected
+function group:draw()
 	ImGui.PushID(tostring(self.name .. self.id))
 
 	if self.parent ~= nil then
@@ -197,6 +220,7 @@ function group:draw() -- Draw func if this is just a sub group
 	ImGui.PopID()
 end
 
+---@protected
 function group:drawMoveGroup()
 	local gs = {}
 	for _, g in pairs(self.sUI.groups) do
@@ -236,6 +260,7 @@ function group:drawMoveGroup()
 	end
 end
 
+---@protected
 function group:drawPos()
 	ImGui.PushItemWidth(150)
 	local x = self.pos.x
@@ -295,6 +320,7 @@ function group:drawPos()
     ImGui.PopItemWidth()
 end
 
+---@protected
 function group:drawRot()
     ImGui.PushItemWidth(150)
     local roll, changed = ImGui.DragFloat("##roll", self.rot.roll, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Roll")

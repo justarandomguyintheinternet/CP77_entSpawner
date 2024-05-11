@@ -1,8 +1,14 @@
 local spawnable = require("modules/classes/spawn/spawnable")
-local mesh = setmetatable({}, { __index = spawnable })
 local builder = require("modules/utils/entityBuilder")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
+
+---Class for worldMeshNode
+---@class mesh : spawnable
+---@field public apps table
+---@field public appIndex integer
+---@field public scale table {x: number, y: number, z: number}
+local mesh = setmetatable({}, { __index = spawnable })
 
 function mesh:new()
 	local o = spawnable.new(self)
@@ -27,7 +33,7 @@ function mesh:loadSpawnData(data, position, rotation, spawner)
         for _, appearance in ipairs(resource.appearances) do
             table.insert(self.apps, appearance.name.value)
         end
-        self.appIndex = utils.indexValue(self.apps, self.app) - 1
+        self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
     end)
 end
 
@@ -55,6 +61,7 @@ function mesh:save()
     return data
 end
 
+---@protected
 function mesh:updateScale()
     local entity = self:getEntity()
     if not entity then return end

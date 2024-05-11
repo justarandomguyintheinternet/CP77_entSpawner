@@ -1,8 +1,13 @@
 local style = require("modules/ui/style")
 local spawnable = require("modules/classes/spawn/spawnable")
-local entity = setmetatable({}, { __index = spawnable })
 local builder = require("modules/utils/entityBuilder")
 local utils = require("modules/utils/utils")
+
+---Class for base entity handling
+---@class entity : spawnable
+---@field public apps table
+---@field public appIndex integer
+local entity = setmetatable({}, { __index = spawnable })
 
 function entity:new()
 	local o = spawnable.new(self)
@@ -15,8 +20,6 @@ function entity:new()
     o.apps = {}
     o.appIndex = 0
 
-    o.spawnData = ""
-
     setmetatable(o, { __index = self })
    	return o
 end
@@ -28,7 +31,7 @@ function entity:loadSpawnData(data, position, rotation, spawner)
         for _, appearance in ipairs(resource.appearances) do
             table.insert(self.apps, appearance.name.value)
         end
-        self.appIndex = utils.indexValue(self.apps, self.app) - 1
+        self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
     end)
 end
 

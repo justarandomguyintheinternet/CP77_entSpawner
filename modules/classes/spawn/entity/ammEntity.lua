@@ -1,4 +1,6 @@
 local entity = require("modules/classes/spawn/entity/entity")
+
+---Class for AMM imported props, just here for the different spawnDataPath
 local amm = setmetatable({}, { __index = entity })
 
 function amm:new()

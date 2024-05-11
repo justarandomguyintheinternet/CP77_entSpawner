@@ -32,10 +32,16 @@ function builder.hook()
     Game.GetCallbackSystem():RegisterCallback('Entity/Initialize', listener:Target(), listener:Function('OnEntityAssemble'), true)
 end
 
+---Register a callback to be called when the entity with the specified entEntityID is assembled
+---@param entityID entEntityID
+---@param callback function Gets the entity passed as an argument
 function builder.registerAssembleCallback(entityID, callback)
     builder.callbacks[tonumber(entityID.hash)] = callback
 end
 
+---Loads the specified resource and calls the callback when it is ready
+---@param path string
+---@param callback function Gets the resource passed as an argument
 function builder.registerLoadResource(path, callback)
     local token = Game.GetResourceDepot():LoadResource(path)
 

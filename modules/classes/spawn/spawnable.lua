@@ -1,7 +1,21 @@
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 
-spawnable = {}
+---Base class for any object / node that can be spawned
+---@class spawnable
+---@field public dataType string
+---@field public spawnListType string
+---@field public spawnListPath string
+---@field public modulePath string
+---@field public boxColor table
+---@field public spawner table
+---@field public spawnData string
+---@field public app string
+---@field public position Vector4
+---@field public rotation EulerAngles
+---@field protected entityID entEntityID
+---@field protected spawned boolean
+local spawnable = {}
 
 function spawnable:new()
 	local o = {}
@@ -25,7 +39,10 @@ function spawnable:new()
    	return setmetatable(o, self)
 end
 
+---Spawns the spawnable if not spawned already
 function spawnable:spawn()
+    if self:isSpawned() then return end
+
     local transform = WorldTransform.new()
     transform:SetOrientation(self.rotation:ToQuat())
     transform:SetPosition(self.position)
@@ -41,6 +58,7 @@ function spawnable:spawn()
     self.spawned = true
 end
 
+---@return boolean
 function spawnable:isSpawned()
     return self.spawned
 end
@@ -53,6 +71,12 @@ function spawnable:despawn()
     self.spawned = false
 end
 
+function spawnable:respawn()
+    self:despawn()
+    self:spawn()
+end
+
+---Update the position and rotation of the spawnable
 function spawnable:update()
     if not self:isSpawned() then return end
 
@@ -66,11 +90,15 @@ function spawnable:update()
     self:getEntity():SetWorldTransform(transform)
 end
 
+---@return entEntity?
 function spawnable:getEntity()
     return Game.FindEntityByID(self.entityID)
 end
 
-function spawnable:generateName(name) -- Generate valid name from given name / path
+--- Generate valid name from given name / path
+---@param name string
+---@return string newName The generated/sanitized name
+function spawnable:generateName(name)
     if string.find(name, "\\") then
         name = name:match("\\[^\\]*$") -- Everything after last \
     end
@@ -78,6 +106,8 @@ function spawnable:generateName(name) -- Generate valid name from given name / p
     return utils.createFileName(name)
 end
 
+---Return the spawnable data for internal object format saving
+---@return table {modulePath, position, rotation, spawnData, dataType, app}
 function spawnable:save()
     return {
         modulePath = self.modulePath,
@@ -89,6 +119,7 @@ function spawnable:save()
     }
 end
 
+---@protected
 function spawnable:drawPosition()
     ImGui.PushItemWidth(150)
     self.position.x, changed = ImGui.DragFloat("##x", self.position.x, self.spawner.settings.posSteps, -9999, 9999, "%.3f X")
@@ -114,6 +145,7 @@ function spawnable:drawPosition()
     style.tooltip("Set the object position to the players position")
 end
 
+---@protected
 function spawnable:drawRelativePosition()
     style.pushGreyedOut(not self:isSpawned())
 
@@ -161,6 +193,7 @@ function spawnable:drawRelativePosition()
     style.popGreyedOut(not self:isSpawned())
 end
 
+---@protected
 function spawnable:drawRotation()
     ImGui.PushItemWidth(150)
     self.rotation.roll, changed = ImGui.DragFloat("##roll", self.rotation.roll, self.spawner.settings.rotSteps, -9999, 9999, "%.3f Roll")
@@ -193,12 +226,18 @@ function spawnable:draw()
     self:drawRotation()
 end
 
+---Amount of extra height to be added to 
+---@see object.draw
+---@return integer
 function spawnable:getExtraHeight()
     return 0
 end
 
 ---Load data blob, position and rotation for spawning
 ---@param data table
+---@param position Vector4
+---@param rotation EulerAngles
+---@param spawner table
 function spawnable:loadSpawnData(data, position, rotation, spawner)
     for key, value in pairs(data) do
         self[key] = value
@@ -209,6 +248,8 @@ function spawnable:loadSpawnData(data, position, rotation, spawner)
     self.spawner = spawner
 end
 
+---Export the spawnable for WScript import, using same structure for `data` as JSON formated node
+---@return table {position, rotation, scale, type, data}
 function spawnable:export()
     return {
         position = utils.fromVector(self.position),

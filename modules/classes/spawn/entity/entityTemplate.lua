@@ -1,4 +1,6 @@
 local entity = require("modules/classes/spawn/entity/entity")
+
+---Class for entity templates
 local template = setmetatable({}, { __index = entity })
 
 function template:new()

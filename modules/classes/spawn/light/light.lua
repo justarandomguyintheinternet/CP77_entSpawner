@@ -1,7 +1,22 @@
 local spawnable = require("modules/classes/spawn/spawnable")
-local light = setmetatable({}, { __index = spawnable })
 local builder = require("modules/utils/entityBuilder")
 local style = require("modules/ui/style")
+
+---Class for worldStaticLightNode
+---@class light : spawnable
+---@field public color table {r: number, g: number, b: number}
+---@field public intensity number
+---@field public innerAngle number
+---@field public outerAngle number
+---@field public radius number
+---@field public capsuleLength number
+---@field public autoHideDistance number
+---@field public flickerStrength number
+---@field public flickerPeriod number
+---@field public flickerOffset number
+---@field public lightType integer
+---@field public localShadows boolean
+local light = setmetatable({}, { __index = spawnable })
 
 local lightTypes = {
     "LT_Point",
@@ -81,6 +96,8 @@ function light:getExtraHeight()
     return h
 end
 
+---Update the light parameters without respawning (Color, Intensity, Angles, Radius, Flicker)
+---@protected
 function light:updateParameters()
     local entity = self:getEntity()
 
@@ -92,6 +109,18 @@ function light:updateParameters()
     comp:SetAngles(self.innerAngle, self.outerAngle)
     comp:SetRadius(self.radius)
     comp:SetFlickerParams(self.flickerStrength, self.flickerPeriod, self.flickerOffset)
+end
+
+---Respawn the light to update parameters, if changed
+---@param changed boolean
+---@protected
+function light:updateFull(changed)
+    if not self:isSpawned() then return end
+
+    if changed then
+        self:despawn()
+        self:spawn()
+    end
 end
 
 function light:draw()
@@ -134,28 +163,19 @@ function light:draw()
     if self.lightType == 2 then
         ImGui.SameLine()
         self.capsuleLength, _ = ImGui.DragFloat("##capsuleLength", self.capsuleLength, 0.05, 0, 9999, "%.2f Length")
-        if ImGui.IsItemDeactivatedAfterEdit() then
-            self:despawn()
-            self:spawn()
-        end
+        self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
         ImGui.SameLine()
     end
     if self.lightType == 1 then
         ImGui.SameLine()
     end
     self.autoHideDistance, _ = ImGui.DragFloat("##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.2f Hide Dist.")
-    if ImGui.IsItemDeactivatedAfterEdit() then
-        self:despawn()
-        self:spawn()
-    end
+    self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
 
     ImGui.Text("Light Type")
     ImGui.SameLine()
     self.lightType, changed = ImGui.Combo("##type", self.lightType, lightTypes, #lightTypes)
-    if changed then
-        self:despawn()
-        self:spawn()
-    end
+    self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
 
     ImGui.Text("Flicker Settings")
     style.tooltip("Controll light flickering, turn up strength to see effect")
@@ -178,10 +198,7 @@ function light:draw()
 
     if self.lightType == 1 then
         self.localShadows, changed = ImGui.Checkbox("Local Shadows", self.localShadows)
-        if changed then
-            self:despawn()
-            self:spawn()
-        end
+        self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
     end
 
     ImGui.PopItemWidth()

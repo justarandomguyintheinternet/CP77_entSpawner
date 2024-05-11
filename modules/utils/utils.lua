@@ -1,5 +1,7 @@
 miscUtils = {}
 
+---@param origin table
+---@return table
 function miscUtils.deepcopy(origin)
 	local orig_type = type(origin)
     local copy
@@ -15,6 +17,10 @@ function miscUtils.deepcopy(origin)
     return copy
 end
 
+---Returns the index of a value in a table, if not found 1
+---@param table table
+---@param value any
+---@return integer
 function miscUtils.indexValue(table, value)
     local index={}
     for k,v in pairs(table) do
@@ -23,38 +29,34 @@ function miscUtils.indexValue(table, value)
     return index[value] or 1
 end
 
+---@param tab table
+---@param val any
+---@return boolean
 function miscUtils.has_value(tab, val)
-    for index, value in ipairs(tab) do
+    for _, value in ipairs(tab) do
         if value == val then
             return true
         end
     end
-
     return false
 end
 
-function miscUtils.getIndex(tab, val)
-    local index = nil
-    for i, v in ipairs(tab) do
-		if v == val then
-			index = i
-		end
-    end
-    return index
-end
-
+---@param tab table
+---@param index any
+---@return boolean
 function miscUtils.hasIndex(tab, index)
-    local exists = false
     for k, _ in pairs(tab) do
         if k == index then
-            exists = true
+            return true
         end
     end
-    return exists
+    return false
 end
 
+---@param tab table
+---@param val any
 function miscUtils.removeItem(tab, val)
-    table.remove(tab, miscUtils.getIndex(tab, val))
+    table.remove(tab, miscUtils.indexValue(tab, val))
 end
 
 function miscUtils.addVector(v1, v2)
@@ -85,27 +87,45 @@ function miscUtils.multEuler(e1, factor)
     return EulerAngles.new(e1.roll * factor, e1.pitch * factor, e1.yaw * factor)
 end
 
-function miscUtils.fromVector(vector) -- Returns table with x y z w from given Vector4
+---Returns table with x y z w from given Vector4
+---@param vector Vector4
+---@return table {x, y, z, w}
+function miscUtils.fromVector(vector)
     return {x = vector.x, y = vector.y, z = vector.z, w = vector.w}
 end
 
-function miscUtils.fromQuaternion(quat) -- Returns table with i j k r from given Quaternion
+---Returns table with i j k r from given Quaternion
+---@param quat Quaternion
+---@return table {i, j, k, r}
+function miscUtils.fromQuaternion(quat)
     return {i = quat.i, j = quat.j, k = quat.k, r = quat.r}
 end
 
-function miscUtils.getVector(tab) -- Returns Vector4 object from given table containing x y z w
+---Returns Vector4 object from given table containing x y z w
+---@param tab table {x, y, z, w}
+---@return Vector4
+function miscUtils.getVector(tab)
     return(Vector4.new(tab.x, tab.y, tab.z, tab.w))
 end
 
-function miscUtils.getQuaternion(tab) -- Returns Quaternion object from given table containing i j k r
+---Returns Quaternion object from given table containing i j k r
+---@param tab table {i, j, k, r}
+---@return Quaternion
+function miscUtils.getQuaternion(tab)
     return(Quaternion.new(tab.i, tab.j, tab.k, tab.r))
 end
 
-function miscUtils.fromEuler(eul) -- Returns table with roll pitch yaw from given EulerAngles
+---Returns table with roll pitch yaw from given EulerAngles
+---@param eul EulerAngles
+---@return table {roll, pitch, yaw}
+function miscUtils.fromEuler(eul)
     return {roll = eul.roll, pitch = eul.pitch, yaw = eul.yaw}
 end
 
-function miscUtils.getEuler(tab) -- Returns EulerAngles object from given table containing roll pitch yaw
+---Returns EulerAngles object from given table containing roll pitch yaw
+---@param tab table {roll, pitch, yaw}
+---@return EulerAngles
+function miscUtils.getEuler(tab)
     return(EulerAngles.new(tab.roll, tab.pitch, tab.yaw))
 end
 
@@ -113,6 +133,9 @@ function miscUtils.distanceVector(from, to)
     return math.sqrt((to.x - from.x)^2 + (to.y - from.y)^2 + (to.z - from.z)^2)
 end
 
+---Sanitizes a string to be used as a file name
+---@param name string
+---@return string
 function miscUtils.createFileName(name)
     name = name:gsub("<", "_")
     name = name:gsub(">", "_")

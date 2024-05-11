@@ -1,8 +1,13 @@
 local mesh = require("modules/classes/spawn/mesh/mesh")
-local rotatingMesh = setmetatable({}, { __index = mesh })
 local builder = require("modules/utils/entityBuilder")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
+
+---Class for worldRotatingMeshNode
+---@class rotatingMesh : mesh
+---@field public duration number
+---@field public axis integer
+local rotatingMesh = setmetatable({}, { __index = mesh })
 
 function rotatingMesh:new()
 	local o = mesh.new(self)
