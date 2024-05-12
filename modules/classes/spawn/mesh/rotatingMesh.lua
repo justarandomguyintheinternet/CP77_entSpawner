@@ -1,13 +1,16 @@
 local mesh = require("modules/classes/spawn/mesh/mesh")
+local spawnable = require("modules/classes/spawn/spawnable")
 local builder = require("modules/utils/entityBuilder")
-local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 
 ---Class for worldRotatingMeshNode
 ---@class rotatingMesh : mesh
 ---@field public duration number
 ---@field public axis integer
+---@field public reverse boolean
 local rotatingMesh = setmetatable({}, { __index = mesh })
+
+local axisTypes = utils.enumTable("gameTransformAnimation_RotateOnAxisAxis")
 
 function rotatingMesh:new()
 	local o = mesh.new(self)
@@ -19,6 +22,7 @@ function rotatingMesh:new()
 
     o.duration = 50
     o.axis = 0
+    o.reverse = false
 
     setmetatable(o, { __index = self })
    	return o
@@ -26,74 +30,81 @@ end
 
 function rotatingMesh:spawn()
     local mesh = self.spawnData
-    self.spawnData = "base\\entity.ent"
+    self.spawnData = "base\\spawner\\rotating_entity.ent"
 
     spawnable.spawn(self)
     self.spawnData = mesh
 
     builder.registerAssembleCallback(self.entityID, function (entity)
-        local component = entMeshComponent.new()
-        component.name = "mesh"
-        component.mesh = ResRef.FromString(self.spawnData)
-        component.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
-        component.meshAppearance = self.app
+        local meshComponent = entMeshComponent.new()
+        meshComponent.name = "mesh"
+        meshComponent.mesh = ResRef.FromString(self.spawnData)
+        meshComponent.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
+        meshComponent.meshAppearance = self.app
 
-        local rotate = gameTransformAnimatorComponent.new()
-        rotate.name = "rotate"
-        local animation = gameTransformAnimationDefinition.new()
-        animation.autoStart = true
-        animation.looping = true
-        local timeline = gameTransformAnimationTimeline.new()
-        local item = gameTransformAnimationTrackItem.new()
-        item.duration = self.duration
-        local impl = gameTransformAnimation_RotateOnAxis.new()
-        impl.axis = Enum.new("gameTransformAnimation_RotateOnAxisAxis", self.axis)
-        impl.numberOfFullRotations = 1
-        item.impl = impl
-        timeline.items = {item}
-        animation.timeline = timeline
-        rotate.animations = {animation}
-        print(rotate.animations[1].timeline.items[1])
+        entity:AddComponent(meshComponent)
 
-        entity:AddComponent(rotate)
-        entity:AddComponent(component)
-
-        local d = entity:FindComponentByName("rotate").animations[1].timeline.items[1]
-        -- print(d)
-        -- print(d.impl.axis)
+        local rotate = entity:FindComponent("rotate")
+        rotate.animations[1].timeline.items[1].impl.axis = Enum.new("gameTransformAnimation_RotateOnAxisAxis", self.axis)
+        rotate.animations[1].timeline.items[1].duration = self.duration
+        rotate.animations[1].timeline.items[1].impl.reverseDirection = self.reverse
+        print(rotate.animations[1].timeline.items[1].impl.axis, rotate.animations[1].timeline.items[1].duration, rotate.animations[1].timeline.items[1].impl.reverseDirection)
     end)
 end
 
 function rotatingMesh:save()
-    local data = spawnable.save(self)
-    data.scale = self.scale
+    local data = mesh.save(self)
     data.duration = self.duration
     data.axis = self.axis
+    data.reverse = self.reverse
 
     return data
 end
 
-function rotatingMesh:export()
-    local app = self.app
-    if app == "" then
-        app = "default"
-    end
+function rotatingMesh:getExtraHeight()
+    return mesh.getExtraHeight(self) + ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight()
+end
 
+---@param changed boolean
+---@protected
+function rotatingMesh:updateParameters(changed)
+    if not changed then return end
+
+    local entity = self:getEntity()
+
+    if not entity then return end
+
+    local rotate = entity:FindComponent("rotate")
+    rotate.animations[1].timeline.items[1].impl.axis = Enum.new("gameTransformAnimation_RotateOnAxisAxis", self.axis)
+    rotate.animations[1].timeline.items[1].duration = self.duration
+    rotate.animations[1].timeline.items[1].impl.reverseDirection = self.reverse
+end
+
+function rotatingMesh:draw()
+    mesh.draw(self)
+
+    ImGui.PushItemWidth(150)
+
+    self.duration, changed = ImGui.DragFloat("##duration", self.duration, 0.01, -9999, 9999, "%.2f Duration")
+    self:updateParameters(changed)
+    ImGui.SameLine()
+
+    self.reverse, changed = ImGui.Checkbox("Reverse", self.reverse)
+    self:updateParameters(changed)
+    ImGui.SameLine()
+
+    self.axis, changed = ImGui.Combo("Axis", self.axis, axisTypes, #axisTypes)
+    self:updateParameters(changed)
+
+    ImGui.PopItemWidth()
+end
+
+function rotatingMesh:export()
     local data = mesh.export(self)
-    data.type = "worldMeshNode"
-    data.scale = self.scale
-    data.data = {
-        mesh = {
-            DepotPath = {
-                ["$storage"] = "string",
-                ["$value"] = self.spawnData
-            },
-        },
-        meshAppearance = {
-            ["$storage"] = "string",
-            ["$value"] = app
-        }
-    }
+    data.type = "worldRotatingMeshNode"
+    data.data.fullRotationTime = self.duration
+    data.reverseDirection = self.reverse
+    data.rotationAxis = axisTypes[self.axis]
 
     return data
 end

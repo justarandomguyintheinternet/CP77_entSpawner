@@ -5,13 +5,7 @@ local gr = require("modules/classes/spawn/group")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 
-local sectorCategory = {
-    "Exterior",
-    "Interior",
-    "Quest",
-    "Navigation",
-    "AlwaysLoaded",
-}
+local sectorCategory = utils.enumTable("worldStreamingSectorCategory")
 
 exportUI = {
     projectName = "new_project",
@@ -150,7 +144,7 @@ function exportUI.exportGroup(group)
         name = utils.createFileName(group.name):lower():gsub(" ", "_"),
         min = min,
         max = max,
-        category = sectorCategory[group.category + 1],
+        category = sectorCategory[group.category],
         level = group.level,
         nodes = {}
     }

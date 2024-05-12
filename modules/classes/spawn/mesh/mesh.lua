@@ -39,7 +39,7 @@ end
 
 function mesh:spawn()
     local mesh = self.spawnData
-    self.spawnData = "base\\entity.ent"
+    self.spawnData = "base\\spawner\\empty_entity.ent"
 
     spawnable.spawn(self)
     self.spawnData = mesh

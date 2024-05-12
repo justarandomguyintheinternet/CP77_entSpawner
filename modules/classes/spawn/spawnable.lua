@@ -27,7 +27,7 @@ function spawnable:new()
     o.boxColor = {255, 0, 0}
     o.spawner = nil
 
-    o.spawnData = "base\\entity.ent"
+    o.spawnData = "base\\spawner\\empty_entity.ent"
     o.app = ""
 
     o.position = Vector4.new(0, 0, 0, 0)

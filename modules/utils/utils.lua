@@ -212,4 +212,16 @@ function miscUtils.rotatePoint(vec, rot)
     return rotated
 end
 
+---@param enumName string
+---@return table
+function miscUtils.enumTable(enumName)
+    local enums = {}
+
+    for i = 0, EnumGetMax(enumName) do
+        enums[i] = EnumValueToString(enumName, i)
+    end
+
+    return enums
+end
+
 return miscUtils

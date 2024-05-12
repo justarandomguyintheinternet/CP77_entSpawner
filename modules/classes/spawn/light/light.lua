@@ -18,11 +18,7 @@ local style = require("modules/ui/style")
 ---@field public localShadows boolean
 local light = setmetatable({}, { __index = spawnable })
 
-local lightTypes = {
-    "LT_Point",
-    "LT_Spot",
-    "LT_Area"
-}
+local lightTypes = utils.enumTable("ELightType")
 
 function light:new()
 	local o = spawnable.new(self)
@@ -225,7 +221,7 @@ function light:export()
         intensity = self.intensity,
         outerAngle = self.outerAngle,
         radius = self.radius,
-        type = lightTypes[self.lightType + 1]
+        type = lightTypes[self.lightType]
     }
 
     return data
