@@ -5,7 +5,7 @@ local gr = require("modules/classes/spawn/group")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 
-local sectorCategory = utils.enumTable("worldStreamingSectorCategory")
+local sectorCategory
 
 exportUI = {
     projectName = "new_project",
@@ -82,6 +82,10 @@ function exportUI.drawGroups()
 end
 
 function exportUI.draw(spawner)
+    if not sectorCategory then
+        sectorCategory = utils.enumTable("worldStreamingSectorCategory")
+    end
+
     exportUI.spawner = spawner
 
     style.sectionHeaderStart("PROPERTIES")

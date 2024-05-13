@@ -8,9 +8,8 @@ local utils = require("modules/utils/utils")
 ---@field public duration number
 ---@field public axis integer
 ---@field public reverse boolean
+---@field private axisTypes table
 local rotatingMesh = setmetatable({}, { __index = mesh })
-
-local axisTypes = utils.enumTable("gameTransformAnimation_RotateOnAxisAxis")
 
 function rotatingMesh:new()
 	local o = mesh.new(self)
@@ -23,6 +22,7 @@ function rotatingMesh:new()
     o.duration = 50
     o.axis = 0
     o.reverse = false
+    o.axisTypes = utils.enumTable("gameTransformAnimation_RotateOnAxisAxis")
 
     setmetatable(o, { __index = self })
    	return o
@@ -93,7 +93,7 @@ function rotatingMesh:draw()
     self:updateParameters(changed)
     ImGui.SameLine()
 
-    self.axis, changed = ImGui.Combo("Axis", self.axis, axisTypes, #axisTypes)
+    self.axis, changed = ImGui.Combo("Axis", self.axis, self.axisTypes, #self.axisTypes)
     self:updateParameters(changed)
 
     ImGui.PopItemWidth()
@@ -104,7 +104,7 @@ function rotatingMesh:export()
     data.type = "worldRotatingMeshNode"
     data.data.fullRotationTime = self.duration
     data.reverseDirection = self.reverse
-    data.rotationAxis = axisTypes[self.axis]
+    data.rotationAxis = self.axisTypes[self.axis]
 
     return data
 end

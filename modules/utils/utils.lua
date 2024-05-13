@@ -217,7 +217,7 @@ end
 function miscUtils.enumTable(enumName)
     local enums = {}
 
-    for i = 0, EnumGetMax(enumName) do
+    for i = 0, tonumber(EnumGetMax(enumName)) do
         enums[i] = EnumValueToString(enumName, i)
     end
 

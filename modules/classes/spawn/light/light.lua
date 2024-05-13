@@ -1,6 +1,7 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local builder = require("modules/utils/entityBuilder")
 local style = require("modules/ui/style")
+local utils = require("modules/utils/utils")
 
 ---Class for worldStaticLightNode
 ---@class light : spawnable
@@ -16,9 +17,8 @@ local style = require("modules/ui/style")
 ---@field public flickerOffset number
 ---@field public lightType integer
 ---@field public localShadows boolean
+---@field private lightTypes table
 local light = setmetatable({}, { __index = spawnable })
-
-local lightTypes = utils.enumTable("ELightType")
 
 function light:new()
 	local o = spawnable.new(self)
@@ -41,6 +41,7 @@ function light:new()
     o.flickerOffset = 0
     o.lightType = 1
     o.localShadows = true
+    o.lightTypes = utils.enumTable("ELightType")
 
     setmetatable(o, { __index = self })
    	return o
@@ -170,7 +171,7 @@ function light:draw()
 
     ImGui.Text("Light Type")
     ImGui.SameLine()
-    self.lightType, changed = ImGui.Combo("##type", self.lightType, lightTypes, #lightTypes)
+    self.lightType, changed = ImGui.Combo("##type", self.lightType, self.lightTypes, #self.lightTypes)
     self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
 
     ImGui.Text("Flicker Settings")
@@ -221,7 +222,7 @@ function light:export()
         intensity = self.intensity,
         outerAngle = self.outerAngle,
         radius = self.radius,
-        type = lightTypes[self.lightType]
+        type = self.lightTypes[self.lightType]
     }
 
     return data
