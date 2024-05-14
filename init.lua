@@ -16,6 +16,7 @@
 
 local config = require("modules/utils/config")
 local builder = require("modules/utils/entityBuilder")
+local Cron = require("modules/utils/Cron")
 
 spawner = {
     runtimeData = {
@@ -84,8 +85,9 @@ function spawner:new()
         self.runtimeData.inGame = not self.GameUI.IsDetached()
     end)
 
-    registerForEvent("onUpdate", function ()
+    registerForEvent("onUpdate", function (dt)
         if self.runtimeData.inGame and not self.runtimeData.inMenu then
+            Cron.Update(dt)
             self.baseUI.savedUI.run(self)
             self.fetcher.update()
         end

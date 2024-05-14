@@ -148,7 +148,7 @@ function exportUI.exportGroup(group)
         name = utils.createFileName(group.name):lower():gsub(" ", "_"),
         min = min,
         max = max,
-        category = sectorCategory[group.category],
+        category = sectorCategory[group.category + 1],
         level = group.level,
         nodes = {}
     }

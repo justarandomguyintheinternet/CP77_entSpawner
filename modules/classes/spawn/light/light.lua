@@ -222,7 +222,7 @@ function light:export()
         intensity = self.intensity,
         outerAngle = self.outerAngle,
         radius = self.radius,
-        type = self.lightTypes[self.lightType]
+        type = self.lightTypes[self.lightType + 1]
     }
 
     return data

@@ -11,7 +11,8 @@ function builder.hook()
                 callback = function (event)
                     local entity = event:GetEntity()
                     local idHash = entity:GetEntityID().hash
-                    if entity:GetTemplatePath():GetHash() ~= ResRef.FromString("base\\spawner\\empty_entity.ent"):GetHash() then return end
+                    local pathHash = entity:GetTemplatePath():GetHash()
+                    if pathHash ~= ResRef.FromString("base\\spawner\\empty_entity.ent"):GetHash() then return end
 
                     if builder.callbacks[tonumber(idHash)] then
                         builder.callbacks[tonumber(idHash)](entity)
