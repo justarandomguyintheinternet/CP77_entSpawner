@@ -59,15 +59,14 @@ function rotatingMesh:spawn()
             local transform = entity:GetWorldTransform()
             transform:SetPosition(self.position)
 
-            local angle = EulerAngles.new(self.rotation.roll, self.rotation.pitch, rotation)
+            local angle = EulerAngles.new(0, 0, rotation)
             if self.axis == 0 then
-                angle = EulerAngles.new(rotation, self.rotation.pitch, self.rotation.yaw)
+                angle = EulerAngles.new(0, rotation, 0)
             elseif self.axis == 1 then
-                angle = EulerAngles.new(self.rotation.roll, rotation, self.rotation.yaw)
+                angle = EulerAngles.new(rotation, 0, 0)
             end
 
-            transform:SetOrientationEuler(angle)
-            entity:SetWorldTransform(transform)
+            entity:FindComponentByName("mesh"):SetLocalOrientation(angle:ToQuat())
         end)
     end)
 end
