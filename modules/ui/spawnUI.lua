@@ -15,6 +15,9 @@ local types = {
     ["Mesh"] = {
         ["Mesh"] = require("modules/classes/spawn/mesh/mesh"),
         ["Rotating Mesh"] = require("modules/classes/spawn/mesh/rotatingMesh")
+    },
+    ["Collision"] = {
+        ["Collision Shape"] = require("modules/classes/spawn/collision/collider")
     }
 }
 
