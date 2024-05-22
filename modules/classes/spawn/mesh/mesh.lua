@@ -2,6 +2,7 @@ local spawnable = require("modules/classes/spawn/spawnable")
 local builder = require("modules/utils/entityBuilder")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
+local cache = require("modules/utils/cache")
 
 ---Class for worldMeshNode
 ---@class mesh : spawnable
@@ -29,12 +30,27 @@ end
 function mesh:loadSpawnData(data, position, rotation, spawner)
     spawnable.loadSpawnData(self, data, position, rotation, spawner)
 
-    builder.registerLoadResource(self.spawnData, function (resource)
-        for _, appearance in ipairs(resource.appearances) do
-            table.insert(self.apps, appearance.name.value)
-        end
-        self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
-    end)
+    self.apps = cache.getValue(self.spawnData)
+    if not self.apps then
+        self.apps = {}
+        builder.registerLoadResource(self.spawnData, function (resource)
+            for _, appearance in ipairs(resource.appearances) do
+                table.insert(self.apps, appearance.name.value)
+            end
+        end)
+        cache.addValue(self.spawnData, self.apps)
+    end
+
+    self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
+end
+
+function mesh:onAssemble(entity)
+    local component = entMeshComponent.new()
+    component.name = "mesh"
+    component.mesh = ResRef.FromString(self.spawnData)
+    component.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
+    component.meshAppearance = self.app
+    entity:AddComponent(component)
 end
 
 function mesh:spawn()
@@ -43,15 +59,6 @@ function mesh:spawn()
 
     spawnable.spawn(self)
     self.spawnData = mesh
-
-    builder.registerAssembleCallback(self.entityID, function (entity)
-        local component = entMeshComponent.new()
-        component.name = "mesh"
-        component.mesh = ResRef.FromString(self.spawnData)
-        component.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
-        component.meshAppearance = self.app
-        entity:AddComponent(component)
-    end)
 end
 
 function mesh:save()

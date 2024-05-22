@@ -47,25 +47,23 @@ function light:new()
    	return o
 end
 
-function light:spawn()
-    spawnable.spawn(self)
+function light:onAssemble(entity)
+    spawnable.onAssemble(self, entity)
 
-    builder.registerAssembleCallback(self.entityID, function (entity)
-        local component = gameLightComponent.new()
-        component.name = "light"
-        component.color = Color.new({ Red = math.floor(self.color[1] * 255), Green = math.floor(self.color[2] * 255), Blue = math.floor(self.color[3] * 255), Alpha = 255 })
-        component.intensity = self.intensity
-        component.turnOnByDefault = true
-        component.innerAngle = self.innerAngle
-        component.outerAngle = self.outerAngle
-        component.radius = self.radius
-        component.capsuleLength = self.capsuleLength
-        component.autoHideDistance = self.autoHideDistance
-        component:SetFlickerParams(self.flickerStrength, self.flickerPeriod, self.flickerOffset)
-        component.type = Enum.new("ELightType", self.lightType)
-        component.enableLocalShadows = self.localShadows
-        entity:AddComponent(component)
-    end)
+    local component = gameLightComponent.new()
+    component.name = "light"
+    component.color = Color.new({ Red = math.floor(self.color[1] * 255), Green = math.floor(self.color[2] * 255), Blue = math.floor(self.color[3] * 255), Alpha = 255 })
+    component.intensity = self.intensity
+    component.turnOnByDefault = true
+    component.innerAngle = self.innerAngle
+    component.outerAngle = self.outerAngle
+    component.radius = self.radius
+    component.capsuleLength = self.capsuleLength
+    component.autoHideDistance = self.autoHideDistance
+    component:SetFlickerParams(self.flickerStrength, self.flickerPeriod, self.flickerOffset)
+    component.type = Enum.new("ELightType", self.lightType)
+    component.enableLocalShadows = self.localShadows
+    entity:AddComponent(component)
 end
 
 function light:save()

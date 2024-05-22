@@ -32,43 +32,43 @@ function rotatingMesh:new()
    	return o
 end
 
+function rotatingMesh:onAssemble(entity)
+    local meshComponent = entMeshComponent.new()
+    meshComponent.name = "mesh"
+    meshComponent.mesh = ResRef.FromString(self.spawnData)
+    meshComponent.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
+    meshComponent.meshAppearance = self.app
+
+    entity:AddComponent(meshComponent)
+
+    self.cronID = Cron.OnUpdate(function ()
+        local entity = self:getEntity()
+
+        if not entity then return end
+
+        local rotation = ((Cron.time % self.duration) / self.duration) * 360
+        if self.reverse then rotation = -rotation end
+
+        local transform = entity:GetWorldTransform()
+        transform:SetPosition(self.position)
+
+        local angle = EulerAngles.new(0, 0, rotation)
+        if self.axis == 0 then
+            angle = EulerAngles.new(0, rotation, 0)
+        elseif self.axis == 1 then
+            angle = EulerAngles.new(rotation, 0, 0)
+        end
+
+        entity:FindComponentByName("mesh"):SetLocalOrientation(angle:ToQuat())
+    end)
+end
+
 function rotatingMesh:spawn()
     local mesh = self.spawnData
     self.spawnData = "base\\spawner\\empty_entity.ent"
 
     spawnable.spawn(self)
     self.spawnData = mesh
-
-    builder.registerAssembleCallback(self.entityID, function (entity)
-        local meshComponent = entMeshComponent.new()
-        meshComponent.name = "mesh"
-        meshComponent.mesh = ResRef.FromString(self.spawnData)
-        meshComponent.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
-        meshComponent.meshAppearance = self.app
-
-        entity:AddComponent(meshComponent)
-
-        self.cronID = Cron.OnUpdate(function ()
-            local entity = self:getEntity()
-
-            if not entity then return end
-
-            local rotation = ((Cron.time % self.duration) / self.duration) * 360
-            if self.reverse then rotation = -rotation end
-
-            local transform = entity:GetWorldTransform()
-            transform:SetPosition(self.position)
-
-            local angle = EulerAngles.new(0, 0, rotation)
-            if self.axis == 0 then
-                angle = EulerAngles.new(0, rotation, 0)
-            elseif self.axis == 1 then
-                angle = EulerAngles.new(rotation, 0, 0)
-            end
-
-            entity:FindComponentByName("mesh"):SetLocalOrientation(angle:ToQuat())
-        end)
-    end)
 end
 
 function rotatingMesh:despawn()

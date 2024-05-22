@@ -1,4 +1,8 @@
 local entity = require("modules/classes/spawn/entity/entity")
+local builder = require("modules/utils/entityBuilder")
+local utils = require("modules/utils/utils")
+local cache = require("modules/utils/cache")
+local spawnable = require("modules/classes/spawn/spawnable")
 
 ---Class for entity records spawned via worldPopulationSpawnerNode
 local record = setmetatable({}, { __index = entity })
@@ -12,6 +16,24 @@ function record:new()
 
     setmetatable(o, { __index = self })
    	return o
+end
+
+function record:loadSpawnData(data, position, rotation, spawner)
+    spawnable.loadSpawnData(self, data, position, rotation, spawner)
+    local resRef = ResRef.FromHash(TweakDB:GetFlat(self.spawnData .. ".entityTemplatePath").hash)
+
+    self.apps = cache.getValue(self.spawnData)
+    if not self.apps then
+        self.apps = {}
+        builder.registerLoadResource(resRef, function (resource)
+            for _, appearance in ipairs(resource.appearances) do
+                table.insert(self.apps, appearance.name.value)
+            end
+        end)
+        cache.addValue(self.spawnData, self.apps)
+    end
+
+    self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
 end
 
 function record:spawn()

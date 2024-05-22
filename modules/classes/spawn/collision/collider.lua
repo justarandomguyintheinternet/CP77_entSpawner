@@ -41,53 +41,51 @@ function collider:new()
    	return o
 end
 
-function collider:spawn()
-    spawnable.spawn(self)
+function collider:onAssemble(entity)
+    spawnable.onAssemble(self, entity)
 
-    builder.registerAssembleCallback(self.entityID, function (entity)
-        local mesh = entMeshComponent.new()
-        mesh.name = "mesh"
-        mesh.mesh = ResRef.FromString("engine\\meshes\\editor\\cube.mesh")
-        mesh.visualScale = Vector3.new(self.extents.x * 2, self.extents.y * 2, self.extents.z * 2)
-        entity:AddComponent(mesh)
+    local mesh = entMeshComponent.new()
+    mesh.name = "mesh"
+    mesh.mesh = ResRef.FromString("engine\\meshes\\editor\\cube.mesh")
+    mesh.visualScale = Vector3.new(self.extents.x * 2, self.extents.y * 2, self.extents.z * 2)
+    entity:AddComponent(mesh)
 
-        local component = entColliderComponent.new()
-        component.name = "collider"
-        local actor
+    local component = entColliderComponent.new()
+    component.name = "collider"
+    local actor
 
-        if self.shape == 0 then
-            actor = physicsColliderBox.new()
-            actor.halfExtents = ToVector3(self.extents)
-        elseif self.shape == 1 then
-            actor = physicsColliderCapsule.new()
-            actor.height = self.height
-            actor.radius = self.radius
-        elseif self.shape == 2 then
-            actor = physicsColliderSphere.new()
-            actor.radius = self.radius
-        end
+    if self.shape == 0 then
+        actor = physicsColliderBox.new()
+        actor.halfExtents = ToVector3(self.extents)
+    elseif self.shape == 1 then
+        actor = physicsColliderCapsule.new()
+        actor.height = self.height
+        actor.radius = self.radius
+    elseif self.shape == 2 then
+        actor = physicsColliderSphere.new()
+        actor.radius = self.radius
+    end
 
-        actor.material = materials[self.material + 1]
+    actor.material = materials[self.material + 1]
 
-        component.colliders = { actor }
+    component.colliders = { actor }
 
-        local filterData = physicsFilterData.new()
-        filterData.preset = self.preset
+    local filterData = physicsFilterData.new()
+    filterData.preset = self.preset
 
-        local query = physicsQueryFilter.new()
-        query.mask1 = 0
-        query.mask2 = 70107400
+    local query = physicsQueryFilter.new()
+    query.mask1 = 0
+    query.mask2 = 70107400
 
-        local sim = physicsSimulationFilter.new()
-        sim.mask1 = 114696
-        sim.mask2 = 23627
+    local sim = physicsSimulationFilter.new()
+    sim.mask1 = 114696
+    sim.mask2 = 23627
 
-        filterData.queryFilter = query
-        filterData.simulationFilter = sim
-        component.filterData = filterData
+    filterData.queryFilter = query
+    filterData.simulationFilter = sim
+    component.filterData = filterData
 
-        entity:AddComponent(component)
-    end)
+    entity:AddComponent(component)
 end
 
 function collider:save()

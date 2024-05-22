@@ -1,5 +1,7 @@
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
+local builder = require("modules/utils/entityBuilder")
+local visualizer = require("modules/utils/visualizer")
 
 ---Base class for any object / node that can be spawned
 ---@class spawnable
@@ -15,6 +17,7 @@ local style = require("modules/ui/style")
 ---@field public rotation EulerAngles
 ---@field protected entityID entEntityID
 ---@field protected spawned boolean
+---@field protected isHovered boolean
 local spawnable = {}
 
 function spawnable:new()
@@ -35,8 +38,40 @@ function spawnable:new()
     o.entityID = entEntityID.new({hash = 0})
     o.spawned = false
 
-	self.__index = self
+    o.isHovered = false
+
+    self.__index = self
    	return setmetatable(o, self)
+end
+
+-- Visualizer:
+    -- Do generalized visualization for editing purposes
+        -- Arrows
+        -- Maybe Boxes for selecting one day
+    -- Do visualization for things that cant be previewed
+        -- Collider shapes
+        -- Maybe shapes for lights
+    -- How 2 manage vis state:
+        -- Manage it in base spawnable, each one that adds custom vis has to manage it
+            -- Attach all possible ones during assemble
+            -- Get hovered state from object file
+            -- Get more fine grained state from own UI
+            -- Must keep track of hovered arrow index, but fine since its all in here
+        -- For custom stuff:
+            -- Wrap assemble to add own stuff
+            -- Already knows when hovered from this class
+            -- Function for hover / unhover
+            -- Should be fine, most custom stuff will just show with generic things like arrows
+    -- Vis scale:
+        -- Do it during assembly or file load
+        -- Cache!
+        -- Custom function for calculating it?
+            -- Could do one generic ig -> Entity based on mesh scale
+                -- Must consider scale
+                -- Can always wrap it, for e.g. lights
+
+function spawnable:onAssemble(entity)
+    visualizer.attachArrows(entity, { x = 1, y = 1, z = 1 })
 end
 
 ---Spawns the spawnable if not spawned already
@@ -54,6 +89,10 @@ function spawnable:spawn()
     spec.attached = true
     spec.appearanceName = self.app
     self.entityID = Game.GetStaticEntitySystem():SpawnEntity(spec)
+
+    builder.registerAssembleCallback(self.entityID, function (entity)
+        self:onAssemble(entity)
+    end)
 
     self.spawned = true
 end
@@ -123,16 +162,25 @@ end
 function spawnable:drawPosition()
     ImGui.PushItemWidth(150)
     self.position.x, changed = ImGui.DragFloat("##x", self.position.x, self.spawner.settings.posSteps, -9999, 9999, "%.3f X")
+    if ImGui.IsItemHovered() then
+        visualizer.highlightArrow(self:getEntity(), "red")
+    end
     if changed then
         self:update()
     end
     ImGui.SameLine()
     self.position.y, changed = ImGui.DragFloat("##y", self.position.y, self.spawner.settings.posSteps, -9999, 9999, "%.3f Y")
+    if ImGui.IsItemHovered() then
+        visualizer.highlightArrow(self:getEntity(), "green")
+    end
     if changed then
         self:update()
     end
     ImGui.SameLine()
     self.position.z, changed = ImGui.DragFloat("##z", self.position.z, self.spawner.settings.posSteps, -9999, 9999, "%.3f Z")
+    if ImGui.IsItemHovered() then
+        visualizer.highlightArrow(self:getEntity(), "blue")
+    end
     if changed then
         self:update()
     end
@@ -224,6 +272,14 @@ function spawnable:draw()
     self:drawPosition()
     self:drawRelativePosition()
     self:drawRotation()
+end
+
+function spawnable:setIsHovered(state)
+    if state == self.isHovered then return end
+
+    self.isHovered = state
+    visualizer.showArrows(self:getEntity(), self.isHovered)
+    visualizer.highlightArrow(self:getEntity(), "all")
 end
 
 ---Amount of extra height to be added to 

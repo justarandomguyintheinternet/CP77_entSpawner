@@ -6,19 +6,20 @@ local object = require("modules/classes/spawn/object")
 local types = {
     ["Entity"] = {
         ["Record"] = require("modules/classes/spawn/entity/entityRecord"),
-        ["Template"] = require("modules/classes/spawn/entity/entityTemplate"),
-        ["Template (AMM)"] = require("modules/classes/spawn/entity/ammEntity")
+        -- ["Template"] = require("modules/classes/spawn/entity/entityTemplate"),
+        -- ["Template (AMM)"] = require("modules/classes/spawn/entity/ammEntity")
     },
-    ["Lights"] = {
-        ["Light"] = require("modules/classes/spawn/light/light")
-    },
+    -- ["Lights"] = {
+    --     ["Light"] = require("modules/classes/spawn/light/light")
+    -- },
     ["Mesh"] = {
         ["Mesh"] = require("modules/classes/spawn/mesh/mesh"),
         ["Rotating Mesh"] = require("modules/classes/spawn/mesh/rotatingMesh")
-    },
-    ["Collision"] = {
-        ["Collision Shape"] = require("modules/classes/spawn/collision/collider")
     }
+    -- ,
+    -- ["Collision"] = {
+    --     ["Collision Shape"] = require("modules/classes/spawn/collision/collider")
+    -- }
 }
 
 local spawnData = {}

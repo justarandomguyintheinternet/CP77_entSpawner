@@ -17,6 +17,7 @@
 local config = require("modules/utils/config")
 local builder = require("modules/utils/entityBuilder")
 local Cron = require("modules/utils/Cron")
+local cache = require("modules/utils/cache")
 
 spawner = {
     runtimeData = {
@@ -61,6 +62,9 @@ function spawner:new()
         config.backwardComp("data/config.json", self.defaultSettings)
         config.tryCreateConfig("data/apps.json", {})
         self.settings = config.loadFile("data/config.json")
+        cache.load()
+        cache.generateRecordsList()
+
         self.baseUI.savedUI.spawner = self
         self.baseUI.savedUI.backwardComp()
         self.baseUI.spawnUI.loadSpawnData(self)

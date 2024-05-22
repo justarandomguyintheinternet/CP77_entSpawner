@@ -239,6 +239,8 @@ function object:draw()
         end
 
         ImGui.EndChild()
+        self.spawnable.setIsHovered(ImGui.IsWindowHovered())
+
         CPS.colorEnd(2)
     end
 
