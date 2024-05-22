@@ -5,6 +5,7 @@ local cache = require("modules/utils/cache")
 local spawnable = require("modules/classes/spawn/spawnable")
 
 ---Class for entity records spawned via worldPopulationSpawnerNode
+---@class record : entity
 local record = setmetatable({}, { __index = entity })
 
 function record:new()
@@ -44,6 +45,10 @@ function record:spawn()
     spec.alwaysSpawned = true
     self.entityID = Game.GetDynamicEntitySystem():CreateEntity(spec)
     self.spawned = true
+
+    builder.registerAssembleCallback(self.entityID, function (entity)
+        self:onAssemble(entity)
+    end)
 end
 
 function record:despawn()

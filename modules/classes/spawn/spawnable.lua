@@ -17,7 +17,8 @@ local visualizer = require("modules/utils/visualizer")
 ---@field public rotation EulerAngles
 ---@field protected entityID entEntityID
 ---@field protected spawned boolean
----@field protected isHovered boolean
+---@field public isHovered boolean
+---@field protected arrowDirection string all|red|green|blue
 local spawnable = {}
 
 function spawnable:new()
@@ -39,42 +40,17 @@ function spawnable:new()
     o.spawned = false
 
     o.isHovered = false
+    o.arrowDirection = "all"
 
     self.__index = self
    	return setmetatable(o, self)
 end
 
--- Visualizer:
-    -- Do generalized visualization for editing purposes
-        -- Arrows
-        -- Maybe Boxes for selecting one day
-    -- Do visualization for things that cant be previewed
-        -- Collider shapes
-        -- Maybe shapes for lights
-    -- How 2 manage vis state:
-        -- Manage it in base spawnable, each one that adds custom vis has to manage it
-            -- Attach all possible ones during assemble
-            -- Get hovered state from object file
-            -- Get more fine grained state from own UI
-            -- Must keep track of hovered arrow index, but fine since its all in here
-        -- For custom stuff:
-            -- Wrap assemble to add own stuff
-            -- Already knows when hovered from this class
-            -- Function for hover / unhover
-            -- Should be fine, most custom stuff will just show with generic things like arrows
-    -- Vis scale:
-        -- Do it during assembly or file load
-        -- Cache!
-        -- Custom function for calculating it?
-            -- Could do one generic ig -> Entity based on mesh scale
-                -- Must consider scale
-                -- Can always wrap it, for e.g. lights
-
 function spawnable:onAssemble(entity)
-    visualizer.attachArrows(entity, { x = 1, y = 1, z = 1 })
+    visualizer.attachArrows(entity, self:getVisualScale())
 end
 
----Spawns the spawnable if not spawned already
+---Spawns the spawnable if not spawned already, must register a callback for entityAssemble which calls onAssemble
 function spawnable:spawn()
     if self:isSpawned() then return end
 
@@ -162,30 +138,30 @@ end
 function spawnable:drawPosition()
     ImGui.PushItemWidth(150)
     self.position.x, changed = ImGui.DragFloat("##x", self.position.x, self.spawner.settings.posSteps, -9999, 9999, "%.3f X")
-    if ImGui.IsItemHovered() then
-        visualizer.highlightArrow(self:getEntity(), "red")
-    end
+    self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
+    self:updateArrowDirection(ImGui.IsItemHovered(), "red")
     if changed then
         self:update()
     end
     ImGui.SameLine()
+
     self.position.y, changed = ImGui.DragFloat("##y", self.position.y, self.spawner.settings.posSteps, -9999, 9999, "%.3f Y")
-    if ImGui.IsItemHovered() then
-        visualizer.highlightArrow(self:getEntity(), "green")
-    end
+    self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
+    self:updateArrowDirection(ImGui.IsItemHovered(), "green")
     if changed then
         self:update()
     end
     ImGui.SameLine()
+
     self.position.z, changed = ImGui.DragFloat("##z", self.position.z, self.spawner.settings.posSteps, -9999, 9999, "%.3f Z")
-    if ImGui.IsItemHovered() then
-        visualizer.highlightArrow(self:getEntity(), "blue")
-    end
+    self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
+    self:updateArrowDirection(ImGui.IsItemHovered(), "blue")
     if changed then
         self:update()
     end
     ImGui.PopItemWidth()
     ImGui.SameLine()
+
     if ImGui.Button("To player", 150, 0) then
         self.position = Game.GetPlayer():GetWorldPosition()
         self:update()
@@ -199,6 +175,8 @@ function spawnable:drawRelativePosition()
 
     ImGui.PushItemWidth(150)
     local x, changed = ImGui.DragFloat("##r_x", 0, self.spawner.settings.posSteps, -9999, 9999, "%.3f Relative X")
+    self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
+    self:updateArrowDirection(ImGui.IsItemHovered(), "red")
     if changed then
         local entity = self:getEntity()
         if entity then
@@ -212,6 +190,8 @@ function spawnable:drawRelativePosition()
     end
     ImGui.SameLine()
     local y, changed = ImGui.DragFloat("##r_y", 0, self.spawner.settings.posSteps, -9999, 9999, "%.3f Relative Y")
+    self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
+    self:updateArrowDirection(ImGui.IsItemHovered(), "green")
     if changed then
         local entity = self:getEntity()
         if entity then
@@ -225,6 +205,8 @@ function spawnable:drawRelativePosition()
     end
     ImGui.SameLine()
     local z, changed = ImGui.DragFloat("##r_z", 0, self.spawner.settings.posSteps, -9999, 9999, "%.3f Relative Z")
+    self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
+    self:updateArrowDirection(ImGui.IsItemHovered(), "blue")
     if changed then
         local entity = self:getEntity()
         if entity then
@@ -245,16 +227,22 @@ end
 function spawnable:drawRotation()
     ImGui.PushItemWidth(150)
     self.rotation.roll, changed = ImGui.DragFloat("##roll", self.rotation.roll, self.spawner.settings.rotSteps, -9999, 9999, "%.3f Roll")
+    self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
+    self:updateArrowDirection(ImGui.IsItemHovered(), "green")
     if changed then
         self:update()
     end
     ImGui.SameLine()
     self.rotation.pitch, changed = ImGui.DragFloat("##pitch", self.rotation.pitch, self.spawner.settings.rotSteps, -9999, 9999, "%.3f Pitch")
+    self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
+    self:updateArrowDirection(ImGui.IsItemHovered(), "red")
     if changed then
         self:update()
     end
     ImGui.SameLine()
     self.rotation.yaw, changed = ImGui.DragFloat("##yaw", self.rotation.yaw, self.spawner.settings.rotSteps, -9999, 9999, "%.3f Yaw")
+    self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
+    self:updateArrowDirection(ImGui.IsItemHovered(), "blue")
     if changed then
         self:update()
     end
@@ -274,12 +262,40 @@ function spawnable:draw()
     self:drawRotation()
 end
 
-function spawnable:setIsHovered(state)
-    if state == self.isHovered then return end
+--- Reset the internal states of the arrow visualizer
+function spawnable:resetVisualizerStates()
+    self.arrowDirection = "all"
+    self.isHovered = false
+end
 
-    self.isHovered = state
-    visualizer.showArrows(self:getEntity(), self.isHovered)
-    visualizer.highlightArrow(self:getEntity(), "all")
+--- Tried to update and highlight the arrow direction, if changed
+function spawnable:updateArrowDirection(hovered, direction)
+    if self.isHovered and direction ~= self.arrowDirection and hovered then
+        self.arrowDirection = direction
+        visualizer.highlightArrow(self:getEntity(), self.arrowDirection)
+    end
+end
+
+--- Collect all hovered states from header and internal widgets
+function spawnable:setIsHovered(state)
+    self.isHovered = state or self.isHovered
+end
+
+--- Called at the end of the draw functions, to update the visualizer visibility if needed
+function spawnable:updateIsHovered(oldState)
+    if oldState ~= self.isHovered then
+        visualizer.showArrows(self:getEntity(), self.isHovered)
+
+        -- TODO: Do this more elegantly
+        if self.arrowDirection == "all" then
+            visualizer.highlightArrow(self:getEntity(), self.arrowDirection)
+        end
+    end
+end
+
+--- Used for visualizer scales
+function spawnable:getVisualScale()
+    return { x = 1, y = 1, z = 1 }
 end
 
 ---Amount of extra height to be added to 

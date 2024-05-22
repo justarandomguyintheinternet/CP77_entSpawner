@@ -151,6 +151,11 @@ function object:draw()
     ImGui.SetNextItemOpen(self.headerOpen)
 
     self.headerOpen = ImGui.CollapsingHeader(self.name)
+
+    local hovered = self.spawnable.isHovered
+    self.spawnable:resetVisualizerStates()
+    self.spawnable:setIsHovered(ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem))
+
     if self.headerOpen then
         CPS.colorBegin("Border", self.color)
         CPS.colorBegin("Separator", self.color)
@@ -239,12 +244,12 @@ function object:draw()
         end
 
         ImGui.EndChild()
-        self.spawnable.setIsHovered(ImGui.IsWindowHovered())
 
         CPS.colorEnd(2)
     end
-
     ImGui.PopID()
+
+    self.spawnable:updateIsHovered(hovered)
 
     if self.parent ~= nil then
 		ImGui.Unindent(35)

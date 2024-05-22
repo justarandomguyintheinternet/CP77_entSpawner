@@ -1,7 +1,7 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local builder = require("modules/utils/entityBuilder")
 local style = require("modules/ui/style")
-local utils = require("modules/utils/utils")
+local visualizer = require("modules/utils/visualizer")
 
 local materials = { "meatbag.physmat","linoleum.physmat","trash.physmat","plastic.physmat","character_armor.physmat","furniture_upholstery.physmat","metal_transparent.physmat","tire_car.physmat","meat.physmat","metal_car_pipe_steam.physmat","character_flesh.physmat","brick.physmat","character_flesh_head.physmat","leaves.physmat","flesh.physmat","water.physmat","plastic_road.physmat","metal_hollow.physmat","cyberware_flesh.physmat","plaster.physmat","plexiglass.physmat","character_vr.physmat","vehicle_chassis.physmat","sand.physmat","glass_electronics.physmat","leaves_stealth.physmat","tarmac.physmat","metal_car.physmat","tiles.physmat","glass_car.physmat","grass.physmat","concrete.physmat","carpet_techpiercable.physmat","wood_hedge.physmat","stone.physmat","leaves_semitransparent.physmat","metal_catwalk.physmat","upholstery_car.physmat","cyberware_metal.physmat","paper.physmat","leather.physmat","metal_pipe_steam.physmat","metal_pipe_water.physmat","metal_semitransparent.physmat","neon.physmat","glass_dst.physmat","plastic_car.physmat","mud.physmat","dirt.physmat","metal_car_pipe_water.physmat","furniture_leather.physmat","asphalt.physmat","wood_bamboo_poles.physmat","glass_opaque.physmat","carpet.physmat","food.physmat","cyberware_metal_head.physmat","metal_road.physmat","wood_tree.physmat","wood_player_npc_semitransparent.physmat","wood.physmat","metal_car_ricochet.physmat","cardboard.physmat","wood_crown.physmat","metal_ricochet.physmat","plastic_electronics.physmat","glass_semitransparent.physmat","metal_painted.physmat","rubber.physmat","ceramic.physmat","glass_bulletproof.physmat","metal_car_electronics.physmat","trash_bag.physmat","character_cyberflesh.physmat","metal_heavypiercable.physmat","metal.physmat","plastic_car_electronics.physmat","oil_spill.physmat","fabrics.physmat","glass.physmat","metal_techpiercable.physmat","concrete_water_puddles.physmat","character_metal.physmat" }
 local presets = { "World Dynamic","Player Collision","Player Hitbox","NPC Collision","NPC Trace Obstacle","NPC Hitbox","Big NPC Collision","Player Blocker","Block Player and Vehicles","Vehicle Blocker","Block PhotoMode Camera","Ragdoll","Ragdoll Inner","RagdollVehicle","Terrain","Sight Blocker","Moving Kinematic","Interaction Object","Particle","Destructible","Debris","Debris Cluster","Foliage Debris","ItemDrop","Shooting","Moving Platform","Water","Window","Device transparent","Device solid visible","Vehicle Device","Environment transparent","Bullet logic","World Static","Simple Environment Collision","Complex Environment Collision","Foliage Trunk","Foliage Trunk Destructible","Foliage Low Trunk","Foliage Crown","Vehicle Part","Vehicle Proxy","Vehicle Part Query Only Exception","Vehicle Chassis","Chassis Bottom","Chassis Bottom Traffic","Vehicle Chassis Traffic","AV Chassis","Tank Chassis","Vehicle Chassis LOD3","Vehicle Chassis Traffic LOD3","Tank Chassis LOD3","Drone","Prop Interaction","Nameplate","Road Barrier Simple Collision","Road Barrier Complex Collision","Lootable Corpse","Spider Tank"}
@@ -33,7 +33,7 @@ function collider:new()
 
     o.shapeTypes = { "Box", "Capsule", "Sphere" }
 
-    o.extents = { x = 1, y = 1, z = 13 }
+    o.extents = { x = 1, y = 1, z = 1 }
     o.height = 3
     o.radius = 1
 
@@ -41,14 +41,10 @@ function collider:new()
    	return o
 end
 
+--- TODO: Add toggle for visual previews
+
 function collider:onAssemble(entity)
     spawnable.onAssemble(self, entity)
-
-    local mesh = entMeshComponent.new()
-    mesh.name = "mesh"
-    mesh.mesh = ResRef.FromString("engine\\meshes\\editor\\cube.mesh")
-    mesh.visualScale = Vector3.new(self.extents.x * 2, self.extents.y * 2, self.extents.z * 2)
-    entity:AddComponent(mesh)
 
     local component = entColliderComponent.new()
     component.name = "collider"
@@ -57,13 +53,16 @@ function collider:onAssemble(entity)
     if self.shape == 0 then
         actor = physicsColliderBox.new()
         actor.halfExtents = ToVector3(self.extents)
+        visualizer.addBox(entity, self.extents, "red")
     elseif self.shape == 1 then
         actor = physicsColliderCapsule.new()
         actor.height = self.height
         actor.radius = self.radius
+        visualizer.addCapsule(entity, self.radius, self.height, "red")
     elseif self.shape == 2 then
         actor = physicsColliderSphere.new()
         actor.radius = self.radius
+        visualizer.addSphere(entity, self.radius, "red")
     end
 
     actor.material = materials[self.material + 1]
@@ -145,20 +144,39 @@ function collider:draw()
 
     if self.shape == 0 then
         self.extents.x, changed = ImGui.DragFloat("##extentsX", self.extents.x, 0.01, 0, 9999, "%.2f X Extents")
+        if changed then
+            visualizer.updateScale(self:getEntity(), self.extents, "box")
+        end
         self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
         ImGui.SameLine()
         self.extents.y, changed = ImGui.DragFloat("##extentsY", self.extents.y, 0.01, 0, 9999, "%.2f Y Extents")
+        if changed then
+            visualizer.updateScale(self:getEntity(), self.extents, "box")
+        end
         self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
         ImGui.SameLine()
         self.extents.z, changed = ImGui.DragFloat("##extentsZ", self.extents.z, 0.01, 0, 9999, "%.2f Z Extents")
+        if changed then
+            visualizer.updateScale(self:getEntity(), self.extents, "box")
+        end
         self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
     elseif self.shape == 1 then
         self.height, changed = ImGui.DragFloat("##height", self.height, 0.01, 0, 9999, "%.2f Height")
+        if changed then
+            visualizer.updateCapsuleScale(self:getEntity(), self.radius, self.height)
+        end
         self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
         ImGui.SameLine()
     end
     if self.shape == 1 or self.shape == 2 then
         self.radius, changed = ImGui.DragFloat("##radius", self.radius, 0.01, 0, 9999, "%.2f Radius")
+        if changed then
+            if self.shape == 1 then
+                visualizer.updateCapsuleScale(self:getEntity(), self.radius, self.height)
+            else
+                visualizer.updateScale(self:getEntity(), { x = self.radius, y = self.radius, z = self.radius }, "sphere")
+            end
+        end
         self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
     end
 

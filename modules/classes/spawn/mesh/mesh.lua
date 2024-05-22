@@ -3,6 +3,7 @@ local builder = require("modules/utils/entityBuilder")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 local cache = require("modules/utils/cache")
+local visualizer = require("modules/utils/visualizer")
 
 ---Class for worldMeshNode
 ---@class mesh : spawnable
@@ -45,6 +46,7 @@ function mesh:loadSpawnData(data, position, rotation, spawner)
 end
 
 function mesh:onAssemble(entity)
+    spawnable.onAssemble(self, entity)
     local component = entMeshComponent.new()
     component.name = "mesh"
     component.mesh = ResRef.FromString(self.spawnData)
@@ -78,6 +80,13 @@ function mesh:updateScale()
 
     component:Toggle(false)
     component:Toggle(true)
+
+    visualizer.updateScale(entity, self:getVisualScale(), "arrows")
+end
+
+function mesh:getVisualScale()
+    local max = math.max(self.scale.x, self.scale.y, self.scale.z)
+    return { x = max, y = max, z = max }
 end
 
 function mesh:getExtraHeight()

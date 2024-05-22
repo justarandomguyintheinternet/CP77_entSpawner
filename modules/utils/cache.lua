@@ -14,10 +14,12 @@ function cache.addValue(key, value)
 end
 
 function cache.getValue(key)
-    return nil--data[key]
+    return nil
 end
 
 function cache.generateRecordsList()
+    if config.fileExists("data/spawnables/entity/records/records.txt") then return end
+
     local records = {
         "gamedataAttachableObject_Record",
         "gamedataCarriableObject_Record",
@@ -28,7 +30,7 @@ function cache.generateRecordsList()
         "gamedataVehicle_Record",
     }
 
-    local file = io.open("names.txt", "w")
+    local file = io.open("data/spawnables/entity/records/records.txt", "w")
 
     for _, record in pairs(records) do
         for _, entry in pairs(TweakDB:GetRecords(record)) do

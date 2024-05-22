@@ -1,0 +1,7 @@
+{
+    "Lua.diagnostics.disable": [
+        "undefined-global",
+        "lowercase-global",
+        "inject-field"
+    ]
+}

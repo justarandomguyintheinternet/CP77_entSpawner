@@ -170,7 +170,7 @@ function light:draw()
     ImGui.Text("Light Type")
     ImGui.SameLine()
     self.lightType, changed = ImGui.Combo("##type", self.lightType, self.lightTypes, #self.lightTypes)
-    self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
+    self:updateFull(changed)
 
     ImGui.Text("Flicker Settings")
     style.tooltip("Controll light flickering, turn up strength to see effect")
@@ -193,7 +193,7 @@ function light:draw()
 
     if self.lightType == 1 then
         self.localShadows, changed = ImGui.Checkbox("Local Shadows", self.localShadows)
-        self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
+        self:updateFull(changed)
     end
 
     ImGui.PopItemWidth()

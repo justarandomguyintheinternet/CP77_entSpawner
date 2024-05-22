@@ -33,13 +33,7 @@ function rotatingMesh:new()
 end
 
 function rotatingMesh:onAssemble(entity)
-    local meshComponent = entMeshComponent.new()
-    meshComponent.name = "mesh"
-    meshComponent.mesh = ResRef.FromString(self.spawnData)
-    meshComponent.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
-    meshComponent.meshAppearance = self.app
-
-    entity:AddComponent(meshComponent)
+    mesh.onAssemble(self, entity)
 
     self.cronID = Cron.OnUpdate(function ()
         local entity = self:getEntity()
