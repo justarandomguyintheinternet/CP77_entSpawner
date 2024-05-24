@@ -59,13 +59,18 @@ end
 function record:update()
     if not self:isSpawned() then return end
 
-    local handle = Game.FindEntityByID(self.entityID)
-    if not handle then
+    local handle = self:getEntity()
+    if handle:GetClassName().value == "NPCPuppet" then
         self:despawn()
         self:spawn()
     else
         Game.GetTeleportationFacility():Teleport(handle, self.position,  self.rotation)
     end
+end
+
+---@return entEntity?
+function record:getEntity()
+    return Game.GetDynamicEntitySystem():GetEntity(self.entityID)
 end
 
 function record:export()

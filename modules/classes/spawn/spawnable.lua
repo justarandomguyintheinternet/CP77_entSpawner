@@ -47,7 +47,7 @@ function spawnable:new()
 end
 
 function spawnable:onAssemble(entity)
-    visualizer.attachArrows(entity, self:getVisualScale())
+    visualizer.attachArrows(entity, self:getVisualScale(), self.isHovered, self.arrowDirection)
 end
 
 ---Spawns the spawnable if not spawned already, must register a callback for entityAssemble which calls onAssemble
@@ -81,7 +81,7 @@ end
 function spawnable:despawn()
     local entity = self:getEntity()
     if entity then
-        Game.FindEntityByID(self.entityID):GetEntity():Destroy()
+        Game.GetStaticEntitySystem():DespawnEntity(self.entityID)
     end
     self.spawned = false
 end
@@ -107,7 +107,7 @@ end
 
 ---@return entEntity?
 function spawnable:getEntity()
-    return Game.FindEntityByID(self.entityID)
+    return Game.GetStaticEntitySystem():GetEntity(self.entityID)
 end
 
 --- Generate valid name from given name / path
@@ -223,6 +223,7 @@ function spawnable:drawRelativePosition()
     style.popGreyedOut(not self:isSpawned())
 end
 
+---TODO: Fix roll+pitch
 ---@protected
 function spawnable:drawRotation()
     ImGui.PushItemWidth(150)

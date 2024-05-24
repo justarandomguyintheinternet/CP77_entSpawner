@@ -62,10 +62,10 @@ end
 ---Creates and attached the arrow mesh, with the component name "arrows"
 ---@param entity entEntity
 ---@param scale table { x = number, y = number, z = number }
-function visualizer.attachArrows(entity, scale)
+function visualizer.attachArrows(entity, scale, active, app)
     if not entity then return end
 
-    addMesh(entity, "arrows", "base\\spawner\\arrow.mesh", scale, "all", false)
+    addMesh(entity, "arrows", "base\\spawner\\arrow.mesh", scale, app, active)
 end
 
 ---Updates the scale of the given visualizer mesh

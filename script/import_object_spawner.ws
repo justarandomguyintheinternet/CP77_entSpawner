@@ -78,6 +78,15 @@ const insertNode = (sector, node) => {
 	nodeData.Pivot.Y = node.position.y
 	nodeData.Pivot.Z = node.position.z
 	
+	// Bounds
+	nodeData.Bounds.Max.X = node.position.x
+	nodeData.Bounds.Max.Y = node.position.y
+	nodeData.Bounds.Max.Z = node.position.z
+
+	nodeData.Bounds.Min.X = node.position.x
+	nodeData.Bounds.Min.Y = node.position.y
+	nodeData.Bounds.Min.Z = node.position.z
+
 	// Scale
 	nodeData.Scale.X = node.scale.x
 	nodeData.Scale.Y = node.scale.y
@@ -131,9 +140,52 @@ const addSectorToBlock = (block, info, root) => {
 	block.Data.RootChunk.descriptors.push(descriptor)
 }
 
+// For Buffers:
+// BufferID - Flags - Type - Data
+// Otherwise:
+// $type / Type must be first
+
+const reorderJSONByType = (data) => {
+    if (Array.isArray(data)) {
+        return data.map(reorderJSONByType)
+    } else if (data !== null && typeof data === "object") {
+        const reordered = {};
+        const keys = Object.keys(data);
+
+        if (keys.includes("$type")) {
+            reordered["$type"] = data["$type"];
+        }
+		if (keys.includes("ShapeType")) {
+            reordered["ShapeType"] = data["ShapeType"];
+        }
+
+        if (keys.includes("BufferId")) {
+            reordered["BufferId"] = data["BufferId"];
+        }
+        if (keys.includes("Flags")) {
+            reordered["Flags"] = data["Flags"];
+        }
+        if (keys.includes("Type")) {
+            reordered["Type"] = data["Type"];
+        }
+
+        for (let key of keys) {
+            if (key !== "$type" && key !== "ShapeType" && key !== "Type" && key !== "BufferId" && key !== "Flags") {
+                reordered[key] = reorderJSONByType(data[key]);
+            }
+        }
+
+        return reordered;
+    } else {
+        return data;
+    }
+}
+
 // Main import logic
 
 let data = JSON.parse(wkit.LoadRawJsonFromProject(inputFilePathInRawFolder, "json"))
+
+data = reorderJSONByType(data)
 
 if (data == null) {
 	Logger.Error(`File ${inputFilePathInRawFolder} does not exist / wrong format!`)

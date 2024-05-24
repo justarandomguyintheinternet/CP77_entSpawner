@@ -227,7 +227,8 @@ function object:draw()
             self:despawn()
             if self.parent ~= nil then
                 utils.removeItem(self.parent.childs, self)
-                self.parent:saveAfterMove()
+                ---TODO: Figure out what to do here
+                -- self.parent:saveAfterMove()
             end
             utils.removeItem(self.sUI.elements, self)
         end

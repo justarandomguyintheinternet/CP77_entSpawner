@@ -184,11 +184,125 @@ function collider:draw()
 end
 
 function collider:export()
+	local extents
+    local shapeType
+    local size
+	if self.shape == 0 then
+		local max = math.max(self.extents.x, self.extents.y, self.extents.z)
+		extents = Vector4.new(max, max, max)
+        shapeType = "Box"
+        size = self.extents
+	elseif self.shape == 1 then
+		local max = math.max(self.radius, self.height)
+		extents = Vector4.new(max, max, max)
+        shapeType = "Capsule"
+        size = Vector4.new(self.radius, self.height, 0, 0)
+	elseif self.shape == 2 then
+		extents = Vector4.new(self.radius, self.radius, self.radius)
+        shapeType = "Sphere"
+        size = Vector4.new(self.radius, 0, 0, 0)
+	end
+
+    local rotation = self.rotation:ToQuat()
+
     local data = spawnable.export(self)
     data.type = "worldCollisionNode"
     data.data = {
+		["compiledData"] = {
+			["BufferId"] = tostring(tonumber(FNV1a64("CollisionBuffer" .. math.random(1, 10000000)))),
+			["Flags"] = 4063232,
+			["Type"] = "WolvenKit.RED4.Archive.Buffer.CollisionBuffer, WolvenKit.RED4, Version=8.14.1.0, Culture=neutral, PublicKeyToken=null",
+			["Data"] = {
+				["Actors"] = {
+					{
+						["Position"] = {
+							["$type"] = "WorldPosition",
+							["x"] = {
+								["$type"] = "FixedPoint",
+								["Bits"] = math.floor(self.position.x * 131072)
+							},
+							["y"] = {
+								["$type"] = "FixedPoint",
+								["Bits"] = math.floor(self.position.y * 131072)
+							},
+							["z"] = {
+								["$type"] = "FixedPoint",
+								["Bits"] = math.floor(self.position.z * 131072)
+							}
+						},
+						["Shapes"] = {
+							{
+								["ShapeType"] = shapeType,
+                                ["Rotation"] = {
+                                    ["$type"] = "Quaternion",
+                                    ["i"] = rotation.i,
+                                    ["j"] = rotation.j,
+                                    ["k"] = rotation.k,
+                                    ["r"] = rotation.r
+                                  },
+								["Size"] = {
+									["$type"] = "Vector3",
+									["X"] = size.x,
+									["Y"] = size.y,
+									["Z"] = size.z
+								},
+								["Preset"] = {
+									["$type"] = "CName",
+									["$storage"] = "string",
+									["$value"] = presets[self.preset + 1]
+								},
+								["ProxyType"] = "CharacterObstacle",
+								["Materials"] = {
+									{
+										["$type"] = "CName",
+										["$storage"] = "string",
+										["$value"] = materials[self.material + 1]
+									}
+								}
+							}
+						},
+						["Scale"] = {
+							["$type"] = "Vector3",
+							["X"] = 1,
+							["Y"] = 1,
+							["Z"] = 1
+						}
+					}
+				}
+			}
+		},
+		["extents"] = {
+			["$type"] = "Vector4",
+			["W"] = 0,
+			["X"] = extents.x,
+			["Y"] = extents.y,
+			["Z"] = extents.z
+		},
+		["lod"] = 1,
+		["numActors"] = 1,
+		["numMaterialIndices"] = 1,
+		["numMaterials"] = 1,
+		["numPresets"] = 1,
+		["numScales"] = 1,
+		["numShapeIndices"] = 1,
+		["numShapeInfos"] = 1,
+		["numShapePositions"] = 0,
+		["numShapeRotations"] = 1,
+        ["resourceVersion"] = 2, -- You little shit
+		["staticCollisionShapeCategories"] = {
+			["$type"] = "worldStaticCollisionShapeCategories_CollisionNode",
+			["arr"] = {
+				["Elements"] = {
+					{ ["Elements"] = {0, 0, 0, 0, 0, 0} },
+					{ ["Elements"] = {0, 1, 0, 0, 0, 0} },
+					{ ["Elements"] = {0, 0, 0, 0, 0, 0} },
+					{ ["Elements"] = {0, 0, 0, 0, 0, 0} },
+					{ ["Elements"] = {0, 1, 0, 0, 0, 0} }
+				}
+			}
+		}
+	}
 
-    }
 
     return data
 end
