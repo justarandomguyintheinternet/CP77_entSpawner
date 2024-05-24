@@ -21,6 +21,9 @@ function builder.hook()
             OnResourceReady = {
                 args = {'handle:ResourceToken'},
                 callback = function(token)
+                    if not token then return end
+                    if not success or token:IsFailed() or not token:IsFinished() then return end
+
                     if builder.callbacks[tonumber(token:GetHash())] then
                         builder.callbacks[tonumber(token:GetHash())](token:GetResource())
                         builder.callbacks[tonumber(token:GetHash())] = nil

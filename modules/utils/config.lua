@@ -47,7 +47,6 @@ function config.loadLists(path)
     for _, file in pairs(dir(path)) do
         if file.name:match("^.+(%..+)$") == ".txt" then
             local data = io.open(path .. file.name)
-
             for line in data:lines() do
                 table.insert(paths, {data = { spawnData = line }, lastSpawned = nil, name = line})
             end
@@ -69,6 +68,14 @@ function config.backwardComp(path, data)
     end
 
     config.saveFile(path, f)
+end
+
+function config.loadText(path)
+    local lines = {}
+    for line in io.lines(path) do
+        table.insert(lines, line)
+    end
+    return lines
 end
 
 return config

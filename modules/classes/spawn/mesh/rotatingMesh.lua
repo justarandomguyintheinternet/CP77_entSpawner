@@ -18,7 +18,6 @@ function rotatingMesh:new()
 
     o.spawnListType = "list"
     o.dataType = "Rotating Mesh"
-    o.spawnDataPath = "data/spawnables/mesh/"
     o.modulePath = "mesh/rotatingMesh"
 
     o.duration = 5
@@ -55,14 +54,6 @@ function rotatingMesh:onAssemble(entity)
 
         entity:FindComponentByName("mesh"):SetLocalOrientation(angle:ToQuat())
     end)
-end
-
-function rotatingMesh:spawn()
-    local mesh = self.spawnData
-    self.spawnData = "base\\spawner\\empty_entity.ent"
-
-    spawnable.spawn(self)
-    self.spawnData = mesh
 end
 
 function rotatingMesh:despawn()

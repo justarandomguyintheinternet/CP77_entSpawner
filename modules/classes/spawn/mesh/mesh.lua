@@ -17,7 +17,7 @@ function mesh:new()
 
     o.spawnListType = "list"
     o.dataType = "Static Mesh"
-    o.spawnDataPath = "data/spawnables/mesh/"
+    o.spawnDataPath = "data/spawnables/mesh/all/"
     o.modulePath = "mesh/mesh"
 
     o.apps = {}
