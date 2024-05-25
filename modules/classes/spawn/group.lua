@@ -195,12 +195,13 @@ function group:draw()
 				self:save()
 				self.sUI.spawner.baseUI.savedUI.files[self.name] = nil
 			end
-			if self.sUI.spawner.settings.groupExport then
-				ImGui.SameLine()
-				if CPS.CPButton("Export") then
-					self:export()
-				end
-			end
+			--- TODO: Do we still need this?
+			-- if self.sUI.spawner.settings.groupExport then
+			-- 	ImGui.SameLine()
+			-- 	if CPS.CPButton("Export") then
+			-- 		self:export()
+			-- 	end
+			-- end
 		end
 
 		ImGui.EndChild()
