@@ -160,16 +160,14 @@ function object:draw()
         CPS.colorBegin("Border", self.color)
         CPS.colorBegin("Separator", self.color)
 
-        local h = 6 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().WindowPadding.y + 5 * ImGui.GetStyle().ItemSpacing.y + 6 * ImGui.GetStyle().ItemSpacing.y
+        local h = 6 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().WindowPadding.y + 4 * ImGui.GetStyle().ItemSpacing.y + 7 * ImGui.GetStyle().ItemSpacing.y
         h = h + self.spawnable:getExtraHeight()
         ImGui.BeginChild("obj_" .. tostring(self.name .. self.id), self.box.x, h, true)
 
         if not self.isAutoLoaded then
-            ImGui.SetNextItemWidth(250)
+            ImGui.SetNextItemWidth(300)
             self.newName = ImGui.InputTextWithHint('##Name', 'New Name...', self.newName, 100)
-            ImGui.SameLine()
-
-            if ImGui.Button("Apply", 150, 0) then
+            if ImGui.IsItemDeactivatedAfterEdit() then
                 self:rename(self.newName)
                 self:saveAfterMove()
                 self.newName = ""
@@ -179,10 +177,6 @@ function object:draw()
 		end
 
         -- ImGui.Text(tostring("Spawned: " .. tostring(self.spawnable:isSpawned()):upper()))
-
-        -- if ImGui.Button("Copy Path to clipboard") then
-        --     ImGui.SetClipboardText(self.path)
-        -- end
 
         self:drawGroup()
 
@@ -269,7 +263,7 @@ function object:drawGroup()
         self.selectedGroup = utils.indexValue(gs, self:getOwnPath(true)) - 1
     end
 
-    ImGui.SetNextItemWidth(250)
+    ImGui.SetNextItemWidth(300)
     self.selectedGroup = ImGui.Combo("##movetogroup", self.selectedGroup, gs, #gs)
 
     ImGui.SameLine()

@@ -294,6 +294,7 @@ function spawnable:updateIsHovered(oldState)
     end
 end
 
+---TODO: Implement better for each object
 --- Used for visualizer scales
 function spawnable:getVisualScale()
     return { x = 1, y = 1, z = 1 }

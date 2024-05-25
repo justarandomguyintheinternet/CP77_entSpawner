@@ -85,8 +85,10 @@ function savedUI.draw(spawner)
         end
     end
 
+    style.spacedSeparator()
+
     local _, wHeight = GetDisplayResolution()
-    ImGui.BeginChild("savedUI", 610, math.min(savedUI.getHeight(), wHeight - 150))
+    ImGui.BeginChild("savedUI", 0, math.min(savedUI.getHeight(), wHeight - 150))
 
     for _, file in pairs(dir("data/objects")) do
         if file.name:match("^.+(%..+)$") == ".json" then
@@ -117,40 +119,47 @@ function savedUI.draw(spawner)
     savedUI.handlePopUp()
 end
 
+local function getGroupHeight()
+    return 3 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().WindowPadding.y + ImGui.GetStyle().ItemSpacing.y * 7
+end
+
+local function getObjectHeight()
+    return 4 * ImGui.GetFrameHeight() + 7 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().WindowPadding.y
+end
+
 function savedUI.drawGroup(group, spawner)
     CPS.colorBegin("Border", savedUI.color.group)
     CPS.colorBegin("Separator", savedUI.color.group)
 
-	local h = 3 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().WindowPadding.y + ImGui.GetStyle().ItemSpacing.y * 7
-    ImGui.BeginChild("group_" .. group.name, savedUI.box.group.x - 10, h, true)
+    ImGui.BeginChild("group_" .. group.name, savedUI.box.group.x - ImGui.GetStyle().ScrollbarSize, getGroupHeight(), true)
 
     if group.newName == nil then group.newName = group.name end
+
+    style.pushGreyedOut(utils.hasIndex(savedUI.spawned, group.name))
+
     ImGui.PushItemWidth(300)
     group.newName = ImGui.InputTextWithHint('##Name', 'Name...', group.newName, 100)
     ImGui.PopItemWidth()
-    ImGui.SameLine()
 
-    if utils.hasIndex(savedUI.spawned, group.name) then
-        ImGui.PushStyleColor(ImGuiCol.Button, 0xff777777)
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, 0xff777777)
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, 0xff777777)
-        ImGui.Button("Apply Name")
-        ImGui.PopStyleColor(3)
-    else
-        if ImGui.Button("Apply Name") then
-            savedUI.files[group.name] = nil
-            os.rename("data/objects/" .. group.name .. ".json", "data/objects/" .. group.newName .. ".json")
-            group.name = group.newName
-            group.newName = nil
-            config.saveFile("data/objects/" .. group.name .. ".json", group)
-            savedUI.files[group.name] = group
-            savedUI.reload()
-        end
+    if ImGui.IsItemDeactivatedAfterEdit() then
+        savedUI.files[group.name] = nil
+        os.rename("data/objects/" .. group.name .. ".json", "data/objects/" .. group.newName .. ".json")
+        group.name = group.newName
+        group.newName = nil
+        config.saveFile("data/objects/" .. group.name .. ".json", group)
+        savedUI.files[group.name] = group
+        savedUI.reload()
     end
+
+    style.popGreyedOut(utils.hasIndex(savedUI.spawned, group.name))
 
     style.spacedSeparator()
 
-    ImGui.Text(("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(group.pos.x, group.pos.y, group.pos.z, ToVector4(group.pos):Distance(GetPlayer():GetWorldPosition())))
+    local pPos = Vector4.new(0, 0, 0, 0)
+    if GetPlayer() then
+        pPos = GetPlayer():GetWorldPosition()
+    end
+    ImGui.Text(("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(group.pos.x, group.pos.y, group.pos.z, ToVector4(group.pos):Distance(pPos)))
 
     style.spacedSeparator()
 
@@ -214,35 +223,35 @@ function savedUI.drawObject(obj, spawner)
     CPS.colorBegin("Border", savedUI.color.object)
     CPS.colorBegin("Separator", savedUI.color.object)
 
-	local h = 5 * ImGui.GetFrameHeight() + 4 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 3 + 3
-    ImGui.BeginChild("group_" .. obj.name, savedUI.box.object.x, h, true)
+    ImGui.BeginChild("group_" .. obj.name, savedUI.box.object.x - ImGui.GetStyle().ScrollbarSize, getObjectHeight(), true)
 
     if obj.newName == nil then obj.newName = obj.name end
+
+    style.pushGreyedOut(utils.hasIndex(savedUI.spawned, obj.name))
+
     ImGui.PushItemWidth(300)
     obj.newName = ImGui.InputTextWithHint('##Name', 'Name...', obj.newName, 100)
     ImGui.PopItemWidth()
-    ImGui.SameLine()
 
-    if utils.hasIndex(savedUI.spawned, obj.name) then
-        ImGui.PushStyleColor(ImGuiCol.Button, 0xff777777)
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, 0xff777777)
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, 0xff777777)
-        ImGui.Button("Apply Name")
-        ImGui.PopStyleColor(3)
-    else
-        if ImGui.Button("Apply Name") then
-            savedUI.files[obj.name] = nil
-            os.rename("data/objects/" .. obj.name .. ".json", "data/objects/" .. obj.newName .. ".json")
-            obj.name = obj.newName
-            obj.newName = nil
-            config.saveFile("data/objects/" .. obj.name .. ".json", obj)
-            savedUI.files[obj.name] = obj
-            savedUI.reload()
-        end
+    if ImGui.IsItemDeactivatedAfterEdit() then
+        savedUI.files[obj.name] = nil
+        os.rename("data/objects/" .. obj.name .. ".json", "data/objects/" .. obj.newName .. ".json")
+        obj.name = obj.newName
+        obj.newName = nil
+        config.saveFile("data/objects/" .. obj.name .. ".json", obj)
+        savedUI.files[obj.name] = obj
+        savedUI.reload()
     end
 
+    style.popGreyedOut(utils.hasIndex(savedUI.spawned, obj.name))
+
     style.spacedSeparator()
-    ImGui.Text(("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(obj.spawnable.position.x, obj.spawnable.position.y, obj.spawnable.position.z, ToVector4(obj.spawnable.position):Distance(GetPlayer():GetWorldPosition())))
+
+    local pPos = Vector4.new(0, 0, 0, 0)
+    if GetPlayer() then
+        pPos = GetPlayer():GetWorldPosition()
+    end
+    ImGui.Text(("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(obj.spawnable.position.x, obj.spawnable.position.y, obj.spawnable.position.z, ToVector4(obj.spawnable.position):Distance(pPos)))
     ImGui.Text("Type: " .. obj.spawnable.dataType)
 
     style.spacedSeparator()
@@ -322,15 +331,20 @@ end
 
 function savedUI.getHeight()
     local y = 0
+
     for _, d in pairs(savedUI.files) do
         if (d.name:lower():match(savedUI.filter:lower())) ~= nil then
+            if y ~= 0 then
+                y = y + ImGui.GetStyle().ItemSpacing.y
+            end
             if d.type == "group" then
-                y = y + savedUI.box.group.y + 4
+                y = y + getGroupHeight()
             else
-                y = y + savedUI.box.object.y + 4
+                y = y + getObjectHeight()
             end
         end
     end
+
     return y
 end
 

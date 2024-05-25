@@ -111,15 +111,22 @@ function spawnedUI.draw(spawner)
         end
     end
     ImGui.SameLine()
-    if ImGui.Button("Add Target") then
-        spawnedUI.tryAddLookAt()
-    end
-    ImGui.SameLine()
-    if ImGui.Button("Fetch all Apps (LAG)") then
-        for _, object in pairs(spawnedUI.getAllObjects()) do
-            spawnedUI.spawner.fetcher.queueFetching(object)
+    if ImGui.Button("Spawn all") then
+        for _, e in pairs(spawnedUI.elements) do
+            e:spawn()
         end
     end
+    ImGui.SameLine()
+    if ImGui.Button("Despawn all") then
+        for _, e in pairs(spawnedUI.elements) do
+            e:despawn()
+        end
+    end
+    ---TODO: Update this
+    -- ImGui.SameLine()
+    -- if ImGui.Button("Add Target") then
+    --     spawnedUI.tryAddLookAt()
+    -- end
 
     ImGui.Spacing()
     ImGui.Separator()

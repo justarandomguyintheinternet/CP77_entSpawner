@@ -1,5 +1,13 @@
 local visualizer = {}
 
+local previewComponentNames = {
+    "box",
+    "sphere",
+    "capsule_body",
+    "capsule_top",
+    "capsule_bottom"
+}
+
 local function addMesh(entity, name, mesh, scale, app, enabled)
     local component = entMeshComponent.new()
     component.name = name
@@ -120,6 +128,19 @@ function visualizer.showArrows(entity, state)
 
     local component = entity:FindComponentByName("arrows")
     component:Toggle(state)
+end
+
+---Toggles the visibility of all visualizion meshes except for arrows
+function visualizer.toggleAll(entity, state)
+    if not entity then return end
+
+    for _, name in pairs(previewComponentNames) do
+        local component = entity:FindComponentByName(name)
+
+        if component then
+            component:Toggle(state)
+        end
+    end
 end
 
 function visualizer.highlightArrow(entity, app)

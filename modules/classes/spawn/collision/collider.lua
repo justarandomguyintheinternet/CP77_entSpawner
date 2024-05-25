@@ -9,13 +9,14 @@ local hints = { "Dynamic + Visibility + PhotoModeCamera + VehicleBlocker + TankB
 
 ---Class for worldCollisionNode
 ---@class collider : spawnable
----@field shape integer
----@field material integer
----@field preset integer
----@field shapeTypes table
----@field extents table {x, y, z}
----@field height number
----@field radius number
+---@field private shape integer
+---@field private material integer
+---@field private preset integer
+---@field private shapeTypes table
+---@field private extents table {x, y, z}
+---@field private height number
+---@field private radius number
+---@field private previewed boolean
 local collider = setmetatable({}, { __index = spawnable })
 
 function collider:new()
@@ -36,6 +37,7 @@ function collider:new()
     o.extents = { x = 1, y = 1, z = 1 }
     o.height = 3
     o.radius = 1
+    o.previewed = true
 
     setmetatable(o, { __index = self })
    	return o
@@ -85,6 +87,8 @@ function collider:onAssemble(entity)
     component.filterData = filterData
 
     entity:AddComponent(component)
+
+    visualizer.toggleAll(entity, self.previewed)
 end
 
 function collider:save()
@@ -95,6 +99,7 @@ function collider:save()
     data.extents = self.extents
     data.height = self.height
     data.radius = self.radius
+    data.previewed = self.previewed or true
 
     return data
 end
@@ -128,6 +133,12 @@ function collider:draw()
     ImGui.SameLine()
     self.shape, changed = ImGui.Combo("##type", self.shape, self.shapeTypes, #self.shapeTypes)
     self:updateFull(changed)
+
+    ImGui.SameLine()
+    self.previewed, changed = ImGui.Checkbox("Preview shape", self.previewed)
+    if changed then
+        visualizer.toggleAll(self:getEntity(), self.previewed)
+    end
 
     ImGui.Text("Collision Preset")
     ImGui.SameLine()

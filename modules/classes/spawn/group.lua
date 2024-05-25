@@ -34,7 +34,7 @@ function group:new(sUI)
 	o.selectedGroup = -1
 	o.type = "group"
 	o.color = {0, 255, 0}
-	o.box = {x = 600, y = 142}
+	o.box = {x = 650, y = 142}
 	o.id = math.random(1, 1000000000) -- Id for imgui child rng gods bls have mercy
 	o.headerOpen = sUI.spawner.settings.headerState
 
@@ -127,10 +127,9 @@ function group:draw()
 
 		if not self.isAutoLoaded then
 			if self.newName == nil then self.newName = "" end
-			ImGui.SetNextItemWidth(250)
+			ImGui.SetNextItemWidth(300)
 			self.newName, changed = ImGui.InputTextWithHint('##newname', 'New Name...', self.newName, 100)
-			ImGui.SameLine()
-			if ImGui.Button("Apply", 150, 0) then
+			if ImGui.IsItemDeactivatedAfterEdit() then
 				self:rename(self.newName)
 				self:saveAfterMove()
 			end
@@ -195,13 +194,6 @@ function group:draw()
 				self:save()
 				self.sUI.spawner.baseUI.savedUI.files[self.name] = nil
 			end
-			--- TODO: Do we still need this?
-			-- if self.sUI.spawner.settings.groupExport then
-			-- 	ImGui.SameLine()
-			-- 	if CPS.CPButton("Export") then
-			-- 		self:export()
-			-- 	end
-			-- end
 		end
 
 		ImGui.EndChild()
@@ -232,7 +224,7 @@ function group:drawMoveGroup()
 		self.selectedGroup = utils.indexValue(gs, self:getOwnPath(true)) - 1
 	end
 
-	ImGui.SetNextItemWidth(250)
+	ImGui.SetNextItemWidth(300)
 	self.selectedGroup = ImGui.Combo("##moveto", self.selectedGroup, gs, #gs)
 	ImGui.SameLine()
 	if ImGui.Button("Move to group", 150, 0) then
@@ -563,14 +555,6 @@ function group:getOwnPath(first)
             return tostring(self.parent:getOwnPath() .. "/" .. self.name)
         end
     end
-end
-
-function group:export()
-	local data = {}
-	for _, obj in pairs(self:getObjects()) do
-		table.insert(data, {path = obj.path, pos = utils.fromVector(obj.pos), rot = utils.fromEuler(obj.rot), app = obj.app})
-	end
-	config.saveFile("export/" .. self.name .. "_export.json", data)
 end
 
 function group:getHeight(yy)
