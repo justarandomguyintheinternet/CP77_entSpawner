@@ -2,6 +2,7 @@ local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
 local CPS = require("CPStyling")
 local object = require("modules/classes/object")
+local settings = require("modules/utils/settings")
 
 ---Class for handling the hierarchical structure and base UI, wraps a spawnable object
 ---@class object
@@ -33,10 +34,10 @@ function object:new(sUI)
     o.color = {0, 50, 255}
     o.box = {x = 650, y = 282}
     o.id = math.random(1, 1000000000) -- Id for imgui child rng gods bls have mercy
-    o.headerOpen = sUI.spawner.settings.headerState
+    o.headerOpen = settings.headerState
 
     o.autoLoad = false
-	o.loadRange = sUI.spawner.settings.autoSpawnRange
+	o.loadRange = settings.autoSpawnRange
     o.isAutoLoaded = false
 
     o.spawnable = nil
@@ -133,7 +134,7 @@ function object:load(data)
     self.loadRange = data.loadRange
 
     self.spawnable = require("modules/classes/spawn/" .. data.spawnable.modulePath):new()
-    self.spawnable:loadSpawnData(data.spawnable, ToVector4(data.spawnable.position), ToEulerAngles(data.spawnable.rotation), self.sUI.spawner)
+    self.spawnable:loadSpawnData(data.spawnable, ToVector4(data.spawnable.position), ToEulerAngles(data.spawnable.rotation))
 end
 
 function object:tryMainDraw()
@@ -205,7 +206,7 @@ function object:draw()
             local pos = Vector4.new(self.spawnable.position.x, self.spawnable.position.y, self.spawnable.position.z, 0)
 
             clone.spawnable = require("modules/classes/spawn/" .. self.spawnable.modulePath):new()
-            clone.spawnable:loadSpawnData(self.spawnable:save(), pos, rot, self.sUI.spawner)
+            clone.spawnable:loadSpawnData(self.spawnable:save(), pos, rot)
 
             clone.name = self.name .. " Clone"
 

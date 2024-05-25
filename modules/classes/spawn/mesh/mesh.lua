@@ -28,8 +28,8 @@ function mesh:new()
    	return o
 end
 
-function mesh:loadSpawnData(data, position, rotation, spawner)
-    spawnable.loadSpawnData(self, data, position, rotation, spawner)
+function mesh:loadSpawnData(data, position, rotation)
+    spawnable.loadSpawnData(self, data, position, rotation)
 
     self.apps = cache.getValue(self.spawnData)
     if not self.apps then

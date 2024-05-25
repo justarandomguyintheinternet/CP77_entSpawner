@@ -3,6 +3,7 @@ local object = require("modules/classes/spawn/object")
 local utils = require("modules/utils/utils")
 local CPS = require("CPStyling")
 local style = require("modules/ui/style")
+local settings = require("modules/utils/settings")
 
 ---Class for organizing multiple objects and or groups
 ---@class group
@@ -36,13 +37,13 @@ function group:new(sUI)
 	o.color = {0, 255, 0}
 	o.box = {x = 650, y = 142}
 	o.id = math.random(1, 1000000000) -- Id for imgui child rng gods bls have mercy
-	o.headerOpen = sUI.spawner.settings.headerState
+	o.headerOpen = settings.headerState
 
 	o.pos = Vector4.new(0, 0, 0, 0)
     o.rot = EulerAngles.new(0, 0, 0)
 
 	o.autoLoad = false
-	o.loadRange = sUI.spawner.settings.autoSpawnRange
+	o.loadRange = settings.autoSpawnRange
 	o.isAutoLoaded = false
 
 	o.sUI = sUI
@@ -117,7 +118,7 @@ function group:draw()
     self.headerOpen = ImGui.CollapsingHeader(n)
 
 	local addY = 0
-	if spawner.settings.groupRot then addY = ImGui.GetFrameHeight() + ImGui.GetStyle().ItemSpacing.y end
+	if settings.groupRot then addY = ImGui.GetFrameHeight() + ImGui.GetStyle().ItemSpacing.y end
 
 	if self.headerOpen then
 		CPS.colorBegin("Border", self.color)
@@ -145,7 +146,7 @@ function group:draw()
 		self.pos = self:getCenter()
 		self:drawPos()
 
-		if spawner.settings.groupRot then
+		if settings.groupRot then
 			self:drawRot()
 		end
 
@@ -169,7 +170,7 @@ function group:draw()
 			g:load(self:toTable())
 			g.name = self.name .. " Clone"
 
-			if self.sUI.spawner.settings.moveCloneToParent == 1 then
+			if settings.moveCloneToParent == 1 then
 				g.parent = self
 				table.insert(self.childs, g)
 			else
@@ -257,7 +258,7 @@ end
 function group:drawPos()
 	ImGui.PushItemWidth(150)
 	local x = self.pos.x
-    x, changed = ImGui.DragFloat("##x", x, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f X")
+    x, changed = ImGui.DragFloat("##x", x, settings.posSteps, -9999, 9999, "%.3f X")
     if changed then
 		x = x - self.pos.x
         self:update(Vector4.new(x, 0, 0, 0))
@@ -265,7 +266,7 @@ function group:drawPos()
     end
     ImGui.SameLine()
 	local y = self.pos.y
-    y, changed = ImGui.DragFloat("##y", y, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Y")
+    y, changed = ImGui.DragFloat("##y", y, settings.posSteps, -9999, 9999, "%.3f Y")
     if changed then
         y = y - self.pos.y
         self:update(Vector4.new(0, y, 0, 0))
@@ -273,7 +274,7 @@ function group:drawPos()
     end
     ImGui.SameLine()
 	local z = self.pos.z
-    z, changed = ImGui.DragFloat("##z", z, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Z")
+    z, changed = ImGui.DragFloat("##z", z, settings.posSteps, -9999, 9999, "%.3f Z")
     if changed then
         z = z - self.pos.z
         self:update(Vector4.new(0, 0, z, 0))
@@ -287,7 +288,7 @@ function group:drawPos()
     end
 
     ImGui.PushItemWidth(150)
-    local x, changed = ImGui.DragFloat("##r_x", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relative X")
+    local x, changed = ImGui.DragFloat("##r_x", 0, settings.posSteps, -9999, 9999, "%.3f Relative X")
     if changed then
         local v = self:getAvgVector("right")
         self:update(Vector4.new((v.x * x), (v.y * x), (v.z * x), 0))
@@ -295,7 +296,7 @@ function group:drawPos()
 		x = 0
     end
     ImGui.SameLine()
-    local y, changed = ImGui.DragFloat("##r_y", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relative Y")
+    local y, changed = ImGui.DragFloat("##r_y", 0, settings.posSteps, -9999, 9999, "%.3f Relative Y")
     if changed then
         local v = self:getAvgVector("forward")
         self:update(Vector4.new((v.x * y), (v.y * y), (v.z * y), 0))
@@ -303,7 +304,7 @@ function group:drawPos()
 		y = 0
     end
     ImGui.SameLine()
-    local z, changed = ImGui.DragFloat("##r_z", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relative Z")
+    local z, changed = ImGui.DragFloat("##r_z", 0, settings.posSteps, -9999, 9999, "%.3f Relative Z")
     if changed then
         local v = self:getAvgVector("up")
         self:update(Vector4.new((v.x * z), (v.y * z), (v.z * z), 0))
@@ -316,7 +317,7 @@ end
 ---@protected
 function group:drawRot()
     ImGui.PushItemWidth(150)
-    local roll, changed = ImGui.DragFloat("##roll", self.rot.roll, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Roll")
+    local roll, changed = ImGui.DragFloat("##roll", self.rot.roll, settings.rotSteps, -9999, 9999, "%.3f Roll")
     if changed then
 		roll = roll - self.rot.roll
 		local objs = self:getObjects()
@@ -329,7 +330,7 @@ function group:drawRot()
 		self:update(Vector4.new(0, 0, 0, 0))
     end
     ImGui.SameLine()
-    local pitch, changed = ImGui.DragFloat("##pitch", self.rot.pitch, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Pitch")
+    local pitch, changed = ImGui.DragFloat("##pitch", self.rot.pitch, settings.rotSteps, -9999, 9999, "%.3f Pitch")
     if changed then
 		pitch = pitch - self.rot.pitch
 		local objs = self:getObjects()
@@ -342,7 +343,7 @@ function group:drawRot()
 		self:update(Vector4.new(0, 0, 0, 0))
     end
     ImGui.SameLine()
-    local yaw, changed = ImGui.DragFloat("##yaw", self.rot.yaw, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Yaw")
+    local yaw, changed = ImGui.DragFloat("##yaw", self.rot.yaw, settings.rotSteps, -9999, 9999, "%.3f Yaw")
     if changed then
         yaw = yaw - self.rot.yaw
 		local objs = self:getObjects()

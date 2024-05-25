@@ -14,7 +14,7 @@
 --
 -------------------------------------------------------------------------------------------------------------------------------
 
-local config = require("modules/utils/config")
+local settings = require("modules/utils/settings")
 local builder = require("modules/utils/entityBuilder")
 local Cron = require("modules/utils/Cron")
 local cache = require("modules/utils/cache")
@@ -26,29 +26,7 @@ spawner = {
         inMenu = false
     },
 
-    defaultSettings = {
-        spawnPos = 1,
-        spawnDist = 3,
-        spawnNewSortAlphabetical = false,
-        posSteps = 0.05,
-        rotSteps = 0.05,
-        despawnOnReload = true,
-        groupRot = false,
-        headerState = true,
-        deleteConfirm = true,
-        moveCloneToParent = 1,
-        groupExport = false,
-        autoSpawnRange = 1000,
-        spawnUIOnlyNames = false,
-        appFetchTrys = 150,
-        editor = {
-            color = 1
-        }
-    },
-
-    settings = {},
     baseUI = require("modules/ui/baseUI"),
-    fetcher = require("modules/utils/appFetcher"),
     GameUI = require("modules/utils/GameUI")
 }
 
@@ -58,10 +36,7 @@ function spawner:new()
     end)
 
     registerForEvent("onInit", function()
-        config.tryCreateConfig("data/config.json", self.defaultSettings)
-        config.backwardComp("data/config.json", self.defaultSettings)
-        config.tryCreateConfig("data/apps.json", {})
-        self.settings = config.loadFile("data/config.json")
+        settings.load()
         cache.load()
         cache.generateRecordsList()
 
@@ -93,12 +68,11 @@ function spawner:new()
         if self.runtimeData.inGame and not self.runtimeData.inMenu then
             Cron.Update(dt)
             self.baseUI.savedUI.run(self)
-            self.fetcher.update()
         end
     end)
 
     registerForEvent("onShutdown", function ()
-        if self.settings.despawnOnReload then
+        if settings.despawnOnReload then
             self.baseUI.spawnedUI.despawnAll()
         end
     end)

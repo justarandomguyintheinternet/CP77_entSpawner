@@ -1,33 +1,28 @@
-local CPS = require("CPStyling")
 local utils = require("modules/utils/utils")
 local object = require("modules/classes/spawn/object")
 local group = require("modules/classes/spawn/group")
+local settings = require("modules/utils/settings")
 
 spawnedUI = {
     elements = {},
     filter = "",
     newGroupName = "New Group",
-    groups = {},
-    spawner = nil
+    groups = {}
 }
-
-function spawnedUI.init(spawner)
-    spawnedUI.spawner = spawner
-end
 
 function spawnedUI.spawnNewObject(entry, class, parent)
     local new = object:new(spawnedUI)
     local rot = GetPlayer():GetWorldOrientation():ToEulerAngles()
     local pos = GetPlayer():GetWorldPosition()
 
-    if spawnedUI.spawner.settings.spawnPos == 2 then
+    if settings.spawnPos == 2 then
         local forward = GetPlayer():GetWorldForward()
-        pos.x = pos.x + forward.x * spawnedUI.spawner.settings.spawnDist
-        pos.y = pos.y + forward.y * spawnedUI.spawner.settings.spawnDist
+        pos.x = pos.x + forward.x * settings.spawnDist
+        pos.y = pos.y + forward.y * settings.spawnDist
     end
 
     new.spawnable = class:new()
-    new.spawnable:loadSpawnData(entry.data, pos, rot, spawnedUI.spawner)
+    new.spawnable:loadSpawnData(entry.data, pos, rot)
     new.name = new.spawnable:generateName(entry.name)
     new.parent = parent
 
@@ -72,9 +67,7 @@ function spawnedUI.getGroups()
     end
 end
 
-function spawnedUI.draw(spawner)
-    if spawnedUI.spawner == nil then spawnedUI.init(spawner) end
-
+function spawnedUI.draw()
     spawnedUI.getGroups()
 
     ImGui.PushItemWidth(250)

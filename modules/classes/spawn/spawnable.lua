@@ -2,6 +2,7 @@ local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local builder = require("modules/utils/entityBuilder")
 local visualizer = require("modules/utils/visualizer")
+local settings = require("modules/utils/settings")
 
 ---Base class for any object / node that can be spawned
 ---@class spawnable
@@ -10,7 +11,6 @@ local visualizer = require("modules/utils/visualizer")
 ---@field public spawnListPath string
 ---@field public modulePath string
 ---@field public boxColor table
----@field public spawner table
 ---@field public spawnData string
 ---@field public app string
 ---@field public position Vector4
@@ -29,7 +29,6 @@ function spawnable:new()
     o.spawnListPath = "data/spawnables/entity/templates/"
     o.modulePath = "spawnable"
     o.boxColor = {255, 0, 0}
-    o.spawner = nil
 
     o.spawnData = "base\\spawner\\empty_entity.ent"
     o.app = ""
@@ -137,7 +136,7 @@ end
 ---@protected
 function spawnable:drawPosition()
     ImGui.PushItemWidth(150)
-    self.position.x, changed = ImGui.DragFloat("##x", self.position.x, self.spawner.settings.posSteps, -9999, 9999, "%.3f X")
+    self.position.x, changed = ImGui.DragFloat("##x", self.position.x, settings.posSteps, -9999, 9999, "%.3f X")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "red")
     if changed then
@@ -145,7 +144,7 @@ function spawnable:drawPosition()
     end
     ImGui.SameLine()
 
-    self.position.y, changed = ImGui.DragFloat("##y", self.position.y, self.spawner.settings.posSteps, -9999, 9999, "%.3f Y")
+    self.position.y, changed = ImGui.DragFloat("##y", self.position.y, settings.posSteps, -9999, 9999, "%.3f Y")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "green")
     if changed then
@@ -153,7 +152,7 @@ function spawnable:drawPosition()
     end
     ImGui.SameLine()
 
-    self.position.z, changed = ImGui.DragFloat("##z", self.position.z, self.spawner.settings.posSteps, -9999, 9999, "%.3f Z")
+    self.position.z, changed = ImGui.DragFloat("##z", self.position.z, settings.posSteps, -9999, 9999, "%.3f Z")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "blue")
     if changed then
@@ -174,7 +173,7 @@ function spawnable:drawRelativePosition()
     style.pushGreyedOut(not self:isSpawned())
 
     ImGui.PushItemWidth(150)
-    local x, changed = ImGui.DragFloat("##r_x", 0, self.spawner.settings.posSteps, -9999, 9999, "%.3f Relative X")
+    local x, changed = ImGui.DragFloat("##r_x", 0, settings.posSteps, -9999, 9999, "%.3f Relative X")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "red")
     if changed then
@@ -189,7 +188,7 @@ function spawnable:drawRelativePosition()
         x = 0
     end
     ImGui.SameLine()
-    local y, changed = ImGui.DragFloat("##r_y", 0, self.spawner.settings.posSteps, -9999, 9999, "%.3f Relative Y")
+    local y, changed = ImGui.DragFloat("##r_y", 0, settings.posSteps, -9999, 9999, "%.3f Relative Y")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "green")
     if changed then
@@ -204,7 +203,7 @@ function spawnable:drawRelativePosition()
         y = 0
     end
     ImGui.SameLine()
-    local z, changed = ImGui.DragFloat("##r_z", 0, self.spawner.settings.posSteps, -9999, 9999, "%.3f Relative Z")
+    local z, changed = ImGui.DragFloat("##r_z", 0, settings.posSteps, -9999, 9999, "%.3f Relative Z")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "blue")
     if changed then
@@ -227,21 +226,21 @@ end
 ---@protected
 function spawnable:drawRotation()
     ImGui.PushItemWidth(150)
-    self.rotation.roll, changed = ImGui.DragFloat("##roll", self.rotation.roll, self.spawner.settings.rotSteps, -9999, 9999, "%.3f Roll")
+    self.rotation.roll, changed = ImGui.DragFloat("##roll", self.rotation.roll, settings.rotSteps, -9999, 9999, "%.3f Roll")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "green")
     if changed then
         self:update()
     end
     ImGui.SameLine()
-    self.rotation.pitch, changed = ImGui.DragFloat("##pitch", self.rotation.pitch, self.spawner.settings.rotSteps, -9999, 9999, "%.3f Pitch")
+    self.rotation.pitch, changed = ImGui.DragFloat("##pitch", self.rotation.pitch, settings.rotSteps, -9999, 9999, "%.3f Pitch")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "red")
     if changed then
         self:update()
     end
     ImGui.SameLine()
-    self.rotation.yaw, changed = ImGui.DragFloat("##yaw", self.rotation.yaw, self.spawner.settings.rotSteps, -9999, 9999, "%.3f Yaw")
+    self.rotation.yaw, changed = ImGui.DragFloat("##yaw", self.rotation.yaw, settings.rotSteps, -9999, 9999, "%.3f Yaw")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "blue")
     if changed then
@@ -311,15 +310,13 @@ end
 ---@param data table
 ---@param position Vector4
 ---@param rotation EulerAngles
----@param spawner table
-function spawnable:loadSpawnData(data, position, rotation, spawner)
+function spawnable:loadSpawnData(data, position, rotation)
     for key, value in pairs(data) do
         self[key] = value
     end
 
     self.position = position
     self.rotation = rotation
-    self.spawner = spawner
 end
 
 ---Export the spawnable for WScript import, using same structure for `data` as JSON formated node

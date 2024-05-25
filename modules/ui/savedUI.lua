@@ -4,6 +4,7 @@ local object = require("modules/classes/spawn/object")
 local gr = require("modules/classes/spawn/group")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
+local settings = require("modules/utils/settings")
 
 local debug = false
 
@@ -23,7 +24,7 @@ function savedUI.convertObject(object)
     spawnable:loadSpawnData({
         spawnData = object.path,
         app = object.app
-    }, ToVector4(object.pos), ToEulerAngles(object.rot), nil)
+    }, ToVector4(object.pos), ToEulerAngles(object.rot))
 
     local newObject = require("modules/classes/spawn/object"):new(savedUI)
     newObject.name = object.name
@@ -292,7 +293,7 @@ function savedUI.drawObject(obj, spawner)
 end
 
 function savedUI.deleteData(data)
-    if savedUI.spawner.settings.deleteConfirm then
+    if settings.deleteConfirm then
         savedUI.popup = true
         savedUI.deleteFile = data
     else
@@ -305,10 +306,10 @@ function savedUI.handlePopUp()
     if savedUI.popup then
         ImGui.OpenPopup("Delete Data?")
         if ImGui.BeginPopupModal("Delete Data?", true, ImGuiWindowFlags.AlwaysAutoResize) then
-            local again, changed = ImGui.Checkbox("Dont ask again", not savedUI.spawner.settings.deleteConfirm)
+            local again, changed = ImGui.Checkbox("Dont ask again", not settings.deleteConfirm)
             if changed then
-                savedUI.spawner.settings.deleteConfirm = not again
-                config.saveFile("data/config.json", savedUI.spawner.settings)
+                settings.deleteConfirm = not again
+                config.saveFile("data/config.json", settings)
             end
 
             if ImGui.Button("Cancel") then

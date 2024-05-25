@@ -28,14 +28,14 @@ function baseUI.draw(spawner)
             baseUI.currentTab = 0
             ImGui.Spacing()
             baseUI.spawnedUI.getGroups()
-            baseUI.spawnUI.draw(spawner)
+            baseUI.spawnUI.draw()
             ImGui.EndTabItem()
         end
 
         if ImGui.BeginTabItem("Spawned") then
             baseUI.currentTab = 1
             ImGui.Spacing()
-            baseUI.spawnedUI.draw(spawner)
+            baseUI.spawnedUI.draw()
             ImGui.EndTabItem()
         end
 
@@ -70,7 +70,7 @@ function baseUI.draw(spawner)
         if ImGui.BeginTabItem("Settings") then
             baseUI.currentTab = 6
             ImGui.Spacing()
-            baseUI.settingsUI.draw(spawner)
+            baseUI.settingsUI.draw()
             ImGui.EndTabItem()
         end
         ImGui.EndTabBar()

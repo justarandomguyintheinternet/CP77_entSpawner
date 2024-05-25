@@ -2,6 +2,7 @@ local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local object = require("modules/classes/spawn/object")
+local settings = require("modules/utils/settings")
 
 local types = {
     ["Entity"] = {
@@ -132,9 +133,9 @@ function spawnUI.draw()
     tooltip("Automatically place any newly spawned object into the selected group")
 	ImGui.PopItemWidth()
 
-    spawnUI.spawner.settings.spawnNewSortAlphabetical, changed = ImGui.Checkbox("Sort alphabetically", spawnUI.spawner.settings.spawnNewSortAlphabetical)
+    settings.spawnNewSortAlphabetical, changed = ImGui.Checkbox("Sort alphabetically", settings.spawnNewSortAlphabetical)
     if changed then
-        config.saveFile("data/config.json", spawnUI.spawner.settings)
+        settings.save()
     end
 
     style.spacedSeparator()
@@ -169,7 +170,7 @@ function spawnUI.draw()
             for _, prop in pairs(props) do
                 local new = object:new(spawnUI)
                 new.spawnable = require("modules/classes/spawn/entity/ammEntity"):new()
-                new.spawnable:loadSpawnData({ spawnData = prop.path }, Vector4.new(0, 0, 0, 0), EulerAngles.new(0, 0, 0), spawnedUI.spawner)
+                new.spawnable:loadSpawnData({ spawnData = prop.path }, Vector4.new(0, 0, 0, 0), EulerAngles.new(0, 0, 0))
                 new.name = new.spawnable:generateName(prop.name)
 
                 config.saveFile("data/spawnables/entity/amm/" .. prop.name .. ".json", new:getState())
@@ -252,7 +253,7 @@ function spawnUI.draw()
 end
 
 function spawnUI.sort()
-    if spawnUI.spawner.settings.spawnNewSortAlphabetical then
+    if settings.spawnNewSortAlphabetical then
         table.sort(spawnUI.getActiveSpawnList().data, function(a, b) return a.name:lower() < b.name:lower() end)
     end
 end

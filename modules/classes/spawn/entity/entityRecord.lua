@@ -19,8 +19,8 @@ function record:new()
    	return o
 end
 
-function record:loadSpawnData(data, position, rotation, spawner)
-    spawnable.loadSpawnData(self, data, position, rotation, spawner)
+function record:loadSpawnData(data, position, rotation)
+    spawnable.loadSpawnData(self, data, position, rotation)
     local resRef = ResRef.FromHash(TweakDB:GetFlat(self.spawnData .. ".entityTemplatePath").hash)
 
     self.apps = cache.getValue(self.spawnData)
