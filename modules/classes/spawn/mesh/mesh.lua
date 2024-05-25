@@ -13,6 +13,8 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@field public appIndex integer
 ---@field public scale table {x: number, y: number, z: number}
 ---@field public bBox table {min: Vector4, max: Vector4}
+---@field public colliderShape integer
+---@field public scaleLocked boolean
 local mesh = setmetatable({}, { __index = spawnable })
 
 function mesh:new(object)
@@ -29,6 +31,7 @@ function mesh:new(object)
     o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
 
     o.colliderShape = 0
+    o.scaleLocked = true
 
     setmetatable(o, { __index = self })
    	return o
@@ -88,6 +91,7 @@ end
 function mesh:save()
     local data = spawnable.save(self)
     data.scale = self.scale
+    data.scaleLocked = self.scaleLocked
 
     return data
 end
@@ -125,19 +129,36 @@ function mesh:draw()
     ImGui.PushItemWidth(150)
     self.scale.x, changed = ImGui.DragFloat("##xsize", self.scale.x, 0.01, -9999, 9999, "%.3f X Scale")
     if changed then
+        if self.scaleLocked then
+            self.scale.y = self.scale.x
+            self.scale.z = self.scale.x
+        end
         self:updateScale()
     end
     ImGui.SameLine()
     self.scale.y, changed = ImGui.DragFloat("##ysize", self.scale.y, 0.01, -9999, 9999, "%.3f Y Scale")
     if changed then
+        if self.scaleLocked then
+            self.scale.x = self.scale.y
+            self.scale.z = self.scale.y
+        end
         self:updateScale()
     end
     ImGui.SameLine()
     self.scale.z, changed = ImGui.DragFloat("##zsize", self.scale.z, 0.01, -9999, 9999, "%.3f Z Scale")
     if changed then
+        if self.scaleLocked then
+            self.scale.x = self.scale.z
+            self.scale.y = self.scale.z
+        end
         self:updateScale()
     end
+
     ImGui.PopItemWidth()
+
+    ImGui.SameLine()
+    self.scaleLocked = ImGui.Checkbox("Lock Axis", self.scaleLocked)
+    style.tooltip("Locks the X, Y, and Z axis scales together")
 
     style.pushGreyedOut(#self.apps == 0)
 
