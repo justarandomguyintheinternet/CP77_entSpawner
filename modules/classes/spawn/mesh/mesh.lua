@@ -5,15 +5,18 @@ local utils = require("modules/utils/utils")
 local cache = require("modules/utils/cache")
 local visualizer = require("modules/utils/visualizer")
 
+local colliderShapes = { "Box", "Capsule", "Sphere" }
+
 ---Class for worldMeshNode
 ---@class mesh : spawnable
 ---@field public apps table
 ---@field public appIndex integer
 ---@field public scale table {x: number, y: number, z: number}
+---@field public bBox table {min: Vector4, max: Vector4}
 local mesh = setmetatable({}, { __index = spawnable })
 
-function mesh:new()
-	local o = spawnable.new(self)
+function mesh:new(object)
+	local o = spawnable.new(self, object)
 
     o.spawnListType = "list"
     o.dataType = "Static Mesh"
@@ -23,6 +26,9 @@ function mesh:new()
     o.apps = {}
     o.appIndex = 0
     o.scale = { x = 1, y = 1, z = 1 }
+    o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
+
+    o.colliderShape = 0
 
     setmetatable(o, { __index = self })
    	return o
@@ -32,14 +38,28 @@ function mesh:loadSpawnData(data, position, rotation)
     spawnable.loadSpawnData(self, data, position, rotation)
 
     self.apps = cache.getValue(self.spawnData)
-    if not self.apps then
+    self.bBox.max = cache.getValue(self.spawnData .. "_bBox_max")
+    self.bBox.min = cache.getValue(self.spawnData .. "_bBox_min")
+
+    if (not self.apps) or (not self.bBox.max) or (not self.bBox.min) then
         self.apps = {}
         builder.registerLoadResource(self.spawnData, function (resource)
             for _, appearance in ipairs(resource.appearances) do
                 table.insert(self.apps, appearance.name.value)
             end
+
+            self.bBox.min = resource.boundingBox.Min
+            self.bBox.max = resource.boundingBox.Max
+
+            visualizer.updateScale(entity, self:getVisualScale(), "arrows")
+
+            cache.addValue(self.spawnData, self.apps)
+            cache.addValue(self.spawnData .. "_bBox_max", utils.fromVector(self.bBox.max))
+            cache.addValue(self.spawnData .. "_bBox_min", utils.fromVector(self.bBox.min))
         end)
-        cache.addValue(self.spawnData, self.apps)
+    else
+        self.bBox.max = ToVector4(self.bBox.max)
+        self.bBox.min = ToVector4(self.bBox.min)
     end
 
     self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
@@ -53,6 +73,8 @@ function mesh:onAssemble(entity)
     component.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
     component.meshAppearance = self.app
     entity:AddComponent(component)
+
+    visualizer.updateScale(entity, self:getVisualScale(), "arrows")
 end
 
 function mesh:spawn()
@@ -90,7 +112,7 @@ function mesh:getVisualScale()
 end
 
 function mesh:getExtraHeight()
-    return 5 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 2
+    return 6 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 3
 end
 
 function mesh:draw()
@@ -147,6 +169,45 @@ function mesh:draw()
         ImGui.SetClipboardText(self.spawnData)
     end
     style.tooltip("Copies the mesh path to the clipboard")
+
+    if ImGui.Button("Generate Collider") then
+        local path = self.object:addGroupToParent(self.object.name .. "_grouped")
+        self.object:setSelectedGroupByPath(path)
+        self.object:moveToSelectedGroup()
+
+        local collider = require("modules/classes/spawn/collision/collider"):new()
+
+        local x = (self.bBox.max.x - self.bBox.min.x) * self.scale.x
+        local y = (self.bBox.max.y - self.bBox.min.y) * self.scale.y
+        local z = (self.bBox.max.z - self.bBox.min.z) * self.scale.z
+
+        local pos = Vector4.new(self.position.x, self.position.y, self.position.z, 0)
+
+        local offset = Vector4.new((self.bBox.min.x * self.scale.x) + x / 2, (self.bBox.min.y * self.scale.y) + y / 2, (self.bBox.min.z * self.scale.z) + z / 2, 0)
+        offset = self.rotation:ToQuat():Transform(offset)
+        pos = Game['OperatorAdd;Vector4Vector4;Vector4'](pos, offset)
+
+        local radius = math.max(x, y, z) / 2
+        if self.colliderShape == 1 then
+            radius = math.max(x, y) / 2
+        end
+
+        local data = {
+            extents = { x = x / 2, y = y / 2, z = z / 2 },
+            radius = radius,
+            height = z - 1,
+            shape = self.colliderShape
+        }
+
+        collider:loadSpawnData(data, pos, self.rotation)
+
+        self.object:addObjectToParent(collider, collider:generateName(self.object.name .. "_collider"), false)
+    end
+
+    ImGui.SameLine()
+
+    ImGui.SetNextItemWidth(150)
+    self.colliderShape, changed = ImGui.Combo("##colliderShape", self.colliderShape, colliderShapes, #colliderShapes)
 end
 
 function mesh:export()

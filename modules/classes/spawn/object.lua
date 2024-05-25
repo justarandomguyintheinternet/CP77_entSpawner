@@ -19,9 +19,11 @@ local settings = require("modules/utils/settings")
 ---@field public loadRange number
 ---@field public isAutoLoaded boolean
 ---@field public spawnable spawnable
----@field public sUI table
+---@field public sUI spawnedUI
 object = {}
 
+---@param sUI spawnedUI
+---@return object
 function object:new(sUI)
 	local o = {}
 
@@ -133,7 +135,7 @@ function object:load(data)
     self.autoLoad = data.autoLoad
     self.loadRange = data.loadRange
 
-    self.spawnable = require("modules/classes/spawn/" .. data.spawnable.modulePath):new()
+    self.spawnable = require("modules/classes/spawn/" .. data.spawnable.modulePath):new(self)
     self.spawnable:loadSpawnData(data.spawnable, ToVector4(data.spawnable.position), ToEulerAngles(data.spawnable.rotation))
 end
 
@@ -205,7 +207,7 @@ function object:draw()
             local rot = EulerAngles.new(self.spawnable.rotation.roll, self.spawnable.rotation.pitch, self.spawnable.rotation.yaw)
             local pos = Vector4.new(self.spawnable.position.x, self.spawnable.position.y, self.spawnable.position.z, 0)
 
-            clone.spawnable = require("modules/classes/spawn/" .. self.spawnable.modulePath):new()
+            clone.spawnable = require("modules/classes/spawn/" .. self.spawnable.modulePath):new(clone)
             clone.spawnable:loadSpawnData(self.spawnable:save(), pos, rot)
 
             clone.name = self.name .. " Clone"
@@ -271,28 +273,74 @@ function object:drawGroup()
 
     if ImGui.Button("Move to group", 150, 0) then
         if self:verifyMove(self.sUI.groups[self.selectedGroup + 1].tab) then -- Dont move inside same group
-            if self.selectedGroup ~= 0 then
-                if self.parent == nil then
-                    os.remove("data/objects/" .. self.name .. ".json")
-                    self.sUI.spawner.baseUI.savedUI.reload()
-                end
-                if self.parent ~= nil then
-                    utils.removeItem(self.parent.childs, self)
-                end
-                self.parent = self.sUI.groups[self.selectedGroup + 1].tab
-                table.insert(self.sUI.groups[self.selectedGroup + 1].tab.childs, self)
-                self:saveAfterMove()
-            else
-                if self.parent ~= nil then
-                    utils.removeItem(self.parent.childs, self)
-                    self.parent:saveAfterMove()
-                end
-
-                self.parent = nil
-                self:save()
-            end
+           self:moveToSelectedGroup()
         end
     end
+end
+
+function object:setSelectedGroupByPath(path)
+    self.sUI.getGroups()
+
+    local i = 0
+    for _, group in pairs(self.sUI.groups) do
+        if group.name == path then
+            self.selectedGroup = i
+            break
+        end
+        i = i + 1
+    end
+end
+
+function object:moveToSelectedGroup()
+    if self.selectedGroup ~= 0 then
+        if self.parent == nil then
+            os.remove("data/objects/" .. self.name .. ".json")
+            self.sUI.spawner.baseUI.savedUI.reload()
+        end
+        if self.parent ~= nil then
+            utils.removeItem(self.parent.childs, self)
+        end
+        self.parent = self.sUI.groups[self.selectedGroup + 1].tab
+        table.insert(self.sUI.groups[self.selectedGroup + 1].tab.childs, self)
+        self:saveAfterMove()
+    else
+        if self.parent ~= nil then
+            utils.removeItem(self.parent.childs, self)
+            self.parent:saveAfterMove()
+        end
+
+        self.parent = nil
+        self:save()
+    end
+end
+
+function object:addGroupToParent(name)
+    local g = require("modules/classes/spawn/group"):new(self.sUI)
+    g.name = utils.createFileName(name)
+
+    g.parent = nil
+    if self.parent then
+        g.parent = self.parent
+        table.insert(self.parent.childs, g)
+    end
+    table.insert(self.sUI.elements, g)
+
+    return g:getOwnPath()
+end
+
+function object:addObjectToParent(spawnable, name, headerOpen)
+    local o = object:new(self.sUI)
+    o.spawnable = spawnable
+    o.spawnable:spawn()
+    o.parent = self.parent
+    o.name = name
+    o.headerOpen = headerOpen
+
+    if self.parent then
+        table.insert(self.parent.childs, o)
+    end
+
+    table.insert(self.sUI.elements, o)
 end
 
 function object:verifyMove(to)

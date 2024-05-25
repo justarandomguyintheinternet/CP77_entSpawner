@@ -1,6 +1,5 @@
 local mesh = require("modules/classes/spawn/mesh/mesh")
-local spawnable = require("modules/classes/spawn/spawnable")
-local builder = require("modules/utils/entityBuilder")
+local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 local Cron = require("modules/utils/Cron")
 
@@ -13,8 +12,8 @@ local Cron = require("modules/utils/Cron")
 ---@field private cronID number
 local rotatingMesh = setmetatable({}, { __index = mesh })
 
-function rotatingMesh:new()
-	local o = mesh.new(self)
+function rotatingMesh:new(object)
+	local o = mesh.new(self, object)
 
     o.spawnListType = "list"
     o.dataType = "Rotating Mesh"
@@ -75,11 +74,13 @@ function rotatingMesh:save()
 end
 
 function rotatingMesh:getExtraHeight()
-    return mesh.getExtraHeight(self) + ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight()
+    return mesh.getExtraHeight(self) + ImGui.GetStyle().ItemSpacing.y * 4 + ImGui.GetFrameHeight()
 end
 
 function rotatingMesh:draw()
     mesh.draw(self)
+
+    style.spacedSeparator()
 
     ImGui.PushItemWidth(150)
 

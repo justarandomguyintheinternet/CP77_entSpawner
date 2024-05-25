@@ -3,6 +3,7 @@ local object = require("modules/classes/spawn/object")
 local group = require("modules/classes/spawn/group")
 local settings = require("modules/utils/settings")
 
+---@class spawnedUI
 spawnedUI = {
     elements = {},
     filter = "",
@@ -21,7 +22,7 @@ function spawnedUI.spawnNewObject(entry, class, parent)
         pos.y = pos.y + forward.y * settings.spawnDist
     end
 
-    new.spawnable = class:new()
+    new.spawnable = class:new(new)
     new.spawnable:loadSpawnData(entry.data, pos, rot)
     new.name = new.spawnable:generateName(entry.name)
     new.parent = parent
@@ -33,23 +34,6 @@ function spawnedUI.spawnNewObject(entry, class, parent)
     new:spawn()
     table.insert(spawnedUI.elements, new)
     return new
-end
-
-function spawnedUI.tryAddLookAt()
-    local target = Game.GetTargetingSystem():GetLookAtObject(Game.GetPlayer(), false, false)
-    if not target then return end
-
-    local new = object:new(spawnedUI)
-    new.path = ""
-    new.name = "target"
-    new.rot = target:GetWorldOrientation():ToEulerAngles()--GetPlayer():GetWorldOrientation():ToEulerAngles()
-    new.pos = target:GetWorldPosition()--GetPlayer():GetWorldPosition()
-    new.parent = nil
-    new.spawned = true
-    new.entID = target:GetEntityID()--Game.GetDynamicEntitySystem():CreateEntity(DynamicEntitySpec.new({recordID = "Vehicle.ue_metro_train", position = GetPlayer():GetWorldPosition()}))
-    new:generateName()
-
-    table.insert(spawnedUI.elements, new)
 end
 
 function spawnedUI.getGroups()
@@ -88,7 +72,7 @@ function spawnedUI.draw()
     ImGui.SameLine()
     if ImGui.Button("Add group") then
         local g = group:new(spawnedUI)
-        g.name =utils.createFileName(spawnedUI.newGroupName)
+        g.name = utils.createFileName(spawnedUI.newGroupName)
         table.insert(spawnedUI.elements, g)
     end
 
@@ -115,11 +99,6 @@ function spawnedUI.draw()
             e:despawn()
         end
     end
-    ---TODO: Update this
-    -- ImGui.SameLine()
-    -- if ImGui.Button("Add Target") then
-    --     spawnedUI.tryAddLookAt()
-    -- end
 
     ImGui.Spacing()
     ImGui.Separator()

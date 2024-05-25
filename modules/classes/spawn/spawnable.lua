@@ -19,9 +19,10 @@ local settings = require("modules/utils/settings")
 ---@field protected spawned boolean
 ---@field public isHovered boolean
 ---@field protected arrowDirection string all|red|green|blue
+---@field public object object? The object that is using this spawnable
 local spawnable = {}
 
-function spawnable:new()
+function spawnable:new(object)
 	local o = {}
 
     o.dataType = "Spawnable"
@@ -40,6 +41,8 @@ function spawnable:new()
 
     o.isHovered = false
     o.arrowDirection = "all"
+
+    o.object = object
 
     self.__index = self
    	return setmetatable(o, self)

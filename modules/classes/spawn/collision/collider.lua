@@ -44,8 +44,6 @@ function collider:new()
    	return o
 end
 
---- TODO: Add toggle for visual previews
-
 function collider:onAssemble(entity)
     spawnable.onAssemble(self, entity)
 

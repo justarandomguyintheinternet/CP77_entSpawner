@@ -309,7 +309,7 @@ function savedUI.handlePopUp()
             local again, changed = ImGui.Checkbox("Dont ask again", not settings.deleteConfirm)
             if changed then
                 settings.deleteConfirm = not again
-                config.saveFile("data/config.json", settings)
+                settings.save()
             end
 
             if ImGui.Button("Cancel") then

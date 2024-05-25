@@ -17,7 +17,7 @@ function cache.addValue(key, value)
 end
 
 function cache.getValue(key)
-    return nil
+    return data[key]
 end
 
 function cache.generateClothList()
