@@ -77,7 +77,7 @@ end
 -- Group system functions
 
 ---Generate valid name from path or if no path given current name
----@param path string
+---@param path string?
 function object:generateName(path)
     local text = path or self.name
     if string.find(self.name, "\\") then

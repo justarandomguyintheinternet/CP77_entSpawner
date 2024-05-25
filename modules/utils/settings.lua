@@ -15,6 +15,7 @@ local config = require("modules/utils/config")
 ---@field public autoSpawnRange number
 ---@field public spawnUIOnlyNames boolean
 ---@field public editor table {color: integer}
+---@field public colliderColor integer
 local settingsData = {
     spawnPos = 2,
     spawnDist = 3,
@@ -31,7 +32,8 @@ local settingsData = {
     spawnUIOnlyNames = false,
     editor = {
         color = 1
-    }
+    },
+    colliderColor = 0
 }
 
 local settingsFNs = {}

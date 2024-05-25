@@ -1,6 +1,8 @@
 local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
 
+local colliderColors = { "Red", "Green", "Blue" }
+
 settingsUI = {}
 
 function settingsUI.draw()
@@ -46,6 +48,12 @@ function settingsUI.draw()
     if changed then settings.save() end
 
     settings.rotSteps, changed = ImGui.InputFloat("Rotation controls step size", settings.rotSteps, -9999, 9999, "%.4f")
+    if changed then settings.save() end
+
+    style.sectionHeaderEnd()
+    style.sectionHeaderStart("COLLIDERS")
+
+    settings.colliderColor, changed = ImGui.Combo("Collider color", settings.colliderColor, colliderColors, #colliderColors)
     if changed then settings.save() end
 
     style.sectionHeaderEnd()

@@ -210,6 +210,7 @@ function spawnedUI.hotkey()
     end
 
     local closest = 999
+    ---@type object
     local closestObj = nil
 
     for _, obj in pairs(allObjects) do
