@@ -58,14 +58,20 @@ function config.loadLists(path)
     return paths
 end
 
+local function recursiveAddMissingKeys(source, target)
+    for k, v in pairs(source) do
+        if type(v) == "table" and type(target[k]) == "table" then
+            recursiveAddMissingKeys(v, target[k])
+        elseif target[k] == nil then
+            target[k] = v
+        end
+    end
+end
+
 function config.backwardComp(path, data)
     local f = config.loadFile(path)
 
-    for k, e in pairs(data) do
-        if f[k] == nil then
-            f[k] = e
-        end
-    end
+    recursiveAddMissingKeys(data, f)
 
     config.saveFile(path, f)
 end

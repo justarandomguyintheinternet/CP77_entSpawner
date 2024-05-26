@@ -140,10 +140,8 @@ const addSectorToBlock = (block, info, root) => {
 	block.Data.RootChunk.descriptors.push(descriptor)
 }
 
-// For Buffers:
+//TODO: Put these in a list
 // BufferID - Flags - Type - Data
-// Otherwise:
-// $type / Type must be first
 
 const reorderJSONByType = (data) => {
     if (Array.isArray(data)) {
@@ -158,7 +156,6 @@ const reorderJSONByType = (data) => {
 		if (keys.includes("ShapeType")) {
             reordered["ShapeType"] = data["ShapeType"];
         }
-
         if (keys.includes("BufferId")) {
             reordered["BufferId"] = data["BufferId"];
         }
@@ -212,4 +209,6 @@ if (data == null) {
 	}
 	wkit.SaveToResources(`${data.name}.xl`, wkit.JsonToYaml(JSON.stringify(xl)))
 	wkit.SaveToProject(`${data.name}/all.streamingblock`, wkit.JsonToCR2W(JSON.stringify(block)))
+
+	Logger.Success("Import finished.")
 }

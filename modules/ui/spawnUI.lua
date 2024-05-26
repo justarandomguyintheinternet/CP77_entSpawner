@@ -71,9 +71,13 @@ function spawnUI.loadSpawnData(spawner)
         table.insert(typeNames, name)
     end
 
+    spawnUI.selectedType = utils.indexValue(typeNames, settings.selectedType) - 1
+
     for name, _ in pairs(types[typeNames[spawnUI.selectedType + 1]]) do
         table.insert(variantNames, name)
     end
+
+    spawnUI.selectedVariant = utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1
 
     spawnUI.refresh()
 end
@@ -143,12 +147,15 @@ function spawnUI.draw()
     ImGui.PushItemWidth(200)
 	spawnUI.selectedType, changed = ImGui.Combo("Object type", spawnUI.selectedType, typeNames, #typeNames)
     if changed then
-        spawnUI.selectedVariant = 0
+        settings.selectedType = typeNames[spawnUI.selectedType + 1]
+        settings.save()
 
         variantNames = {}
         for name, _ in pairs(types[typeNames[spawnUI.selectedType + 1]]) do
             table.insert(variantNames, name)
         end
+
+        spawnUI.selectedVariant = utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1
 
         spawnUI.refresh()
     end
@@ -157,6 +164,9 @@ function spawnUI.draw()
 
 	spawnUI.selectedVariant, changed = ImGui.Combo("Object variant", spawnUI.selectedVariant, variantNames, #variantNames)
     if changed then
+        settings.lastVariants[settings.selectedType] = variantNames[spawnUI.selectedVariant + 1]
+        settings.save()
+
         spawnUI.refresh()
     end
 	ImGui.PopItemWidth()

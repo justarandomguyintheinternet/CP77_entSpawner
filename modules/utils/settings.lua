@@ -33,7 +33,9 @@ local settingsData = {
     editor = {
         color = 1
     },
-    colliderColor = 0
+    colliderColor = 0,
+    selectedType = "Entity",
+    lastVariants = { Entity = "Template", Lights = "Light", Mesh = "Mesh", Collision = "Collision Shape" }
 }
 
 local settingsFNs = {}

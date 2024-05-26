@@ -40,10 +40,12 @@ end
 function mesh:loadSpawnData(data, position, rotation)
     spawnable.loadSpawnData(self, data, position, rotation)
 
+    -- Get from cache
     self.apps = cache.getValue(self.spawnData)
     self.bBox.max = cache.getValue(self.spawnData .. "_bBox_max")
     self.bBox.min = cache.getValue(self.spawnData .. "_bBox_min")
 
+    -- Something is missing
     if (not self.apps) or (not self.bBox.max) or (not self.bBox.min) then
         self.apps = {}
         builder.registerLoadResource(self.spawnData, function (resource)
@@ -56,6 +58,7 @@ function mesh:loadSpawnData(data, position, rotation)
 
             visualizer.updateScale(entity, self:getVisualScale(), "arrows")
 
+            -- Save to cache
             cache.addValue(self.spawnData, self.apps)
             cache.addValue(self.spawnData .. "_bBox_max", utils.fromVector(self.bBox.max))
             cache.addValue(self.spawnData .. "_bBox_min", utils.fromVector(self.bBox.min))
@@ -191,6 +194,7 @@ function mesh:draw()
     end
     style.tooltip("Copies the mesh path to the clipboard")
 
+    ---TODO: Rotate capsule horizontally if it seems good
     if ImGui.Button("Generate Collider") then
         local path = self.object:addGroupToParent(self.object.name .. "_grouped")
         self.object:setSelectedGroupByPath(path)
