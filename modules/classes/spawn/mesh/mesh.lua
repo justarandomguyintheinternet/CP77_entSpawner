@@ -194,45 +194,59 @@ function mesh:draw()
     end
     style.tooltip("Copies the mesh path to the clipboard")
 
-    ---TODO: Rotate capsule horizontally if it seems good
     if ImGui.Button("Generate Collider") then
-        local path = self.object:addGroupToParent(self.object.name .. "_grouped")
-        self.object:setSelectedGroupByPath(path)
-        self.object:moveToSelectedGroup()
-
-        local collider = require("modules/classes/spawn/collision/collider"):new()
-
-        local x = (self.bBox.max.x - self.bBox.min.x) * self.scale.x
-        local y = (self.bBox.max.y - self.bBox.min.y) * self.scale.y
-        local z = (self.bBox.max.z - self.bBox.min.z) * self.scale.z
-
-        local pos = Vector4.new(self.position.x, self.position.y, self.position.z, 0)
-
-        local offset = Vector4.new((self.bBox.min.x * self.scale.x) + x / 2, (self.bBox.min.y * self.scale.y) + y / 2, (self.bBox.min.z * self.scale.z) + z / 2, 0)
-        offset = self.rotation:ToQuat():Transform(offset)
-        pos = Game['OperatorAdd;Vector4Vector4;Vector4'](pos, offset)
-
-        local radius = math.max(x, y, z) / 2
-        if self.colliderShape == 1 then
-            radius = math.max(x, y) / 2
-        end
-
-        local data = {
-            extents = { x = x / 2, y = y / 2, z = z / 2 },
-            radius = radius,
-            height = z - 1,
-            shape = self.colliderShape
-        }
-
-        collider:loadSpawnData(data, pos, self.rotation)
-
-        self.object:addObjectToParent(collider, collider:generateName(self.object.name .. "_collider"), false)
+        self:generateCollider()
     end
 
     ImGui.SameLine()
 
     ImGui.SetNextItemWidth(150)
     self.colliderShape, changed = ImGui.Combo("##colliderShape", self.colliderShape, colliderShapes, #colliderShapes)
+end
+
+---@protected
+function mesh:generateCollider()
+    local path = self.object:addGroupToParent(self.object.name .. "_grouped")
+    self.object:setSelectedGroupByPath(path)
+    self.object:moveToSelectedGroup()
+
+    local collider = require("modules/classes/spawn/collision/collider"):new()
+
+    local x = (self.bBox.max.x - self.bBox.min.x) * self.scale.x
+    local y = (self.bBox.max.y - self.bBox.min.y) * self.scale.y
+    local z = (self.bBox.max.z - self.bBox.min.z) * self.scale.z
+
+    local pos = Vector4.new(self.position.x, self.position.y, self.position.z, 0)
+    local rotation = EulerAngles.new(self.rotation.roll, self.rotation.pitch, self.rotation.yaw)
+
+    local offset = Vector4.new((self.bBox.min.x * self.scale.x) + x / 2, (self.bBox.min.y * self.scale.y) + y / 2, (self.bBox.min.z * self.scale.z) + z / 2, 0)
+    offset = self.rotation:ToQuat():Transform(offset)
+    pos = Game['OperatorAdd;Vector4Vector4;Vector4'](pos, offset)
+
+    local radius = math.max(x, y) / 2
+    local height = z - radius * 2
+    if self.colliderShape == 1 then
+        if x > z or y > z then
+            radius = z / 2
+            height = math.max(x, y) - radius * 2
+            rotation.roll = rotation.roll + 90
+
+            if y > x then
+                rotation.yaw = rotation.yaw + 90
+            end
+        end
+    end
+
+    local data = {
+        extents = { x = x / 2, y = y / 2, z = z / 2 },
+        radius = radius,
+        height = height,
+        shape = self.colliderShape
+    }
+
+    collider:loadSpawnData(data, pos, rotation)
+
+    self.object:addObjectToParent(collider, collider:generateName(self.object.name .. "_collider"), false)
 end
 
 function mesh:export()
