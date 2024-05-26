@@ -114,7 +114,11 @@ function mesh:updateScale()
 end
 
 function mesh:getVisualScale()
-    local max = math.max(self.scale.x, self.scale.y, self.scale.z)
+    local x = (self.bBox.max.x - self.bBox.min.x) * math.abs(self.scale.x)
+    local y = (self.bBox.max.y - self.bBox.min.y) * math.abs(self.scale.y)
+    local z = (self.bBox.max.z - self.bBox.min.z) * math.abs(self.scale.z)
+
+    local max = math.min(math.max(x, y, z, 1.5) * 0.5, 3)
     return { x = max, y = max, z = max }
 end
 
@@ -247,6 +251,7 @@ function mesh:generateCollider()
     collider:loadSpawnData(data, pos, rotation)
 
     self.object:addObjectToParent(collider, collider:generateName(self.object.name .. "_collider"), false)
+    self.object.headerOpen = false
 end
 
 function mesh:export()
