@@ -22,20 +22,19 @@ function particle:new()
    	return o
 end
 
--- function particle:onAssemble(entity)
---     spawnable.onAssemble(self, entity)
+function particle:onAssemble(entity)
+    spawnable.onAssemble(self, entity)
 
---     local component = entParticlesComponent.new()
---     ResourceHelper.LoadReferenceResource(component, "particleSystem", self.spawnData)
---     component.name = "particle"
---     component.emissionRate = self.emissionRate
---     entity:AddComponent(component)
--- end
+    local component = entParticlesComponent.new()
+    ResourceHelper.LoadReferenceResource(component, "particleSystem", self.spawnData, true)
+    component.name = "particle"
+    component.emissionRate = self.emissionRate
+    entity:AddComponent(component)
+end
 
---TODO: Do this using onAssemble once resource loading waiting is a thing
 function particle:spawn()
     local particle = self.spawnData
-    self.spawnData = "base\\spawner\\particles\\" .. self.spawnData:gsub("\\", "_") .. ".ent"
+    self.spawnData = "base\\spawner\\empty_entity.ent"
 
     spawnable.spawn(self)
     self.spawnData = particle

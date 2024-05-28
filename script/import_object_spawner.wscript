@@ -99,7 +99,7 @@ const insertNode = (sector, node) => {
 	nodeData.Orientation.r = node.rotation.r
 	
 	// Hash for interactivity
-	nodeData.QuestPrefabRefHash.$value = wkit.HashString(JSON.stringify(nodeData), "default").toString()
+	nodeData.QuestPrefabRefHash.$value = wkit.HashString(JSON.stringify(nodeData), "fnv1a64").toString()
 	
 	sector.Data.RootChunk.nodeData.Data.push(nodeData)
 	

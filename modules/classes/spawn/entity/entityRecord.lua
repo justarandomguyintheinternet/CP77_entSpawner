@@ -43,6 +43,7 @@ function record:spawn()
     spec.position = self.position
     spec.orientation = self.rotation:ToQuat()
     spec.alwaysSpawned = true
+    spec.appearanceName = self.app
     self.entityID = Game.GetDynamicEntitySystem():CreateEntity(spec)
     self.spawned = true
 
@@ -77,10 +78,15 @@ function record:export()
     local data = spawnable.export(self)
     data.type = "worldPopulationSpawnerNode"
     data.data = {
+        appearanceName = {
+            ["$storage"] = "string",
+            ["$value"] = self.app
+        },
         objectRecordId = {
             ["$storage"] = "string",
             ["$value"] = self.spawnData
-        }
+        },
+        spawnOnStart = 1
     }
 
     return data
