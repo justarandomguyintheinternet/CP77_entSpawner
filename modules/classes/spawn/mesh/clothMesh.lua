@@ -14,6 +14,9 @@ function clothMesh:new(object)
     o.dataType = "Cloth Mesh"
     o.modulePath = "mesh/clothMesh"
     o.spawnDataPath = "data/spawnables/mesh/cloth/"
+    o.node = "worldClothMeshNode"
+    o.description = "Places a cloth mesh with physics, from a given .mesh file"
+    o.previewNote = "Cloth meshes do not have simulated physics in the editor"
 
     o.affectedByWind = false
     o.collisionType = 4

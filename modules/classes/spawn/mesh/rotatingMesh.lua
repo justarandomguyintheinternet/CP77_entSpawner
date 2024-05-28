@@ -18,6 +18,8 @@ function rotatingMesh:new(object)
     o.spawnListType = "list"
     o.dataType = "Rotating Mesh"
     o.modulePath = "mesh/rotatingMesh"
+    o.node = "worldRotatingMeshNode"
+    o.description = "Places a static mesh, from a given .mesh file, and rotates it around a given axis"
 
     o.duration = 5
     o.axis = 0

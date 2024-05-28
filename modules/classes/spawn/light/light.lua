@@ -28,6 +28,8 @@ function light:new()
     o.dataType = "Static Light"
     o.spawnDataPath = "data/spawnables/lights/"
     o.modulePath = "light/light"
+    o.node = "worldStaticLightNode"
+    o.description = "Places a static light"
 
     o.color = { 1, 1, 1 }
     o.intensity = 100

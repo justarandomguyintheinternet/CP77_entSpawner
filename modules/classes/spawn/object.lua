@@ -3,6 +3,7 @@ local utils = require("modules/utils/utils")
 local CPS = require("CPStyling")
 local object = require("modules/classes/object")
 local settings = require("modules/utils/settings")
+local style = require("modules/ui/style")
 
 ---Class for handling the hierarchical structure and base UI, wraps a spawnable object
 ---@class object
@@ -175,7 +176,13 @@ function object:draw()
                 self:saveAfterMove()
                 self.newName = ""
             end
-            ---TODO: Add generic "copy spawnData" button
+
+            ImGui.SameLine()
+
+            if ImGui.Button("Copy Data to Clipboard") then
+                ImGui.SetClipboardText(self.spawnable.spawnData)
+            end
+            style.tooltip(self.spawnable.spawnData)
         else
 			ImGui.Text(tostring(self.name .. " | AUTOSPAWNED"))
 		end

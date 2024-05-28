@@ -24,6 +24,8 @@ function mesh:new(object)
     o.dataType = "Static Mesh"
     o.spawnDataPath = "data/spawnables/mesh/all/"
     o.modulePath = "mesh/mesh"
+    o.node = "worldMeshNode"
+    o.description = "Places a static mesh, from a given .mesh file. This will not have any collision, but has an option to generate a fitting collider"
 
     o.apps = {}
     o.appIndex = 0
@@ -190,13 +192,6 @@ function mesh:draw()
         end
     end
     style.popGreyedOut(#self.apps == 0)
-
-    ImGui.SameLine()
-
-    if ImGui.Button("Copy Path to Clipboard") then
-        ImGui.SetClipboardText(self.spawnData)
-    end
-    style.tooltip("Copies the mesh path to the clipboard")
 
     if ImGui.Button("Generate Collider") then
         self:generateCollider()

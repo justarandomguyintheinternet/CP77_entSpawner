@@ -14,6 +14,8 @@ function particle:new()
     o.dataType = "Particles"
     o.spawnDataPath = "data/spawnables/visual/particles/"
     o.modulePath = "visual/particle"
+    o.node = "worldStaticParticleNode"
+    o.description = "Plays a particle system, from a given .particle file"
 
     o.emissionRate = 1
     o.respawnOnMove = false

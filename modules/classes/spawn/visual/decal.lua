@@ -18,6 +18,8 @@ function decal:new()
     o.dataType = "Decals"
     o.spawnDataPath = "data/spawnables/visual/decals/"
     o.modulePath = "visual/decal"
+    o.node = "worldStaticDecalNode"
+    o.description = "Places a decal on the nearest surface, from a given .mi file"
 
     o.alpha = 1
     o.horizontalFlip = false

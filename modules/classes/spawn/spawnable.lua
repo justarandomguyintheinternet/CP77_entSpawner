@@ -20,6 +20,9 @@ local settings = require("modules/utils/settings")
 ---@field public isHovered boolean
 ---@field protected arrowDirection string all|red|green|blue
 ---@field public object object? The object that is using this spawnable
+---@field public node string
+---@field public description string
+---@field public previewNote string
 local spawnable = {}
 
 function spawnable:new(object)
@@ -30,6 +33,9 @@ function spawnable:new(object)
     o.spawnListPath = "data/spawnables/entity/templates/"
     o.modulePath = "spawnable"
     o.boxColor = {255, 0, 0}
+    o.node = "worldEntityNode"
+    o.description = ""
+    o.previewNote = "---"
 
     o.spawnData = "base\\spawner\\empty_entity.ent"
     o.app = ""

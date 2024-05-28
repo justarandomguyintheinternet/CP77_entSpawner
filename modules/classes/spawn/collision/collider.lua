@@ -28,6 +28,8 @@ function collider:new()
     o.dataType = "Collision Shape"
     o.spawnDataPath = "data/spawnables/colliders/"
     o.modulePath = "collision/collider"
+    o.node = "worldCollisionNode"
+    o.description = "A collision shape, can be a box, capsule or sphere"
 
     o.shape = 0
     o.material = 0

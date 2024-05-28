@@ -8,6 +8,8 @@ function template:new()
 
     o.dataType = "Entity Template"
     o.spawnDataPath = "data/spawnables/entity/templates/"
+    o.node = "worldEntityNode"
+    o.description = "Spawns an entity from a given .ent file"
 
     o.modulePath = "entity/entityTemplate"
 

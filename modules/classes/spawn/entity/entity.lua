@@ -53,13 +53,6 @@ function entity:draw()
     ImGui.Separator()
     ImGui.Spacing()
 
-    if ImGui.Button("Copy Path to Clipboard") then
-        ImGui.SetClipboardText(self.spawnData)
-    end
-    style.tooltip("Copies the template path / record of the object to the clipboard")
-
-    ImGui.SameLine()
-
     style.pushGreyedOut(#self.apps == 0)
 
     local list = self.apps

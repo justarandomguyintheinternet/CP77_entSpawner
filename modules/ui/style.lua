@@ -27,6 +27,24 @@ function style.tooltip(text)
     end
 end
 
+function style.spawnableInfo(info)
+    if ImGui.IsItemHovered() then
+        ImGui.BeginTooltip()
+        ImGui.PushTextWrapPos(ImGui.GetFontSize() * 20)
+
+        style.mutedText("Node: ")
+        ImGui.Text(info.node)
+        ImGui.Spacing()
+        style.mutedText("Description: ")
+        ImGui.Text(info.description)
+        ImGui.Spacing()
+        style.mutedText("Preview Note: ")
+        ImGui.Text(info.previewNote)
+
+        ImGui.EndTooltip()
+    end
+end
+
 function style.spacedSeparator()
     ImGui.Spacing()
     ImGui.Separator()

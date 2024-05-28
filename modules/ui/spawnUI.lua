@@ -63,10 +63,11 @@ function spawnUI.loadSpawnData(spawner)
         spawnData[dataName] = {}
         for variantName, variant in pairs(dataType) do
             local variantInstance = variant:new()
+            local info = { node = variantInstance.node, description = variantInstance.description, previewNote = variantInstance.previewNote }
             if variantInstance.spawnListType == "list" then
-                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant }
+                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant, info = info }
             else
-                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant }
+                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant, info = info }
             end
         end
     end
@@ -176,7 +177,11 @@ function spawnUI.draw()
 
         spawnUI.refresh()
     end
+    style.spawnableInfo(spawnUI.getActiveSpawnList().info)
+
 	ImGui.PopItemWidth()
+
+    ImGui.SameLine()
 
     if variantNames[spawnUI.selectedVariant + 1] == "Template (AMM)" then
         ImGui.SameLine()

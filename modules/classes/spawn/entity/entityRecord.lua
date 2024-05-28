@@ -14,6 +14,8 @@ function record:new()
     o.dataType = "Entity Record"
     o.spawnDataPath = "data/spawnables/entity/records/"
     o.modulePath = "entity/entityRecord"
+    o.node = "worldPopulationSpawnerNode"
+    o.description = "Spawns an entity from a given TweakDB record"
 
     setmetatable(o, { __index = self })
    	return o
