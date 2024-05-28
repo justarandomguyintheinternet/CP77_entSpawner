@@ -23,7 +23,8 @@ local types = {
         ["Collision Shape"] = require("modules/classes/spawn/collision/collider")
     },
     ["Deco"] = {
-        ["Particles"] = require("modules/classes/spawn/visual/particle")
+        ["Particles"] = require("modules/classes/spawn/visual/particle"),
+        ["Decals"] = require("modules/classes/spawn/visual/decal")
     }
 }
 

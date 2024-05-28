@@ -175,6 +175,7 @@ function object:draw()
                 self:saveAfterMove()
                 self.newName = ""
             end
+            ---TODO: Add generic "copy spawnData" button
         else
 			ImGui.Text(tostring(self.name .. " | AUTOSPAWNED"))
 		end
