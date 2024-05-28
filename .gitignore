@@ -32,3 +32,4 @@ cache.json
 apps.json
 config.json
 2.0/*
+data/spawnables/entity/templates/custom.txt

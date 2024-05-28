@@ -89,6 +89,8 @@ function spawnable:despawn()
 end
 
 function spawnable:respawn()
+    if not self:isSpawned() then return end
+
     self:despawn()
     self:spawn()
 end
@@ -105,6 +107,11 @@ function spawnable:update()
     transform:SetPosition(self.position)
     transform:SetOrientationEuler(self.rotation)
     self:getEntity():SetWorldTransform(transform)
+end
+
+---Called when one of the control UI widgets is released
+function spawnable:onEdited(edited)
+
 end
 
 ---@return entEntity?
@@ -145,6 +152,7 @@ function spawnable:drawPosition()
     if changed then
         self:update()
     end
+    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
     ImGui.SameLine()
 
     self.position.y, changed = ImGui.DragFloat("##y", self.position.y, settings.posSteps, -9999, 9999, "%.3f Y")
@@ -153,6 +161,7 @@ function spawnable:drawPosition()
     if changed then
         self:update()
     end
+    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
     ImGui.SameLine()
 
     self.position.z, changed = ImGui.DragFloat("##z", self.position.z, settings.posSteps, -9999, 9999, "%.3f Z")
@@ -161,6 +170,7 @@ function spawnable:drawPosition()
     if changed then
         self:update()
     end
+    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
     ImGui.PopItemWidth()
     ImGui.SameLine()
 
@@ -168,6 +178,7 @@ function spawnable:drawPosition()
         self.position = Game.GetPlayer():GetWorldPosition()
         self:update()
     end
+    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
     style.tooltip("Set the object position to the players position")
 end
 
@@ -190,6 +201,8 @@ function spawnable:drawRelativePosition()
         end
         x = 0
     end
+    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
+
     ImGui.SameLine()
     local y, changed = ImGui.DragFloat("##r_y", 0, settings.posSteps, -9999, 9999, "%.3f Relative Y")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
@@ -205,6 +218,8 @@ function spawnable:drawRelativePosition()
         end
         y = 0
     end
+    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
+
     ImGui.SameLine()
     local z, changed = ImGui.DragFloat("##r_z", 0, settings.posSteps, -9999, 9999, "%.3f Relative Z")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
@@ -220,6 +235,7 @@ function spawnable:drawRelativePosition()
         end
         z = 0
     end
+    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
     ImGui.PopItemWidth()
 
     style.popGreyedOut(not self:isSpawned())
@@ -235,6 +251,8 @@ function spawnable:drawRotation()
     if changed then
         self:update()
     end
+    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
+
     ImGui.SameLine()
     self.rotation.pitch, changed = ImGui.DragFloat("##pitch", self.rotation.pitch, settings.rotSteps, -9999, 9999, "%.3f Pitch")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
@@ -242,6 +260,8 @@ function spawnable:drawRotation()
     if changed then
         self:update()
     end
+    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
+
     ImGui.SameLine()
     self.rotation.yaw, changed = ImGui.DragFloat("##yaw", self.rotation.yaw, settings.rotSteps, -9999, 9999, "%.3f Yaw")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
@@ -249,6 +269,8 @@ function spawnable:drawRotation()
     if changed then
         self:update()
     end
+    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
+
     ImGui.SameLine()
     ImGui.PopItemWidth()
 
@@ -256,6 +278,7 @@ function spawnable:drawRotation()
         self.rotation = GetPlayer():GetWorldOrientation():ToEulerAngles()
         self:update()
     end
+    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
     style.tooltip("Set the object rotation to the players rotation")
 end
 

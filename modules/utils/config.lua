@@ -84,4 +84,17 @@ function config.loadText(path)
     return lines
 end
 
+function config.loadRaw(path)
+    local file = io.open(path, "r")
+    local content = file:read("*a")
+    file:close()
+    return content
+end
+
+function config.saveRaw(path, data)
+    local file = io.open(path, "w")
+    file:write(data)
+    file:close()
+end
+
 return config

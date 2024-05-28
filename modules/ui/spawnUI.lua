@@ -21,6 +21,9 @@ local types = {
     ,
     ["Collision"] = {
         ["Collision Shape"] = require("modules/classes/spawn/collision/collider")
+    },
+    ["Deco"] = {
+        ["Particles"] = require("modules/classes/spawn/visual/particle")
     }
 }
 
@@ -90,6 +93,9 @@ end
 
 ---Regenerate the filteredList based on the active filter and the currently selected active spawn list
 function spawnUI.updateFilter()
+    settings.spawnUIFilter = spawnUI.filter
+    settings.save()
+
     if spawnUI.filter == "" then
         spawnUI.filteredList = spawnUI.getActiveSpawnList().data
         return
