@@ -15,6 +15,7 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@field public bBox table {min: Vector4, max: Vector4}
 ---@field public colliderShape integer
 ---@field public scaleLocked boolean
+---@field public hideGenerate boolean
 local mesh = setmetatable({}, { __index = spawnable })
 
 function mesh:new(object)
@@ -34,6 +35,7 @@ function mesh:new(object)
 
     o.colliderShape = 0
     o.scaleLocked = true
+    o.hideGenerate = false
 
     setmetatable(o, { __index = self })
    	return o
@@ -49,6 +51,9 @@ function mesh:loadSpawnData(data, position, rotation)
 
     -- Something is missing
     if (not self.apps) or (not self.bBox.max) or (not self.bBox.min) then
+        self.bBox.max = Vector4.new(0.5, 0.5, 0.5, 0) -- Temp values, so that onAssemble//updateScale can work
+        self.bBox.min = Vector4.new(-0.5, -0.5, -0.5, 0)
+
         self.apps = {}
         builder.registerLoadResource(self.spawnData, function (resource)
             for _, appearance in ipairs(resource.appearances) do
@@ -57,7 +62,6 @@ function mesh:loadSpawnData(data, position, rotation)
 
             self.bBox.min = resource.boundingBox.Min
             self.bBox.max = resource.boundingBox.Max
-
             visualizer.updateScale(entity, self:getVisualScale(), "arrows")
 
             -- Save to cache
@@ -125,7 +129,11 @@ function mesh:getVisualScale()
 end
 
 function mesh:getExtraHeight()
-    return 6 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 3
+    local height = 5 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 2
+    if not self.hideGenerate then
+        height = height + ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight()
+    end
+    return height
 end
 
 function mesh:draw()
@@ -192,6 +200,10 @@ function mesh:draw()
         end
     end
     style.popGreyedOut(#self.apps == 0)
+
+    if self.hideGenerate then
+        return
+    end
 
     if ImGui.Button("Generate Collider") then
         self:generateCollider()
