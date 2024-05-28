@@ -1,4 +1,6 @@
 local mesh = require("modules/classes/spawn/mesh/mesh")
+local spawnable = require("modules/classes/spawn/spawnable")
+local visualizer = require("modules/utils/visualizer")
 
 ---Class for worldDynamicMeshNode
 ---@class dynamicMesh : mesh
@@ -22,6 +24,34 @@ function dynamicMesh:new(object)
 
     setmetatable(o, { __index = self })
    	return o
+end
+
+function dynamicMesh:onAssemble(entity)
+    spawnable.onAssemble(self, entity)
+    local component = PhysicalMeshComponent.new()
+    component.name = "mesh"
+    component.mesh = ResRef.FromString(self.spawnData)
+    component.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
+    component.meshAppearance = self.app
+
+    local filterData = physicsFilterData.new()
+    filterData.preset = "World Dynamic"
+
+    local query = physicsQueryFilter.new()
+    query.mask1 = 0
+    query.mask2 = 70107400
+
+    local sim = physicsSimulationFilter.new()
+    sim.mask1 = 114696
+    sim.mask2 = 23627
+
+    filterData.queryFilter = query
+    filterData.simulationFilter = sim
+    component.filterData = filterData
+
+    entity:AddComponent(component)
+
+    visualizer.updateScale(entity, self:getVisualScale(), "arrows")
 end
 
 function dynamicMesh:save()
