@@ -118,7 +118,7 @@ function decal:draw()
         self:updateScale()
     end
     ImGui.SameLine()
-    self.scale.z, changed = ImGui.DragFloat("##zsize", self.scale.z, 0.01, -9999, 9999, "%.3f Z Scale")
+    self.scale.z, changed = ImGui.DragFloat("##zsize", self.scale.z, 0.01, -9999, 9999, "%.3f Depth")
     if changed then
         if self.scaleLocked then
             self.scale.x = self.scale.z

@@ -42,6 +42,7 @@ function spawner:new()
 
         self.baseUI.savedUI.spawner = self
         self.baseUI.savedUI.backwardComp()
+        self.baseUI.savedUI.filter = settings.savedUIFilter
         self.baseUI.spawnUI.filter = settings.spawnUIFilter
         self.baseUI.spawnUI.loadSpawnData(self)
 

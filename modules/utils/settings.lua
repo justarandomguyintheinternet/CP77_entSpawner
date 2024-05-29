@@ -16,6 +16,10 @@ local config = require("modules/utils/config")
 ---@field public spawnUIOnlyNames boolean
 ---@field public editor table {color: integer}
 ---@field public colliderColor integer
+---@field public selectedType string
+---@field public lastVariants table
+---@field public spawnUIFilter string
+---@field public savedUIFilter string
 local settingsData = {
     spawnPos = 2,
     spawnDist = 3,
@@ -36,7 +40,8 @@ local settingsData = {
     colliderColor = 0,
     selectedType = "Entity",
     lastVariants = { Entity = "Template", Lights = "Light", Mesh = "Mesh", Collision = "Collision Shape", ["Deco"] = "Particles"},
-    spawnUIFilter = ""
+    spawnUIFilter = "",
+    savedUIFilter = ""
 }
 
 local settingsFNs = {}

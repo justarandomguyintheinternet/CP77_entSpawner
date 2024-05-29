@@ -76,13 +76,19 @@ end
 
 function savedUI.draw(spawner)
     ImGui.PushItemWidth(250)
-    savedUI.filter = ImGui.InputTextWithHint('##Filter', 'Search for data...', savedUI.filter, 100)
+    savedUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search for data...', savedUI.filter, 100)
+    if changed then
+        settings.savedUIFilter = savedUI.filter
+        settings.save()
+    end
     ImGui.PopItemWidth()
 
     if savedUI.filter ~= '' then
         ImGui.SameLine()
         if ImGui.Button('X') then
             savedUI.filter = ''
+            settings.savedUIFilter = savedUI.filter
+            settings.save()
         end
     end
 
