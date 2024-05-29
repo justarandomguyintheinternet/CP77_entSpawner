@@ -10,8 +10,18 @@ local sectorCategory
 exportUI = {
     projectName = "new_project",
     groups = {},
+    templates = {},
     spawner = nil
 }
+
+function exportUI.init()
+    for _, file in pairs(dir("data/exportTemplates/")) do
+        if file.name:match("^.+(%..+)$") == ".json" then
+            local data = config.loadFile("data/exportTemplates/" .. file.name)
+            exportUI.templates[data.projectName] = data
+        end
+    end
+end
 
 function exportUI.drawGroups()
     if #exportUI.groups > 0 then
@@ -81,12 +91,66 @@ function exportUI.drawGroups()
     end
 end
 
+function exportUI.drawTemplates()
+    if utils.tableLength(exportUI.templates) > 0 then
+        ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, 0)
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0)
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
+
+        ImGui.BeginChildFrame(2, 0, math.min(5, math.max(utils.tableLength(exportUI.templates), 3)) * ImGui.GetFrameHeightWithSpacing())
+
+        for key, data in pairs(exportUI.templates) do
+            ImGui.BeginGroup()
+
+            local nodeFlags = ImGuiTreeNodeFlags.SpanFullWidth
+            if ImGui.TreeNodeEx(data.projectName, nodeFlags) then
+                ImGui.PopStyleColor()
+                ImGui.PopStyleVar()
+
+                style.mutedText("Groups:")
+                ImGui.SameLine()
+                ImGui.Text(tostring(#data.groups))
+
+                if ImGui.Button("Load") then
+                    exportUI.groups = utils.deepcopy(data.groups)
+                    exportUI.projectName = data.projectName
+                end
+                ImGui.SameLine()
+                if ImGui.Button("Delete") then
+                    os.remove("data/exportTemplates/" .. data.projectName .. ".json")
+                    exportUI.templates[key] = nil
+                end
+
+                ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
+                ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
+                ImGui.TreePop()
+            end
+            ImGui.EndGroup()
+        end
+
+        ImGui.EndChildFrame()
+        ImGui.PopStyleColor()
+        ImGui.PopStyleVar(3)
+    else
+        ImGui.PushStyleColor(ImGuiCol.Text, style.mutedColor)
+        ImGui.TextWrapped("No templates created yet.")
+        ImGui.PopStyleColor()
+    end
+end
+
 function exportUI.draw(spawner)
     if not sectorCategory then
         sectorCategory = utils.enumTable("worldStreamingSectorCategory")
     end
 
     exportUI.spawner = spawner
+
+    style.sectionHeaderStart("EXPORT TEMPLATES", "Templates let you save an export setup for later usage, without having to setup what groups/settings to use each time.")
+
+    exportUI.drawTemplates()
+
+    style.sectionHeaderEnd()
 
     style.sectionHeaderStart("PROPERTIES")
 
@@ -101,12 +165,25 @@ function exportUI.draw(spawner)
     exportUI.drawGroups()
 
     style.sectionHeaderEnd()
-    style.sectionHeaderStart("EXPORT")
+    style.sectionHeaderStart("EXPORT AND SAVE")
 
     style.pushGreyedOut(#exportUI.groups == 0)
     if ImGui.Button("Export") and #exportUI.groups > 0 then
         exportUI.export()
     end
+    style.tooltip("Export the currently selected groups to a .json file, ready for import into WKit")
+
+    ImGui.SameLine()
+    if ImGui.Button("Save as Template") and #exportUI.groups > 0 then
+        local data = {
+            projectName = exportUI.projectName,
+            groups = utils.deepcopy(exportUI.groups)
+        }
+        exportUI.templates[exportUI.projectName] = data
+        config.saveFile("data/exportTemplates/" .. exportUI.projectName .. ".json", data)
+    end
+    style.tooltip("Save the current export setup as a template for later (re)usage")
+
     style.popGreyedOut(#exportUI.groups == 0)
 
     style.sectionHeaderEnd(true)

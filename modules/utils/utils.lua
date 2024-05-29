@@ -53,6 +53,12 @@ function miscUtils.hasIndex(tab, index)
     return false
 end
 
+function miscUtils.tableLength(table)
+    local count = 0
+    for _ in pairs(table) do count = count + 1 end
+    return count
+end
+
 ---@param tab table
 ---@param val any
 function miscUtils.removeItem(tab, val)

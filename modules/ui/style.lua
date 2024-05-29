@@ -51,10 +51,17 @@ function style.spacedSeparator()
     ImGui.Spacing()
 end
 
-function style.sectionHeaderStart(text)
+---@param text string
+---@param tooltip string?
+function style.sectionHeaderStart(text, tooltip)
     ImGui.PushStyleColor(ImGuiCol.Text, style.mutedColor)
     ImGui.SetWindowFontScale(0.85)
     ImGui.Text(text)
+
+    if tooltip then
+        style.tooltip(tooltip)
+    end
+
     ImGui.SetWindowFontScale(1)
     ImGui.PopStyleColor()
     ImGui.Separator()

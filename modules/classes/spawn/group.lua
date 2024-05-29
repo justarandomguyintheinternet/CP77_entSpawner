@@ -140,6 +140,10 @@ function group:draw()
 
 		self:drawMoveGroup()
 
+		---TODO: Draw arrow
+		---TODO: Add group spawnable controls
+		---TODO: More modular for future NCA feature
+
 		CPS.colorBegin("Separator", self.color)
 		style.spacedSeparator()
 

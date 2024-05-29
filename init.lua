@@ -51,6 +51,8 @@ function spawner:new()
         self.baseUI.spawnedUI.getGroups()
         self.baseUI.savedUI.reload()
 
+        self.baseUI.exportUI.init()
+
         Observe('RadialWheelController', 'OnIsInMenuChanged', function(_, isInMenu)
             self.runtimeData.inMenu = isInMenu
         end)
