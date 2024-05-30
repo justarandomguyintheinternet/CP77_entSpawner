@@ -199,28 +199,7 @@ function object:draw()
         ImGui.Separator()
         ImGui.Spacing()
 
-        ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, 0)
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0)
-        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
-        ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
-
-        ImGui.BeginChildFrame(self.id, 0, self.spawnable:getExtraHeight())
-
-        ImGui.BeginGroup()
-
-        local nodeFlags = ImGuiTreeNodeFlags.SpanFullWidth
-        if ImGui.TreeNodeEx(data.projectName, nodeFlags) then
-            self.spawnable:draw()
-
-            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
-            ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
-            ImGui.TreePop()
-        end
-        ImGui.EndGroup()
-
-        ImGui.EndChildFrame()
-        ImGui.PopStyleColor()
-        ImGui.PopStyleVar(3)
+        self.spawnable:draw()
 
         ImGui.Spacing()
         ImGui.Separator()
