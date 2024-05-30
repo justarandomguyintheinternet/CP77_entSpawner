@@ -64,7 +64,7 @@ function decal:save()
     data.horizontalFlip = self.horizontalFlip
     data.verticalFlip = self.verticalFlip
     data.autoHideDistance = self.autoHideDistance
-    data.scale = self.scale
+    data.scale = { x = self.scale.x, y = self.scale.y, z = self.scale.z }
     data.scaleLocked = self.scaleLocked
 
     return data

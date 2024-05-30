@@ -99,7 +99,7 @@ end
 
 function mesh:save()
     local data = spawnable.save(self)
-    data.scale = self.scale
+    data.scale = { x = self.scale.x, y = self.scale.y, z = self.scale.z }
     data.scaleLocked = self.scaleLocked
 
     return data

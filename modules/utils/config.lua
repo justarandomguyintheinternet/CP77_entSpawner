@@ -97,4 +97,12 @@ function config.saveRaw(path, data)
     file:close()
 end
 
+function config.saveRawTable(path, data)
+    local file = io.open(path, "w")
+    for _, line in pairs(data) do
+        file:write(line .. "\n")
+    end
+    file:close()
+end
+
 return config

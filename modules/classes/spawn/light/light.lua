@@ -70,7 +70,7 @@ end
 
 function light:save()
     local data = spawnable.save(self)
-    data.color = self.color
+    data.color = { self.color[1], self.color[2], self.color[3] }
     data.intensity = self.intensity
     data.innerAngle = self.innerAngle
     data.outerAngle = self.outerAngle

@@ -98,7 +98,7 @@ function collider:save()
     data.shape = self.shape
     data.material = self.material
     data.preset = self.preset
-    data.extents = self.extents
+    data.extents = { x = self.extents.x, y = self.extents.y, z = self.extents.z }
     data.height = self.height
     data.radius = self.radius
     data.previewed = self.previewed or true

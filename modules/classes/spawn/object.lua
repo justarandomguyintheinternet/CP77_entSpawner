@@ -21,6 +21,7 @@ local style = require("modules/ui/style")
 ---@field public isAutoLoaded boolean
 ---@field public spawnable spawnable
 ---@field public sUI spawnedUI
+---@field public spawnableHeaderOpen boolean
 object = {}
 
 ---@param sUI spawnedUI
@@ -38,6 +39,7 @@ function object:new(sUI)
     o.box = {x = 650, y = 282}
     o.id = math.random(1, 1000000000) -- Id for imgui child rng gods bls have mercy
     o.headerOpen = settings.headerState
+    o.spawnableHeaderOpen = false
 
     o.autoLoad = false
 	o.loadRange = settings.autoSpawnRange
@@ -108,6 +110,7 @@ function object:getState()
         name = self.name,
         type = self.type,
         headerOpen = self.headerOpen,
+        spawnableHeaderOpen = self.spawnableHeaderOpen,
         autoLoad = self.autoLoad,
         loadRange = self.loadRange,
         spawnable = self.spawnable:save()
@@ -135,6 +138,7 @@ function object:load(data)
     self.headerOpen = data.headerOpen
     self.autoLoad = data.autoLoad
     self.loadRange = data.loadRange
+    self.spawnableHeaderOpen = data.spawnableHeaderOpen or true
 
     self.spawnable = require("modules/classes/spawn/" .. data.spawnable.modulePath):new(self)
     self.spawnable:loadSpawnData(data.spawnable, ToVector4(data.spawnable.position), ToEulerAngles(data.spawnable.rotation))
@@ -195,7 +199,28 @@ function object:draw()
         ImGui.Separator()
         ImGui.Spacing()
 
-        self.spawnable:draw()
+        ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, 0)
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0)
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
+
+        ImGui.BeginChildFrame(self.id, 0, self.spawnable:getExtraHeight())
+
+        ImGui.BeginGroup()
+
+        local nodeFlags = ImGuiTreeNodeFlags.SpanFullWidth
+        if ImGui.TreeNodeEx(data.projectName, nodeFlags) then
+            self.spawnable:draw()
+
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
+            ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
+            ImGui.TreePop()
+        end
+        ImGui.EndGroup()
+
+        ImGui.EndChildFrame()
+        ImGui.PopStyleColor()
+        ImGui.PopStyleVar(3)
 
         ImGui.Spacing()
         ImGui.Separator()

@@ -34,3 +34,5 @@ config.json
 2.0/*
 data/spawnables/entity/templates/custom.txt
 data/exportTemplates/*.json
+data/backup
+.VSCodeCounter
