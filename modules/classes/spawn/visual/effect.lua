@@ -54,7 +54,7 @@ function effect:despawn()
     GameObjectEffectHelper.StopEffectEvent(self:getEntity(), "effect")
 
     -- Needs some time for StopEffectEvent to be sent to the entity
-    self.disableCron = Cron.After(0.05, function ()
+    self.disableCron = Cron.After(0.1, function ()
         spawnable.despawn(self)
         self.disableCron = nil
     end)
