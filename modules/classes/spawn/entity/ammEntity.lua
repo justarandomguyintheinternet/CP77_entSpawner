@@ -10,7 +10,7 @@ function amm:new()
     o.spawnDataPath = "data/spawnables/entity/amm/"
     o.spawnListType = "files"
     o.node = "worldEntityNode"
-    o.description = "Same as entity, but allows for the AMM list of named props to be used"
+    o.description = "Same as entity, but allows for the AMM list of named props (Including custom ones) to be used"
 
     o.modulePath = "entity/ammEntity"
 

@@ -116,9 +116,7 @@ function spawnable:update()
 end
 
 ---Called when one of the control UI widgets is released
-function spawnable:onEdited(edited)
-
-end
+function spawnable:onEdited(edited) end
 
 ---@return entEntity?
 function spawnable:getEntity()
