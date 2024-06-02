@@ -12,8 +12,8 @@ local Cron = require("modules/utils/Cron")
 ---@field private cronID number
 local rotatingMesh = setmetatable({}, { __index = mesh })
 
-function rotatingMesh:new(object)
-	local o = mesh.new(self, object)
+function rotatingMesh:new()
+	local o = mesh.new(self)
 
     o.spawnListType = "list"
     o.dataType = "Rotating Mesh"

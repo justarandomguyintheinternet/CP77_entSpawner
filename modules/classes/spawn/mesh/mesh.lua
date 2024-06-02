@@ -18,8 +18,8 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@field public hideGenerate boolean
 local mesh = setmetatable({}, { __index = spawnable })
 
-function mesh:new(object)
-	local o = spawnable.new(self, object)
+function mesh:new()
+	local o = spawnable.new(self)
 
     o.spawnListType = "list"
     o.dataType = "Static Mesh"

@@ -106,7 +106,9 @@ const insertNode = (sector, node) => {
 	let worldNode = JSON.parse(wkit.CreateInstanceAsJSON(node.type))
 	
 	deepCopy(node.data, worldNode)
-	
+
+	worldNode.debugName.$value = node.name || ""
+
 	sector.Data.RootChunk.nodes.push({HandleId : sector.Data.RootChunk.nodes.length.toString() , Data : worldNode})
 }
 

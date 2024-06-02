@@ -8,8 +8,8 @@ local clothMesh = setmetatable({}, { __index = mesh })
 
 local collisionTypes = { "SPHERE", "BOX", "CONVEX", "TRIMESH", "CAPSULE" }
 
-function clothMesh:new(object)
-	local o = mesh.new(self, object)
+function clothMesh:new()
+	local o = mesh.new(self)
 
     o.dataType = "Cloth Mesh"
     o.modulePath = "mesh/clothMesh"

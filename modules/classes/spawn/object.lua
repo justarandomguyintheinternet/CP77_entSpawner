@@ -140,7 +140,8 @@ function object:load(data)
     self.loadRange = data.loadRange
     self.spawnableHeaderOpen = data.spawnableHeaderOpen or true
 
-    self.spawnable = require("modules/classes/spawn/" .. data.spawnable.modulePath):new(self)
+    self.spawnable = require("modules/classes/spawn/" .. data.spawnable.modulePath):new()
+    self.spawnable.object = self
     self.spawnable:loadSpawnData(data.spawnable, ToVector4(data.spawnable.position), ToEulerAngles(data.spawnable.rotation))
 end
 

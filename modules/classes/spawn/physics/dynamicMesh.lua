@@ -8,8 +8,8 @@ local visualizer = require("modules/utils/visualizer")
 ---@field private forceAutoHideDistance number
 local dynamicMesh = setmetatable({}, { __index = mesh })
 
-function dynamicMesh:new(object)
-	local o = mesh.new(self, object)
+function dynamicMesh:new()
+	local o = mesh.new(self)
 
     o.dataType = "Dynamic Mesh"
     o.modulePath = "physics/dynamicMesh"

@@ -25,7 +25,7 @@ local settings = require("modules/utils/settings")
 ---@field public previewNote string
 local spawnable = {}
 
-function spawnable:new(object)
+function spawnable:new()
 	local o = {}
 
     o.dataType = "Spawnable"
@@ -357,6 +357,7 @@ function spawnable:export()
         rotation = utils.fromQuaternion(self.rotation:ToQuat()),
         scale = { x = 1, y = 1, z = 1 },
         type = "worldEntityNode",
+        name = self.object.name,
         data = {
             entityTemplate = {
                 DepotPath = {
