@@ -14,6 +14,7 @@ function cache.load()
     cache.removeDuplicates("data/spawnables/mesh/physics/paths_filtered_mesh.txt")
     cache.removeDuplicates("data/spawnables/visual/particles/paths_particle.txt")
     cache.removeDuplicates("data/spawnables/visual/decals/paths_mi.txt")
+    cache.removeDuplicates("data/spawnables/visual/effects/path_effect.txt")
 end
 
 function cache.addValue(key, value)
@@ -59,6 +60,19 @@ function cache.generateRecordsList()
     end
 
     file:close()
+end
+
+function cache.generateStaticAudioList()
+    if config.fileExists("data/spawnables/visual/sounds/sounds.txt") then return end
+
+    local data = config.loadFile("data.json")["Data"]["RootChunk"]["root"]["Data"]["events"]
+    local sounds = {}
+
+    for _, entry in pairs(data) do
+        table.insert(sounds, entry["redId"]["$value"])
+    end
+
+    config.saveRawTable("data/spawnables/visual/sounds/sounds.txt", sounds)
 end
 
 return cache

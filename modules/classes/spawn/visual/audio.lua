@@ -1,5 +1,4 @@
 local spawnable = require("modules/classes/spawn/spawnable")
-local style = require("modules/ui/style")
 
 ---Class for worldStaticSoundEmitterNode
 ---@class sound : spawnable
@@ -12,11 +11,12 @@ function sound:new()
     o.spawnListType = "list"
     o.dataType = "Sounds"
     o.spawnDataPath = "data/spawnables/visual/sounds/"
-    o.modulePath = "visual/particle"
+    o.modulePath = "visual/audio"
     o.node = "worldStaticSoundEmitterNode"
     o.description = "Plays a sound"
+    o.previewNote = "A lot of the sounds might not work / play.\n\"amb_\" ones usually work.\nRadius is not previewed."
 
-    o.radius = 10
+    o.radius = 5
 
     setmetatable(o, { __index = self })
    	return o
@@ -25,15 +25,12 @@ end
 function sound:onAssemble(entity)
     spawnable.onAssemble(self, entity)
 
+    -- Needed for sound to play
     local component = gameaudioSoundComponent.new()
     component.name = "sound"
-    component.applyAcousticOcclusion = true
-    component.applyObstruction = true
-    component.audioName = self.spawnData
-    component.maxPlayDistance = self.radius
-    component.streamingDistance = self.radius
-
     entity:AddComponent(component)
+
+    entity:QueueEvent(SoundPlayEvent.new ({ soundName = self.spawnData }))
 end
 
 function sound:spawn()
@@ -46,7 +43,7 @@ end
 
 function sound:save()
     local data = spawnable.save(self)
-
+    data.radius = self.radius
 
     return data
 end
@@ -63,17 +60,7 @@ function sound:draw()
     ImGui.Spacing()
 
     ImGui.SetNextItemWidth(150)
-    self.radius, changed = ImGui.DragFloat("Radius", self.radius, 0.01, 0, 9999, "%.2f")
-    if changed then
-        self.radius = math.max(self.radius, 0)
-
-        local entity = self:getEntity()
-        if entity then
-            local component = entity:FindComponentByName("sound")
-            component.maxPlayDistance = self.radius
-            component.streamingDistance = self.radius
-        end
-    end
+    self.radius = ImGui.DragFloat("Radius", self.radius, 0.01, 0, 9999, "%.2f")
 end
 
 function sound:export()
@@ -84,6 +71,21 @@ function sound:export()
         radius = self.radius,
         usePhysicsObstruction = 1,
         useDoppler = 1,
+        Settings = {
+        ["Data"] = {
+            ["$type"] = "audioAmbientAreaSettings",
+            ["EventsOnActive"] = {
+                    {
+                        ["$type"] = "audioAudEventStruct",
+                        ["event"] = {
+                            ["$type"] = "CName",
+                            ["$storage"] = "string",
+                            ["$value"] = self.spawnData
+                        }
+                    }
+                },
+            }
+        },
     }
 
     return data

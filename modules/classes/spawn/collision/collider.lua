@@ -101,7 +101,8 @@ function collider:save()
     data.extents = { x = self.extents.x, y = self.extents.y, z = self.extents.z }
     data.height = self.height
     data.radius = self.radius
-    data.previewed = self.previewed or true
+    data.previewed = self.previewed
+    if data.previewed == nil then data.previewed = true end
 
     return data
 end
@@ -114,7 +115,7 @@ end
 ---@param changed boolean
 ---@protected
 function collider:updateFull(changed)
-    if changed then self:respawn() end
+    if changed and self:isSpawned() then self:respawn() end
 end
 
 function collider:draw()

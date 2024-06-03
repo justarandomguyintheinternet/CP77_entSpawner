@@ -207,7 +207,11 @@ function object:draw()
         ImGui.Spacing()
 
         if CPS.CPButton("Spawn") then
-            self.spawnable:respawn()
+            if self.spawnable:isSpawned() then
+                self.spawnable:respawn()
+            else
+                self.spawnable:spawn()
+            end
         end
         ImGui.SameLine()
         if CPS.CPButton("Despawn") then

@@ -112,7 +112,7 @@ end
 ---@param changed boolean
 ---@protected
 function light:updateFull(changed)
-    if changed then self:respawn() end
+    if changed and self:isSpawned() then self:respawn() end
 end
 
 function light:draw()

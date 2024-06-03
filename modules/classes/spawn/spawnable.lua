@@ -95,8 +95,6 @@ function spawnable:despawn()
 end
 
 function spawnable:respawn()
-    if not self:isSpawned() then return end
-
     self:despawn()
     self:spawn()
 end

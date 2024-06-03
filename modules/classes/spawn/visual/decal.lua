@@ -89,7 +89,7 @@ end
 ---@param changed boolean
 ---@protected
 function decal:updateFull(changed)
-    if changed then self:respawn() end
+    if changed and self:isSpawned() then self:respawn() end
 end
 
 function decal:draw()
