@@ -4,6 +4,7 @@ local CPS = require("CPStyling")
 local object = require("modules/classes/object")
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
+local drag = require("modules/utils/dragHelper")
 
 ---Class for handling the hierarchical structure and base UI, wraps a spawnable object
 ---@class object
@@ -22,6 +23,10 @@ local style = require("modules/ui/style")
 ---@field public spawnable spawnable
 ---@field public sUI spawnedUI
 ---@field public spawnableHeaderOpen boolean
+---@field public beingTargeted boolean
+---@field public targetable boolean
+---@field public beingDragged boolean
+---@field public hovered boolean
 object = {}
 
 ---@param sUI spawnedUI
@@ -48,6 +53,11 @@ function object:new(sUI)
     o.spawnable = nil
 
     o.sUI = sUI
+
+    o.beingTargeted = false
+    o.targetable = false
+    o.beingDragged = false
+    o.hovered = false
 
 	self.__index = self
    	return setmetatable(o, self)
@@ -151,6 +161,26 @@ function object:tryMainDraw()
     end
 end
 
+function object:handleDrag()
+	local hovered = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem)
+
+	if hovered and not self.hovered then
+		drag.draggableHoveredIn(self)
+	elseif not hovered and self.hovered then
+		drag.draggableHoveredOut(self)
+	end
+
+	self.hovered = hovered
+end
+
+---Callback for when this object gets dropped into another one
+function object:dropIn(target)
+    if target.type == "group" then
+        self:setSelectedGroupByPath(target:getOwnPath())
+        self:moveToSelectedGroup()
+    end
+end
+
 function object:draw()
     if self.parent ~= nil then
 		ImGui.Indent(35)
@@ -159,7 +189,12 @@ function object:draw()
     ImGui.PushID(tostring(self.name .. self.id))
     ImGui.SetNextItemOpen(self.headerOpen)
 
+    if self.beingDragged then ImGui.PushStyleColor(ImGuiCol.Header, 1, 0, 0, 0.5) end
+	if self.beingTargeted then ImGui.PushStyleColor(ImGuiCol.Header, 0, 1, 0, 0.5) end
     self.headerOpen = ImGui.CollapsingHeader(self.name)
+	if self.beingDragged or self.beingTargeted then ImGui.PopStyleColor() end
+
+    self:handleDrag()
 
     local hovered = self.spawnable.isHovered
     self.spawnable:resetVisualizerStates()

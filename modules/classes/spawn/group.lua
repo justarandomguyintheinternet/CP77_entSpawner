@@ -4,6 +4,7 @@ local utils = require("modules/utils/utils")
 local CPS = require("CPStyling")
 local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
+local drag = require("modules/utils/dragHelper")
 
 ---Class for organizing multiple objects and or groups
 ---@class group
@@ -23,6 +24,10 @@ local settings = require("modules/utils/settings")
 ---@field public isAutoLoaded boolean
 ---@field public sUI table
 ---@field public isUsingSpawnables boolean Signalizes that the groups has been converted from the old format
+---@field public beingTargeted boolean
+---@field public targetable boolean
+---@field public beingDragged boolean
+---@field public hovered boolean
 group = {}
 
 function group:new(sUI)
@@ -48,6 +53,11 @@ function group:new(sUI)
 
 	o.sUI = sUI
 	o.isUsingSpawnables = true
+
+	o.beingTargeted = false
+    o.targetable = true
+	o.beingDragged = false
+	o.hovered = false
 
 	self.__index = self
    	return setmetatable(o, self)
@@ -101,6 +111,28 @@ function group:rename(name)
 	self.sUI.spawner.baseUI.savedUI.reload()
 end
 
+function group:handleDrag()
+	local hovered = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem)
+
+	if hovered and not self.hovered then
+		drag.draggableHoveredIn(self)
+	elseif not hovered and self.hovered then
+		drag.draggableHoveredOut(self)
+	end
+
+	self.hovered = hovered
+
+	if self.beingTargeted then
+		self.headerOpen = true
+	end
+end
+
+---Callback for when this object gets dropped into another one
+function group:dropIn(target)
+	self:setSelectedGroupByPath(target:getOwnPath())
+	self:moveToSelectedGroup()
+end
+
 ---Draw func if this is just a sub group
 ---@protected
 function group:draw()
@@ -115,7 +147,12 @@ function group:draw()
 	local n = self.name
 	if self.isAutoLoaded then n = tostring(self.name .. " | AUTOSPAWNED") end
 
+	if self.beingDragged then ImGui.PushStyleColor(ImGuiCol.Header, 1, 0, 0, 0.5) end
+	if self.beingTargeted then ImGui.PushStyleColor(ImGuiCol.Header, 0, 1, 0, 0.5) end
     self.headerOpen = ImGui.CollapsingHeader(n)
+	if self.beingDragged or self.beingTargeted then ImGui.PopStyleColor() end
+
+	self:handleDrag()
 
 	local addY = 0
 	if settings.groupRot then addY = ImGui.GetFrameHeight() + ImGui.GetStyle().ItemSpacing.y end
@@ -234,27 +271,44 @@ function group:drawMoveGroup()
 	ImGui.SameLine()
 	if ImGui.Button("Move to group", 150, 0) then
 		if self:verifyMove(self.sUI.groups[self.selectedGroup + 1].tab) then
-			if self.selectedGroup ~= 0 then
-				if self.parent == nil then
-					os.remove("data/objects/" .. self.name .. ".json")
-					self.sUI.spawner.baseUI.savedUI.reload()
-				end
-				if self.parent ~= nil then
-					utils.removeItem(self.parent.childs, self)
-				end
-				self.parent = self.sUI.groups[self.selectedGroup + 1].tab
-				table.insert(self.sUI.groups[self.selectedGroup + 1].tab.childs, self)
-				self:saveAfterMove()
-			else
-				if self.parent ~= nil then
-					utils.removeItem(self.parent.childs, self)
-					self.parent:saveAfterMove()
-				end
-
-				self.parent = nil
-				self:save()
-			end
+			self:moveToSelectedGroup()
 		end
+	end
+end
+
+function group:setSelectedGroupByPath(path)
+    self.sUI.getGroups()
+
+    local i = 0
+    for _, group in pairs(self.sUI.groups) do
+        if group.name == path then
+            self.selectedGroup = i
+            break
+        end
+        i = i + 1
+    end
+end
+
+function group:moveToSelectedGroup()
+	if self.selectedGroup ~= 0 then
+		if self.parent == nil then
+			os.remove("data/objects/" .. self.name .. ".json")
+			self.sUI.spawner.baseUI.savedUI.reload()
+		end
+		if self.parent ~= nil then
+			utils.removeItem(self.parent.childs, self)
+		end
+		self.parent = self.sUI.groups[self.selectedGroup + 1].tab
+		table.insert(self.sUI.groups[self.selectedGroup + 1].tab.childs, self)
+		self:saveAfterMove()
+	else
+		if self.parent ~= nil then
+			utils.removeItem(self.parent.childs, self)
+			self.parent:saveAfterMove()
+		end
+
+		self.parent = nil
+		self:save()
 	end
 end
 

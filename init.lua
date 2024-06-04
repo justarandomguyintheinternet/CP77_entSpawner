@@ -18,6 +18,7 @@ local settings = require("modules/utils/settings")
 local builder = require("modules/utils/entityBuilder")
 local Cron = require("modules/utils/Cron")
 local cache = require("modules/utils/cache")
+local drag = require("modules/utils/dragHelper")
 
 spawner = {
     runtimeData = {
@@ -83,6 +84,7 @@ function spawner:new()
 
     registerForEvent("onDraw", function()
         if self.runtimeData.cetOpen then
+            drag.draw()
             self.baseUI.draw(self)
         end
     end)

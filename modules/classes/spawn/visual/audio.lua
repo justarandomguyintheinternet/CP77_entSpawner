@@ -1,4 +1,5 @@
 local spawnable = require("modules/classes/spawn/spawnable")
+local visualizer = require("modules/utils/visualizer")
 
 ---Class for worldStaticSoundEmitterNode
 ---@class sound : spawnable
@@ -29,6 +30,8 @@ function sound:onAssemble(entity)
     local component = gameaudioSoundComponent.new()
     component.name = "sound"
     entity:AddComponent(component)
+
+    -- visualizer.addSphere(entity, 0.5, "green")
 
     entity:QueueEvent(SoundPlayEvent.new ({ soundName = self.spawnData }))
 end
