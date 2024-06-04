@@ -121,10 +121,6 @@ function group:handleDrag()
 	end
 
 	self.hovered = hovered
-
-	if self.beingTargeted then
-		self.headerOpen = true
-	end
 end
 
 ---Callback for when this object gets dropped into another one
@@ -177,6 +173,7 @@ function group:draw()
 
 		self:drawMoveGroup()
 
+		---TODO: Unify draggability into class, hierarchical things into class
 		---TODO: Draw arrow
 		---TODO: Add group spawnable controls
 		---TODO: More modular for future NCA feature
@@ -270,9 +267,7 @@ function group:drawMoveGroup()
 	self.selectedGroup = ImGui.Combo("##moveto", self.selectedGroup, gs, #gs)
 	ImGui.SameLine()
 	if ImGui.Button("Move to group", 150, 0) then
-		if self:verifyMove(self.sUI.groups[self.selectedGroup + 1].tab) then
-			self:moveToSelectedGroup()
-		end
+		self:moveToSelectedGroup()
 	end
 end
 
@@ -290,6 +285,10 @@ function group:setSelectedGroupByPath(path)
 end
 
 function group:moveToSelectedGroup()
+	if not self:verifyMove(self.sUI.groups[self.selectedGroup + 1].tab) then
+		return
+	end
+
 	if self.selectedGroup ~= 0 then
 		if self.parent == nil then
 			os.remove("data/objects/" .. self.name .. ".json")

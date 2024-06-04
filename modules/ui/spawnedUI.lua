@@ -23,6 +23,7 @@ function spawnedUI.spawnNewObject(entry, class, parent)
     end
 
     new.spawnable = class:new(new)
+    new.spawnable.object = new
     new.spawnable:loadSpawnData(entry.data, pos, rot)
     new.name = new.spawnable:generateName(entry.name)
     new.parent = parent
