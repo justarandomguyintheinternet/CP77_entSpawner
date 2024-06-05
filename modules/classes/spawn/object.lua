@@ -55,7 +55,7 @@ function object:new(sUI)
     o.sUI = sUI
 
     o.beingTargeted = false
-    o.targetable = false
+    o.targetable = true
     o.beingDragged = false
     o.hovered = false
 
@@ -178,6 +178,13 @@ function object:dropIn(target)
     if target.type == "group" then
         self:setSelectedGroupByPath(target:getOwnPath())
         self:moveToSelectedGroup()
+    elseif target.type == "object" then
+        local path = self:addGroupToParent(self.name .. "_group")
+        self:setSelectedGroupByPath(path)
+        self:moveToSelectedGroup()
+
+        target:setSelectedGroupByPath(path)
+        target:moveToSelectedGroup()
     end
 end
 
