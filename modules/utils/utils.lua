@@ -230,4 +230,14 @@ function miscUtils.enumTable(enumName)
     return enums
 end
 
+function miscUtils.generateCopyName(name)
+    local num = name:match("%d*$")
+
+    if #num ~= 0 then
+        return name:sub(1, -#num - 1) .. tostring(tonumber(num) + 1)
+    else
+        return name .. "_1"
+    end
+end
+
 return miscUtils

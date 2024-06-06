@@ -38,7 +38,7 @@ function object:new(sUI)
     o.parent = nil
 
     o.type = "object" -- Visual stuff
-    o.newName = ""
+    o.newName = nil
     o.selectedGroup = -1
     o.color = {0, 50, 255}
     o.box = {x = 650, y = 282}
@@ -91,23 +91,13 @@ end
 
 -- Group system functions
 
----Generate valid name from path or if no path given current name
----@param path string?
-function object:generateName(path)
-    local text = path or self.name
-    if string.find(self.name, "\\") then
-        self.name = text:match("\\[^\\]*$") -- Everything after last \
-    end
-    self.name = self.name:gsub(".ent", ""):gsub("\\", "_") -- Remove .ent, replace \ by _
-    self.name = utils.createFileName(self.name)
-end
-
 ---Update file name to new given
 ---@param name string
 function object:rename(name)
     name = self.spawnable:generateName(name)
     os.rename("data/objects/" .. self.name .. ".json", "data/objects/" .. name .. ".json")
     self.name = name
+    self.newName = name
     self.sUI.spawner.baseUI.savedUI.reload()
 end
 
@@ -216,12 +206,13 @@ function object:draw()
         ImGui.BeginChild("obj_" .. tostring(self.name .. self.id), self.box.x, h, true)
 
         if not self.isAutoLoaded then
+		    if self.newName == nil then self.newName = self.name end
+
             ImGui.SetNextItemWidth(300)
             self.newName = ImGui.InputTextWithHint('##Name', 'New Name...', self.newName, 100)
             if ImGui.IsItemDeactivatedAfterEdit() then
                 self:rename(self.newName)
                 self:saveAfterMove()
-                self.newName = ""
             end
 
             ImGui.SameLine()
@@ -268,7 +259,7 @@ function object:draw()
             clone.spawnable = require("modules/classes/spawn/" .. self.spawnable.modulePath):new(clone)
             clone.spawnable:loadSpawnData(self.spawnable:save(), pos, rot)
 
-            clone.name = self.name .. " Clone"
+            clone.name = utils.generateCopyName(self.name)
 
             clone:spawn()
             table.insert(self.sUI.elements, clone)

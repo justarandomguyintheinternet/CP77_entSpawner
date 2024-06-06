@@ -34,6 +34,7 @@ function group:new(sUI)
 	local o = {}
 
 	o.name = "New Group"
+	o.newName = nil
 	o.childs = {}
 	o.parent = nil
 
@@ -108,6 +109,7 @@ function group:rename(name)
 	name = utils.createFileName(name)
     os.rename("data/objects/" .. self.name .. ".json", "data/objects/" .. name .. ".json")
     self.name = name
+	self.newName = name
 	self.sUI.spawner.baseUI.savedUI.reload()
 end
 
@@ -160,7 +162,8 @@ function group:draw()
     	ImGui.BeginChild("group" .. tostring(self.name .. self.id), self.box.x, h + addY, true)
 
 		if not self.isAutoLoaded then
-			if self.newName == nil then self.newName = "" end
+			if self.newName == nil then self.newName = self.name end
+
 			ImGui.SetNextItemWidth(300)
 			self.newName, changed = ImGui.InputTextWithHint('##newname', 'New Name...', self.newName, 100)
 			if ImGui.IsItemDeactivatedAfterEdit() then
@@ -206,7 +209,7 @@ function group:draw()
 			local g = require("modules/classes/spawn/group"):new(self.sUI)
 
 			g:load(self:toTable())
-			g.name = self.name .. " Clone"
+			g.name = utils.generateCopyName(self.name)
 
 			if settings.moveCloneToParent == 1 then
 				g.parent = self
