@@ -248,8 +248,6 @@ function group:draw()
 	end
 	if self.parent ~= nil then
 		ImGui.Unindent(35)
-	else
-		ImGui.Separator()
 	end
 
 	ImGui.PopID()

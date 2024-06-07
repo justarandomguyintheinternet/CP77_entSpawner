@@ -300,8 +300,6 @@ function object:draw()
 
     if self.parent ~= nil then
 		ImGui.Unindent(35)
-	else
-		ImGui.Separator()
 	end
 end
 

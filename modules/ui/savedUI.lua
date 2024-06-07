@@ -19,7 +19,7 @@ savedUI = {
     spawned = {}
 }
 
-function savedUI.convertObject(object)
+function savedUI.convertObject(object, getState)
     local spawnable = require("modules/classes/spawn/entity/entityTemplate"):new()
     spawnable:loadSpawnData({
         spawnData = object.path,
@@ -33,7 +33,11 @@ function savedUI.convertObject(object)
     newObject.autoLoad = object.autoLoad
     newObject.spawnable = spawnable
 
-    return newObject:getState()
+    if getState then
+        return newObject:getState()
+    else
+        return newObject
+    end
 end
 
 function savedUI.convertGroup(group)
@@ -41,7 +45,7 @@ function savedUI.convertGroup(group)
 
     for _, child in pairs(group.childs) do
         if child.type == "object" then
-            table.insert(data, savedUI.convertObject(child))
+            table.insert(data, savedUI.convertObject(child, true))
         else
             table.insert(data, savedUI.convertGroup(child))
         end
@@ -59,7 +63,7 @@ function savedUI.backwardComp()
             if data.type == "object" and data.path then
                 config.saveFile("data/oldFormat/" .. file.name, data)
 
-                local new = savedUI.convertObject(data)
+                local new = savedUI.convertObject(data, true)
                 config.saveFile("data/objects/" .. file.name, new)
                 print("[ObjectSpawner] Converted \"" .. file.name .. "\" to the new file format.")
             elseif data.type == "group" and not data.isUsingSpawnables then
@@ -70,6 +74,95 @@ function savedUI.backwardComp()
                 config.saveFile("data/objects/" .. file.name, data)
                 print("[ObjectSpawner] Converted \"" .. file.name .. "\" to the new file format.")
             end
+        end
+    end
+end
+
+local function getAMMLightByID(lights, id)
+    for _, light in pairs(lights) do
+        if light.uid == id then
+            return light
+        end
+    end
+end
+
+function savedUI.convertAMMPreset(data)
+    local area = "base\\amm_props\\entity\\ambient_area_light"
+    local point = "base\\amm_props\\entity\\ambient_point_light"
+    local spot = "base\\amm_props\\entity\\ambient_spot_light"
+
+    local root = gr:new(savedUI)
+    root.name = data.file_name:gsub(".json", "")
+
+    local props = gr:new(savedUI)
+    props.parent = root
+    props.name = "Props"
+
+    local lights = gr:new(savedUI)
+    lights.parent = root
+    lights.name = "Lights"
+
+    for _, prop in pairs(data.props) do
+        local location = loadstring("return " .. prop.pos, "")()
+        local pos = Vector4.new(location.x, location.y, location.z, 0)
+        local rot = EulerAngles.new(location.roll, location.pitch, location.yaw)
+
+        local spawnData = {
+            path = prop.template_path,
+            app = prop.app,
+            name = prop.name,
+            pos = pos,
+            rot = rot,
+            headerOpen = false,
+            loadRange = 100,
+            autoLoad = false
+        }
+
+        local object = savedUI.convertObject(spawnData, false)
+        if prop.template_path:match(area) or prop.template_path:match(point) or prop.template_path:match(spot) then
+            local lightData = getAMMLightByID(data.lights, prop.uid)
+
+            spawnData.color = loadstring("return " .. lightData.color, "")()
+            spawnData.color = {spawnData.color[1], spawnData.color[1], spawnData.color[1]}
+            spawnData.intensity = lightData.intensity
+            local angles = loadstring("return " .. lightData.angles, "")()
+            spawnData.innerAngle = angles.inner
+            spawnData.outerAngle = angles.outer
+            spawnData.radius = lightData.radius
+
+            if prop.template_path:match(area) then
+                spawnData.lightType = 2
+            elseif prop.template_path:match(point) then
+                spawnData.lightType = 0
+            else
+                spawnData.lightType = 1
+            end
+
+            local light = require("modules/classes/spawn/light/light"):new()
+            light:loadSpawnData(spawnData, spawnData.pos, spawnData.pos)
+            object.spawnable = light
+            object.parent = lights
+            table.insert(lights.childs, object)
+        else
+            object.parent = props
+            table.insert(props.childs, object)
+        end
+    end
+
+    table.insert(root.childs, props)
+    table.insert(root.childs, lights)
+    root.pos = root:getCenter()
+
+    root:save()
+    print("[ObjectSpawner] Imported \"" .. data.file_name .. "\" from AMM.")
+    os.remove("data/AMMImport/" .. data.file_name)
+end
+
+function savedUI.importAMMPresets()
+    for _, file in pairs(dir("data/AMMImport")) do
+        if file.name:match("^.+(%..+)$") == ".json" then
+            local data = config.loadFile("data/AMMImport/" .. file.name)
+            savedUI.convertAMMPreset(data)
         end
     end
 end
