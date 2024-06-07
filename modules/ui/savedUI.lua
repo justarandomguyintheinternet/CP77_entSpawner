@@ -123,7 +123,7 @@ function savedUI.convertAMMPreset(data)
             local lightData = getAMMLightByID(data.lights, prop.uid)
 
             spawnData.color = loadstring("return " .. lightData.color, "")()
-            spawnData.color = {spawnData.color[1], spawnData.color[1], spawnData.color[1]}
+            spawnData.color = {spawnData.color[1], spawnData.color[2], spawnData.color[3]}
             spawnData.intensity = lightData.intensity
             local angles = loadstring("return " .. lightData.angles, "")()
             spawnData.innerAngle = angles.inner
