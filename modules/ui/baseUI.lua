@@ -1,5 +1,6 @@
 local CPS = require("CPStyling")
 
+---@class baseUI
 baseUI = {
     spawnUI = require("modules/ui/spawnUI"),
     spawnedUI = require("modules/ui/spawnedUI"),

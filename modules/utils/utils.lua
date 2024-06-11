@@ -218,6 +218,41 @@ function miscUtils.rotatePoint(vec, rot)
     return rotated
 end
 
+---Returns the min and max of a BBox for a list of Vector4's
+---@param vectors table
+---@return Vector4, Vector4
+function miscUtils.getVector4BBox(vectors)
+    local minX = 9999999999
+    local minY = 9999999999
+    local minZ = 9999999999
+    local maxX = -9999999999
+    local maxY = -9999999999
+    local maxZ = -9999999999
+
+    for _, vector in ipairs(vectors) do
+        if vector.x < minX then
+            minX = vector.x
+        end
+        if vector.y < minY then
+            minY = vector.y
+        end
+        if vector.z < minZ then
+            minZ = vector.z
+        end
+        if vector.x > maxX then
+            maxX = vector.x
+        end
+        if vector.y > maxY then
+            maxY = vector.y
+        end
+        if vector.z > maxZ then
+            maxZ = vector.z
+        end
+    end
+
+    return Vector4.new(minX, minY, minZ, 0), Vector4.new(maxX, maxY, maxZ, 0)
+end
+
 ---@param enumName string
 ---@return table
 function miscUtils.enumTable(enumName)

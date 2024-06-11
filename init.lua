@@ -20,6 +20,9 @@ local Cron = require("modules/utils/Cron")
 local cache = require("modules/utils/cache")
 local drag = require("modules/utils/dragHelper")
 
+---@class spawner
+---@field runtimeData table {cetOpen: boolean, inGame: boolean, inMenu: boolean}
+---@field baseUI baseUI
 spawner = {
     runtimeData = {
         cetOpen = false,

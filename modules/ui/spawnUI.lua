@@ -1,8 +1,8 @@
 local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
-local object = require("modules/classes/spawn/object")
 local settings = require("modules/utils/settings")
+local amm = require("modules/utils/ammUtils")
 
 local types = {
     ["Entity"] = {
@@ -41,6 +41,14 @@ local function tooltip(text)
     end
 end
 
+---@class spawnUI
+---@field filter string
+---@field selectedGroup number
+---@field selectedType number
+---@field selectedVariant number
+---@field sizeX number
+---@field spawner? spawner
+---@field filteredList table
 spawnUI = {
     filter = "",
     selectedGroup = 0,
@@ -192,17 +200,7 @@ function spawnUI.draw()
 
         style.pushGreyedOut(not AMM)
         if ImGui.Button("Generate AMM Props") and AMM then
-            local props = AMM.API.GetAMMProps()
-            for _, prop in pairs(props) do
-                local new = object:new(spawnUI)
-                new.spawnable = require("modules/classes/spawn/entity/ammEntity"):new()
-                new.spawnable:loadSpawnData({ spawnData = prop.path }, Vector4.new(0, 0, 0, 0), EulerAngles.new(0, 0, 0))
-                new.name = new.spawnable:generateName(prop.name)
-
-                config.saveFile("data/spawnables/entity/amm/" .. prop.name .. ".json", new:getState())
-            end
-
-            spawnUI.loadSpawnData(spawnUI.spawner)
+            amm.generateProps(spawnUI, AMM)
         end
         style.tooltip("[THIS WILL LAG] Generate files for spawning, from current list of AMM props")
 
