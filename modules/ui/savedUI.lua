@@ -5,6 +5,7 @@ local gr = require("modules/classes/spawn/group")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
+local amm = require("modules/utils/ammUtils")
 
 local debug = false
 
@@ -159,12 +160,13 @@ function savedUI.convertAMMPreset(data)
 end
 
 function savedUI.importAMMPresets()
-    for _, file in pairs(dir("data/AMMImport")) do
-        if file.name:match("^.+(%..+)$") == ".json" then
-            local data = config.loadFile("data/AMMImport/" .. file.name)
-            savedUI.convertAMMPreset(data)
-        end
-    end
+    -- for _, file in pairs(dir("data/AMMImport")) do
+    --     if file.name:match("^.+(%..+)$") == ".json" then
+    --         local data = config.loadFile("data/AMMImport/" .. file.name)
+    --         savedUI.convertAMMPreset(data)
+    --     end
+    -- end
+    amm.importPresets(savedUI)
 end
 
 function savedUI.draw(spawner)

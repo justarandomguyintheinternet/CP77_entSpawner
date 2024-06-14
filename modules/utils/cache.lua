@@ -1,4 +1,5 @@
 local config = require("modules/utils/config")
+local tasks = require("modules/utils/tasks")
 
 local sanitizeSpawnData = false
 local data = {}
@@ -73,6 +74,42 @@ function cache.generateStaticAudioList()
     end
 
     config.saveRawTable("data/spawnables/visual/sounds/sounds.txt", sounds)
+end
+
+function cache.tryGet(...)
+    local arg = {...}
+    local missing = false
+
+    for _, key in pairs(arg) do
+        local value = cache.getValue(key)
+
+        if not value then
+            missing = true
+        end
+    end
+
+    return {
+        ---Callback for when one of the keys was not cached, callback gets a task object on which it shall call task:taskCompleted() once the value is found
+        ---@param notFoundCallback function
+        notFound = function (notFoundCallback)
+            local task = tasks:new()
+            if missing then
+                task:addTask(function ()
+                    notFoundCallback(task)
+                end)
+            end
+
+            return {
+                ---Callback for when all keys are cached
+                found = function (foundCallback)
+                    task:onFinalize(function ()
+                        foundCallback()
+                    end)
+                    task:run()
+                end
+            }
+        end
+    }
 end
 
 return cache

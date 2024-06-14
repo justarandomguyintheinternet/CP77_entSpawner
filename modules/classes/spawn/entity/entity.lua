@@ -8,6 +8,7 @@ local cache = require("modules/utils/cache")
 ---@class entity : spawnable
 ---@field public apps table
 ---@field public appIndex integer
+---@field private bBoxCallback function
 local entity = setmetatable({}, { __index = spawnable })
 
 function entity:new()
@@ -20,6 +21,8 @@ function entity:new()
 
     o.apps = {}
     o.appIndex = 0
+    o.bBoxCallback = nil
+    o.bbox = nil
 
     setmetatable(o, { __index = self })
    	return o
@@ -28,7 +31,7 @@ end
 function entity:loadSpawnData(data, position, rotation)
     spawnable.loadSpawnData(self, data, position, rotation)
 
-    self.apps = cache.getValue(self.spawnData)
+    self.apps = cache.getValue(self.spawnData .. "_apps")
     if not self.apps then
         self.apps = {}
         builder.registerLoadResource(self.spawnData, function (resource)
@@ -36,7 +39,7 @@ function entity:loadSpawnData(data, position, rotation)
                 table.insert(self.apps, appearance.name.value)
             end
         end)
-        cache.addValue(self.spawnData, self.apps)
+        cache.addValue(self.spawnData .. "_apps", self.apps)
     end
 
     self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
@@ -45,38 +48,31 @@ end
 function entity:onAssemble(entity)
     spawnable.onAssemble(self, entity)
 
-    builder.getEntityBBox(entity, function (data)
-        print(data.bBox.min, data.bBox.max, #data.meshes)
+    cache.tryGet(self.spawnData .. "_bBox", self.spawnData .. "_meshes")
 
-        for _, mesh in pairs(data.meshes) do
-            print(mesh.path .. " : " .. mesh.app)
-            print(mesh.min, mesh.max)
-            print(mesh.pos)
-            print(mesh.rot)
-            print("------------------------")
+    .notFound(function (task)
+        builder.getEntityBBox(entity, function (data)
+            local meshes = {}
+            for _, mesh in pairs(data.meshes) do
+                table.insert(meshes, { app = mesh.app, path = mesh.path, pos = utils.fromVector(mesh.pos), rot = utils.fromEuler(mesh.rot) })
+            end
 
-            -- local collider = require("modules/classes/spawn/collision/collider"):new()
+            cache.addValue(self.spawnData .. "_bBox", { min = utils.fromVector(data.bBox.min), max = utils.fromVector(data.bBox.max) })
+            cache.addValue(self.spawnData .. "_meshes", meshes)
+            task:taskCompleted()
+        end)
+    end)
 
-            -- local x = mesh.max.x - mesh.min.x
-            -- local y = mesh.max.y - mesh.min.y
-            -- local z = mesh.max.z - mesh.min.z
-
-            -- local offset = Vector4.new((mesh.min.x) + x / 2, (mesh.min.y) + y / 2, (mesh.min.z) + z / 2, 0)
-            -- offset = mesh.rot:ToQuat():Transform(offset)
-            -- offset = self.rotation:ToQuat():Transform(offset)
-
-            -- pos = Game['OperatorAdd;Vector4Vector4;Vector4'](self.rotation:ToQuat():Transform(mesh.pos), offset)
-            -- pos = Game['OperatorAdd;Vector4Vector4;Vector4'](self.position, pos)
-            -- rot = utils.addEuler(mesh.rot, self.rotation)
-
-            -- local data = {
-            --     extents = { x = x / 2, y = y / 2, z = z / 2 },
-            --     shape = 0
-            -- }
-            -- collider:loadSpawnData(data, pos, rot)
-            -- self.object:addObjectToParent(collider, collider:generateName(mesh.path), false)
+    .found(function ()
+        self.bbox = cache.getValue(self.spawnData .. "_bBox")
+        if self.bBoxCallback then
+            self.bBoxCallback(cache.getValue(self.spawnData .. "_meshes"))
         end
     end)
+end
+
+function entity:onBBoxLoaded(callback)
+    self.bBoxCallback = callback
 end
 
 function entity:getExtraHeight()
@@ -96,12 +92,6 @@ function entity:draw()
 
     if #self.apps == 0 then
         list = {"No apps"}
-    end
-
-    if ImGui.Button("Test") then
-        builder.getEntityBBox(self:getEntity(), function ()
-            
-        end)
     end
 
     ImGui.SetNextItemWidth(150)

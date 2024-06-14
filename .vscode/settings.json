@@ -4,5 +4,6 @@
         "lowercase-global",
         "inject-field",
         "missing-parameter"
-    ]
+    ],
+    "Lua.completion.requireSeparator": "/"
 }

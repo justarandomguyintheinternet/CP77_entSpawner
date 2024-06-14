@@ -45,7 +45,7 @@ function mesh:loadSpawnData(data, position, rotation)
     spawnable.loadSpawnData(self, data, position, rotation)
 
     -- Get from cache
-    self.apps = cache.getValue(self.spawnData)
+    self.apps = cache.getValue(self.spawnData .. "_apps")
     self.bBox.max = cache.getValue(self.spawnData .. "_bBox_max")
     self.bBox.min = cache.getValue(self.spawnData .. "_bBox_min")
 
@@ -65,7 +65,7 @@ function mesh:loadSpawnData(data, position, rotation)
             visualizer.updateScale(entity, self:getVisualScale(), "arrows")
 
             -- Save to cache
-            cache.addValue(self.spawnData, self.apps)
+            cache.addValue(self.spawnData .. "_apps", self.apps)
             cache.addValue(self.spawnData .. "_bBox_max", utils.fromVector(self.bBox.max))
             cache.addValue(self.spawnData .. "_bBox_min", utils.fromVector(self.bBox.min))
         end)
