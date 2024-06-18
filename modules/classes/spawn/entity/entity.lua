@@ -3,12 +3,14 @@ local spawnable = require("modules/classes/spawn/spawnable")
 local builder = require("modules/utils/entityBuilder")
 local utils = require("modules/utils/utils")
 local cache = require("modules/utils/cache")
+local visualizer = require("modules/utils/visualizer")
 
 ---Class for base entity handling
 ---@class entity : spawnable
 ---@field public apps table
 ---@field public appIndex integer
 ---@field private bBoxCallback function
+---@field public bBox table {min: Vector4, max: Vector4}
 local entity = setmetatable({}, { __index = spawnable })
 
 function entity:new()
@@ -22,7 +24,7 @@ function entity:new()
     o.apps = {}
     o.appIndex = 0
     o.bBoxCallback = nil
-    o.bbox = nil
+    o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
 
     setmetatable(o, { __index = self })
    	return o
@@ -65,7 +67,12 @@ function entity:onAssemble(entity)
     end)
     .found(function ()
         utils.log("[Entity] BBOX for entity " .. self.spawnData .. " found.")
-        self.bbox = cache.getValue(self.spawnData .. "_bBox")
+        local box = cache.getValue(self.spawnData .. "_bBox")
+        self.bBox.min = ToVector4(box.min)
+        self.bBox.max = ToVector4(box.max)
+
+        visualizer.updateScale(entity, self:getVisualScale(), "arrows")
+
         if self.bBoxCallback then
             self.bBoxCallback(cache.getValue(self.spawnData .. "_meshes"))
         end
@@ -74,6 +81,15 @@ end
 
 function entity:onBBoxLoaded(callback)
     self.bBoxCallback = callback
+end
+
+function entity:getVisualScale()
+    local x = self.bBox.max.x - self.bBox.min.x
+    local y = self.bBox.max.y - self.bBox.min.y
+    local z = self.bBox.max.z - self.bBox.min.z
+
+    local max = math.min(math.max(x, y, z, 1) * 0.5, 3.5)
+    return { x = max, y = max, z = max }
 end
 
 function entity:getExtraHeight()

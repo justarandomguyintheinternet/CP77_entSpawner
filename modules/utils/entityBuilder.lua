@@ -121,7 +121,7 @@ function builder.getEntityBBox(entity, callback)
                 end)
                 .found(function ()
                     local min = ToVector4(cache.getValue(path .. "_bBox_min"))
-                    local max = ToVector4(cache.getValue(path .. "_bBox_min"))
+                    local max = ToVector4(cache.getValue(path .. "_bBox_max"))
 
                     table.insert(meshes, {
                         min = min,
