@@ -275,4 +275,20 @@ function miscUtils.generateCopyName(name)
     end
 end
 
+function miscUtils.log(...)
+    if true then return end
+
+    local args = {...}
+    local str = ""
+
+    for i, arg in ipairs(args) do
+        str = str .. tostring(arg)
+        if i < #args then
+            str = str .. "\t"
+        end
+    end
+
+    print(str)
+end
+
 return miscUtils

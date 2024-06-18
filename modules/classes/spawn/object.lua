@@ -166,6 +166,7 @@ end
 ---Callback for when this object gets dropped into another one
 function object:dropIn(target)
     if target.type == "group" then
+        -- TODO: If its the direct parent, move to that parent's parent instead
         self:setSelectedGroupByPath(target:getOwnPath())
         self:moveToSelectedGroup()
     elseif target.type == "object" then

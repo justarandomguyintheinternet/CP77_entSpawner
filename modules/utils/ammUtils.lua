@@ -2,7 +2,6 @@ local object = require("modules/classes/spawn/object")
 local gr = require("modules/classes/spawn/group")
 local cache = require("modules/utils/cache")
 local utils = require("modules/utils/utils")
-local Cron = require("modules/utils/Cron")
 local amm = {}
 
 local area = "base\\amm_props\\entity\\ambient_area_light"
@@ -91,7 +90,7 @@ local function extractPropData(prop)
         scale = Vector4.new(scale.x, scale.y, scale.z, 0)
     end
 
-    return { pos = pos, rot = rot, scale = scale, path = prop.template_path, app = prop.app, uid = prop.uid }
+    return { pos = pos, rot = rot, scale = scale, path = prop.template_path, app = prop.app, uid = prop.uid, name = prop.name }
 end
 
 function amm.importPreset(data, savedUI)
@@ -122,15 +121,16 @@ function amm.importPreset(data, savedUI)
         local o = generateObject(savedUI, propData)
         if propData.path:match(area) or propData.path:match(point) or propData.path:match(spot) then
             o.spawnable = convertLight(propData, data)
-            o.name = o.spawnable:generateName(propData.path)
+            o.name = o.spawnable:generateName(propData.name)
             o.parent = lights
             table.insert(lights.childs, o)
         elseif propData.scale.x ~= 100 or propData.scale.y ~= 100 or propData.scale.z ~= 100 then
             meshService:addTask(function ()
-                print("Executing task for " .. propData.path .. " BBOX: " .. tostring(cache.getValue(propData.path .. "_bBox")) .. " MESHES: " .. tostring(cache.getValue(propData.path .. "_meshes")))
+                utils.log("Executing task for " .. propData.path .. " Cached: " .. tostring((cache.getValue(propData.path .. "_bBox") and cache.getValue(propData.path .. "_meshes"))))
+
                 cache.tryGet(propData.path .. "_bBox", propData.path .. "_meshes")
                 .notFound(function (task)
-                    print("Data for", propData.path, "not found, loading...")
+                    utils.log("Data for", propData.path, "not found, loading...")
                     local spawnable = require("modules/classes/spawn/entity/entity"):new()
                     spawnable:loadSpawnData({
                         spawnData = propData.path,
@@ -140,14 +140,14 @@ function amm.importPreset(data, savedUI)
 
                     spawnable:onBBoxLoaded(function ()
                         spawnable:despawn()
-                        print("Data for", propData.path, "loaded and cached.", propData.uid)
+                        utils.log("Data for", propData.path, "loaded and cached.", propData.uid)
                         task:taskCompleted()
                     end)
                 end)
                 .found(function ()
                     local meshesData = cache.getValue(propData.path .. "_meshes")
                     for _, mesh in pairs(meshesData) do
-                        print("Creating spawnable for mesh " .. mesh.path .. " for prop " .. propData.path, prop.pos, ToVector4(mesh.pos))
+                        utils.log("Creating spawnable for mesh " .. mesh.path .. " for prop " .. propData.path, prop.pos, ToVector4(mesh.pos))
 
                         local m = require("modules/classes/spawn/mesh/mesh"):new()
                         m:loadSpawnData({
@@ -156,18 +156,21 @@ function amm.importPreset(data, savedUI)
                             app = mesh.app
                         }, utils.addVector(propData.pos, ToVector4(mesh.pos)), utils.addEuler(propData.rot, ToEulerAngles(mesh.rot)))
 
-                        local meshObject = generateObject(savedUI, { name = mesh.path })
+                        local meshObject = generateObject(savedUI, { name = propData.name })
                         meshObject.spawnable = m
                         meshObject.parent = meshes
                         table.insert(meshes.childs, meshObject)
                     end
-                    print(meshService.tasksTodo - 1)
+
+                    utils.log("[ammUtils] Task Done For " .. propData.path)
+                    print("[AMMImport] Imported prop " .. propData.name .. " by converting it to " .. #meshesData .. " meshes.")
+                    utils.log("   ")
                     meshService:taskCompleted()
                 end)
             end)
         else
             o.spawnable = convertProp(propData)
-            o.name = o.spawnable:generateName(propData.path)
+            o.name = o.spawnable:generateName(propData.name)
             o.parent = props
             table.insert(props.childs, o)
         end
@@ -184,17 +187,11 @@ function amm.importPreset(data, savedUI)
 
         root:save()
         print("[ObjectSpawner] Imported \"" .. data.file_name .. "\" from AMM.")
-        -- os.remove("data/AMMImport/" .. data.file_name)
+        os.remove("data/AMMImport/" .. data.file_name)
     end)
 
-    print("TODO", meshService.tasksTodo)
-
-    meshService:run(1, math.floor(#meshService.tasks / 2))
-
-    Cron.After(6, function ()
-        print("Running remaining tasks")
-        meshService:run(math.floor(#meshService.tasks / 2) + 1, #meshService.tasks)
-    end)
+    meshService.taskDelay = 0.05
+    meshService:run(true)
 end
 
 function amm.importPresets(savedUI)

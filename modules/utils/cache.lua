@@ -76,6 +76,9 @@ function cache.generateStaticAudioList()
     config.saveRawTable("data/spawnables/visual/sounds/sounds.txt", sounds)
 end
 
+---Tries to get the cached value for each key, if any of the keys is not cached, the notFound callback is called with a task object on which task:taskCompleted() must be called once the value has been put into the cache
+---@param ... string List of keys to check
+---@return table { notFound = function (notFoundCallback) -> { found = function (foundCallback) } }
 function cache.tryGet(...)
     local arg = {...}
     local missing = false

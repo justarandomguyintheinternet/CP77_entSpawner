@@ -49,7 +49,6 @@ function entity:onAssemble(entity)
     spawnable.onAssemble(self, entity)
 
     cache.tryGet(self.spawnData .. "_bBox", self.spawnData .. "_meshes")
-
     .notFound(function (task)
         builder.getEntityBBox(entity, function (data)
             local meshes = {}
@@ -59,11 +58,13 @@ function entity:onAssemble(entity)
 
             cache.addValue(self.spawnData .. "_bBox", { min = utils.fromVector(data.bBox.min), max = utils.fromVector(data.bBox.max) })
             cache.addValue(self.spawnData .. "_meshes", meshes)
+            utils.log("[Entity] Loaded and cached BBOX for entity " .. self.spawnData .. " with " .. #meshes .. " meshes.")
+
             task:taskCompleted()
         end)
     end)
-
     .found(function ()
+        utils.log("[Entity] BBOX for entity " .. self.spawnData .. " found.")
         self.bbox = cache.getValue(self.spawnData .. "_bBox")
         if self.bBoxCallback then
             self.bBoxCallback(cache.getValue(self.spawnData .. "_meshes"))

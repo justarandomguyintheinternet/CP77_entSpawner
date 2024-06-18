@@ -16,21 +16,25 @@ function builder.hook()
                     local entity = event:GetEntity()
                     local idHash = entity:GetEntityID().hash
 
-                    if builder.callbacks[tonumber(idHash)] then
-                        builder.callbacks[tonumber(idHash)](entity)
-                        builder.callbacks[tonumber(idHash)] = nil
+                    if builder.callbacks[tostring(idHash)] then
+                        builder.callbacks[tostring(idHash)](entity)
+                        builder.callbacks[tostring(idHash)] = nil
                     end
                 end
             },
             OnResourceReady = {
                 args = {'handle:ResourceToken'},
                 callback = function(token)
-                    if not token then return end
+                    if type(token) ~= "userdata" then
+                        print("Token not userdata")
+                        return
+                    end
+                    if not IsDefined(token) then return end
                     if token:IsFailed() or not token:IsFinished() then return end
 
-                    if builder.callbacks[tonumber(token:GetHash())] then
-                        builder.callbacks[tonumber(token:GetHash())](token:GetResource())
-                        builder.callbacks[tonumber(token:GetHash())] = nil
+                    if builder.callbacks[tostring(token:GetHash())] then
+                        builder.callbacks[tostring(token:GetHash())](token:GetResource())
+                        builder.callbacks[tostring(token:GetHash())] = nil
                     end
                 end
             }
@@ -42,7 +46,7 @@ end
 ---@param entityID entEntityID
 ---@param callback function Gets the entity passed as an argument
 function builder.registerAssembleCallback(entityID, callback)
-    builder.callbacks[tonumber(entityID.hash)] = callback
+    builder.callbacks[tostring(entityID.hash)] = callback
 end
 
 ---Loads the specified resource and calls the callback when it is ready
@@ -52,12 +56,12 @@ function builder.registerLoadResource(path, callback)
     local token = Game.GetResourceDepot():LoadResource(path)
 
     if not token:IsFailed() then
-        builder.callbacks[tonumber(token:GetHash())] = callback
+        builder.callbacks[tostring(token:GetHash())] = callback
         token:RegisterCallback(listener:Target(), listener:Function('OnResourceReady'))
     end
 end
 
----Gets the approximate offset of a component, not consdidring the parent componentes
+---Gets the approximate offset of a component, not considering the parent componentes
 ---@param component entIComponent
 local function getComponentOffset(component)
     local offset = WorldTransform.new()
@@ -65,6 +69,20 @@ local function getComponentOffset(component)
     offset:SetOrientation(component:GetLocalOrientation())
 
     return offset
+end
+
+local function shouldUseMesh(component)
+    local enabled = component:IsEnabled()
+    local isMesh = component:IsA("entMeshComponent") or component:IsA("entSkinnedMeshComponent")
+    local ignore = false
+    local meshExists = false
+
+    if isMesh then
+        ignore = ResRef.FromHash(component.mesh.hash):ToString():match("base\\spawner") or ResRef.FromHash(component.mesh.hash):ToString():match("base\\amm_props\\mesh\\invis_")
+        meshExists = Game.GetResourceDepot():ResourceExists(ResRef.FromHash(component.mesh.hash))
+    end
+
+    return enabled and isMesh and meshExists and not ignore
 end
 
 ---Gets the bounding box of an entity, and the position and rotation of each mesh component
@@ -78,21 +96,26 @@ function builder.getEntityBBox(entity, callback)
     local meshesTask = task:new()
 
     for _, component in ipairs(components) do
-        if (component:IsA("entMeshComponent") or component:IsA("entSkinnedMeshComponent")) and not (ResRef.FromHash(component.mesh.hash):ToString():match("base\\spawner")) and not (ResRef.FromHash(component.mesh.hash):ToString():match("base\\amm_props\\mesh\\invis_")) then
+        if shouldUseMesh(component) then
+            local path = ResRef.FromHash(component.mesh.hash):ToString()
+
             meshesTask:addTask(function ()
-                local offset = WorldTransform.new()
-                offset = getComponentOffset(component)
-                local path = ResRef.FromHash(component.mesh.hash):ToString()
+                local offset = getComponentOffset(component)
+                utils.log("[entityBuilder] task for mesh " .. path)
 
                 cache.tryGet(path .. "_bBox_max", path .. "_bBox_min")
                 .notFound(function (task)
+                    utils.log("[entityBuilder] notFound BBOX for mesh " .. path)
+
                     builder.registerLoadResource(path, function(resource)
                         local min = resource.boundingBox.Min
                         local max = resource.boundingBox.Max
 
                         cache.addValue(path .. "_bBox_max", utils.fromVector(max))
                         cache.addValue(path .. "_bBox_min", utils.fromVector(min))
-                        print("Loaded BBOX for mesh " .. path)
+
+                        utils.log("[entityBuilder] loaded from resource BBOX for mesh " .. path)
+
                         task:taskCompleted()
                     end)
                 end)
@@ -112,6 +135,8 @@ function builder.getEntityBBox(entity, callback)
                     table.insert(bBoxPoints, offset:GetOrientation():Transform(min))
                     table.insert(bBoxPoints, offset:GetOrientation():Transform(max))
 
+                    utils.log("[entityBuilder] found BBOX for mesh " .. path)
+                    utils.log("[entityBuilder] meshesTask todo: " .. meshesTask.tasksTodo - 1)
                     meshesTask:taskCompleted()
                 end)
             end)
@@ -119,11 +144,13 @@ function builder.getEntityBBox(entity, callback)
     end
 
     meshesTask:onFinalize(function ()
+        utils.log("[entityBuilder] onFinalize BBOX for entity " .. ResRef.ToString(entity:GetTemplatePath()))
         local bboxMin, bboxMax = utils.getVector4BBox(bBoxPoints)
         callback({ bBox = { min = bboxMin, max = bboxMax }, meshes = meshes })
     end)
 
-    meshesTask:run()
+    meshesTask.taskDelay = 0.1
+    meshesTask:run(true)
 end
 
 return builder
