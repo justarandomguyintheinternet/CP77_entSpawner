@@ -4,11 +4,17 @@ local group = require("modules/classes/spawn/group")
 local settings = require("modules/utils/settings")
 
 ---@class spawnedUI
+---@field elements table {element}
+---@field filter string
+---@field newGroupName string
+---@field groups table {string}
+---@field spawner spawner?
 spawnedUI = {
     elements = {},
     filter = "",
     newGroupName = "New Group",
-    groups = {}
+    groups = {},
+    spawner = nil
 }
 
 function spawnedUI.spawnNewObject(entry, class, parent)
@@ -175,40 +181,6 @@ function spawnedUI.despawnAll()
     for _, e in pairs(spawnedUI.elements) do
         e:despawn()
     end
-end
-
-function spawnedUI.hotkey()
-    local allObjects = {}
-    for _, data in pairs(spawnedUI.elements) do
-        if data.type == "group" then
-            for _, obj in pairs(data:getObjects()) do
-                table.insert(allObjects, obj)
-            end
-        else
-            table.insert(allObjects, data)
-        end
-    end
-
-    local closest = 999
-    ---@type object
-    local closestObj = nil
-
-    for _, obj in pairs(allObjects) do
-
-        targetDir = utils.subVector(obj.pos, Game.GetPlayer():GetWorldPosition())
-        targetDir = Vector4.Normalize(targetDir)
-
-        dot = Vector4.Dot(targetDir, Game.GetPlayer():GetWorldForward())
-
-        angle =  math.deg(math.acos(dot))
-        print(180-angle, obj.name)
-        if (180 - angle) < closest then
-            closest = 180 - angle
-            closestObj = obj
-        end
-    end
-
-    spawnedUI.filter = closestObj.name
 end
 
 return spawnedUI

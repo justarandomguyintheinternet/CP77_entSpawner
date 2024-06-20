@@ -1,7 +1,10 @@
 -- Most of the colors and style has been taken from https://github.com/psiberx/cp2077-red-hot-tools
 
 local style = {
-    mutedColor = 0xFFA5A19B
+    mutedColor = 0xFFA5A19B,
+    elementIndent = 35,
+    draggedColor = 0xFF00007F,
+    targetedColor = 0xFF00007F,
 }
 
 function style.pushGreyedOut(state)
