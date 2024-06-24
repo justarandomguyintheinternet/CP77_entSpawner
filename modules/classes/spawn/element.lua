@@ -59,13 +59,6 @@ function element:load(data, silent)
     self.type = data.type
 end
 
----Try to draw as root element
-function element:tryMainDraw()
-	if self.parent == nil then
-		self:draw()
-	end
-end
-
 ---Update file name to new given
 ---@param name string
 function element:rename(name)
@@ -94,6 +87,33 @@ function element:dropIn(target)
     print("[Element] dropIn behavior not defined for class " .. self.type)
 end
 
+---Try to draw as root element
+function element:tryMainDraw()
+	if self.parent == nil then
+		self:draw()
+	end
+end
+
+---Amount of extra height to be added to 
+---@see element.draw
+---@return number
+function element:getExtraHeight()
+	return 0
+end
+
+local function getBaseHeight()
+	return 6 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().FramePadding.y + 7 * ImGui.GetStyle().ItemSpacing.y
+end
+
+function element:drawName()
+	ImGui.SetNextItemWidth(300)
+	self.newName, changed = ImGui.InputTextWithHint('##newname', 'New Name...', self.newName, 100)
+	if ImGui.IsItemDeactivatedAfterEdit() then
+		self:rename(self.newName)
+		self:saveAfterMove()
+	end
+end
+
 ---Main drawing
 ---@protected
 function element:draw()
@@ -112,28 +132,13 @@ function element:draw()
 	if self.beingDragged or self.beingTargeted then ImGui.PopStyleColor() end
 	self:handleDrag()
 
-	local addY = 0
-	if settings.groupRot then addY = ImGui.GetFrameHeight() + ImGui.GetStyle().ItemSpacing.y end
-
 	if self.headerOpen then
 		CPS.colorBegin("Border", self.color)
+    	ImGui.BeginChild("group" .. tostring(self.name .. self.id), self.box.x, getBaseHeight() + self:getExtraHeight(), true)
 
-		local h = 6 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().FramePadding.y + 7 * ImGui.GetStyle().ItemSpacing.y
-    	ImGui.BeginChild("group" .. tostring(self.name .. self.id), self.box.x, h + addY, true)
+		if self.newName == nil then self.newName = self.name end
 
-		if not self.isAutoLoaded then
-			if self.newName == nil then self.newName = self.name end
-
-			ImGui.SetNextItemWidth(300)
-			self.newName, changed = ImGui.InputTextWithHint('##newname', 'New Name...', self.newName, 100)
-			if ImGui.IsItemDeactivatedAfterEdit() then
-				self:rename(self.newName)
-				self:saveAfterMove()
-			end
-		else
-			ImGui.Text(tostring(self.name .. " | AUTOSPAWNED"))
-		end
-
+		self:drawName()
 		self:drawMoveGroup()
 
 		---TODO: Unify draggability into class, hierarchical things into class
@@ -214,7 +219,7 @@ function element:draw()
 end
 
 ---@protected
-function group:drawMoveGroup()
+function element:drawMoveGroup()
 	local gs = {}
 	for _, g in pairs(self.sUI.groups) do
 		table.insert(gs, g.name)
@@ -232,7 +237,7 @@ function group:drawMoveGroup()
 	end
 end
 
-function group:setSelectedGroupByPath(path)
+function element:setSelectedGroupByPath(path)
     self.sUI.getGroups()
 
     local i = 0
@@ -245,7 +250,7 @@ function group:setSelectedGroupByPath(path)
     end
 end
 
-function group:moveToSelectedGroup()
+function element:moveToSelectedGroup()
 	if not self:verifyMove(self.sUI.groups[self.selectedGroup + 1].tab) then
 		return
 	end
@@ -272,25 +277,15 @@ function group:moveToSelectedGroup()
 	end
 end
 
-function group:remove()
-	self:despawn()
+function element:remove()
 	if self.parent ~= nil then
 		utils.removeItem(self.parent.childs, self)
 		self.parent:saveAfterMove()
 	end
-	for _, c in pairs(self:getObjects()) do
-		utils.removeItem(self.sUI.elements, c)
-	end
 	utils.removeItem(self.sUI.elements, self)
 end
 
-function group:update(vec)
-	for _, obj in pairs(self:getObjects()) do
-		obj:setPosition(utils.addVector(obj:getPosition(), vec))
-	end
-end
-
-function group:verifyMove(to) -- Make sure group doesnt get moved into child
+function element:verifyMove(to) -- Make sure group doesnt get moved into child
 	local allowed = true
 	local childs = self:getPath()
 	for _, c in pairs(childs) do
