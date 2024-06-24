@@ -80,6 +80,7 @@ function savedUI.backwardComp()
 end
 
 function savedUI.importAMMPresets()
+    if amm.importing then return end
     amm.importPresets(savedUI)
 end
 
@@ -103,9 +104,11 @@ function savedUI.draw(spawner)
 
     style.spacedSeparator()
 
+    style.pushGreyedOut(amm.importing)
     if ImGui.Button("Import AMM Presets") then
         savedUI.importAMMPresets()
     end
+    style.popGreyedOut(amm.importing)
     style.tooltip("Imports all presets from the AMMImport folder.\nImport might take a bit, depending on size.\nThe initial spawn might crash for now.")
 
     style.spacedSeparator()

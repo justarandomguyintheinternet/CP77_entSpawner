@@ -35,10 +35,11 @@ function tasks:taskCompleted()
 
     if self.tasksTodo == 0 then
         self.finalizeCallback()
+        return
     end
 
     if not self.synchronous then return end
-    if #self.tasks <= 0 then return end
+    if #self.tasks <= 1 then return end
 
     table.remove(self.tasks, 1)
     if self.taskDelay > 0 then
