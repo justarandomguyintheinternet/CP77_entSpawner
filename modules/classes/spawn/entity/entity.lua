@@ -79,6 +79,32 @@ function entity:onAssemble(entity)
     end)
 end
 
+function entity:cacheCollisions()
+    local colliders = {}
+    for _, component in pairs(self:getEntity():GetComponents()) do
+        if component:IsA("entColliderComponent") then
+            for _, actor in pairs(component.colliders) do
+                local data = {
+                    previewed = false
+                }
+                if actor:IsA("physicsColliderBox") then
+                    data.shape = 0
+                    data.extents = { x = actor.extents.X, y = actor.extents.Y, z = actor.extents.Z }
+                elseif actor:IsA("physicsColliderCapsule") then
+                    data.shape = 1
+                    data.height = actor.height
+                    data.radius = actor.radius
+                elseif actor:IsA("physicsColliderSphere") then
+                    data.shape = 2
+                    data.radius = actor.radius
+                end
+                table.insert(colliders, data)
+            end
+        end
+    end
+    cache.addValue(self.spawnData .. "_collision", colliders)
+end
+
 function entity:onBBoxLoaded(callback)
     self.bBoxCallback = callback
 end
