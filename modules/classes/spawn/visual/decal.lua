@@ -74,6 +74,11 @@ function decal:getExtraHeight()
     return 6 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 3
 end
 
+function decal:getVisualScale()
+    local max = math.min(math.max(self.scale.x, self.scale.y, self.scale.z, 1) * 0.5, 3.5)
+    return { x = max, y = max, z = max }
+end
+
 function decal:updateScale()
     local entity = self:getEntity()
     if not entity then return end
