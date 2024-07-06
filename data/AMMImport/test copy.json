@@ -1,0 +1,28 @@
+{
+    "lights": [
+        {
+            "angles": "{inner = 120.000000, outer = 220.000000}",
+            "entity_id": "0x10C03C62, 35",
+            "radius": 12,
+            "color": "{0.823529, 0.984314, 0.811765, 1.000000}",
+            "intensity": 200,
+            "uid": 4510
+        }
+    ],
+    "name": "HollywoodCliffhanger",
+    "customIncluded": true,
+    "file_name": "HollywoodCliffhanger.json",
+    "props": [
+        {
+            "name": "Ceiling Circular Lamp Entropy | 2",
+            "app": "default",
+            "uid": 4510,
+            "trigger": "{x = 532.874634, y = 1112.270996, z = 215.534607, w = 1.000000}",
+            "entity_id": "0x10C03C62, 35",
+            "scale": "nil",
+            "pos": "{x = 545.041992, y = 1070.114990, z = 208.660995, w = 1.000000, roll = 0.000000, pitch = 0.000000, yaw = 43.245209}",
+            "tag": "Hollywood Cliffhanger",
+            "template_path": "base\\gameplay\\devices\\lights\\indestructible\\rancho_entropy_ceiling_lamp_d.ent"
+        }
+    ]
+}
