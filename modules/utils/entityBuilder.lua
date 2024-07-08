@@ -65,7 +65,7 @@ end
 ---@param component entIComponent
 local function getComponentOffset(component)
     local offset = WorldTransform.new()
-    offset:SetPosition(Vector4.Transform(component:GetLocalToWorld(), component:GetLocalPosition()))
+    offset:SetPosition(component:GetLocalPosition())
     offset:SetOrientation(component:GetLocalOrientation())
 
     return offset
@@ -103,7 +103,7 @@ function builder.getEntityBBox(entity, callback)
                 local offset = getComponentOffset(component)
                 utils.log("[entityBuilder] task for mesh " .. path)
 
-                cache.tryGet(path .. "_bBox_max", path .. "_bBox_min")
+                cache.tryGet(path .. "_bBox_max", path .. "_bBox_min", path .. "_collision")
                 .notFound(function (task)
                     utils.log("[entityBuilder] notFound BBOX for mesh " .. path)
 
@@ -111,8 +111,16 @@ function builder.getEntityBBox(entity, callback)
                         local min = resource.boundingBox.Min
                         local max = resource.boundingBox.Max
 
+                        local hasEmbeddedCollision = false
+                        for _, parameter in ipairs(resource.parameters) do
+                            if parameter:IsA("meshMeshParamPhysics") then
+                                hasEmbeddedCollision = true
+                            end
+                        end
+
                         cache.addValue(path .. "_bBox_max", utils.fromVector(max))
                         cache.addValue(path .. "_bBox_min", utils.fromVector(min))
+                        cache.addValue(path .. "_collision", hasEmbeddedCollision)
 
                         utils.log("[entityBuilder] loaded from resource BBOX for mesh " .. path)
 

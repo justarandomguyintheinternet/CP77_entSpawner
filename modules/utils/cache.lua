@@ -5,9 +5,17 @@ local sanitizeSpawnData = false
 local data = {}
 local cache = {}
 
+local version = 1
+
 function cache.load()
-    config.tryCreateConfig("data/cache.json", {})
+    config.tryCreateConfig("data/cache.json", { version = version })
     data = config.loadFile("data/cache.json")
+
+    if not data.version or data.version < version then
+        data = { version = version }
+        config.saveFile("data/cache.json", data)
+        print("[entSpawner] Cache is outdated, resetting cache")
+    end
 
     if not sanitizeSpawnData then return end
     cache.removeDuplicates("data/spawnables/entity/templates/paths_ent.txt")

@@ -60,6 +60,13 @@ function mesh:loadSpawnData(data, position, rotation)
                 table.insert(self.apps, appearance.name.value)
             end
 
+            local hasEmbeddedCollision = false
+            for _, parameter in ipairs(resource.parameters) do
+                if parameter:IsA("meshMeshParamPhysics") then
+                    hasEmbeddedCollision = true
+                end
+            end
+
             self.bBox.min = resource.boundingBox.Min
             self.bBox.max = resource.boundingBox.Max
             visualizer.updateScale(entity, self:getVisualScale(), "arrows")
@@ -68,6 +75,7 @@ function mesh:loadSpawnData(data, position, rotation)
             cache.addValue(self.spawnData .. "_apps", self.apps)
             cache.addValue(self.spawnData .. "_bBox_max", utils.fromVector(self.bBox.max))
             cache.addValue(self.spawnData .. "_bBox_min", utils.fromVector(self.bBox.min))
+            cache.addValue(self.spawnData .. "_collision", hasEmbeddedCollision)
         end)
     else
         self.bBox.max = ToVector4(self.bBox.max)

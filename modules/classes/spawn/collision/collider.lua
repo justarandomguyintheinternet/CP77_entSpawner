@@ -17,7 +17,7 @@ local colors = { "red", "green", "blue" }
 ---@field private extents table {x, y, z}
 ---@field private height number
 ---@field private radius number
----@field private previewed boolean
+---@field public previewed boolean
 local collider = setmetatable({}, { __index = spawnable })
 
 function collider:new()
