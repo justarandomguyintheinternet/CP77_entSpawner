@@ -92,6 +92,11 @@ local function extractPropData(prop)
         scale = Vector4.new(scale.x, scale.y, scale.z, 0)
     end
 
+    -- Holy mother of clusterfucks
+    if pos:Distance(scale) < 100 then
+        scale = Vector4.new(100, 100, 100, 0)
+    end
+
     return { pos = pos, rot = rot, scale = scale, path = prop.template_path, app = prop.app, uid = prop.uid, name = prop.name }
 end
 
@@ -138,7 +143,7 @@ function amm.importPreset(data, savedUI, importTasks)
             table.insert(lights.childs, o)
         elseif propData.scale.x ~= 100 or propData.scale.y ~= 100 or propData.scale.z ~= 100 then --or (isLight and not isAMMLight)
             if not Game.GetResourceDepot():ResourceExists(propData.path) then
-                print("Resource for " .. propData.path .. " does not exist, skipping...")
+                print("[AMMImport] Resource for " .. propData.path .. " does not exist, skipping...")
             else
                 meshService:addTask(function ()
                     utils.log("Executing task for " .. propData.path .. " Cached: " .. tostring((cache.getValue(propData.path .. "_bBox") and cache.getValue(propData.path .. "_meshes"))))
@@ -162,31 +167,60 @@ function amm.importPreset(data, savedUI, importTasks)
                     .found(function ()
                         local meshesData = cache.getValue(propData.path .. "_meshes")
                         for _, mesh in pairs(meshesData) do
-                            if (propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0) or cache.getValue(mesh.path .. "_collision") then
-                                local min = cache.getValue(mesh.path .. "_bBox_min")
-                                local max = cache.getValue(mesh.path .. "_bBox_max")
+                            local meshCollisions = cache.getValue(mesh.path .. "_collisions")
+                            if ((propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0) and meshCollisions) or (meshCollisions and #meshCollisions > 0) then
+                                for _, collision in pairs(meshCollisions) do
+                                    local c = require("modules/classes/spawn/collision/collider"):new()
 
-                                utils.log("Creating collider for zero-scale mesh " .. mesh.path .. " for prop " .. propData.path)
-                                utils.log("Has embedded but is not zero-scale: " .. tostring(cache.getValue(mesh.path .. "_collision") and not (propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0)))
+                                    local collisionPos = ToVector4(collision.pos)
+                                    if not (propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0) then
+                                        collisionPos = Vector4.new(collisionPos.x * propData.scale.x / 100, collisionPos.y * propData.scale.y / 100, collisionPos.z * propData.scale.z / 100, 0)
+                                    end
 
-                                local c = require("modules/classes/spawn/collision/collider"):new()
+                                    utils.log("Collision position after scaling: " .. collisionPos.x .. " " .. collisionPos.y .. " " .. collisionPos.z)
 
-                                local x = max.x - min.x
-                                local y = max.y - min.y
-                                local z = max.z - min.z
+                                    local localPosition = utils.addVector(ToVector4(mesh.pos), collisionPos)
 
-                                local offset = Vector4.new(min.x + x / 2, min.y + y / 2, min.z + z / 2, 0)
-                                offset = propData.rot:ToQuat():Transform(offset)
-                                local pos = Game['OperatorAdd;Vector4Vector4;Vector4'](Vector4.new(propData.pos.x, propData.pos.y, propData.pos.z, 0), offset)
+                                    utils.log("Collision position after adding mesh position: " .. localPosition.x .. " " .. localPosition.y .. " " .. localPosition.z)
 
-                                c:loadSpawnData({ extents = { x = x / 2, y = y / 2, z = z / 2}, previewed = false, material = 34 }, pos, utils.addEuler(propData.rot, ToEulerAngles(mesh.rot)))
-                                local collisionObject = generateObject(savedUI, { name = propData.name .. "_collision" })
-                                collisionObject.spawnable = c
-                                collisionObject.parent = colliders
-                                table.insert(colliders.childs, collisionObject)
+                                    localPosition = ToEulerAngles(mesh.rot):ToQuat():Transform(localPosition)
+                                    localPosition = propData.rot:ToQuat():Transform(localPosition)
+                                    local rot = utils.addEulerRelative(utils.addEulerRelative(propData.rot, ToEulerAngles(mesh.rot)), ToQuaternion(collision.rot):ToEulerAngles())
 
-                                print("[AMMImport] Imported prop " .. propData.name .. " by converting it to " .. #meshesData .. " colliders.")
-                            else
+                                    utils.log("Collision position after rotating: " .. localPosition.x .. " " .. localPosition.y .. " " .. localPosition.z)
+
+                                    local pos = utils.addVector(propData.pos, localPosition)
+
+                                    if not (propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0) then
+                                        if collision.extents then
+                                            collision.extents = { x = collision.extents.x * (propData.scale.x / 100), y = collision.extents.y * (propData.scale.y / 100), z = collision.extents.z * (propData.scale.z / 100) }
+                                        end
+                                        if collision.radius then
+                                            collision.radius = collision.radius * (math.max(propData.scale.x, propData.scale.y) / 100)
+                                        end
+                                        if collision.height then
+                                            collision.height = collision.height * (propData.scale.z / 100)
+                                        end
+                                        utils.log("Prop is scaled, but not zero, scaling collider accordingly")
+                                    end
+
+                                    collision.preset = c:getPresetIndexByName(collision.preset)
+                                    collision.material = c:getMaterialIndexByName(collision.material)
+
+                                    c:loadSpawnData(collision, pos, rot)
+                                    local collisionObject = generateObject(savedUI, { name = propData.name .. "_collision" })
+                                    collisionObject.spawnable = c
+                                    collisionObject.parent = colliders
+                                    table.insert(colliders.childs, collisionObject)
+
+                                    utils.log("Creating collider for mesh " .. mesh.path .. " for prop " .. propData.path)
+                                    utils.log("Is zero-scale: " .. tostring(propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0))
+                                end
+
+                                print("[AMMImport] Created " .. #meshCollisions .. " colliders for the mesh " .. mesh.path .. " for prop " .. propData.path)
+                            end
+
+                            if propData.scale.x ~= 0 and propData.scale.y ~= 0 and propData.scale.z ~= 0 then
                                 utils.log("Creating spawnable for mesh " .. mesh.path .. " for prop " .. propData.path, prop.pos, ToVector4(mesh.pos))
 
                                 local m = require("modules/classes/spawn/mesh/mesh"):new()
@@ -218,6 +252,11 @@ function amm.importPreset(data, savedUI, importTasks)
             table.insert(props.childs, o)
         end
     end
+
+-- zero scale:
+    -- generate collider based on physics param, ignore scale
+-- non 100 non zero scale:
+    -- generate collider based on physics param, scale collider
 
     meshService:onFinalize(function ()
         table.insert(root.childs, props)

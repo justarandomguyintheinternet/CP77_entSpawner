@@ -1,11 +1,12 @@
 local config = require("modules/utils/config")
 local tasks = require("modules/utils/tasks")
+local utils = require("modules/utils/utils")
 
 local sanitizeSpawnData = false
 local data = {}
 local cache = {}
 
-local version = 1
+local version = 2
 
 function cache.load()
     config.tryCreateConfig("data/cache.json", { version = version })
@@ -32,7 +33,11 @@ function cache.addValue(key, value)
 end
 
 function cache.getValue(key)
-    return data[key]
+    local value = data[key]
+    if type(value) == "table" then
+        return utils.deepcopy(value)
+    end
+    return value
 end
 
 function cache.removeDuplicates(path)

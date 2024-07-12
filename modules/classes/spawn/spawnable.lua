@@ -23,6 +23,7 @@ local settings = require("modules/utils/settings")
 ---@field public node string
 ---@field public description string
 ---@field public previewNote string
+---@field private rotationRelative boolean
 local spawnable = {}
 
 function spawnable:new()
@@ -47,6 +48,7 @@ function spawnable:new()
 
     o.isHovered = false
     o.arrowDirection = "all"
+    o.rotationRelative = false
 
     o.object = object
 
@@ -141,7 +143,8 @@ function spawnable:save()
         rotation = { roll = self.rotation.roll, pitch = self.rotation.pitch, yaw = self.rotation.yaw },
         spawnData = self.spawnData,
         dataType = self.dataType,
-        app = self.app
+        app = self.app,
+        rotationRelative = self.rotationRelative
     }
 end
 
@@ -247,28 +250,49 @@ end
 ---@protected
 function spawnable:drawRotation()
     ImGui.PushItemWidth(150)
-    self.rotation.roll, changed = ImGui.DragFloat("##roll", self.rotation.roll, settings.rotSteps, -9999, 9999, "%.3f Roll")
+    local roll, changed = ImGui.DragFloat("##roll", self.rotation.roll, settings.rotSteps, -9999, 9999, "%.3f Roll")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "green")
     if changed then
+        if self.rotationRelative then
+            local rot = Quaternion.SetAxisAngle(Vector4.new(0, 1, 0, 0), Deg2Rad(roll - self.rotation.roll))
+            self.rotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.rotation:ToQuat(), rot):ToEulerAngles()
+        else
+            self.rotation.roll = roll
+        end
+
         self:update()
     end
     self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
 
     ImGui.SameLine()
-    self.rotation.pitch, changed = ImGui.DragFloat("##pitch", self.rotation.pitch, settings.rotSteps, -9999, 9999, "%.3f Pitch")
+    local pitch, changed = ImGui.DragFloat("##pitch", self.rotation.pitch, settings.rotSteps, -9999, 9999, "%.3f Pitch")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "red")
     if changed then
+        if self.rotationRelative then
+            local rot = Quaternion.SetAxisAngle(Vector4.new(1, 0, 0, 0), Deg2Rad(pitch - self.rotation.pitch))
+            self.rotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.rotation:ToQuat(), rot):ToEulerAngles()
+        else
+            self.rotation.pitch = pitch
+        end
+
         self:update()
     end
     self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
 
     ImGui.SameLine()
-    self.rotation.yaw, changed = ImGui.DragFloat("##yaw", self.rotation.yaw, settings.rotSteps, -9999, 9999, "%.3f Yaw")
+    local yaw, changed = ImGui.DragFloat("##yaw", self.rotation.yaw, settings.rotSteps, -9999, 9999, "%.3f Yaw")
     self:setIsHovered(ImGui.IsItemActive() or ImGui.IsItemHovered())
     self:updateArrowDirection(ImGui.IsItemHovered(), "blue")
     if changed then
+        if self.rotationRelative then
+            local rot = Quaternion.SetAxisAngle(Vector4.new(0, 0, 1, 0), Deg2Rad(yaw - self.rotation.yaw))
+            self.rotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.rotation:ToQuat(), rot):ToEulerAngles()
+        else
+            self.rotation.yaw = yaw
+        end
+
         self:update()
     end
     self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
@@ -276,12 +300,8 @@ function spawnable:drawRotation()
     ImGui.SameLine()
     ImGui.PopItemWidth()
 
-    if ImGui.Button("To Player Rotation", 150, 0) then
-        self.rotation = GetPlayer():GetWorldOrientation():ToEulerAngles()
-        self:update()
-    end
-    self:onEdited(ImGui.IsItemDeactivatedAfterEdit())
-    style.tooltip("Set the object rotation to the players rotation")
+    self.rotationRelative = ImGui.Checkbox("Relative", self.rotationRelative)
+    style.tooltip("Rotate relative to the object's orientation")
 end
 
 function spawnable:draw()
@@ -345,6 +365,7 @@ function spawnable:loadSpawnData(data, position, rotation)
 
     self.position = position
     self.rotation = rotation
+    self.rotationRelative = data.rotationRelative or false
 end
 
 ---Export the spawnable for WScript import, using same structure for `data` as JSON formated node

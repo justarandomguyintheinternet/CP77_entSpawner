@@ -253,6 +253,14 @@ function miscUtils.getVector4BBox(vectors)
     return Vector4.new(minX, minY, minZ, 0), Vector4.new(maxX, maxY, maxZ, 0)
 end
 
+function miscUtils.addEulerRelative(current, delta)
+    local result = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](current:ToQuat(), Quaternion.SetAxisAngle(Vector4.new(0, 1, 0, 0), Deg2Rad(delta.roll)))
+    result = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](result, Quaternion.SetAxisAngle(Vector4.new(1, 0, 0, 0), Deg2Rad(delta.pitch)))
+    result = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](result, Quaternion.SetAxisAngle(Vector4.new(0, 0, 1, 0), Deg2Rad(delta.yaw)))
+
+    return result:ToEulerAngles()
+end
+
 ---@param enumName string
 ---@return table
 function miscUtils.enumTable(enumName)
