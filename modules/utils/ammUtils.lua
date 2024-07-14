@@ -193,7 +193,11 @@ function amm.importPreset(data, savedUI, importTasks)
 
                                     if not (propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0) then
                                         if collision.extents then
-                                            collision.extents = { x = collision.extents.x * (propData.scale.x / 100), y = collision.extents.y * (propData.scale.y / 100), z = collision.extents.z * (propData.scale.z / 100) }
+                                            local factor = Vector4.new(propData.scale.x / 100, propData.scale.y / 100, propData.scale.z / 100, 0)
+                                            factor = ToQuaternion(collision.rot):Transform(factor) -- Account for rotation of collision when applying scaling
+                                            local scale = Vector4.new(collision.extents.x * factor.x, collision.extents.y * factor.y, collision.extents.z * factor.z, 0)
+
+                                            collision.extents = { x = scale.x, y = scale.y, z = scale.z }
                                         end
                                         if collision.radius then
                                             collision.radius = collision.radius * (math.max(propData.scale.x, propData.scale.y) / 100)
