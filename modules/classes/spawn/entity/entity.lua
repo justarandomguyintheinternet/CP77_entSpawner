@@ -74,7 +74,7 @@ function entity:onAssemble(entity)
         visualizer.updateScale(entity, self:getVisualScale(), "arrows")
 
         if self.bBoxCallback then
-            self.bBoxCallback(cache.getValue(self.spawnData .. "_meshes"))
+            self.bBoxCallback(entity)
         end
     end)
 end

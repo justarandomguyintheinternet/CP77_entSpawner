@@ -18,6 +18,8 @@ local utils = require("modules/utils/utils")
 ---@field public lightType integer
 ---@field public localShadows boolean
 ---@field private lightTypes table
+---@field private temperature number
+---@field private scaleVolFog number
 local light = setmetatable({}, { __index = spawnable })
 
 function light:new()
@@ -44,6 +46,8 @@ function light:new()
     o.lightType = 1
     o.localShadows = true
     o.lightTypes = utils.enumTable("ELightType")
+    o.temperature = -1
+    o.scaleVolFog = 0
 
     setmetatable(o, { __index = self })
    	return o
@@ -65,6 +69,8 @@ function light:onAssemble(entity)
     component:SetFlickerParams(self.flickerStrength, self.flickerPeriod, self.flickerOffset)
     component.type = Enum.new("ELightType", self.lightType)
     component.enableLocalShadows = self.localShadows
+    component.temperature = self.temperature
+    component.scaleVolFog = self.scaleVolFog
     entity:AddComponent(component)
 end
 
@@ -81,6 +87,8 @@ function light:save()
     data.flickerPeriod = self.flickerPeriod
     data.flickerOffset = self.flickerOffset
     data.lightType = self.lightType
+    data.temperature = self.temperature
+    data.scaleVolFog = self.scaleVolFog
 
     return data
 end

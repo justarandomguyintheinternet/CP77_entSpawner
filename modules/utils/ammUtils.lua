@@ -100,6 +100,44 @@ local function extractPropData(prop)
     return { pos = pos, rot = rot, scale = scale, path = prop.template_path, app = prop.app, uid = prop.uid, name = prop.name }
 end
 
+local function cacheLights(entity, propData, lightData)
+    local lights = {}
+
+    for _, component in pairs(entity:GetComponents()) do
+        if component:IsA("gameLightComponent") then
+            local color = loadstring("return " .. lightData.color, "")()
+            local angles = loadstring("return " .. lightData.angles, "")()
+
+            local light = {
+                color = { color[1], color[2], color[3] },
+                intensity = lightData.intensity,
+                innerAngle = angles.inner,
+                outerAngle = angles.outer,
+                radius = lightData.radius,
+                capsuleLength = component.capsuleLength,
+                autoHideDistance = component.autoHideDistance,
+                type = tonumber(EnumInt(component.type)),
+                enableLocalShadows = component.localShadows,
+                temperature = component.temperature,
+                scaleVolFog = component.scaleVolFog
+            }
+
+            if component.flicker then
+                light.flickerStrength = component.flicker.flickerStrength
+                light.flickerPeriod = component.flicker.flickerPeriod
+                light.flickerOffset = component.flicker.flickerOffset
+            end
+
+            light.position = utils.fromVector(component:GetLocalPosition())
+            light.rotation = utils.fromQuaternion(component:GetLocalOrientation())
+
+            table.insert(lights, light)
+        end
+    end
+
+    cache.addValue(propData.path .. "_lights", lights)
+end
+
 function amm.importPreset(data, savedUI, importTasks)
     local meshService = require("modules/utils/tasks"):new()
 
@@ -141,14 +179,14 @@ function amm.importPreset(data, savedUI, importTasks)
             o.name = o.spawnable:generateName(propData.name)
             o.parent = lights
             table.insert(lights.childs, o)
-        elseif propData.scale.x ~= 100 or propData.scale.y ~= 100 or propData.scale.z ~= 100 then --or (isLight and not isAMMLight)
+        elseif (propData.scale.x ~= 100 or propData.scale.y ~= 100 or propData.scale.z ~= 100) or (isLight and not isAMMLight) then
             if not Game.GetResourceDepot():ResourceExists(propData.path) then
                 print("[AMMImport] Resource for " .. propData.path .. " does not exist, skipping...")
             else
                 meshService:addTask(function ()
                     utils.log("Executing task for " .. propData.path .. " Cached: " .. tostring((cache.getValue(propData.path .. "_bBox") and cache.getValue(propData.path .. "_meshes"))))
 
-                    cache.tryGet(propData.path .. "_bBox", propData.path .. "_meshes")
+                    cache.tryGet(propData.path .. "_bBox", propData.path .. "_meshes", propData.path .. "_lights")
                     .notFound(function (task)
                         utils.log("Data for", propData.path, "not found, loading...")
                         local spawnable = require("modules/classes/spawn/entity/entity"):new()
@@ -158,7 +196,11 @@ function amm.importPreset(data, savedUI, importTasks)
                         }, Vector4.new(0, 0, 0, 0), propData.rot)
                         spawnable:spawn()
 
-                        spawnable:onBBoxLoaded(function ()
+                        spawnable:onBBoxLoaded(function (entity)
+                            if isLight and not isAMMLight then
+                                cacheLights(entity, propData, isLight)
+                            end
+
                             spawnable:despawn()
                             utils.log("Data for", propData.path, "loaded and cached.", propData.uid)
                             task:taskCompleted()
@@ -232,7 +274,7 @@ function amm.importPreset(data, savedUI, importTasks)
                                     scale = { x = propData.scale.x / 100, y = propData.scale.y / 100, z = propData.scale.z / 100 },
                                     spawnData = mesh.path,
                                     app = mesh.app
-                                }, utils.addVector(propData.pos, ToVector4(mesh.pos)), utils.addEuler(propData.rot, ToEulerAngles(mesh.rot)))
+                                }, utils.addVector(propData.pos, ToVector4(mesh.pos)), utils.addEulerRelative(propData.rot, ToEulerAngles(mesh.rot)))
 
                                 local meshObject = generateObject(savedUI, { name = propData.name })
                                 meshObject.spawnable = m
@@ -241,6 +283,19 @@ function amm.importPreset(data, savedUI, importTasks)
 
                                 print("[AMMImport] Imported prop " .. propData.name .. " by converting it to " .. #meshesData .. " meshes.")
                             end
+                        end
+
+                        local lightComponents = cache.getValue(propData.path .. "_lights") or {}
+                        for _, light in pairs(lightComponents) do
+                            local l = require("modules/classes/spawn/light/light"):new()
+                            l:loadSpawnData(light, utils.addVector(propData.pos, ToVector4(light.position)), utils.addEulerRelative(propData.rot, ToQuaternion(light.rotation):ToEulerAngles()))
+
+                            local lightObject = generateObject(savedUI, { name = propData.name .. "_light" })
+                            lightObject.spawnable = l
+                            lightObject.parent = lights
+                            table.insert(lights.childs, lightObject)
+
+                            print("[AMMImport] Imported prop " .. propData.name .. " by converting it to " .. #lightComponents .. " lights.")
                         end
 
                         utils.log("[ammUtils] Task Done For " .. propData.path)
