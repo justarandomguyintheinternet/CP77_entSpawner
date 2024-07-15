@@ -299,4 +299,20 @@ function miscUtils.log(...)
     print(str)
 end
 
+function redDataToJSON(data)
+    local classType = Reflection.GetTypeOf(data)
+    local class = classType:GetInnerType():AsClass()
+    local converted = {
+        ["$type"] = class:GetName()
+    }
+
+    for _, prop in pairs(componentClass:GetProps()) do
+        -- grab value
+        -- check type
+        -- simple: keep
+        -- class: recurse
+        
+    end
+end
+
 return miscUtils

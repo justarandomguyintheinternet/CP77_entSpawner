@@ -11,6 +11,7 @@ local visualizer = require("modules/utils/visualizer")
 ---@field public appIndex integer
 ---@field private bBoxCallback function
 ---@field public bBox table {min: Vector4, max: Vector4}
+---@field public instanceData table
 local entity = setmetatable({}, { __index = spawnable })
 
 function entity:new()
@@ -25,6 +26,8 @@ function entity:new()
     o.appIndex = 0
     o.bBoxCallback = nil
     o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
+
+    o.instanceData = {}
 
     setmetatable(o, { __index = self })
    	return o
@@ -124,6 +127,28 @@ function entity:draw()
         end
     end
     style.popGreyedOut(#self.apps == 0)
+end
+
+function entity:export()
+    local data = spawnable.export(self)
+
+    if #self.instanceData > 0 then
+        data.data.instanceData = {
+            ["Data"] = {
+                ["$type"] = "entEntityInstanceData",
+                ["buffer"] = {
+                    ["BufferId"] = tostring(tonumber(FNV1a64("Entity" .. tostring(self.position.x * self.position.y) .. math.random(1, 10000000)))),
+                    ["Type"] = "WolvenKit.RED4.Archive.Buffer.RedPackage, WolvenKit.RED4, Version=8.14.1.0, Culture=neutral, PublicKeyToken=null",
+                    ["Data"] = {
+                        ["Version"] = 4,
+                        ["Chunks"] = self.instanceData
+                    }
+                }
+            }
+        }
+    end
+
+    return data
 end
 
 return entity
