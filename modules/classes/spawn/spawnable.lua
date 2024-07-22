@@ -369,8 +369,10 @@ function spawnable:loadSpawnData(data, position, rotation)
 end
 
 ---Export the spawnable for WScript import, using same structure for `data` as JSON formated node
+---@param key integer Index of the object in the group
+---@param length integer Amount of objects in the group
 ---@return table {position, rotation, scale, type, data}
-function spawnable:export()
+function spawnable:export(key, length)
     return {
         position = utils.fromVector(self.position),
         rotation = utils.fromQuaternion(self.rotation:ToQuat()),

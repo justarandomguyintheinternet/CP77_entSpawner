@@ -30,6 +30,16 @@ spawner = {
         inMenu = false
     },
 
+    e = function(data)
+        local red = require("modules/utils/redConverter")
+        config.saveFile("wkit.json", red.redDataToJSON(data))
+    end,
+
+    i = function(data)
+        local red = require("modules/utils/redConverter")
+        red.JSONToRedData(config.loadFile("export.json"), data)
+    end,
+
     baseUI = require("modules/ui/baseUI"),
     GameUI = require("modules/utils/GameUI")
 }

@@ -37,3 +37,5 @@ data/exportTemplates/*.json
 data/backup
 .VSCodeCounter
 .vscode/settings.json
+export.json
+wkit.json

@@ -4,6 +4,7 @@ local builder = require("modules/utils/entityBuilder")
 local utils = require("modules/utils/utils")
 local cache = require("modules/utils/cache")
 local visualizer = require("modules/utils/visualizer")
+local red = require("modules/utils/redConverter")
 
 ---Class for base entity handling
 ---@class entity : spawnable
@@ -53,6 +54,14 @@ end
 function entity:onAssemble(entity)
     spawnable.onAssemble(self, entity)
 
+    for _, component in pairs(entity:GetComponents()) do
+        for _, data in pairs(utils.deepcopy(self.instanceData)) do
+            if data.id == tostring(CRUIDToHash(component.id)):gsub("ULL", "") then
+                red.JSONToRedData(data, component)
+            end
+        end
+    end
+
     cache.tryGet(self.spawnData .. "_bBox", self.spawnData .. "_meshes")
     .notFound(function (task)
         builder.getEntityBBox(entity, function (data)
@@ -80,6 +89,13 @@ function entity:onAssemble(entity)
             self.bBoxCallback(entity)
         end
     end)
+end
+
+function entity:save()
+    local data = spawnable.save(self)
+    data.instanceData = self.instanceData
+
+    return data
 end
 
 function entity:onBBoxLoaded(callback)
@@ -129,19 +145,53 @@ function entity:draw()
     style.popGreyedOut(#self.apps == 0)
 end
 
-function entity:export()
+local function copyAndPrepareData(data, index)
+	local orig_type = type(data)
+    local copy
+
+    if orig_type == 'table' then
+        copy = {}
+        for origin_key, origin_value in next, data, nil do
+            local keyCopy = copyAndPrepareData(origin_key, index)
+            local valueCopy = copyAndPrepareData(origin_value, index)
+
+            if keyCopy == "HandleId" then
+                valueCopy = tostring(index[1])
+                index[1] = index[1] + 1
+            end
+
+            copy[keyCopy] = valueCopy
+        end
+        setmetatable(copy, copyAndPrepareData(getmetatable(data), index))
+    else
+        copy = data
+    end
+    return copy
+end
+
+function entity:export(key, length)
     local data = spawnable.export(self)
 
     if #self.instanceData > 0 then
+        local dict = {}
+
+        for key, data in pairs(self.instanceData) do
+            dict[tostring(key - 1)] = data.id
+        end
+
         data.data.instanceData = {
+            ["HandleId"] = tostring(key),
             ["Data"] = {
                 ["$type"] = "entEntityInstanceData",
                 ["buffer"] = {
-                    ["BufferId"] = tostring(tonumber(FNV1a64("Entity" .. tostring(self.position.x * self.position.y) .. math.random(1, 10000000)))),
+                    ["BufferId"] = tostring(FNV1a64("Entity" .. tostring(self.position.x * self.position.y) .. math.random(1, 10000000))):gsub("ULL", ""),
                     ["Type"] = "WolvenKit.RED4.Archive.Buffer.RedPackage, WolvenKit.RED4, Version=8.14.1.0, Culture=neutral, PublicKeyToken=null",
                     ["Data"] = {
                         ["Version"] = 4,
-                        ["Chunks"] = self.instanceData
+                        ["Sections"] = 6,
+                        ["CruidIndex"] = -1,
+                        ["CruidDict"] = dict,
+                        ["Chunks"] = copyAndPrepareData(self.instanceData, { length * 10 + (key + 2) * 100 })
                     }
                 }
             }

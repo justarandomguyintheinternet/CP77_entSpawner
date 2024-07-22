@@ -232,8 +232,8 @@ function exportUI.exportGroup(group)
 
     local objects = g:getObjects()
 
-    for _, object in pairs(objects) do
-        table.insert(exported.nodes, object.spawnable:export())
+    for key, object in pairs(objects) do
+        table.insert(exported.nodes, object.spawnable:export(key, #objects))
     end
 
     return exported
