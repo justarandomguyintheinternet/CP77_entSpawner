@@ -268,7 +268,7 @@ function amm.importPreset(data, savedUI, importTasks)
 
         root:save()
         print("[ObjectSpawner] Imported \"" .. data.file_name .. "\" from AMM.")
-        -- os.remove("data/AMMImport/" .. data.file_name)
+        os.remove("data/AMMImport/" .. data.file_name)
 
         importTasks:taskCompleted()
     end)
