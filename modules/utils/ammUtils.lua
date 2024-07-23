@@ -208,7 +208,6 @@ function amm.importPreset(data, savedUI, importTasks)
 
                 spawnable:onBBoxLoaded(function (entity)
                     spawnable.instanceData = getEntityInstanceData(entity, isLight)
-                    Game.GetStaticEntitySystem():DespawnEntity(spawnable.entityID)
 
                     local lightObject = generateObject(savedUI, { name = propData.name .. "_light" })
                     lightObject.spawnable = spawnable
@@ -217,6 +216,7 @@ function amm.importPreset(data, savedUI, importTasks)
 
                     amm.progress = amm.progress + 1
                     print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. #spawnable.instanceData .. " light components.")
+                    Game.GetStaticEntitySystem():DespawnEntity(spawnable.entityID)
                     meshService:taskCompleted()
                 end)
             end)
@@ -236,8 +236,6 @@ function amm.importPreset(data, savedUI, importTasks)
                         spawnable:spawn()
 
                         spawnable:onBBoxLoaded(function (entity)
-                            Game.GetStaticEntitySystem():DespawnEntity(spawnable.entityID)
-
                             local instances = {}
                             for _, mesh in pairs(cache.getValue(propData.path .. "_meshes")) do
                                 local data = red.redDataToJSON(entity:FindComponentByName(mesh.name))
@@ -246,6 +244,7 @@ function amm.importPreset(data, savedUI, importTasks)
 
                             cache.addValue(propData.path .. "_meshInstanceData", instances)
 
+                            Game.GetStaticEntitySystem():DespawnEntity(spawnable.entityID)
                             utils.log("Data for", propData.path, "loaded and cached.", propData.uid)
                             task:taskCompleted()
                         end)
