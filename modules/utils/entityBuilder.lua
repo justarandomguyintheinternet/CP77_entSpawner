@@ -55,6 +55,11 @@ end
 ---@param path string
 ---@param callback function Gets the resource passed as an argument
 function builder.registerLoadResource(path, callback)
+    local pathAsHash = loadstring("return " .. path, "")()
+    if type(pathAsHash) == "cdata" then
+        path = ResRef.FromHash(pathAsHash)
+    end
+
     local token = Game.GetResourceDepot():LoadResource(path)
 
     if not token:IsFailed() then
@@ -100,6 +105,9 @@ function builder.getEntityBBox(entity, callback)
     for _, component in ipairs(components) do
         if shouldUseMesh(component) then
             local path = ResRef.FromHash(component.mesh.hash):ToString()
+            if path == "" then
+                path = tostring(component.mesh.hash)
+            end
 
             meshesTask:addTask(function ()
                 local offset = getComponentOffset(component)

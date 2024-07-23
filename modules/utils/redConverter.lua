@@ -277,7 +277,11 @@ local function importHandle(value, data, key)
 end
 
 local function importResource(value)
-    return ResRef.FromString(value["DepotPath"]["$value"])
+    if value["DepotPath"]["$storage"] == "string" then
+        return ResRef.FromString(value["DepotPath"]["$value"])
+    else
+        return ResRef.FromHash(loadstring("return " .. value["DepotPath"]["$value"] .. "ULL", "")())
+    end
 end
 
 function red.JSONToRedData(json, data)
