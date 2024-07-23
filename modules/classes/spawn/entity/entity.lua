@@ -67,7 +67,7 @@ function entity:onAssemble(entity)
         builder.getEntityBBox(entity, function (data)
             local meshes = {}
             for _, mesh in pairs(data.meshes) do
-                table.insert(meshes, { app = mesh.app, path = mesh.path, pos = utils.fromVector(mesh.pos), rot = utils.fromEuler(mesh.rot) })
+                table.insert(meshes, { app = mesh.app, path = mesh.path, pos = utils.fromVector(mesh.pos), rot = utils.fromEuler(mesh.rot), name = mesh.name })
             end
 
             cache.addValue(self.spawnData .. "_bBox", { min = utils.fromVector(data.bBox.min), max = utils.fromVector(data.bBox.max) })
@@ -169,7 +169,7 @@ local function copyAndPrepareData(data, index)
     return copy
 end
 
-function entity:export(key, length)
+function entity:export(index, length)
     local data = spawnable.export(self)
 
     if #self.instanceData > 0 then
@@ -179,8 +179,10 @@ function entity:export(key, length)
             dict[tostring(key - 1)] = data.id
         end
 
+        local baseHandle = length + 10 + index * 25 -- 10 offset to last handle of nodeData, 25 handleIDs per entity for instance data
+
         data.data.instanceData = {
-            ["HandleId"] = tostring(key),
+            ["HandleId"] = tostring(baseHandle), -- 10 offset to last handle of nodeData, 25 handleIDs per entity for instance data
             ["Data"] = {
                 ["$type"] = "entEntityInstanceData",
                 ["buffer"] = {
@@ -191,7 +193,7 @@ function entity:export(key, length)
                         ["Sections"] = 6,
                         ["CruidIndex"] = -1,
                         ["CruidDict"] = dict,
-                        ["Chunks"] = copyAndPrepareData(self.instanceData, { length * 10 + (key + 2) * 100 })
+                        ["Chunks"] = copyAndPrepareData(self.instanceData, { baseHandle + 1 })
                     }
                 }
             }

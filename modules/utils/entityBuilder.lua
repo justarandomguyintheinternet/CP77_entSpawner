@@ -85,50 +85,6 @@ local function shouldUseMesh(component)
     return enabled and isMesh and meshExists and not ignore
 end
 
-local function getCollisions(resource)
-    local collisions = {}
-
-    for _, parameter in ipairs(resource.parameters) do
-        if parameter:IsA("meshMeshParamPhysics") then
-            for _, body in pairs(parameter.physicsData.bodies) do
-                for _, shape in pairs(body.collisionShapes) do
-                    local collider = nil
-                    if shape:IsA("physicsColliderBox") then
-                        collider = {
-                            shape = 0,
-                            extents = { x = shape.halfExtents.x, y = shape.halfExtents.y, z = shape.halfExtents.z }
-                        }
-                    elseif shape:IsA("physicsColliderSphere") then
-                        collider = {
-                            shape = 2,
-                            radius = shape.radius
-                        }
-                    elseif shape:IsA("physicsColliderCapsule") then
-                        collider = {
-                            shape = 1,
-                            radius = shape.radius,
-                            height = shape.height
-                        }
-                    end
-
-                    if collider then
-                        collider.rot = utils.fromQuaternion(shape.localToBody.orientation)
-                        collider.pos = utils.fromVector(shape.localToBody.position)
-                        if  shape.filterData then
-                            collider.preset = shape.filterData.preset.value
-                        end
-                        collider.material = shape.material.value
-
-                        table.insert(collisions, collider)
-                    end
-                end
-            end
-        end
-    end
-
-    return collisions
-end
-
 ---Gets the bounding box of an entity, and the position and rotation of each mesh component
 ---@param entity entEntity
 ---@param callback function Gets a table with the bounding box and a table with the meshes
@@ -157,7 +113,6 @@ function builder.getEntityBBox(entity, callback)
 
                         cache.addValue(path .. "_bBox_max", utils.fromVector(max))
                         cache.addValue(path .. "_bBox_min", utils.fromVector(min))
-                        cache.addValue(path .. "_collisions", getCollisions(resource))
 
                         utils.log("[entityBuilder] loaded from resource BBOX for mesh " .. path)
 
@@ -174,7 +129,8 @@ function builder.getEntityBBox(entity, callback)
                         pos = offset:GetWorldPosition():ToVector4(),
                         rot = offset:GetOrientation():ToEulerAngles(),
                         path = path,
-                        app = component.meshAppearance.value
+                        app = component.meshAppearance.value,
+                        name = component.name.value
                     })
 
                     table.insert(bBoxPoints, offset:GetOrientation():Transform(min))

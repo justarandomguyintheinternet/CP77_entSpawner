@@ -2,8 +2,11 @@ local object = require("modules/classes/spawn/object")
 local gr = require("modules/classes/spawn/group")
 local cache = require("modules/utils/cache")
 local utils = require("modules/utils/utils")
+local red = require("modules/utils/redConverter")
 local amm = {
-    importing = false
+    importing = false,
+    progress = 0,
+    total = 0
 }
 
 local area = "base\\amm_props\\entity\\ambient_area_light"
@@ -100,70 +103,49 @@ local function extractPropData(prop)
     return { pos = pos, rot = rot, scale = scale, path = prop.template_path, app = prop.app, uid = prop.uid, name = prop.name }
 end
 
-local function cacheLights(entity, propData, lightData)
-    local lights = {}
+local function getEntityInstanceData(entity, lightData)
+    local instanceData = {}
 
     for _, component in pairs(entity:GetComponents()) do
         if component:IsA("gameLightComponent") then
-            local color = loadstring("return " .. lightData.color, "")()
+            local data = red.redDataToJSON(component)
             local angles = loadstring("return " .. lightData.angles, "")()
+            local color = loadstring("return " .. lightData.color, "")()
 
-            local light = {
-                color = { color[1], color[2], color[3] },
-                intensity = lightData.intensity,
-                innerAngle = angles.inner,
-                outerAngle = angles.outer,
-                radius = lightData.radius,
-                capsuleLength = component.capsuleLength,
-                autoHideDistance = component.autoHideDistance,
-                type = tonumber(EnumInt(component.type)),
-                enableLocalShadows = component.localShadows,
-                temperature = component.temperature,
-                scaleVolFog = component.scaleVolFog
-            }
+            data.color.Red = math.floor(color[1] * 255)
+            data.color.Green = math.floor(color[2] * 255)
+            data.color.Blue = math.floor(color[3] * 255)
+            data.color.Alpha = math.floor(color[4] * 255)
+            data.intensity = lightData.intensity
+            data.innerAngle = angles.inner
+            data.outerAngle = angles.outer
+            data.radius = lightData.radius
 
-            if component.flicker then
-                light.flickerStrength = component.flicker.flickerStrength
-                light.flickerPeriod = component.flicker.flickerPeriod
-                light.flickerOffset = component.flicker.flickerOffset
-            end
-
-            light.position = utils.fromVector(component:GetLocalPosition())
-            light.rotation = utils.fromQuaternion(component:GetLocalOrientation())
-
-            table.insert(lights, light)
+            table.insert(instanceData, data)
         end
     end
 
-    cache.addValue(propData.path .. "_lights", lights)
+    return instanceData
+end
+
+local function createGroup(savedUI, name, parent)
+    local group = gr:new(savedUI)
+    group.parent = parent
+    group.headerOpen = false
+    group.name = name
+
+    return group
 end
 
 function amm.importPreset(data, savedUI, importTasks)
     local meshService = require("modules/utils/tasks"):new()
 
-    local root = gr:new(savedUI)
-    root.name = data.file_name:gsub(".json", "")
-
-    local props = gr:new(savedUI)
-    props.parent = root
-    props.headerOpen = false
-    props.name = "Props"
-
-    local lights = gr:new(savedUI)
-    lights.parent = root
-    lights.headerOpen = false
-    lights.name = "Lights"
-
-    local meshes = gr:new(savedUI)
-    meshes.parent = root
-    meshes.headerOpen = false
-    meshes.name = "Meshes"
-
-    local colliders = gr:new(savedUI)
-    colliders.parent = root
-    colliders.headerOpen = false
-    colliders.name = "Colliders"
-
+    local root = createGroup(savedUI, data.file_name:gsub(".json", ""), nil)
+    local props = createGroup(savedUI, "Props", root)
+    local lights = createGroup(savedUI, "Lights", root)
+    local lightNodes = createGroup(savedUI, "Light Nodes", lights)
+    local lightCustom = createGroup(savedUI, "Customized Light Props", lights)
+    local scaledProps = createGroup(savedUI, "Scaled Props", root)
 
     for _, prop in pairs(data.props) do
         local propData = extractPropData(prop)
@@ -175,18 +157,41 @@ function amm.importPreset(data, savedUI, importTasks)
         local isAMMLight = propData.path:match(area) or propData.path:match(point) or propData.path:match(spot)
 
         if isLight and isAMMLight then
+            -- Light Node
             o.spawnable = convertLight(propData, data)
             o.name = o.spawnable:generateName(propData.name)
-            o.parent = lights
-            table.insert(lights.childs, o)
-        elseif (propData.scale.x ~= 100 or propData.scale.y ~= 100 or propData.scale.z ~= 100) or (isLight and not isAMMLight) then
+            o.parent = lightNodes
+            table.insert(lightNodes.childs, o)
+            amm.progress = amm.progress + 1
+        elseif isLight and not isAMMLight then
+            -- Generate instance data for custom lights
+            meshService:addTask(function ()
+                local spawnable = require("modules/classes/spawn/entity/entity"):new()
+                spawnable:loadSpawnData({
+                    spawnData = propData.path,
+                    app = propData.app
+                }, propData.pos, propData.rot)
+                spawnable:spawn()
+
+                spawnable:onBBoxLoaded(function (entity)
+                    spawnable.instanceData = getEntityInstanceData(entity, isLight)
+                    Game.GetStaticEntitySystem():DespawnEntity(spawnable.entityID)
+
+                    local lightObject = generateObject(savedUI, { name = propData.name .. "_light" })
+                    lightObject.spawnable = spawnable
+                    lightObject.parent = lightCustom
+                    table.insert(lightCustom.childs, lightObject)
+
+                    amm.progress = amm.progress + 1
+                    meshService:taskCompleted()
+                end)
+            end)
+        elseif (propData.scale.x ~= 100 or propData.scale.y ~= 100 or propData.scale.z ~= 100) then
             if not Game.GetResourceDepot():ResourceExists(propData.path) then
                 print("[AMMImport] Resource for " .. propData.path .. " does not exist, skipping...")
             else
                 meshService:addTask(function ()
-                    utils.log("Executing task for " .. propData.path .. " Cached: " .. tostring((cache.getValue(propData.path .. "_bBox") and cache.getValue(propData.path .. "_meshes"))))
-
-                    cache.tryGet(propData.path .. "_bBox", propData.path .. "_meshes", propData.path .. "_lights")
+                    cache.tryGet(propData.path .. "_meshInstanceData")
                     .notFound(function (task)
                         utils.log("Data for", propData.path, "not found, loading...")
                         local spawnable = require("modules/classes/spawn/entity/entity"):new()
@@ -197,109 +202,42 @@ function amm.importPreset(data, savedUI, importTasks)
                         spawnable:spawn()
 
                         spawnable:onBBoxLoaded(function (entity)
-                            if isLight and not isAMMLight then
-                                cacheLights(entity, propData, isLight)
+                            Game.GetStaticEntitySystem():DespawnEntity(spawnable.entityID)
+
+                            local instances = {}
+                            for _, mesh in pairs(cache.getValue(propData.path .. "_meshes")) do
+                                local data = red.redDataToJSON(entity:FindComponentByName(mesh.name))
+                                table.insert(instances, data)
                             end
 
-                            spawnable:despawn()
+                            cache.addValue(propData.path .. "_meshInstanceData", instances)
+
                             utils.log("Data for", propData.path, "loaded and cached.", propData.uid)
                             task:taskCompleted()
                         end)
                     end)
                     .found(function ()
-                        local meshesData = cache.getValue(propData.path .. "_meshes")
+                        local meshesData = cache.getValue(propData.path .. "_meshInstanceData")
                         for _, mesh in pairs(meshesData) do
-                            local meshCollisions = cache.getValue(mesh.path .. "_collisions")
-                            if ((propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0) and meshCollisions) or (meshCollisions and #meshCollisions > 0) then
-                                for _, collision in pairs(meshCollisions) do
-                                    local c = require("modules/classes/spawn/collision/collider"):new()
-
-                                    local collisionPos = ToVector4(collision.pos)
-                                    if not (propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0) then
-                                        collisionPos = Vector4.new(collisionPos.x * propData.scale.x / 100, collisionPos.y * propData.scale.y / 100, collisionPos.z * propData.scale.z / 100, 0)
-                                    end
-
-                                    utils.log("Collision position after scaling: " .. collisionPos.x .. " " .. collisionPos.y .. " " .. collisionPos.z)
-
-                                    local localPosition = utils.addVector(ToVector4(mesh.pos), collisionPos)
-
-                                    utils.log("Collision position after adding mesh position: " .. localPosition.x .. " " .. localPosition.y .. " " .. localPosition.z)
-
-                                    localPosition = ToEulerAngles(mesh.rot):ToQuat():Transform(localPosition)
-                                    localPosition = propData.rot:ToQuat():Transform(localPosition)
-                                    local rot = utils.addEulerRelative(utils.addEulerRelative(propData.rot, ToEulerAngles(mesh.rot)), ToQuaternion(collision.rot):ToEulerAngles())
-
-                                    utils.log("Collision position after rotating: " .. localPosition.x .. " " .. localPosition.y .. " " .. localPosition.z)
-
-                                    local pos = utils.addVector(propData.pos, localPosition)
-
-                                    if not (propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0) then
-                                        if collision.extents then
-                                            local factor = Vector4.new(propData.scale.x / 100, propData.scale.y / 100, propData.scale.z / 100, 0)
-                                            factor = ToQuaternion(collision.rot):Transform(factor) -- Account for rotation of collision when applying scaling
-                                            local scale = Vector4.new(collision.extents.x * factor.x, collision.extents.y * factor.y, collision.extents.z * factor.z, 0)
-
-                                            collision.extents = { x = scale.x, y = scale.y, z = scale.z }
-                                        end
-                                        if collision.radius then
-                                            collision.radius = collision.radius * (math.max(propData.scale.x, propData.scale.y) / 100)
-                                        end
-                                        if collision.height then
-                                            collision.height = collision.height * (propData.scale.z / 100)
-                                        end
-                                        utils.log("Prop is scaled, but not zero, scaling collider accordingly")
-                                    end
-
-                                    collision.preset = c:getPresetIndexByName(collision.preset)
-                                    collision.material = c:getMaterialIndexByName(collision.material)
-
-                                    c:loadSpawnData(collision, pos, rot)
-                                    local collisionObject = generateObject(savedUI, { name = propData.name .. "_collision" })
-                                    collisionObject.spawnable = c
-                                    collisionObject.parent = colliders
-                                    table.insert(colliders.childs, collisionObject)
-
-                                    utils.log("Creating collider for mesh " .. mesh.path .. " for prop " .. propData.path)
-                                    utils.log("Is zero-scale: " .. tostring(propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0))
-                                end
-
-                                print("[AMMImport] Created " .. #meshCollisions .. " colliders for the mesh " .. mesh.path .. " for prop " .. propData.path)
-                            end
-
-                            if propData.scale.x ~= 0 and propData.scale.y ~= 0 and propData.scale.z ~= 0 then
-                                utils.log("Creating spawnable for mesh " .. mesh.path .. " for prop " .. propData.path, prop.pos, ToVector4(mesh.pos))
-
-                                local m = require("modules/classes/spawn/mesh/mesh"):new()
-                                m:loadSpawnData({
-                                    scale = { x = propData.scale.x / 100, y = propData.scale.y / 100, z = propData.scale.z / 100 },
-                                    spawnData = mesh.path,
-                                    app = mesh.app
-                                }, utils.addVector(propData.pos, ToVector4(mesh.pos)), utils.addEulerRelative(propData.rot, ToEulerAngles(mesh.rot)))
-
-                                local meshObject = generateObject(savedUI, { name = propData.name })
-                                meshObject.spawnable = m
-                                meshObject.parent = meshes
-                                table.insert(meshes.childs, meshObject)
-
-                                print("[AMMImport] Imported prop " .. propData.name .. " by converting it to " .. #meshesData .. " meshes.")
+                            if propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0 then
+                                mesh.chunkMask = "0"
+                            else
+                                mesh.visualScale.X = propData.scale.x / 100
+                                mesh.visualScale.Y = propData.scale.y / 100
+                                mesh.visualScale.Z = propData.scale.z / 100
                             end
                         end
 
-                        local lightComponents = cache.getValue(propData.path .. "_lights") or {}
-                        for _, light in pairs(lightComponents) do
-                            local l = require("modules/classes/spawn/light/light"):new()
-                            l:loadSpawnData(light, utils.addVector(propData.pos, ToVector4(light.position)), utils.addEulerRelative(propData.rot, ToQuaternion(light.rotation):ToEulerAngles()))
+                        o.spawnable = convertProp(propData)
+                        o.spawnable.instanceData = meshesData
+                        o.name = o.spawnable:generateName(propData.name)
+                        o.parent = props
+                        table.insert(scaledProps.childs, o)
 
-                            local lightObject = generateObject(savedUI, { name = propData.name .. "_light" })
-                            lightObject.spawnable = l
-                            lightObject.parent = lights
-                            table.insert(lights.childs, lightObject)
-
-                            print("[AMMImport] Imported prop " .. propData.name .. " by converting it to " .. #lightComponents .. " lights.")
-                        end
-
+                        print("[AMMImport] Imported prop " .. propData.name .. " by converting generating instanceData for " .. #meshesData .. " mesh components.")
                         utils.log("[ammUtils] Task Done For " .. propData.path)
                         utils.log("   ")
+                        amm.progress = amm.progress + 1
                         meshService:taskCompleted()
                     end)
                 end)
@@ -309,24 +247,24 @@ function amm.importPreset(data, savedUI, importTasks)
             o.name = o.spawnable:generateName(propData.name)
             o.parent = props
             table.insert(props.childs, o)
+
+            amm.progress = amm.progress + 1
         end
     end
-
--- zero scale:
-    -- generate collider based on physics param, ignore scale
--- non 100 non zero scale:
-    -- generate collider based on physics param, scale collider
 
     meshService:onFinalize(function ()
         table.insert(root.childs, props)
         table.insert(root.childs, lights)
-        table.insert(root.childs, meshes)
-        table.insert(root.childs, colliders)
+        table.insert(lights.childs, lightCustom)
+        table.insert(lights.childs, lightNodes)
+        table.insert(root.childs, scaledProps)
+
         root.pos = root:getCenter()
         lights.pos = lights:getCenter()
+        lightCustom.pos = lightCustom:getCenter()
+        lightNodes.pos = lightNodes:getCenter()
         props.pos = props:getCenter()
-        meshes.pos = meshes:getCenter()
-        colliders.pos = colliders:getCenter()
+        scaledProps.pos = scaledProps:getCenter()
 
         root:save()
         print("[ObjectSpawner] Imported \"" .. data.file_name .. "\" from AMM.")
@@ -341,12 +279,15 @@ end
 
 function amm.importPresets(savedUI)
     local importTasks = require("modules/utils/tasks"):new()
+    amm.progress = 0
 
     for _, file in pairs(dir("data/AMMImport")) do
         if file.name:match("^.+(%..+)$") == ".json" then
             importTasks:addTask(function ()
                 local data = config.loadFile("data/AMMImport/" .. file.name)
                 amm.importPreset(data, savedUI, importTasks)
+
+                amm.total = amm.total + #data.props
             end)
         end
     end
@@ -357,7 +298,7 @@ function amm.importPresets(savedUI)
     end)
 
     importTasks:run(true)
-    -- amm.importing = true
+    amm.importing = true
 end
 
 return amm

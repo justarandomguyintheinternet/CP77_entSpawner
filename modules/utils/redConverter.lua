@@ -66,7 +66,7 @@ local function convertSimple(propValue, propClass)
             propData = nil
         end
     else
-        print("Unsupported simple type: ", propClass)
+        utils.log("Unsupported simple type: ", propClass)
     end
 
     return propData
@@ -165,7 +165,7 @@ function red.redDataToJSON(data)
                 elseif propType == ERTTIType.ResourceReference or propType == ERTTIType.ResourceAsyncReference then
                     propData = convertResRef(propValue)
                 else
-                    print("Unsupported type: ", propType)
+                    utils.log("Unsupported type: ", propType)
                 end
             end
 
@@ -287,7 +287,6 @@ function red.JSONToRedData(json, data)
         local prop = Reflection.GetClassOf(ToVariant(data), true):GetProperty(key)
         local propType = prop:GetType():GetName().value
         local metaType = prop:GetType():GetMetaType()
-        print(key, value, propType, metaType)
 
         local propData = nil
 
@@ -308,7 +307,7 @@ function red.JSONToRedData(json, data)
         elseif metaType == ERTTIType.ResourceReference or metaType == ERTTIType.ResourceAsyncReference then
             propData = importResource(value)
         else
-            print("Unsupported type: ", metaType)
+            utils.log("Unsupported type: ", metaType)
         end
 
         if propData then

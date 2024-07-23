@@ -22,7 +22,7 @@ end
 
 function baseUI.draw(spawner)
     -- CPS:setThemeBegin()
-    ImGui.Begin("Object Spawner 1.4", ImGuiWindowFlags.AlwaysAutoResize)
+    ImGui.Begin("Object Spawner 2.0", ImGuiWindowFlags.AlwaysAutoResize)
 
     if ImGui.BeginTabBar("Tabbar", ImGuiTabItemFlags.NoTooltip) then
         if ImGui.BeginTabItem("Spawn new") then

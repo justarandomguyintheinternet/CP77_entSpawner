@@ -104,12 +104,14 @@ function savedUI.draw(spawner)
 
     style.spacedSeparator()
 
-    style.pushGreyedOut(amm.importing)
-    if ImGui.Button("Import AMM Presets") then
-        savedUI.importAMMPresets()
+    if not amm.importing then
+        if ImGui.Button("Import AMM Presets") then
+            savedUI.importAMMPresets()
+        end
+        style.tooltip("Imports all presets from the AMMImport folder.\nImport might take a bit, depending on size.\nThe initial spawn might crash for now.")
+    else
+        ImGui.ProgressBar(amm.progress / amm.total, 200, 30, string.format("%.2f%%", (amm.progress / amm.total) * 100))
     end
-    style.popGreyedOut(amm.importing)
-    style.tooltip("Imports all presets from the AMMImport folder.\nImport might take a bit, depending on size.\nThe initial spawn might crash for now.")
 
     style.spacedSeparator()
 
