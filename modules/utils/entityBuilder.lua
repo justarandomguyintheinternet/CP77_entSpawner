@@ -16,6 +16,9 @@ function builder.hook()
                     if not event then return end
 
                     local entity = event:GetEntity()
+
+                    if not entity then return end
+
                     local idHash = entity:GetEntityID().hash
 
                     if builder.callbacks[tostring(idHash)] then
@@ -55,10 +58,12 @@ end
 ---@param path string
 ---@param callback function Gets the resource passed as an argument
 function builder.registerLoadResource(path, callback)
-    local pathAsHash = loadstring("return " .. path, "")()
-    if type(pathAsHash) == "cdata" then
-        path = ResRef.FromHash(pathAsHash)
-    end
+    pcall(function ()
+        local pathAsHash = loadstring("return " .. path, "")()
+        if type(pathAsHash) == "cdata" then
+            path = ResRef.FromHash(pathAsHash)
+        end
+    end)
 
     local token = Game.GetResourceDepot():LoadResource(path)
 
