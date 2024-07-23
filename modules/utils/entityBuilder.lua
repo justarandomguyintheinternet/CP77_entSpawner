@@ -13,6 +13,8 @@ function builder.hook()
             OnEntityAssemble = {
                 args = {'handle:EntityLifecycleEvent'},
                 callback = function (event)
+                    if not event then return end
+
                     local entity = event:GetEntity()
                     local idHash = entity:GetEntityID().hash
 
