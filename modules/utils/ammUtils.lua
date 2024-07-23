@@ -103,11 +103,44 @@ local function extractPropData(prop)
     return { pos = pos, rot = rot, scale = scale, path = prop.template_path, app = prop.app, uid = prop.uid, name = prop.name }
 end
 
+local lightComponentNames = {
+    "Light0275",
+    "Light7460",
+    "Light5050",
+    "Light1783",
+    "Light5638",
+    "amm_light",
+    "Light5520",
+    "Light7161",
+    "Light0034",
+    "Light2702",
+    "Light1460",
+    "Light6337",
+    "Light2103",
+    "Light6270",
+    "Light5424",
+    "Light7002",
+    "L_Main",
+    "Light6234",
+    "LT_Point",
+    "LT_Spot",
+    "Light6765",
+    "Light4716",
+    "Light_Main8854",
+    "Light_Main",
+    "Light",
+    "Light_Glow",
+    "head_light_left_01",
+    "head_light_right_01",
+    "Mesh4713",
+    "Light_DistantLight"
+}
+
 local function getEntityInstanceData(entity, lightData)
     local instanceData = {}
 
     for _, component in pairs(entity:GetComponents()) do
-        if component:IsA("gameLightComponent") then
+        if component:IsA("gameLightComponent") and utils.has_value(lightComponentNames, component.name.value) then
             local data = red.redDataToJSON(component)
             local angles = loadstring("return " .. lightData.angles, "")()
             local color = loadstring("return " .. lightData.color, "")()
@@ -183,6 +216,7 @@ function amm.importPreset(data, savedUI, importTasks)
                     table.insert(lightCustom.childs, lightObject)
 
                     amm.progress = amm.progress + 1
+                    print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. #spawnable.instanceData .. " light components.")
                     meshService:taskCompleted()
                 end)
             end)
@@ -234,7 +268,7 @@ function amm.importPreset(data, savedUI, importTasks)
                         o.parent = props
                         table.insert(scaledProps.childs, o)
 
-                        print("[AMMImport] Imported prop " .. propData.name .. " by converting generating instanceData for " .. #meshesData .. " mesh components.")
+                        print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. #meshesData .. " mesh components.")
                         utils.log("[ammUtils] Task Done For " .. propData.path)
                         utils.log("   ")
                         amm.progress = amm.progress + 1

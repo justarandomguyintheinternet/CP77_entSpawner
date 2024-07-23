@@ -72,7 +72,7 @@ function entity:onAssemble(entity)
 
             cache.addValue(self.spawnData .. "_bBox", { min = utils.fromVector(data.bBox.min), max = utils.fromVector(data.bBox.max) })
             cache.addValue(self.spawnData .. "_meshes", meshes)
-            utils.log("[Entity] Loaded and cached BBOX for entity " .. self.spawnData .. " with " .. #meshes .. " meshes.")
+            print("[Entity] Loaded and cached BBOX for entity " .. self.spawnData .. " with " .. #meshes .. " meshes.")
 
             task:taskCompleted()
         end)
