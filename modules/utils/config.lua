@@ -28,35 +28,81 @@ function config.saveFile(path, data)
     file:close()
 end
 
-function config.loadPaths(path)
-    local paths = {}
-    file = io.open(path)
-    for line in file:lines() do
+function config.loadFiles(path)
+    local files = {}
 
-        local n = line
-        if string.find(n, "\\") then
-            n = n:match("\\[^\\]*$") -- Everything after last \
+    for _, file in pairs(dir(path)) do
+        if file.name:match("^.+(%..+)$") == ".json" then
+            local data = config.loadFile(path .. file.name)
+            table.insert(files, {data = data.spawnable, lastSpawned = nil, name = data.name})
         end
-        n = n:gsub(".ent", ""):gsub("\\", "_") -- Remove .ent, replace \ by _
-        n = n:sub(2)
-
-        table.insert(paths, {path = line, obj = nil, name = n})
-
     end
-    file:close()
+
+    return files
+end
+
+function config.loadLists(path)
+    local paths = {}
+
+    for _, file in pairs(dir(path)) do
+        if file.name:match("^.+(%..+)$") == ".txt" then
+            local data = io.open(path .. file.name)
+            for line in data:lines() do
+                table.insert(paths, {data = { spawnData = line }, lastSpawned = nil, name = line})
+            end
+
+            data:close()
+        end
+    end
+
     return paths
+end
+
+local function recursiveAddMissingKeys(source, target)
+    for k, v in pairs(source) do
+        if type(v) == "table" and type(target[k]) == "table" then
+            recursiveAddMissingKeys(v, target[k])
+        elseif target[k] == nil then
+            target[k] = v
+        end
+    end
 end
 
 function config.backwardComp(path, data)
     local f = config.loadFile(path)
 
-    for k, e in pairs(data) do
-        if f[k] == nil then
-            f[k] = e
-        end
-    end
+    recursiveAddMissingKeys(data, f)
 
     config.saveFile(path, f)
+end
+
+function config.loadText(path)
+    local lines = {}
+    for line in io.lines(path) do
+        table.insert(lines, line)
+    end
+    return lines
+end
+
+function config.loadRaw(path)
+    local file = io.open(path, "r")
+    local content = file:read("*a")
+    file:close()
+    return content
+end
+
+function config.saveRaw(path, data)
+    local file = io.open(path, "w")
+    file:write(data)
+    file:close()
+end
+
+function config.saveRawTable(path, data)
+    local file = io.open(path, "w")
+    for _, line in pairs(data) do
+        file:write(line .. "\n")
+    end
+    file:close()
 end
 
 return config

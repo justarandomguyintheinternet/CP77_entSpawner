@@ -2,116 +2,147 @@ local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
 local CPS = require("CPStyling")
 local object = require("modules/classes/object")
+local settings = require("modules/utils/settings")
+local style = require("modules/ui/style")
+local drag = require("modules/utils/dragHelper")
 
+---Class for handling the hierarchical structure and base UI, wraps a spawnable object
+---@class object
+---@field public name string
+---@field public parent group?
+---@field public type string
+---@field public newName string
+---@field public selectedGroup integer
+---@field public color table
+---@field public box table {x: number, y: number}
+---@field public id integer
+---@field public headerOpen boolean
+---@field public autoLoad boolean
+---@field public loadRange number
+---@field public isAutoLoaded boolean
+---@field public spawnable spawnable
+---@field public sUI spawnedUI
+---@field public spawnableHeaderOpen boolean
+---@field public beingTargeted boolean
+---@field public targetable boolean
+---@field public beingDragged boolean
+---@field public hovered boolean
 object = {}
 
+---@param sUI spawnedUI
+---@return object
 function object:new(sUI)
 	local o = {}
 
     o.name = "" -- Base stuff
-    o.path = ""
-    o.app = ""
     o.parent = nil
-    o.spawned = false
 
     o.type = "object" -- Visual stuff
-    o.newName = ""
+    o.newName = nil
     o.selectedGroup = -1
     o.color = {0, 50, 255}
-    o.box = {x = 600, y = 282}
+    o.box = {x = 650, y = 282}
     o.id = math.random(1, 1000000000) -- Id for imgui child rng gods bls have mercy
-    o.headerOpen = sUI.spawner.settings.headerState
-    o.dynSize = nil
-
-    o.apps = {}
-    o.appIndex = -1
-
-    o.entID = nil -- Actual object stuff
-    o.pos = Vector4.new(0, 0, 0, 0)
-    o.rot = EulerAngles.new(0, 0, 0)
+    o.headerOpen = settings.headerState
+    o.spawnableHeaderOpen = false
 
     o.autoLoad = false
-	o.loadRange = sUI.spawner.settings.autoSpawnRange
+	o.loadRange = settings.autoSpawnRange
     o.isAutoLoaded = false
 
+    o.spawnable = nil
+
     o.sUI = sUI
+
+    o.beingTargeted = false
+    o.targetable = true
+    o.beingDragged = false
+    o.hovered = false
 
 	self.__index = self
    	return setmetatable(o, self)
 end
 
 function object:spawn()
-    local transform = Game.GetPlayer():GetWorldTransform()
-    transform:SetOrientation(GetSingleton('EulerAngles'):ToQuat(self.rot))
-    transform:SetPosition(self.pos)
-    self.entID = exEntitySpawner.Spawn(self.path, transform, self.app)
-    self.entity = Game.FindEntityByID(self.entID)
-    self.spawned = true
+    self.spawnable:spawn()
 end
 
 function object:update()
-    if self.spawned then
-        local tpSuccess = pcall(function ()
-            Game.GetTeleportationFacility():Teleport(Game.FindEntityByID(self.entID), self.pos,  self.rot)
-        end)
-        if not tpSuccess then
-            Game.FindEntityByID(self.entID):GetEntity():Destroy()
-            local transform = Game.GetPlayer():GetWorldTransform()
-            transform:SetOrientation(GetSingleton('EulerAngles'):ToQuat(self.rot))
-            transform:SetPosition(self.pos)
-            self.entID = exEntitySpawner.Spawn(self.path, transform, self.app)
-        end
-    end
+    self.spawnable:update()
 end
 
 function object:despawn()
-    if Game.FindEntityByID(self.entID) ~= nil then
-        Game.FindEntityByID(self.entID):GetEntity():Destroy()
-        self.spawned = false
-    end
+    self.spawnable:despawn()
+end
+
+function object:getPosition()
+    return self.spawnable.position
+end
+
+---@param position Vector4
+function object:setPosition(position)
+    self.spawnable.position = position
+    self:update()
+end
+
+function object:getRotation()
+    return self.spawnable.rotation
 end
 
 -- Group system functions
 
-function object:generateName(path) -- Generate valid name from path or if no path given current name
-    local text = path or self.name
-    if string.find(self.name, "\\") then
-        self.name = text:match("\\[^\\]*$") -- Everything after last \
-    end
-    self.name = self.name:gsub(".ent", ""):gsub("\\", "_") -- Remove .ent, replace \ by _
-    self.name = utils.createFileName(self.name)
-end
-
-function object:rename(name) -- Update file name to new given
-    name = utils.createFileName(name)
+---Update file name to new given
+---@param name string
+function object:rename(name)
+    name = self.spawnable:generateName(name)
     os.rename("data/objects/" .. self.name .. ".json", "data/objects/" .. name .. ".json")
     self.name = name
+    self.newName = name
     self.sUI.spawner.baseUI.savedUI.reload()
 end
 
-function object:save() -- Either save to file or return self as table to parent
+---Return the object data for internal object format saving
+---@return table {name, type, headerOpen, autoLoad, loadRange, spawnable}
+function object:getState()
+    self.name = self.spawnable:generateName(self.name)
+
+    return {
+        name = self.name,
+        type = self.type,
+        headerOpen = self.headerOpen,
+        spawnableHeaderOpen = self.spawnableHeaderOpen,
+        autoLoad = self.autoLoad,
+        loadRange = self.loadRange,
+        spawnable = self.spawnable:save()
+    }
+end
+
+---Either save to file or return self as table to parent
+---@return table?
+function object:save()
     if self.parent == nil then
-        self:generateName()
-        local obj = {path = self.path, app = self.app, name = self.name, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
-        config.tryCreateConfig("data/objects/" .. obj.name .. ".json", obj)
-        config.saveFile("data/objects/" .. obj.name .. ".json", obj)
+        local state = self:getState()
+
+        config.tryCreateConfig("data/objects/" .. state.name .. ".json", state)
+        config.saveFile("data/objects/" .. state.name .. ".json", state)
         self.sUI.spawner.baseUI.savedUI.reload()
     else
-        return {path = self.path, app = self.app, name = self.name, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
+        return self:getState()
     end
 end
 
+---Load object data from table, same format as what
+---@see object.getState returns
 function object:load(data)
     self.name = data.name
-    self.path = data.path
-    self.pos = utils.getVector(data.pos)
-    self.rot = utils.getEuler(data.rot)
     self.headerOpen = data.headerOpen
     self.autoLoad = data.autoLoad
     self.loadRange = data.loadRange
+    self.spawnableHeaderOpen = data.spawnableHeaderOpen or true
 
-    self.app = data.app or ""
-    self.apps = config.loadFile("data/apps.json")[self.path] or {}
+    self.spawnable = require("modules/classes/spawn/" .. data.spawnable.modulePath):new()
+    self.spawnable.object = self
+    self.spawnable:loadSpawnData(data.spawnable, ToVector4(data.spawnable.position), ToEulerAngles(data.spawnable.rotation))
 end
 
 function object:tryMainDraw()
@@ -120,11 +151,31 @@ function object:tryMainDraw()
     end
 end
 
-function object:checkSpawned()
-    if Game.FindEntityByID(self.entID) == nil then
-        self.spawned = false
-    else
-        self.spawned = true
+function object:handleDrag()
+	local hovered = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem)
+
+	if hovered and not self.hovered then
+		drag.draggableHoveredIn(self)
+	elseif not hovered and self.hovered then
+		drag.draggableHoveredOut(self)
+	end
+
+	self.hovered = hovered
+end
+
+---Callback for when this object gets dropped into another one
+function object:dropIn(target)
+    if target.type == "group" then
+        -- TODO: If its the direct parent, move to that parent's parent instead
+        self:setSelectedGroupByPath(target:getOwnPath())
+        self:moveToSelectedGroup()
+    elseif target.type == "object" then
+        local path = self:addGroupToParent(self.name .. "_group")
+        self:setSelectedGroupByPath(path)
+        self:moveToSelectedGroup()
+
+        target:setSelectedGroupByPath(path)
+        target:moveToSelectedGroup()
     end
 end
 
@@ -136,114 +187,120 @@ function object:draw()
     ImGui.PushID(tostring(self.name .. self.id))
     ImGui.SetNextItemOpen(self.headerOpen)
 
+    if self.beingDragged then ImGui.PushStyleColor(ImGuiCol.Header, 1, 0, 0, 0.5) end
+	if self.beingTargeted then ImGui.PushStyleColor(ImGuiCol.Header, 0, 1, 0, 0.5) end
     self.headerOpen = ImGui.CollapsingHeader(self.name)
-    if self.headerOpen then
+	if self.beingDragged or self.beingTargeted then ImGui.PopStyleColor() end
 
+    self:handleDrag()
+
+    local hovered = self.spawnable.isHovered
+    self.spawnable:resetVisualizerStates()
+    self.spawnable:setIsHovered(ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem))
+
+    if self.headerOpen then
         CPS.colorBegin("Border", self.color)
         CPS.colorBegin("Separator", self.color)
 
-        local h = 8 * ImGui.GetFrameHeight() + 9 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 4 + 4
+        local h = 6 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().WindowPadding.y + 4 * ImGui.GetStyle().ItemSpacing.y + 7 * ImGui.GetStyle().ItemSpacing.y
+        h = h + self.spawnable:getExtraHeight()
         ImGui.BeginChild("obj_" .. tostring(self.name .. self.id), self.box.x, h, true)
 
         if not self.isAutoLoaded then
-            if self.newName == "" then self.newName = self.name end
-            ImGui.PushItemWidth(300)
-            self.newName = ImGui.InputTextWithHint('##Name', 'Name...', self.newName, 100)
-            ImGui.PopItemWidth()
-            ImGui.SameLine()
-            if ImGui.Button("Apply new object name") then
+		    if self.newName == nil then self.newName = self.name end
+
+            ImGui.SetNextItemWidth(300)
+            self.newName = ImGui.InputTextWithHint('##Name', 'New Name...', self.newName, 100)
+            if ImGui.IsItemDeactivatedAfterEdit() then
                 self:rename(self.newName)
                 self:saveAfterMove()
             end
+
+            ImGui.SameLine()
+
+            if ImGui.Button("Copy Data to Clipboard") then
+                ImGui.SetClipboardText(self.spawnable.spawnData)
+            end
+            style.tooltip(self.spawnable.spawnData)
         else
 			ImGui.Text(tostring(self.name .. " | AUTOSPAWNED"))
 		end
 
-            ImGui.Separator()
+        -- ImGui.Text(tostring("Spawned: " .. tostring(self.spawnable:isSpawned()):upper()))
 
-            self:checkSpawned()
-            ImGui.Text(tostring("Spawned: " .. tostring(self.spawned):upper()))
+        self:drawGroup()
 
-            ImGui.SameLine()
+        ImGui.Spacing()
+        ImGui.Separator()
+        ImGui.Spacing()
 
-            if ImGui.Button("Copy Path to clipboard") then
-                ImGui.SetClipboardText(self.path)
+        self.spawnable:draw()
+
+        ImGui.Spacing()
+        ImGui.Separator()
+        ImGui.Spacing()
+
+        if CPS.CPButton("Spawn") then
+            if self.spawnable:isSpawned() then
+                self.spawnable:respawn()
+            else
+                self.spawnable:spawn()
             end
+        end
+        ImGui.SameLine()
+        if CPS.CPButton("Despawn") then
+            self:despawn()
+        end
+        ImGui.SameLine()
+        if CPS.CPButton("Clone") then
+            local clone = object:new(self.sUI)
+            local rot = EulerAngles.new(self.spawnable.rotation.roll, self.spawnable.rotation.pitch, self.spawnable.rotation.yaw)
+            local pos = Vector4.new(self.spawnable.position.x, self.spawnable.position.y, self.spawnable.position.z, 0)
 
-            self:drawGroup()
+            clone.spawnable = require("modules/classes/spawn/" .. self.spawnable.modulePath):new(clone)
+            clone.spawnable:loadSpawnData(self.spawnable:save(), pos, rot)
 
-            ImGui.Separator()
+            clone.name = utils.generateCopyName(self.name)
 
-            self:drawApp()
-
-            ImGui.Separator()
-
-            self:drawPos()
-            self:drawRot()
-
-            ImGui.Separator()
-
-            if CPS.CPButton("Spawn") then
-                self:despawn()
-                self:spawn()
+            clone:spawn()
+            table.insert(self.sUI.elements, clone)
+            if self.parent ~= nil then
+                clone.parent = self.parent
+                table.insert(self.parent.childs, clone)
             end
-            ImGui.SameLine()
-            if CPS.CPButton("Despawn") then
-                self:despawn()
+        end
+        ImGui.SameLine()
+        if CPS.CPButton("Remove") then
+            self:despawn()
+            if self.parent ~= nil then
+                utils.removeItem(self.parent.childs, self)
+                ---TODO: Figure out what to do here
+                -- self.parent:saveAfterMove()
             end
-            ImGui.SameLine()
-            if CPS.CPButton("Clone") then
-                local obj = object:new(self.sUI)
-                obj.pos = Vector4.new(self.pos.x, self.pos.y, self.pos.z, self.pos.w)
-                obj.rot = EulerAngles.new(self.rot.roll, self.rot.pitch, self.rot.yaw)
-                obj.path = self.path
-                obj.name = self.name .. " Clone"
-                obj.apps = self.apps
-                obj:spawn()
-                table.insert(self.sUI.elements, obj)
-                if self.parent ~= nil then
-                    obj.parent = self.parent
-                    table.insert(self.parent.childs, obj)
-                end
+            utils.removeItem(self.sUI.elements, self)
+        end
+        ImGui.SameLine()
+        if CPS.CPButton("Make Favorite") then
+            self.sUI.spawner.baseUI.favUI.createNewFav(self)
+        end
+        ImGui.SameLine()
+        if self.parent == nil then
+            if CPS.CPButton("Save to file") then
+                self:save()
+                self.sUI.spawner.baseUI.savedUI.files[self.name] = nil
             end
-            ImGui.SameLine()
-            if CPS.CPButton("Remove") then
-                self:despawn()
-                if self.parent ~= nil then
-                    utils.removeItem(self.parent.childs, self)
-                    self.parent:saveAfterMove()
-                end
-                utils.removeItem(self.sUI.elements, self)
-            end
-            ImGui.SameLine()
-            if CPS.CPButton("Make Favorite") then
-                self.sUI.spawner.baseUI.favUI.createNewFav(self)
-            end
-            ImGui.SameLine()
-            if self.parent == nil then
-                if CPS.CPButton("Save to file") then
-                    self:save()
-                    self.sUI.spawner.baseUI.savedUI.files[self.name] = nil
-                end
-                if self.sUI.spawner.settings.groupExport then
-                    ImGui.SameLine()
-                    if CPS.CPButton("Export") then
-                        self:export()
-                    end
-                end
-            end
+        end
 
-            ImGui.EndChild()
+        ImGui.EndChild()
 
         CPS.colorEnd(2)
     end
-
     ImGui.PopID()
+
+    self.spawnable:updateIsHovered(hovered)
 
     if self.parent ~= nil then
 		ImGui.Unindent(35)
-	else
-		ImGui.Separator()
 	end
 end
 
@@ -257,166 +314,81 @@ function object:drawGroup()
         self.selectedGroup = utils.indexValue(gs, self:getOwnPath(true)) - 1
     end
 
-    ImGui.PushItemWidth(200)
+    ImGui.SetNextItemWidth(300)
     self.selectedGroup = ImGui.Combo("##movetogroup", self.selectedGroup, gs, #gs)
-    ImGui.PopItemWidth()
 
     ImGui.SameLine()
-    if ImGui.Button("Move to group") then
+
+    if ImGui.Button("Move to group", 150, 0) then
         if self:verifyMove(self.sUI.groups[self.selectedGroup + 1].tab) then -- Dont move inside same group
-            if self.selectedGroup ~= 0 then
-                if self.parent == nil then
-                    os.remove("data/objects/" .. self.name .. ".json")
-                    self.sUI.spawner.baseUI.savedUI.reload()
-                end
-                if self.parent ~= nil then
-                    utils.removeItem(self.parent.childs, self)
-                end
-                self.parent = self.sUI.groups[self.selectedGroup + 1].tab
-                table.insert(self.sUI.groups[self.selectedGroup + 1].tab.childs, self)
-                self:saveAfterMove()
-            else
-                if self.parent ~= nil then
-                    utils.removeItem(self.parent.childs, self)
-                    self.parent:saveAfterMove()
-                end
-
-                self.parent = nil
-                self:save()
-            end
+           self:moveToSelectedGroup()
         end
     end
 end
 
-function object:drawPos()
-    ImGui.PushItemWidth(100)
-    self.pos.x, changed = ImGui.DragFloat("##x", self.pos.x, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f X")
-    if changed then
-        self:update()
-    end
-    ImGui.SameLine()
-    self.pos.y, changed = ImGui.DragFloat("##y", self.pos.y, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Y")
-    if changed then
-        self:update()
-    end
-    ImGui.SameLine()
-    self.pos.z, changed = ImGui.DragFloat("##z", self.pos.z, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Z")
-    if changed then
-        self:update()
-    end
-    ImGui.PopItemWidth()
-    ImGui.SameLine()
-    if ImGui.Button("To player") then
-        self.pos = Game.GetPlayer():GetWorldPosition()
-        self:update()
-    end
+function object:setSelectedGroupByPath(path)
+    self.sUI.getGroups()
 
-    ImGui.PushItemWidth(150)
-    local x, changed = ImGui.DragFloat("##r_x", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ X")
-    if changed then
-        local v = self:getEntitiy():GetWorldRight()
-        self.pos.x = self.pos.x + (v.x * x)
-        self.pos.y = self.pos.y + (v.y * x)
-        self.pos.z = self.pos.z + (v.z * x)
-        self:update()
-        x = 0
-    end
-    ImGui.SameLine()
-    local y, changed = ImGui.DragFloat("##r_y", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ Y")
-    if changed then
-        local v = self:getEntitiy():GetWorldForward()
-        self.pos.x = self.pos.x + (v.x * y)
-        self.pos.y = self.pos.y + (v.y * y)
-        self.pos.z = self.pos.z + (v.z * y)
-        self:update()
-        y = 0
-    end
-    ImGui.SameLine()
-    local z, changed = ImGui.DragFloat("##r_z", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ Z")
-    if changed then
-        local v = self:getEntitiy():GetWorldUp()
-        self.pos.x = self.pos.x + (v.x * z)
-        self.pos.y = self.pos.y + (v.y * z)
-        self.pos.z = self.pos.z + (v.z * z)
-        self:update()
-        z = 0
-    end
-    ImGui.PopItemWidth()
-end
-
-function object:drawRot()
-    ImGui.PushItemWidth(100)
-    self.rot.roll, changed = ImGui.DragFloat("##roll", self.rot.roll, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Roll")
-    if changed then
-        self:update()
-    end
-    ImGui.SameLine()
-    self.rot.pitch, changed = ImGui.DragFloat("##pitch", self.rot.pitch, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Pitch")
-    if changed then
-        self:update()
-    end
-    ImGui.SameLine()
-    self.rot.yaw, changed = ImGui.DragFloat("##yaw", self.rot.yaw, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Yaw")
-    if changed then
-        self:update()
-    end
-    ImGui.SameLine()
-    ImGui.PopItemWidth()
-    if ImGui.Button("Player rot") then
-        self.rot = GetSingleton('Quaternion'):ToEulerAngles(Game.GetPlayer():GetWorldOrientation())
-        self:update()
+    local i = 0
+    for _, group in pairs(self.sUI.groups) do
+        if group.name == path then
+            self.selectedGroup = i
+            break
+        end
+        i = i + 1
     end
 end
 
-function object:drawApp()
-    ImGui.PushItemWidth(100)
-    self.app, changed = ImGui.InputTextWithHint('##App', 'Appearance...', self.app, 100)
-    if changed then self:getEntitiy():ScheduleAppearanceChange(self.app) end
-    ImGui.PopItemWidth()
-
-    if #self.apps ~= 0 then
-        ImGui.SameLine()
-
-        local as = {}
-        table.insert(as, "-- Default Appearance --")
-        for _, app in pairs(self.apps) do
-            table.insert(as, app)
+function object:moveToSelectedGroup()
+    if self.selectedGroup ~= 0 then
+        if self.parent == nil then
+            os.remove("data/objects/" .. self.name .. ".json")
+            self.sUI.spawner.baseUI.savedUI.reload()
         end
-        if self.appIndex == -1 then
-            self.appIndex = utils.indexValue(self.apps, self.app)
+        if self.parent ~= nil then
+            utils.removeItem(self.parent.childs, self)
         end
-        if self.apps[1] == "default" then self.appIndex = 1 end
-        if self.appIndex == -1 then
-            self.appIndex = 0
+        self.parent = self.sUI.groups[self.selectedGroup + 1].tab
+        table.insert(self.sUI.groups[self.selectedGroup + 1].tab.childs, self)
+        self:saveAfterMove()
+    else
+        if self.parent ~= nil then
+            utils.removeItem(self.parent.childs, self)
+            self.parent:saveAfterMove()
         end
-        ImGui.PushItemWidth(200)
 
-        local numItems = #as
-        if self.apps[1] == "default" then numItems = numItems - 1 end
-
-        self.appIndex, changed = ImGui.Combo("##app", self.appIndex, as, numItems)
-        if changed and self.appIndex ~= 0 then
-            self.app = self.apps[self.appIndex]
-            self:despawn()
-            self:getEntitiy():ScheduleAppearanceChange(self.app)
-            self:spawn()
-        elseif changed and self.appIndex == 0 then
-            self.app = ""
-            self:despawn()
-            self:getEntitiy():ScheduleAppearanceChange(self.apps[1])
-            self:spawn()
-        end
-        ImGui.PopItemWidth()
-    end
-
-    ImGui.SameLine()
-    if ImGui.Button("Fetch Apps") then
-        self.sUI.spawner.fetcher.queueFetching(self)
+        self.parent = nil
+        self:save()
     end
 end
 
-function object:getEntitiy()
-    return Game.FindEntityByID(self.entID)
+function object:addGroupToParent(name)
+    local g = require("modules/classes/spawn/group"):new(self.sUI)
+    g.name = utils.createFileName(name)
+
+    g.parent = nil
+    if self.parent then
+        g.parent = self.parent
+        table.insert(self.parent.childs, g)
+    end
+    table.insert(self.sUI.elements, g)
+
+    return g:getOwnPath()
+end
+
+function object:addObjectToParent(spawnable, name, headerOpen)
+    local o = object:new(self.sUI)
+    o.spawnable = spawnable
+    o.spawnable:spawn()
+    o.parent = self.parent
+    o.name = name
+    o.headerOpen = headerOpen
+
+    if self.parent then
+        table.insert(self.parent.childs, o)
+    end
+
+    table.insert(self.sUI.elements, o)
 end
 
 function object:verifyMove(to)
@@ -430,17 +402,17 @@ function object:verifyMove(to)
 end
 
 function object:saveAfterMove()
-	if self.parent == nil then
-		for _, file in pairs(dir("data/objects")) do
-			if file.name:match("^.+(%..+)$") == ".json" then
-				if file.name == self.name .. ".json" then
-					self:save()
-				end
-			end
-		end
-	else
-		self.parent:saveAfterMove()
-	end
+	-- if self.parent == nil then
+	-- 	for _, file in pairs(dir("data/objects")) do
+	-- 		if file.name:match("^.+(%..+)$") == ".json" then
+	-- 			if file.name == self.name .. ".json" then
+	-- 				self:save()
+	-- 			end
+	-- 		end
+	-- 	end
+	-- else
+	-- 	self.parent:saveAfterMove()
+	-- end
 end
 
 function object:getOwnPath(first)
@@ -457,11 +429,6 @@ function object:getOwnPath(first)
             return tostring(self.parent:getOwnPath() .. "/" .. self.name)
         end
     end
-end
-
-function object:export()
-	local data = {{path = self.path, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), app = self.app}}
-	config.saveFile("export/" .. self.name .. "_export.json", data)
 end
 
 function object:getHeight(y)

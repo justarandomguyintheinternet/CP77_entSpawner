@@ -14,8 +14,15 @@
 --
 -------------------------------------------------------------------------------------------------------------------------------
 
-local config = require("modules/utils/config")
+local settings = require("modules/utils/settings")
+local builder = require("modules/utils/entityBuilder")
+local Cron = require("modules/utils/Cron")
+local cache = require("modules/utils/cache")
+local drag = require("modules/utils/dragHelper")
 
+---@class spawner
+---@field runtimeData table {cetOpen: boolean, inGame: boolean, inMenu: boolean}
+---@field baseUI baseUI
 spawner = {
     runtimeData = {
         cetOpen = false,
@@ -23,86 +30,87 @@ spawner = {
         inMenu = false
     },
 
-    defaultSettings = {
-        spawnPos = 1,
-        spawnDist = 3,
-        spawnNewSortAlphabetical = false,
-        posSteps = 0.05,
-        rotSteps = 0.05,
-        despawnOnReload = true,
-        groupRot = false,
-        headerState = true,
-        deleteConfirm = true,
-        moveCloneToParent = 1,
-        groupExport = false,
-        autoSpawnRange = 1000,
-        spawnUIOnlyNames = false,
-        appFetchTrys = 150
-    },
+    e = function(data)
+        local red = require("modules/utils/redConverter")
+        config.saveFile("wkit.json", red.redDataToJSON(data))
+    end,
 
-    settings = {},
+    i = function(data)
+        local red = require("modules/utils/redConverter")
+        red.JSONToRedData(config.loadFile("export.json"), data)
+    end,
+
     baseUI = require("modules/ui/baseUI"),
-    fetcher = require("modules/utils/appFetcher"),
     GameUI = require("modules/utils/GameUI")
 }
 
 function spawner:new()
-    registerForEvent("onInit", function()
-        config.tryCreateConfig("data/config.json", spawner.defaultSettings)
-        config.backwardComp("data/config.json", spawner.defaultSettings)
-        config.tryCreateConfig("data/apps.json", {})
-        spawner.settings = config.loadFile("data/config.json")
-        spawner.baseUI.spawnUI.loadPaths(spawner)
-        spawner.baseUI.favUI.load(spawner)
-        spawner.baseUI.spawnedUI.spawner = spawner
-        spawner.baseUI.spawnedUI.getGroups()
-        spawner.baseUI.savedUI.spawner = spawner
-        spawner.baseUI.savedUI.reload()
-
-        Observe('RadialWheelController', 'OnIsInMenuChanged', function(_, isInMenu)
-            spawner.runtimeData.inMenu = isInMenu
-        end)
-
-        spawner.GameUI.OnSessionStart(function()
-            spawner.runtimeData.inGame = true
-        end)
-
-        spawner.GameUI.OnSessionEnd(function()
-            spawner.runtimeData.inGame = false
-        end)
-
-        spawner.runtimeData.inGame = not spawner.GameUI.IsDetached()
+    registerForEvent("onHook", function ()
+        builder.hook()
     end)
 
-    registerForEvent("onUpdate", function ()
-        if spawner.runtimeData.inGame and not spawner.runtimeData.inMenu then
-            spawner.baseUI.savedUI.run(spawner)
-            spawner.fetcher.update()
+    registerForEvent("onInit", function()
+        settings.load()
+        cache.load()
+        cache.generateRecordsList()
+
+        self.baseUI.savedUI.spawner = self
+        self.baseUI.savedUI.backwardComp()
+        self.baseUI.savedUI.filter = settings.savedUIFilter
+        self.baseUI.spawnUI.filter = settings.spawnUIFilter
+        self.baseUI.spawnUI.loadSpawnData(self)
+
+        self.baseUI.favUI.load(self)
+        self.baseUI.spawnedUI.spawner = self
+        self.baseUI.spawnedUI.getGroups()
+        self.baseUI.savedUI.reload()
+
+        self.baseUI.exportUI.init()
+
+        Observe('RadialWheelController', 'OnIsInMenuChanged', function(_, isInMenu)
+            self.runtimeData.inMenu = isInMenu
+        end)
+
+        self.GameUI.OnSessionStart(function()
+            self.runtimeData.inGame = true
+        end)
+
+        self.GameUI.OnSessionEnd(function()
+            self.runtimeData.inGame = false
+        end)
+
+        self.runtimeData.inGame = not self.GameUI.IsDetached()
+    end)
+
+    registerForEvent("onUpdate", function (dt)
+        if self.runtimeData.inGame and not self.runtimeData.inMenu then
+            Cron.Update(dt)
+            self.baseUI.savedUI.run(self)
         end
     end)
 
     registerForEvent("onShutdown", function ()
-        if spawner.settings.despawnOnReload then
-            spawner.baseUI.spawnedUI.despawnAll()
+        if settings.despawnOnReload then
+            self.baseUI.spawnedUI.despawnAll()
         end
     end)
 
     registerForEvent("onDraw", function()
-        if spawner.runtimeData.cetOpen then
-            spawner.baseUI.draw(spawner)
+        if self.runtimeData.cetOpen then
+            drag.draw()
+            self.baseUI.draw(self)
         end
     end)
 
     registerForEvent("onOverlayOpen", function()
-        spawner.runtimeData.cetOpen = true
+        self.runtimeData.cetOpen = true
     end)
 
     registerForEvent("onOverlayClose", function()
-        spawner.runtimeData.cetOpen = false
+        self.runtimeData.cetOpen = false
     end)
 
-    return spawner
-
+    return self
 end
 
 return spawner:new()

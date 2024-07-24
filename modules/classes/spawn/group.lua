@@ -2,37 +2,72 @@ local config = require("modules/utils/config")
 local object = require("modules/classes/spawn/object")
 local utils = require("modules/utils/utils")
 local CPS = require("CPStyling")
+local style = require("modules/ui/style")
+local settings = require("modules/utils/settings")
+local drag = require("modules/utils/dragHelper")
 
+---Class for organizing multiple objects and or groups
+---@class group
+---@field public name string
+---@field public childs object[]
+---@field public parent group?
+---@field public selectedGroup integer
+---@field public type string
+---@field public color table
+---@field public box table {x: number, y: number}
+---@field public id integer
+---@field public headerOpen boolean
+---@field public pos Vector4
+---@field public rot EulerAngles
+---@field public autoLoad boolean
+---@field public loadRange number
+---@field public isAutoLoaded boolean
+---@field public sUI table
+---@field public isUsingSpawnables boolean Signalizes that the groups has been converted from the old format
+---@field public beingTargeted boolean
+---@field public targetable boolean
+---@field public beingDragged boolean
+---@field public hovered boolean
 group = {}
 
 function group:new(sUI)
 	local o = {}
 
 	o.name = "New Group"
+	o.newName = nil
 	o.childs = {}
 	o.parent = nil
 
 	o.selectedGroup = -1
 	o.type = "group"
 	o.color = {0, 255, 0}
-	o.box = {x = 600, y = 142}
+	o.box = {x = 650, y = 142}
 	o.id = math.random(1, 1000000000) -- Id for imgui child rng gods bls have mercy
-	o.headerOpen = sUI.spawner.settings.headerState
+	o.headerOpen = settings.headerState
 
 	o.pos = Vector4.new(0, 0, 0, 0)
     o.rot = EulerAngles.new(0, 0, 0)
 
 	o.autoLoad = false
-	o.loadRange = sUI.spawner.settings.autoSpawnRange
+	o.loadRange = settings.autoSpawnRange
 	o.isAutoLoaded = false
 
 	o.sUI = sUI
+	o.isUsingSpawnables = true
+
+	o.beingTargeted = false
+    o.targetable = true
+	o.beingDragged = false
+	o.hovered = false
 
 	self.__index = self
    	return setmetatable(o, self)
 end
 
-function group:load(data)
+---Loads the data from a given table, recursively building up the tree of child elements
+---@param data table {name, childs, type, pos, rot, headerOpen, autoLoad, loadRange}
+---@param silent boolean
+function group:load(data, silent)
 	self.name = data.name
 	self.pos = utils.getVector(data.pos)
 	self.rot = utils.getEuler(data.rot)
@@ -46,31 +81,59 @@ function group:load(data)
 			g.parent = self
 			g:load(c)
 			table.insert(self.childs, g)
-			table.insert(self.sUI.elements, g)
+			if not silent then
+				table.insert(self.sUI.elements, g)
+			end
 		else
 			local o = object:new(self.sUI)
 			o:load(c)
 			o.parent = self
 			table.insert(self.childs, o)
-			table.insert(self.sUI.elements, o)
+			if not silent then
+				table.insert(self.sUI.elements, o)
+			end
 		end
 	end
 end
 
-function group:tryMainDraw() -- Try to draw as "main group"
+---Try to draw as "main group"
+function group:tryMainDraw()
 	if self.parent == nil then
 		self:draw()
 	end
 end
 
-function group:rename(name) -- Update file name to new given
+---Update file name to new given
+---@param name string
+function group:rename(name)
 	name = utils.createFileName(name)
     os.rename("data/objects/" .. self.name .. ".json", "data/objects/" .. name .. ".json")
     self.name = name
+	self.newName = name
 	self.sUI.spawner.baseUI.savedUI.reload()
 end
 
-function group:draw() -- Draw func if this is just a sub group
+function group:handleDrag()
+	local hovered = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem)
+
+	if hovered and not self.hovered then
+		drag.draggableHoveredIn(self)
+	elseif not hovered and self.hovered then
+		drag.draggableHoveredOut(self)
+	end
+
+	self.hovered = hovered
+end
+
+---Callback for when this object gets dropped into another one
+function group:dropIn(target)
+	self:setSelectedGroupByPath(target:getOwnPath())
+	self:moveToSelectedGroup()
+end
+
+---Draw func if this is just a sub group
+---@protected
+function group:draw()
 	ImGui.PushID(tostring(self.name .. self.id))
 
 	if self.parent ~= nil then
@@ -82,24 +145,28 @@ function group:draw() -- Draw func if this is just a sub group
 	local n = self.name
 	if self.isAutoLoaded then n = tostring(self.name .. " | AUTOSPAWNED") end
 
+	if self.beingDragged then ImGui.PushStyleColor(ImGuiCol.Header, 1, 0, 0, 0.5) end
+	if self.beingTargeted then ImGui.PushStyleColor(ImGuiCol.Header, 0, 1, 0, 0.5) end
     self.headerOpen = ImGui.CollapsingHeader(n)
+	if self.beingDragged or self.beingTargeted then ImGui.PopStyleColor() end
+
+	self:handleDrag()
 
 	local addY = 0
-	if spawner.settings.groupRot then addY = ImGui.GetFrameHeight() + ImGui.GetStyle().ItemSpacing.y end
+	if settings.groupRot then addY = ImGui.GetFrameHeight() + ImGui.GetStyle().ItemSpacing.y end
 
 	if self.headerOpen then
 		CPS.colorBegin("Border", self.color)
 
-		local h = 5 * ImGui.GetFrameHeight() + 7 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().FramePadding.y + ImGui.GetStyle().ItemSpacing.y * 2 + 2
+		local h = 6 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().FramePadding.y + 7 * ImGui.GetStyle().ItemSpacing.y
     	ImGui.BeginChild("group" .. tostring(self.name .. self.id), self.box.x, h + addY, true)
 
 		if not self.isAutoLoaded then
-			if self.newName == nil then self.newName = "" end
-			ImGui.PushItemWidth(300)
+			if self.newName == nil then self.newName = self.name end
+
+			ImGui.SetNextItemWidth(300)
 			self.newName, changed = ImGui.InputTextWithHint('##newname', 'New Name...', self.newName, 100)
-			ImGui.PopItemWidth()
-			ImGui.SameLine()
-			if ImGui.Button("Apply new group name") then
+			if ImGui.IsItemDeactivatedAfterEdit() then
 				self:rename(self.newName)
 				self:saveAfterMove()
 			end
@@ -109,17 +176,23 @@ function group:draw() -- Draw func if this is just a sub group
 
 		self:drawMoveGroup()
 
+		---TODO: Unify draggability into class, hierarchical things into class
+		---TODO: Draw arrow
+		---TODO: Add group spawnable controls
+		---TODO: More modular for future NCA feature
+
 		CPS.colorBegin("Separator", self.color)
-		ImGui.Separator()
+		style.spacedSeparator()
 
 		self.pos = self:getCenter()
 		self:drawPos()
 
-		if spawner.settings.groupRot then
+		if settings.groupRot then
 			self:drawRot()
 		end
 
-		ImGui.Separator()
+		ImGui.Spacing()
+		style.spacedSeparator()
 
 		CPS.colorEnd()
 
@@ -136,9 +209,9 @@ function group:draw() -- Draw func if this is just a sub group
 			local g = require("modules/classes/spawn/group"):new(self.sUI)
 
 			g:load(self:toTable())
-			g.name = self.name .. " Clone"
+			g.name = utils.generateCopyName(self.name)
 
-			if self.sUI.spawner.settings.moveCloneToParent == 1 then
+			if settings.moveCloneToParent == 1 then
 				g.parent = self
 				table.insert(self.childs, g)
 			else
@@ -163,12 +236,6 @@ function group:draw() -- Draw func if this is just a sub group
 				self:save()
 				self.sUI.spawner.baseUI.savedUI.files[self.name] = nil
 			end
-			if self.sUI.spawner.settings.groupExport then
-				ImGui.SameLine()
-				if CPS.CPButton("Export") then
-					self:export()
-				end
-			end
 		end
 
 		ImGui.EndChild()
@@ -181,13 +248,12 @@ function group:draw() -- Draw func if this is just a sub group
 	end
 	if self.parent ~= nil then
 		ImGui.Unindent(35)
-	else
-		ImGui.Separator()
 	end
 
 	ImGui.PopID()
 end
 
+---@protected
 function group:drawMoveGroup()
 	local gs = {}
 	for _, g in pairs(self.sUI.groups) do
@@ -198,40 +264,59 @@ function group:drawMoveGroup()
 		self.selectedGroup = utils.indexValue(gs, self:getOwnPath(true)) - 1
 	end
 
-	ImGui.PushItemWidth(200)
+	ImGui.SetNextItemWidth(300)
 	self.selectedGroup = ImGui.Combo("##moveto", self.selectedGroup, gs, #gs)
-	ImGui.PopItemWidth()
 	ImGui.SameLine()
-	if ImGui.Button("Move to group") then
-		if self:verifyMove(self.sUI.groups[self.selectedGroup + 1].tab) then
-			if self.selectedGroup ~= 0 then
-				if self.parent == nil then
-					os.remove("data/objects/" .. self.name .. ".json")
-					self.sUI.spawner.baseUI.savedUI.reload()
-				end
-				if self.parent ~= nil then
-					utils.removeItem(self.parent.childs, self)
-				end
-				self.parent = self.sUI.groups[self.selectedGroup + 1].tab
-				table.insert(self.sUI.groups[self.selectedGroup + 1].tab.childs, self)
-				self:saveAfterMove()
-			else
-				if self.parent ~= nil then
-					utils.removeItem(self.parent.childs, self)
-					self.parent:saveAfterMove()
-				end
-
-				self.parent = nil
-				self:save()
-			end
-		end
+	if ImGui.Button("Move to group", 150, 0) then
+		self:moveToSelectedGroup()
 	end
 end
 
+function group:setSelectedGroupByPath(path)
+    self.sUI.getGroups()
+
+    local i = 0
+    for _, group in pairs(self.sUI.groups) do
+        if group.name == path then
+            self.selectedGroup = i
+            break
+        end
+        i = i + 1
+    end
+end
+
+function group:moveToSelectedGroup()
+	if not self:verifyMove(self.sUI.groups[self.selectedGroup + 1].tab) then
+		return
+	end
+
+	if self.selectedGroup ~= 0 then
+		if self.parent == nil then
+			os.remove("data/objects/" .. self.name .. ".json")
+			self.sUI.spawner.baseUI.savedUI.reload()
+		end
+		if self.parent ~= nil then
+			utils.removeItem(self.parent.childs, self)
+		end
+		self.parent = self.sUI.groups[self.selectedGroup + 1].tab
+		table.insert(self.sUI.groups[self.selectedGroup + 1].tab.childs, self)
+		self:saveAfterMove()
+	else
+		if self.parent ~= nil then
+			utils.removeItem(self.parent.childs, self)
+			self.parent:saveAfterMove()
+		end
+
+		self.parent = nil
+		self:save()
+	end
+end
+
+---@protected
 function group:drawPos()
-    ImGui.PushItemWidth(100)
+	ImGui.PushItemWidth(150)
 	local x = self.pos.x
-    x, changed = ImGui.DragFloat("##x", x, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f X")
+    x, changed = ImGui.DragFloat("##x", x, settings.posSteps, -9999, 9999, "%.3f X")
     if changed then
 		x = x - self.pos.x
         self:update(Vector4.new(x, 0, 0, 0))
@@ -239,7 +324,7 @@ function group:drawPos()
     end
     ImGui.SameLine()
 	local y = self.pos.y
-    y, changed = ImGui.DragFloat("##y", y, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Y")
+    y, changed = ImGui.DragFloat("##y", y, settings.posSteps, -9999, 9999, "%.3f Y")
     if changed then
         y = y - self.pos.y
         self:update(Vector4.new(0, y, 0, 0))
@@ -247,7 +332,7 @@ function group:drawPos()
     end
     ImGui.SameLine()
 	local z = self.pos.z
-    z, changed = ImGui.DragFloat("##z", z, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Z")
+    z, changed = ImGui.DragFloat("##z", z, settings.posSteps, -9999, 9999, "%.3f Z")
     if changed then
         z = z - self.pos.z
         self:update(Vector4.new(0, 0, z, 0))
@@ -261,7 +346,7 @@ function group:drawPos()
     end
 
     ImGui.PushItemWidth(150)
-    local x, changed = ImGui.DragFloat("##r_x", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ X")
+    local x, changed = ImGui.DragFloat("##r_x", 0, settings.posSteps, -9999, 9999, "%.3f Relative X")
     if changed then
         local v = self:getAvgVector("right")
         self:update(Vector4.new((v.x * x), (v.y * x), (v.z * x), 0))
@@ -269,7 +354,7 @@ function group:drawPos()
 		x = 0
     end
     ImGui.SameLine()
-    local y, changed = ImGui.DragFloat("##r_y", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ Y")
+    local y, changed = ImGui.DragFloat("##r_y", 0, settings.posSteps, -9999, 9999, "%.3f Relative Y")
     if changed then
         local v = self:getAvgVector("forward")
         self:update(Vector4.new((v.x * y), (v.y * y), (v.z * y), 0))
@@ -277,7 +362,7 @@ function group:drawPos()
 		y = 0
     end
     ImGui.SameLine()
-    local z, changed = ImGui.DragFloat("##r_z", 0, self.sUI.spawner.settings.posSteps, -9999, 9999, "%.3f Relativ Z")
+    local z, changed = ImGui.DragFloat("##r_z", 0, settings.posSteps, -9999, 9999, "%.3f Relative Z")
     if changed then
         local v = self:getAvgVector("up")
         self:update(Vector4.new((v.x * z), (v.y * z), (v.z * z), 0))
@@ -287,41 +372,42 @@ function group:drawPos()
     ImGui.PopItemWidth()
 end
 
+---@protected
 function group:drawRot()
-    ImGui.PushItemWidth(100)
-    local roll, changed = ImGui.DragFloat("##roll", self.rot.roll, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Roll")
+    ImGui.PushItemWidth(150)
+    local roll, changed = ImGui.DragFloat("##roll", self.rot.roll, settings.rotSteps, -9999, 9999, "%.3f Roll")
     if changed then
 		roll = roll - self.rot.roll
 		local objs = self:getObjects()
 		for _, o in pairs(objs) do
-			o.pos = utils.addVector(Vector4.RotateAxis(utils.subVector(o.pos, self.pos), self:getAvgVector("forward"), math.rad(roll)), self.pos)
-			o.rot.roll = o.rot.roll + roll
+			o:setPosition(utils.addVector(Vector4.RotateAxis(utils.subVector(o:getPosition(), self.pos), self:getAvgVector("forward"), math.rad(roll)), self.pos))
+			o.spawnable.rotation.roll = o.spawnable.rotation.roll + roll
 		end
 
 		self.rot.roll = self.rot.roll + roll
 		self:update(Vector4.new(0, 0, 0, 0))
     end
     ImGui.SameLine()
-    local pitch, changed = ImGui.DragFloat("##pitch", self.rot.pitch, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Pitch")
+    local pitch, changed = ImGui.DragFloat("##pitch", self.rot.pitch, settings.rotSteps, -9999, 9999, "%.3f Pitch")
     if changed then
 		pitch = pitch - self.rot.pitch
 		local objs = self:getObjects()
 		for _, o in pairs(objs) do
-			o.pos = utils.addVector(Vector4.RotateAxis(utils.subVector(o.pos, self.pos), self:getAvgVector("right"), math.rad(pitch)), self.pos)
-			o.rot.pitch = o.rot.pitch + pitch
+			o:setPosition(utils.addVector(Vector4.RotateAxis(utils.subVector(o:getPosition(), self.pos), self:getAvgVector("right"), math.rad(pitch)), self.pos))
+			o.spawnable.rotation.pitch = o.spawnable.rotation.pitch + pitch
 		end
 
 		self.rot.pitch = self.rot.pitch + pitch
 		self:update(Vector4.new(0, 0, 0, 0))
     end
     ImGui.SameLine()
-    local yaw, changed = ImGui.DragFloat("##yaw", self.rot.yaw, self.sUI.spawner.settings.rotSteps, -9999, 9999, "%.3f Yaw")
+    local yaw, changed = ImGui.DragFloat("##yaw", self.rot.yaw, settings.rotSteps, -9999, 9999, "%.3f Yaw")
     if changed then
         yaw = yaw - self.rot.yaw
 		local objs = self:getObjects()
 		for _, o in pairs(objs) do
-			o.pos = utils.addVector(Vector4.RotateAxis(utils.subVector(o.pos, self.pos), self:getAvgVector("up"), math.rad(yaw)), self.pos)
-			o.rot.yaw = o.rot.yaw + yaw
+			o:setPosition(utils.addVector(Vector4.RotateAxis(utils.subVector(o:getPosition(), self.pos), self:getAvgVector("up"), math.rad(yaw)), self.pos))
+			o.spawnable.rotation.yaw = o.spawnable.rotation.yaw + yaw
 		end
 
 		self.rot.yaw = self.rot.yaw + yaw
@@ -329,10 +415,6 @@ function group:drawRot()
     end
     ImGui.SameLine()
     ImGui.PopItemWidth()
-    -- if ImGui.Button("Player rot") then
-    --     --self.rot =  GetSingleton('Quaternion'):ToEulerAnglesGame(GetPlayer():GetWorldOrientation())
-    --     self:update()
-    -- end
 end
 
 function group:spawn()
@@ -361,8 +443,7 @@ end
 
 function group:update(vec)
 	for _, obj in pairs(self:getObjects()) do
-		obj.pos = utils.addVector(obj.pos, vec)
-		obj:update()
+		obj:setPosition(utils.addVector(obj:getPosition(), vec))
 	end
 end
 
@@ -376,12 +457,16 @@ function group:getAvgVector(dir)
 	if #objs > 0 then
 		for _, o in pairs(objs) do
 			local dirVec = Vector4.new(0, 0, 0, 0)
-			if dir == "forward" then
-				dirVec =  o:getEntitiy():GetWorldForward()
-			elseif dir == "right" then
-				dirVec =  o:getEntitiy():GetWorldRight()
-			elseif dir == "up" then
-				dirVec =  o:getEntitiy():GetWorldUp()
+			local entity = o.spawnable:getEntity()
+
+			if entity then
+				if dir == "forward" then
+					dirVec =  entity:GetWorldForward()
+				elseif dir == "right" then
+					dirVec =  entity:GetWorldRight()
+				elseif dir == "up" then
+					dirVec =  entity:GetWorldUp()
+				end
 			end
 			if #vectors == 0 then
 				table.insert(vectors, {vec = dirVec, count = 1})
@@ -418,9 +503,9 @@ function group:getCenter()
 		local totalY = 0
 		local totalZ = 0
 		for _, o in pairs(objs) do
-			totalX = totalX + o.pos.x
-			totalY = totalY + o.pos.y
-			totalZ = totalZ + o.pos.z
+			totalX = totalX + o:getPosition().x
+			totalY = totalY + o:getPosition().y
+			totalZ = totalZ + o:getPosition().z
 		end
 		center = Vector4.new(totalX / #objs, totalY / #objs, totalZ / #objs, 0)
 	end
@@ -478,14 +563,14 @@ end
 
 function group:save()
 	if self.parent == nil then
-		local data = {name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
+		local data = { isUsingSpawnables = true, name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
 		for _, c in pairs(self.childs) do
 			table.insert(data.childs, c:save())
 		end
 		config.saveFile("data/objects/" .. self.name .. ".json", data)
 		self.sUI.spawner.baseUI.savedUI.reload()
 	else
-		local data = {name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
+		local data = { isUsingSpawnables = true, name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
 		for _, c in pairs(self.childs) do
 			table.insert(data.childs, c:save())
 		end
@@ -494,7 +579,7 @@ function group:save()
 end
 
 function group:toTable()
-	local data = {name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
+	local data = { isUsingSpawnables = true, name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
 	for _, c in pairs(self.childs) do
 		table.insert(data.childs, c:save())
 	end
@@ -529,14 +614,6 @@ function group:getOwnPath(first)
             return tostring(self.parent:getOwnPath() .. "/" .. self.name)
         end
     end
-end
-
-function group:export()
-	local data = {}
-	for _, obj in pairs(self:getObjects()) do
-		table.insert(data, {path = obj.path, pos = utils.fromVector(obj.pos), rot = utils.fromEuler(obj.rot), app = obj.app})
-	end
-	config.saveFile("export/" .. self.name .. "_export.json", data)
 end
 
 function group:getHeight(yy)

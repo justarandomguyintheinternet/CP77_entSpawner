@@ -1,0 +1,19 @@
+{
+    "loadRange": 1000,
+    "spawnable": {
+        "material": 31,
+        "preset": 33,
+        "position": {
+            "z": 23.13151550293,
+            "x": -1394.9351806641,
+            "y": 1228.9204101563,
+            "w": 0
+        },
+        "modulePath": "collision/collider",
+        "dataType": "Collision Shape"
+    },
+    "name": "Box",
+    "type": "object",
+    "headerOpen": true,
+    "autoLoad": false
+}

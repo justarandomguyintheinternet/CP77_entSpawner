@@ -1,8 +1,14 @@
-local CPS = require("CPStyling")
 local utils = require("modules/utils/utils")
 local object = require("modules/classes/spawn/object")
 local group = require("modules/classes/spawn/group")
+local settings = require("modules/utils/settings")
 
+---@class spawnedUI
+---@field elements table {element}
+---@field filter string
+---@field newGroupName string
+---@field groups table {string}
+---@field spawner spawner?
 spawnedUI = {
     elements = {},
     filter = "",
@@ -11,32 +17,29 @@ spawnedUI = {
     spawner = nil
 }
 
-function spawnedUI.init(spawner)
-    spawnedUI.spawner = spawner
-end
-
-function spawnedUI.spawnNewObject(path, parent)
+function spawnedUI.spawnNewObject(entry, class, parent)
     local new = object:new(spawnedUI)
-    new.path = path
-    new.name = path
-    new.rot = GetSingleton('Quaternion'):ToEulerAngles(Game.GetPlayer():GetWorldOrientation())
-    new.pos = Game.GetPlayer():GetWorldPosition()
+    local rot = GetPlayer():GetWorldOrientation():ToEulerAngles()
+    local pos = GetPlayer():GetWorldPosition()
+
+    if settings.spawnPos == 2 then
+        local forward = GetPlayer():GetWorldForward()
+        pos.x = pos.x + forward.x * settings.spawnDist
+        pos.y = pos.y + forward.y * settings.spawnDist
+    end
+
+    new.spawnable = class:new(new)
+    new.spawnable.object = new
+    new.spawnable:loadSpawnData(entry.data, pos, rot)
+    new.name = new.spawnable:generateName(entry.name)
     new.parent = parent
 
     if parent ~= nil then
         table.insert(new.parent.childs, new)
     end
 
-    if spawnedUI.spawner.settings.spawnPos == 2 then
-        local vec = Game.GetPlayer():GetWorldForward()
-        new.pos.x = new.pos.x + vec.x * spawnedUI.spawner.settings.spawnDist
-        new.pos.y = new.pos.y + vec.y * spawnedUI.spawner.settings.spawnDist
-    end
-
-    new:generateName()
     new:spawn()
     table.insert(spawnedUI.elements, new)
-
     return new
 end
 
@@ -55,9 +58,7 @@ function spawnedUI.getGroups()
     end
 end
 
-function spawnedUI.draw(spawner)
-    if spawnedUI.spawner == nil then spawnedUI.init(spawner) end
-
+function spawnedUI.draw()
     spawnedUI.getGroups()
 
     ImGui.PushItemWidth(250)
@@ -78,7 +79,7 @@ function spawnedUI.draw(spawner)
     ImGui.SameLine()
     if ImGui.Button("Add group") then
         local g = group:new(spawnedUI)
-        g.name =utils.createFileName(spawnedUI.newGroupName)
+        g.name = utils.createFileName(spawnedUI.newGroupName)
         table.insert(spawnedUI.elements, g)
     end
 
@@ -94,13 +95,21 @@ function spawnedUI.draw(spawner)
         end
     end
     ImGui.SameLine()
-    if ImGui.Button("Fetch all Apps (LAG)") then
-        for _, object in pairs(spawnedUI.getAllObjects()) do
-            spawnedUI.spawner.fetcher.queueFetching(object)
+    if ImGui.Button("Spawn all") then
+        for _, e in pairs(spawnedUI.elements) do
+            e:spawn()
+        end
+    end
+    ImGui.SameLine()
+    if ImGui.Button("Despawn all") then
+        for _, e in pairs(spawnedUI.elements) do
+            e:despawn()
         end
     end
 
+    ImGui.Spacing()
     ImGui.Separator()
+    ImGui.Spacing()
 
     local _, wHeight = GetDisplayResolution()
     ImGui.BeginChild("spawnedUI", spawnedUI.getWidth(), wHeight - wHeight * 0.175)
@@ -172,39 +181,6 @@ function spawnedUI.despawnAll()
     for _, e in pairs(spawnedUI.elements) do
         e:despawn()
     end
-end
-
-function spawnedUI.hotkey()
-    local allObjects = {}
-    for _, data in pairs(spawnedUI.elements) do
-        if data.type == "group" then
-            for _, obj in pairs(data:getObjects()) do
-                table.insert(allObjects, obj)
-            end
-        else
-            table.insert(allObjects, data)
-        end
-    end
-
-    local closest = 999
-    local closestObj = nil
-
-    for _, obj in pairs(allObjects) do
-
-        targetDir = utils.subVector(obj.pos, Game.GetPlayer():GetWorldPosition())
-        targetDir = Vector4.Normalize(targetDir)
-
-        dot = Vector4.Dot(targetDir, Game.GetPlayer():GetWorldForward())
-
-        angle =  math.deg(math.acos(dot))
-        print(180-angle, obj.name)
-        if (180 - angle) < closest then
-            closest = 180 - angle
-            closestObj = obj
-        end
-    end
-
-    spawnedUI.filter = closestObj.name
 end
 
 return spawnedUI

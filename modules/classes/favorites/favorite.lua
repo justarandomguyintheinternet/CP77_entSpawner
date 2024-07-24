@@ -2,6 +2,7 @@ local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
 local CPS = require("CPStyling")
 local object = require("modules/classes/spawn/object")
+local settings = require("modules/utils/settings")
 
 favorite = {}
 
@@ -141,10 +142,10 @@ function favorite:draw()
             local new = object:new(self.fUI.spawner.baseUI.spawnedUI)
             new.pos = Game.GetPlayer():GetWorldPosition()
 
-            if self.fUI.spawner.settings.spawnPos == 2 then
+            if settings.spawnPos == 2 then
                 local vec = Game.GetPlayer():GetWorldForward()
-                new.pos.x = new.pos.x + vec.x * spawnedUI.spawner.settings.spawnDist
-                new.pos.y = new.pos.y + vec.y * spawnedUI.spawner.settings.spawnDist
+                new.pos.x = new.pos.x + vec.x * settings.spawnDist
+                new.pos.y = new.pos.y + vec.y * settings.spawnDist
             end
 
             new.rot = GetSingleton('Quaternion'):ToEulerAngles(Game.GetPlayer():GetWorldOrientation())

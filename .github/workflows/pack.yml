@@ -2,7 +2,10 @@ name: pack
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - nodes
+      - dev/nodes
   workflow_dispatch:
 
 jobs:
@@ -14,9 +17,12 @@ jobs:
       - name: Setup folders
         run: |
           cd ${{ github.workspace }}
+          sudo mkdir -p /entSpawnerPacked/archive/pc/mod
           sudo mkdir -p /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
       - name: Copy files
         run: |
+          sudo cp -r baseEntity.archive /entSpawnerPacked/archive/pc/mod
+          sudo cp -r script /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
           sudo cp -r CPStyling /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
           sudo cp -r data /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
           sudo cp -r export /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/

@@ -1,7 +1,6 @@
 
 *.md
 *.csv
-*.json
 *.log
 *.sqlite3
 dump1.txt
@@ -9,10 +8,8 @@ dump2.txt
 dump3.txt
 dumpCmds.txt
 .VSCodeCounter/2021-06-20_11-56-27/results.txt
-*.ent
 *.cpmodproj
 *.xml
-*.archive
 patch1_5Paths.txt
 data/allPathsWMeshes.txt
 data/allPaths_broken.txt
@@ -22,3 +19,26 @@ d1.txt
 d2.txt
 d3.txt
 d4.txt
+*.bat
+data/backupManual/*
+data/favorites/*.json
+data/objects/*.json
+data/oldFormat/*.json
+data/spawnables/entity/amm/*.json
+export/*.json
+export/repWaysSplit/*.json
+dump*.txt
+cache.json
+apps.json
+config.json
+2.0/*
+data/spawnables/entity/templates/custom.txt
+data/exportTemplates/*.json
+data/backup
+.VSCodeCounter
+.vscode/settings.json
+export.json
+wkit.json
+data/AMMImport/*.json
+data/Club 27 - Glen Apartment.json
+data/V-HOME-LUNAR.json
