@@ -382,11 +382,13 @@ function spawnable:export(key, length)
         data = {
             entityTemplate = {
                 DepotPath = {
+                    ["$type"] = "ResourcePath",
                     ["$storage"] = "string",
                     ["$value"] = self.spawnData
                 }
             },
             appearanceName = {
+                ["$type"] = "CName",
                 ["$storage"] = "string",
                 ["$value"] = self.app
             }

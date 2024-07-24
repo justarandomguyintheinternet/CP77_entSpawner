@@ -13,7 +13,8 @@ local red = {}
 local exportExludes = {
     "appearancePath",
     "meshResource",
-    "worldTransform"
+    "worldTransform",
+    "appearanceName"
 }
 
 local function convertCName(propValue)
