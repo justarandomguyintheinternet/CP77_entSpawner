@@ -24,7 +24,14 @@ function amm.generateProps(spawnUI, AMM)
         new.spawnable:loadSpawnData({ spawnData = prop.path }, Vector4.new(0, 0, 0, 0), EulerAngles.new(0, 0, 0))
         new.name = new.spawnable:generateName(prop.name)
 
-        config.saveFile("data/spawnables/entity/amm/" .. prop.name .. ".json", new:getState())
+        local name = utils.createFileName(prop.name)
+        if name == "" then
+            name = "unnamed"
+        end
+
+        print("PropName: " .. name .. " OG: " .. prop.name)
+
+        config.saveFile("data/spawnables/entity/amm/" .. name .. ".json", new:getState())
     end
 
     spawnUI.loadSpawnData(spawnUI.spawner)
