@@ -238,8 +238,10 @@ function amm.importPreset(data, savedUI, importTasks)
                         spawnable:onBBoxLoaded(function (entity)
                             local instances = {}
                             for _, mesh in pairs(cache.getValue(propData.path .. "_meshes")) do
-                                local data = red.redDataToJSON(entity:FindComponentByName(mesh.name))
-                                table.insert(instances, data)
+                                if mesh.scaled then
+                                    local data = red.redDataToJSON(entity:FindComponentByName(mesh.name))
+                                    table.insert(instances, data)
+                                end
                             end
 
                             cache.addValue(propData.path .. "_meshInstanceData", instances)

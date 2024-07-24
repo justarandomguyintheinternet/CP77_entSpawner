@@ -145,7 +145,8 @@ function builder.getEntityBBox(entity, callback)
                         rot = offset:GetOrientation():ToEulerAngles(),
                         path = path,
                         app = component.meshAppearance.value,
-                        name = component.name.value
+                        name = component.name.value,
+                        hasScale = component:IsA("entMeshComponent")
                     })
 
                     table.insert(bBoxPoints, offset:GetOrientation():Transform(min))
