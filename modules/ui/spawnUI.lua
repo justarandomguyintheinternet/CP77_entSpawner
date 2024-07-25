@@ -199,10 +199,14 @@ function spawnUI.draw()
         ImGui.SameLine()
 
         style.pushGreyedOut(not AMM)
-        if ImGui.Button("Generate AMM Props") and AMM then
-            amm.generateProps(spawnUI, AMM)
+        if not amm.importing then
+            if ImGui.Button("Generate AMM Props") and AMM then
+                amm.generateProps(spawnUI, AMM)
+            end
+            style.tooltip("[THIS WILL LAG] Generate files for spawning, from current list of AMM props")
+        else
+            ImGui.ProgressBar(amm.progress / amm.total, 200, 30, string.format("%.2f%%", (amm.progress / amm.total) * 100))
         end
-        style.tooltip("[THIS WILL LAG] Generate files for spawning, from current list of AMM props")
 
         style.popGreyedOut(not AMM)
     end

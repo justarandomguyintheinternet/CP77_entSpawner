@@ -18,23 +18,38 @@ local spot = "base\\amm_props\\entity\\ambient_spot_light"
 function amm.generateProps(spawnUI, AMM)
     local props = AMM.API.GetAMMProps()
 
+    local propsService = require("modules/utils/tasks"):new()
+
     for _, prop in pairs(props) do
-        local new = object:new(spawnUI)
-        new.spawnable = require("modules/classes/spawn/entity/ammEntity"):new()
-        new.spawnable:loadSpawnData({ spawnData = prop.path }, Vector4.new(0, 0, 0, 0), EulerAngles.new(0, 0, 0))
-        new.name = new.spawnable:generateName(prop.name)
+        propsService:addTask(function ()
+            local new = object:new(spawnUI)
+            new.spawnable = require("modules/classes/spawn/entity/ammEntity"):new()
+            new.spawnable:loadSpawnData({ spawnData = prop.path }, Vector4.new(0, 0, 0, 0), EulerAngles.new(0, 0, 0))
+            new.name = new.spawnable:generateName(prop.name)
 
-        local name = utils.createFileName(prop.name)
-        if name == "" then
-            name = "unnamed"
-        end
+            local name = utils.createFileName(prop.name)
+            if name == "" then
+                name = "unnamed"
+            end
 
-        print("PropName: " .. name .. " OG: " .. prop.name)
+            config.saveFile("data/spawnables/entity/amm/" .. name .. ".json", new:getState())
 
-        config.saveFile("data/spawnables/entity/amm/" .. name .. ".json", new:getState())
+            amm.progress = amm.progress + 1
+            propsService:taskCompleted()
+        end)
     end
 
-    spawnUI.loadSpawnData(spawnUI.spawner)
+    amm.importing = true
+    amm.total = #props
+    amm.progress = 0
+
+    propsService.taskDelay = 0.01
+    propsService:run(true)
+
+    propsService:onFinalize(function ()
+        spawnUI.loadSpawnData(spawnUI.spawner)
+        amm.importing = false
+    end)
 end
 
 local function getAMMLightByID(lights, id)

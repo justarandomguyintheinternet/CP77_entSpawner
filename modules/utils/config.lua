@@ -16,7 +16,13 @@ end
 
 function config.loadFile(path)
     local file = io.open(path, "r")
-    local config = json.decode(file:read("*a"))
+    local config = {}
+    local success = pcall(function ()
+        config = json.decode(file:read("*a"))
+    end)
+    if not success then
+        print("Failed to load file: " .. path .. ", restoring empty state")
+    end
     file:close()
     return config
 end
