@@ -3,6 +3,8 @@ local gr = require("modules/classes/spawn/group")
 local cache = require("modules/utils/cache")
 local utils = require("modules/utils/utils")
 local red = require("modules/utils/redConverter")
+local entityBuilder = require("modules/utils/entityBuilder")
+
 local amm = {
     importing = false,
     progress = 0,
@@ -158,29 +160,56 @@ local lightComponentNames = {
     "Light_DistantLight"
 }
 
-local function getEntityInstanceData(entity, lightData)
-    local instanceData = {}
+local function setInstanceDataMesh(entity, propData, spawnable)
+    for _, component in pairs(entity:GetComponents()) do
+        if entityBuilder.shouldUseMesh(component) and component:IsA("entMeshComponent") then
+            local default = red.redDataToJSON(entity:FindComponentByName(component.name))
+            table.insert(spawnable.instanceData, default)
 
+            local change = {}
+            if propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0 then
+                change = {chunkMask = "0"}
+            else
+                change = {
+                    visualScale = {
+                        ["$type"] = "Vector3",
+                        X = propData.scale.x / 100,
+                        Y = propData.scale.y / 100,
+                        Z = propData.scale.z / 100
+                    }
+                }
+            end
+
+            spawnable.instanceDataChanges[tostring(CRUIDToHash(entity:FindComponentByName(component.name).id)):gsub("ULL", "")] = change
+        end
+    end
+end
+
+local function setInstanceDataLight(entity, lightData, spawnable)
     for _, component in pairs(entity:GetComponents()) do
         if component:IsA("gameLightComponent") and utils.has_value(lightComponentNames, component.name.value) then
             local data = red.redDataToJSON(component)
             local angles = loadstring("return " .. lightData.angles, "")()
             local color = loadstring("return " .. lightData.color, "")()
 
-            data.color.Red = math.floor(color[1] * 255)
-            data.color.Green = math.floor(color[2] * 255)
-            data.color.Blue = math.floor(color[3] * 255)
-            data.color.Alpha = math.floor(color[4] * 255)
-            data.intensity = lightData.intensity
-            data.innerAngle = angles.inner
-            data.outerAngle = angles.outer
-            data.radius = lightData.radius
+            local change = {
+                color = {
+                    ["$type"] = "Color",
+                    Red = math.floor(color[1] * 255),
+                    Green = math.floor(color[2] * 255),
+                    Blue = math.floor(color[3] * 255),
+                    Alpha = math.floor(color[4] * 255)
+                },
+                intensity = lightData.intensity,
+                innerAngle = angles.inner,
+                outerAngle = angles.outer,
+                radius = lightData.radius
+            }
 
-            table.insert(instanceData, data)
+            table.insert(spawnable.instanceData, data)
+            spawnable.instanceDataChanges[tostring(CRUIDToHash(component.id)):gsub("ULL", "")] = change
         end
     end
-
-    return instanceData
 end
 
 local function createGroup(savedUI, name, parent)
@@ -210,6 +239,7 @@ function amm.importPreset(data, savedUI, importTasks)
 
         local isLight = getAMMLightByID(data.lights, propData.uid)
         local isAMMLight = propData.path:match(area) or propData.path:match(point) or propData.path:match(spot)
+        local isScaled = propData.scale.x ~= 100 or propData.scale.y ~= 100 or propData.scale.z ~= 100
 
         if isLight and isAMMLight then
             -- Light Node
@@ -218,82 +248,43 @@ function amm.importPreset(data, savedUI, importTasks)
             o.parent = lightNodes
             table.insert(lightNodes.childs, o)
             amm.progress = amm.progress + 1
-        elseif isLight and not isAMMLight then
-            -- Generate instance data for custom lights
-            meshService:addTask(function ()
-                local spawnable = require("modules/classes/spawn/entity/entity"):new()
-                spawnable:loadSpawnData({
-                    spawnData = propData.path,
-                    app = propData.app
-                }, propData.pos, propData.rot)
-                spawnable:spawn()
-
-                spawnable:onBBoxLoaded(function (entity)
-                    spawnable.instanceData = getEntityInstanceData(entity, isLight)
-
-                    local lightObject = generateObject(savedUI, { name = propData.name .. "_light" })
-                    lightObject.spawnable = spawnable
-                    lightObject.parent = lightCustom
-                    table.insert(lightCustom.childs, lightObject)
-
-                    amm.progress = amm.progress + 1
-                    print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. #spawnable.instanceData .. " light components.")
-                    Game.GetStaticEntitySystem():DespawnEntity(spawnable.entityID)
-                    meshService:taskCompleted()
-                end)
-            end)
-        elseif (propData.scale.x ~= 100 or propData.scale.y ~= 100 or propData.scale.z ~= 100) then
+        elseif (isLight and not isAMMLight) or isScaled then
             if not Game.GetResourceDepot():ResourceExists(propData.path) then
                 print("[AMMImport] Resource for " .. propData.path .. " does not exist, skipping...")
             else
                 meshService:addTask(function ()
-                    cache.tryGet(propData.path .. "_meshInstanceData")
-                    .notFound(function (task)
-                        utils.log("Data for", propData.path, "not found, loading...")
-                        local spawnable = require("modules/classes/spawn/entity/entity"):new()
-                        spawnable:loadSpawnData({
-                            spawnData = propData.path,
-                            app = propData.app
-                        }, Vector4.new(0, 0, 0, 0), propData.rot)
-                        spawnable:spawn()
+                    local spawnable = require("modules/classes/spawn/entity/entity"):new()
+                    spawnable:loadSpawnData({
+                        spawnData = propData.path,
+                        app = propData.app
+                    }, propData.pos, propData.rot)
+                    spawnable:spawn()
 
-                        spawnable:onBBoxLoaded(function (entity)
-                            local instances = {}
-                            for _, mesh in pairs(cache.getValue(propData.path .. "_meshes")) do
-                                if mesh.scaled then
-                                    local data = red.redDataToJSON(entity:FindComponentByName(mesh.name))
-                                    table.insert(instances, data)
-                                end
+                    spawnable:onBBoxLoaded(function (entity)
+                        if isLight then
+                            setInstanceDataLight(entity, isLight, spawnable)
+
+                            if not isScaled then
+                                o.spawnable = spawnable
+                                o.parent = lightCustom
+                                o.name = o.spawnable:generateName(propData.name .. "_light")
+                                table.insert(lightCustom.childs, o)
                             end
 
-                            cache.addValue(propData.path .. "_meshInstanceData", instances)
+                            print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. #spawnable.instanceData .. " light components.")
+                        end
+                        if isScaled then
+                            setInstanceDataMesh(entity, propData, spawnable)
 
-                            Game.GetStaticEntitySystem():DespawnEntity(spawnable.entityID)
-                            utils.log("Data for", propData.path, "loaded and cached.", propData.uid)
-                            task:taskCompleted()
-                        end)
-                    end)
-                    .found(function ()
-                        local meshesData = cache.getValue(propData.path .. "_meshInstanceData")
-                        for _, mesh in pairs(meshesData) do
-                            if propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0 then
-                                mesh.chunkMask = "0"
-                            else
-                                mesh.visualScale.X = propData.scale.x / 100
-                                mesh.visualScale.Y = propData.scale.y / 100
-                                mesh.visualScale.Z = propData.scale.z / 100
-                            end
+                            o.spawnable = spawnable
+                            o.name = o.spawnable:generateName(propData.name)
+                            o.parent = scaledProps
+                            table.insert(scaledProps.childs, o)
+
+                            print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. utils.tableLength(spawnable.instanceDataChanges) .. " mesh components.")
                         end
 
-                        o.spawnable = convertProp(propData)
-                        o.spawnable.instanceData = meshesData
-                        o.name = o.spawnable:generateName(propData.name)
-                        o.parent = props
-                        table.insert(scaledProps.childs, o)
-
-                        print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. #meshesData .. " mesh components.")
-                        utils.log("[ammUtils] Task Done For " .. propData.path)
-                        utils.log("   ")
+                        Game.GetStaticEntitySystem():DespawnEntity(spawnable.entityID)
                         amm.progress = amm.progress + 1
                         meshService:taskCompleted()
                     end)

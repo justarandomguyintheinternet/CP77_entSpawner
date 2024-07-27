@@ -253,6 +253,8 @@ function exportUI.export()
     end
 
     config.saveFile("export/" .. project.name .. "_exported.json", project)
+
+    print("[entSpawner] Exported project " .. project.name)
 end
 
 return exportUI

@@ -12,7 +12,8 @@ local red = require("modules/utils/redConverter")
 ---@field public appIndex integer
 ---@field private bBoxCallback function
 ---@field public bBox table {min: Vector4, max: Vector4}
----@field public instanceData table
+---@field public instanceData table Default data for each changed component, on a per app basis
+---@field public instanceDataChanges table Changes to the default data, regardless of app (Matched by ID)
 local entity = setmetatable({}, { __index = spawnable })
 
 function entity:new()
@@ -29,6 +30,7 @@ function entity:new()
     o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
 
     o.instanceData = {}
+    o.instanceDataChanges = {}
 
     setmetatable(o, { __index = self })
    	return o
@@ -51,16 +53,42 @@ function entity:loadSpawnData(data, position, rotation)
     self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
 end
 
-function entity:onAssemble(entity)
-    spawnable.onAssemble(self, entity)
+local function assembleInstanceData(instanceDataPart, instanceData)
+    for key, data in pairs(instanceDataPart) do
+        instanceData[key] = data
+    end
+end
 
+function entity:loadInstanceData(entity)
     for _, component in pairs(entity:GetComponents()) do
-        for _, data in pairs(utils.deepcopy(self.instanceData)) do
-            if data.id == tostring(CRUIDToHash(component.id)):gsub("ULL", "") then
+        for key, data in pairs(utils.deepcopy(self.instanceDataChanges)) do
+            if key == tostring(CRUIDToHash(component.id)):gsub("ULL", "") then
+
+                local defaultData = nil
+
+                for _, entry in pairs(self.instanceData) do
+                    if entry.id == key then
+                        defaultData = entry
+                        break
+                    end
+                end
+
+                if not defaultData then
+                    defaultData = red.redDataToJSON(component)
+                    table.insert(self.instanceData, defaultData)
+                end
+
+                assembleInstanceData(data, defaultData)
                 red.JSONToRedData(data, component)
             end
         end
     end
+end
+
+function entity:onAssemble(entity)
+    spawnable.onAssemble(self, entity)
+
+    self:loadInstanceData(entity)
 
     cache.tryGet(self.spawnData .. "_bBox", self.spawnData .. "_meshes")
     .notFound(function (task)
@@ -94,6 +122,7 @@ end
 function entity:save()
     local data = spawnable.save(self)
     data.instanceData = self.instanceData
+    data.instanceDataChanges = self.instanceDataChanges
 
     return data
 end
@@ -122,7 +151,7 @@ function entity:draw()
     ImGui.Separator()
     ImGui.Spacing()
 
-    style.pushGreyedOut(#self.apps == 0)
+    style.pushGreyedOut(#self.apps == 0 or not self:isSpawned())
 
     local list = self.apps
 
@@ -132,17 +161,19 @@ function entity:draw()
 
     ImGui.SetNextItemWidth(150)
     local index, changed = ImGui.Combo("##app", self.appIndex, list, #list)
-    if changed and #self.apps > 0 then
+    if changed and #self.apps > 0 and self:isSpawned() then
         self.appIndex = index
         self.app = self.apps[self.appIndex + 1]
 
         local entity = self:getEntity()
 
+        self.instanceData = {}
+
         if entity then
-            entity:ScheduleAppearanceChange(self.app)
+            self:respawn()
         end
     end
-    style.popGreyedOut(#self.apps == 0)
+    style.popGreyedOut(#self.apps == 0 or not self:isSpawned())
 end
 
 local function copyAndPrepareData(data, index)
@@ -169,14 +200,27 @@ local function copyAndPrepareData(data, index)
     return copy
 end
 
+--exEntitySpawner.Spawn("base\\worlds\\03_night_city\\sectors\\se1\\loc_q103_ghost_town\\interior_wall_lamp_a_3_q103.ent", GetPlayer():GetWorldTransform())
+
 function entity:export(index, length)
     local data = spawnable.export(self)
 
-    if #self.instanceData > 0 then
+    if utils.tableLength(self.instanceDataChanges) > 0 then
         local dict = {}
 
-        for key, data in pairs(self.instanceData) do
-            dict[tostring(key - 1)] = data.id
+        local i = 0
+        for key, _ in pairs(self.instanceDataChanges) do
+            dict[tostring(i)] = key
+            i = i + 1
+        end
+
+        local combinedData = {}
+
+        for _, data in pairs(utils.deepcopy(self.instanceData)) do
+            if self.instanceDataChanges[data.id] then
+                assembleInstanceData(self.instanceDataChanges[data.id], data)
+                table.insert(combinedData, data)
+            end
         end
 
         local baseHandle = length + 10 + index * 25 -- 10 offset to last handle of nodeData, 25 handleIDs per entity for instance data
@@ -193,7 +237,7 @@ function entity:export(index, length)
                         ["Sections"] = 6,
                         ["CruidIndex"] = -1,
                         ["CruidDict"] = dict,
-                        ["Chunks"] = copyAndPrepareData(self.instanceData, { baseHandle + 1 })
+                        ["Chunks"] = copyAndPrepareData(combinedData, { baseHandle + 1 })
                     }
                 }
             }

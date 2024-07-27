@@ -64,10 +64,6 @@ end
 function spawnable:spawn()
     if self:isSpawned() then return end
 
-    local transform = WorldTransform.new()
-    transform:SetOrientation(self.rotation:ToQuat())
-    transform:SetPosition(self.position)
-
     local spec = StaticEntitySpec.new()
     spec.templatePath = self.spawnData
     spec.position = self.position

@@ -83,7 +83,7 @@ local function getComponentOffset(component)
     return offset
 end
 
-local function shouldUseMesh(component)
+function builder.shouldUseMesh(component)
     local enabled = component:IsEnabled()
     local isMesh = component:IsA("entMeshComponent") or component:IsA("entSkinnedMeshComponent")
     local ignore = false
@@ -108,7 +108,7 @@ function builder.getEntityBBox(entity, callback)
     local meshesTask = task:new()
 
     for _, component in ipairs(components) do
-        if shouldUseMesh(component) then
+        if builder.shouldUseMesh(component) then
             local path = ResRef.FromHash(component.mesh.hash):ToString()
             if path == "" then
                 path = tostring(component.mesh.hash)

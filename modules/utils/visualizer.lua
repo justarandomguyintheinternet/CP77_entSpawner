@@ -9,12 +9,29 @@ local previewComponentNames = {
 }
 
 local function addMesh(entity, name, mesh, scale, app, enabled)
+    local parent = nil
+    for _, component in pairs(entity:GetComponents()) do
+        if component:IsA("entMeshComponent") then
+            parent = component
+            break
+        end
+    end
+    if not parent then parent = entity:GetComponents()[1] end
+
     local component = entMeshComponent.new()
     component.name = name
     component.mesh = ResRef.FromString(mesh)
     component.visualScale = ToVector3(scale)
     component.meshAppearance = app
     component.isEnabled = enabled
+
+    -- Bind to something, to avoid weird bug where other components would lose their localTransform
+    if parent then
+        local parentTransform = entHardTransformBinding.new()
+        parentTransform.bindName = parent.name.value
+        component.parentTransform = parentTransform
+    end
+
     entity:AddComponent(component)
 end
 
