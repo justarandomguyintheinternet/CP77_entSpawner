@@ -163,7 +163,7 @@ local lightComponentNames = {
 local function setInstanceDataMesh(entity, propData, spawnable)
     for _, component in pairs(entity:GetComponents()) do
         if entityBuilder.shouldUseMesh(component) and component:IsA("entMeshComponent") then
-            local default = red.redDataToJSON(entity:FindComponentByName(component.name))
+            local default = red.redDataToJSON(component)
             table.insert(spawnable.instanceData, default)
 
             local change = {}
@@ -180,7 +180,7 @@ local function setInstanceDataMesh(entity, propData, spawnable)
                 }
             end
 
-            spawnable.instanceDataChanges[tostring(CRUIDToHash(entity:FindComponentByName(component.name).id)):gsub("ULL", "")] = change
+            spawnable.instanceDataChanges[tostring(CRUIDToHash(component.id)):gsub("ULL", "")] = change
         end
     end
 end

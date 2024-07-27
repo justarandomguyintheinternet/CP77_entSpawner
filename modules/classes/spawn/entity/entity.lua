@@ -200,8 +200,6 @@ local function copyAndPrepareData(data, index)
     return copy
 end
 
---exEntitySpawner.Spawn("base\\worlds\\03_night_city\\sectors\\se1\\loc_q103_ghost_town\\interior_wall_lamp_a_3_q103.ent", GetPlayer():GetWorldTransform())
-
 function entity:export(index, length)
     local data = spawnable.export(self)
 
