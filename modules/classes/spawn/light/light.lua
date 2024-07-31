@@ -213,7 +213,8 @@ function light:export()
         color = {
             ["Red"] = math.floor(self.color[1] * 255),
             ["Green"] = math.floor(self.color[2] * 255),
-            ["Blue"] = math.floor(self.color[3] * 255)
+            ["Blue"] = math.floor(self.color[3] * 255),
+            ["Alpha"] = 255
         },
         enableLocalShadows = self.localShadows and 1 or 0,
         flicker = {

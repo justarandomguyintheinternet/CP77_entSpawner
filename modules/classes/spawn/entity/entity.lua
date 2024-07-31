@@ -66,7 +66,7 @@ function entity:loadInstanceData(entity)
 
                 local defaultData = nil
 
-                for _, entry in pairs(self.instanceData) do
+                for _, entry in pairs(utils.deepcopy(self.instanceData)) do
                     if entry.id == key then
                         defaultData = entry
                         break
@@ -75,7 +75,7 @@ function entity:loadInstanceData(entity)
 
                 if not defaultData then
                     defaultData = red.redDataToJSON(component)
-                    table.insert(self.instanceData, defaultData)
+                    table.insert(self.instanceData, utils.deepcopy(defaultData))
                 end
 
                 assembleInstanceData(data, defaultData)
