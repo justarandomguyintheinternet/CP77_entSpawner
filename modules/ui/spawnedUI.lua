@@ -4,7 +4,7 @@ local group = require("modules/classes/spawn/group")
 local settings = require("modules/utils/settings")
 
 ---@class spawnedUI
----@field elements table {element}
+---@field elements element[]
 ---@field filter string
 ---@field newGroupName string
 ---@field groups table {string}
@@ -41,6 +41,20 @@ function spawnedUI.spawnNewObject(entry, class, parent)
     new:spawn()
     table.insert(spawnedUI.elements, new)
     return new
+end
+
+function spawnedUI.cachePaths()
+    spawnUI.gropus = {}
+
+    for _, entry in pairs(spawnedUI.elements) do
+        if entry.isNode then
+
+        end
+    end
+end
+
+function spawnUI.getNodes(root)
+
 end
 
 function spawnedUI.getGroups()
@@ -111,12 +125,14 @@ function spawnedUI.draw()
     ImGui.Separator()
     ImGui.Spacing()
 
-    local _, wHeight = GetDisplayResolution()
-    ImGui.BeginChild("spawnedUI", spawnedUI.getWidth(), wHeight - wHeight * 0.175)
+    local _, height = GetDisplayResolution()
+    height = height - height * 0.175
+    ImGui.BeginChild("spawnedUI", math.min(1000, spawnedUI.getWidth()), height, false, ImGuiWindowFlags.HorizontalScrollbar )
 
     for _, f in pairs(spawnedUI.elements) do
         if spawnedUI.filter == "" then
             f:tryMainDraw()
+            -- f:draw(true)
         else
             if (f.name:lower():match(spawnedUI.filter:lower())) ~= nil then
                 if f.type == "object" then
@@ -124,6 +140,7 @@ function spawnedUI.draw()
                         ImGui.Unindent(35)
                     end
                     f:draw()
+                    -- f:draw(false)
                     if f.parent ~= nil then
                         ImGui.Indent(35)
                     end
@@ -135,35 +152,8 @@ function spawnedUI.draw()
     ImGui.EndChild()
 end
 
-function spawnedUI.getAllObjects()
-    local allObjects = {}
-    for _, e in pairs(spawnedUI.elements) do
-        if e.type == "object" then
-            table.insert(allObjects, e)
-        else
-            for _, obj in pairs(e:getObjects()) do
-                table.insert(allObjects, obj)
-            end
-        end
-    end
-    return allObjects
-end
-
-function spawnedUI.getHeight()
-    local y = 0
-    for _, e in pairs(spawnedUI.elements) do
-        if e.parent == nil then
-            y = e:getHeight(y)
-        end
-    end
-
-    local _, wHeight = GetDisplayResolution()
-    if spawnedUI.filter ~= "" then y = wHeight - 150 end
-    return y
-end
-
 function spawnedUI.getWidth()
-    local x = 0
+    local x = 650
     for _, e in pairs(spawnedUI.elements) do
         if e.parent == nil then
             if e.type == "object" then
