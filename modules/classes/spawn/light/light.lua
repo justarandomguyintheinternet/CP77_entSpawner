@@ -227,7 +227,8 @@ function light:export()
         outerAngle = self.outerAngle,
         radius = self.radius,
         type = self.lightTypes[self.lightType + 1],
-        allowDistantLight = 0
+        allowDistantLight = 0,
+        lightChannel = "LC_Channel1, LC_Channel2, LC_Channel3, LC_Channel4, LC_Channel5, LC_Channel6, LC_Channel7, LC_Channel8, LC_ChannelWorld"
     }
 
     return data

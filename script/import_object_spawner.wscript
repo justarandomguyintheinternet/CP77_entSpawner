@@ -8,7 +8,7 @@ import * as Logger from 'Logger.wscript';
 
 const header = {
   "Header": {
-    "WolvenKitVersion": "8.13.0",
+    "WolvenKitVersion": "8.14.1",
     "WKitJsonVersion": "0.0.8",
     "DataType": "CR2W",
   },
@@ -101,13 +101,15 @@ const insertNode = (sector, node) => {
 	// Hash for interactivity
 	nodeData.QuestPrefabRefHash.$value = wkit.HashString(JSON.stringify(nodeData), "fnv1a64").toString()
 	
+	// Debug name for wkit
+	worldNode.debugName.$value = node.name || ""
+
 	sector.Data.RootChunk.nodeData.Data.push(nodeData)
 	
 	let worldNode = JSON.parse(wkit.CreateInstanceAsJSON(node.type))
 	
+	sortInstanceData(node.data)
 	deepCopy(node.data, worldNode)
-
-	worldNode.debugName.$value = node.name || ""
 
 	sector.Data.RootChunk.nodes.push({HandleId : sector.Data.RootChunk.nodes.length.toString() , Data : worldNode})
 }
@@ -140,6 +142,22 @@ const addSectorToBlock = (block, info, root) => {
 	descriptor.data.DepotPath.$value = `${root}/sectors/${info.name}.streamingsector`
 	
 	block.Data.RootChunk.descriptors.push(descriptor)
+}
+
+const sortInstanceData = (data) => {
+	if (data["instanceData"]) {
+		const instanceDataSorted = []
+
+		for (const dictKey in data["instanceData"]["Data"]["buffer"]["Data"]["CruidDict"]) {
+			for (const dataEntry of data["instanceData"]["Data"]["buffer"]["Data"]["Chunks"]) {
+				if (dataEntry["id"] === data["instanceData"]["Data"]["buffer"]["Data"]["CruidDict"][dictKey]) {
+					instanceDataSorted.push(dataEntry)
+				}
+			}
+		}
+
+		data["instanceData"]["Data"]["buffer"]["Data"]["Chunks"] = instanceDataSorted
+	}
 }
 
 //TODO: Put these in a list

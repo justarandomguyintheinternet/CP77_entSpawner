@@ -127,39 +127,6 @@ local function extractPropData(prop)
     return { pos = pos, rot = rot, scale = scale, path = prop.template_path, app = prop.app, uid = prop.uid, name = prop.name }
 end
 
-local lightComponentNames = {
-    "Light0275",
-    "Light7460",
-    "Light5050",
-    "Light1783",
-    "Light5638",
-    "amm_light",
-    "Light5520",
-    "Light7161",
-    "Light0034",
-    "Light2702",
-    "Light1460",
-    "Light6337",
-    "Light2103",
-    "Light6270",
-    "Light5424",
-    "Light7002",
-    "L_Main",
-    "Light6234",
-    "LT_Point",
-    "LT_Spot",
-    "Light6765",
-    "Light4716",
-    "Light_Main8854",
-    "Light_Main",
-    "Light",
-    "Light_Glow",
-    "head_light_left_01",
-    "head_light_right_01",
-    "Mesh4713",
-    "Light_DistantLight"
-}
-
 local function setInstanceDataMesh(entity, propData, spawnable)
     for _, component in pairs(entity:GetComponents()) do
         if entityBuilder.shouldUseMesh(component) and component:IsA("entMeshComponent") then
@@ -187,7 +154,7 @@ end
 
 local function setInstanceDataLight(entity, lightData, spawnable)
     for _, component in pairs(entity:GetComponents()) do
-        if component:IsA("gameLightComponent") and utils.has_value(lightComponentNames, component.name.value) then
+        if component:IsA("gameLightComponent") then
             local data = red.redDataToJSON(component)
             local angles = loadstring("return " .. lightData.angles, "")()
             local color = loadstring("return " .. lightData.color, "")()
