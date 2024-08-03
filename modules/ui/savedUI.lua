@@ -116,7 +116,7 @@ function savedUI.draw(spawner)
     style.spacedSeparator()
 
     local _, wHeight = GetDisplayResolution()
-    ImGui.BeginChild("savedUI", 0, math.min(savedUI.getHeight(), wHeight - 150))
+    ImGui.BeginChild("savedUI", 0, math.min(savedUI.getHeight(), wHeight - 250))
 
     for _, file in pairs(dir("data/objects")) do
         if file.name:match("^.+(%..+)$") == ".json" then
@@ -159,13 +159,20 @@ function savedUI.drawGroup(group, spawner)
     CPS.colorBegin("Border", savedUI.color.group)
     CPS.colorBegin("Separator", savedUI.color.group)
 
-    ImGui.BeginChild("group_" .. group.name, savedUI.box.group.x - ImGui.GetStyle().ScrollbarSize, getGroupHeight(), true)
+    local pPos = Vector4.new(0, 0, 0, 0)
+    if GetPlayer() then
+        pPos = GetPlayer():GetWorldPosition()
+    end
+    local posString = ("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(group.pos.x, group.pos.y, group.pos.z, ToVector4(group.pos):Distance(pPos))
+
+    local buttonsX = ImGui.CalcTextSize("SpawnLoadTP to posAdd to ExportDelete") + 4 * ImGui.GetStyle().ItemSpacing.x + 10 * ImGui.GetStyle().FramePadding.x + 2 * ImGui.GetStyle().WindowPadding.x
+    ImGui.BeginChild("group_" .. group.name, math.max(ImGui.GetFontSize() * 20, buttonsX), getGroupHeight(), true)
 
     if group.newName == nil then group.newName = group.name end
 
     style.pushGreyedOut(utils.hasIndex(savedUI.spawned, group.name))
 
-    ImGui.PushItemWidth(300)
+    ImGui.PushItemWidth(math.max(ImGui.GetFontSize() * 20, buttonsX) * 2/3)
     group.newName = ImGui.InputTextWithHint('##Name', 'Name...', group.newName, 100)
     ImGui.PopItemWidth()
 
@@ -183,11 +190,7 @@ function savedUI.drawGroup(group, spawner)
 
     style.spacedSeparator()
 
-    local pPos = Vector4.new(0, 0, 0, 0)
-    if GetPlayer() then
-        pPos = GetPlayer():GetWorldPosition()
-    end
-    ImGui.Text(("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(group.pos.x, group.pos.y, group.pos.z, ToVector4(group.pos):Distance(pPos)))
+    ImGui.Text(posString)
 
     style.spacedSeparator()
 
@@ -251,13 +254,21 @@ function savedUI.drawObject(obj, spawner)
     CPS.colorBegin("Border", savedUI.color.object)
     CPS.colorBegin("Separator", savedUI.color.object)
 
-    ImGui.BeginChild("group_" .. obj.name, savedUI.box.object.x - ImGui.GetStyle().ScrollbarSize, getObjectHeight(), true)
+    local pPos = Vector4.new(0, 0, 0, 0)
+    if GetPlayer() then
+        pPos = GetPlayer():GetWorldPosition()
+    end
+    local posString = ("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(obj.spawnable.position.x, obj.spawnable.position.y, obj.spawnable.position.z, ToVector4(obj.spawnable.position):Distance(pPos))
+
+    local textX = ImGui.CalcTextSize(posString) + 2 * ImGui.GetStyle().WindowPadding.x
+    local buttonsX = ImGui.CalcTextSize("SpawnLoadTP to posDelete") + 3 * ImGui.GetStyle().ItemSpacing.x + 8 * ImGui.GetStyle().FramePadding.x + 2 * ImGui.GetStyle().WindowPadding.x
+    ImGui.BeginChild("group_" .. obj.name, math.max(buttonsX, ImGui.GetFontSize() * 20, textX), getObjectHeight(), true)
 
     if obj.newName == nil then obj.newName = obj.name end
 
     style.pushGreyedOut(utils.hasIndex(savedUI.spawned, obj.name))
 
-    ImGui.PushItemWidth(300)
+    ImGui.PushItemWidth(math.max(buttonsX, ImGui.GetFontSize() * 20) * 2/3)
     obj.newName = ImGui.InputTextWithHint('##Name', 'Name...', obj.newName, 100)
     ImGui.PopItemWidth()
 
@@ -275,11 +286,7 @@ function savedUI.drawObject(obj, spawner)
 
     style.spacedSeparator()
 
-    local pPos = Vector4.new(0, 0, 0, 0)
-    if GetPlayer() then
-        pPos = GetPlayer():GetWorldPosition()
-    end
-    ImGui.Text(("Position: X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(obj.spawnable.position.x, obj.spawnable.position.y, obj.spawnable.position.z, ToVector4(obj.spawnable.position):Distance(pPos)))
+    ImGui.Text(posString)
     ImGui.Text("Type: " .. obj.spawnable.dataType)
 
     style.spacedSeparator()
