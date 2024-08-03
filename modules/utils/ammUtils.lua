@@ -92,8 +92,12 @@ local function convertLight(propData, data)
         spawnData.lightType = 1
     end
 
+    local fixedRotation = EulerAngles.new(-90.23202, -65.13491, -90.25572)
+    local fixedPosition = Vector4.new(0.061408997, -0.05025482, -0.21749115, 1)
+    fixedPosition = propData.rot:ToQuat():Transform(fixedPosition)
+
     local light = require("modules/classes/spawn/light/light"):new()
-    light:loadSpawnData(spawnData, propData.pos, propData.rot)
+    light:loadSpawnData(spawnData, utils.addVector(propData.pos, fixedPosition), utils.addEuler(fixedRotation, propData.rot))
 
     return light
 end

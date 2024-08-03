@@ -63,6 +63,8 @@ function record:update()
     if not self:isSpawned() then return end
 
     local handle = self:getEntity()
+    if not handle then return end
+
     if handle:GetClassName().value == "NPCPuppet" then
         self:despawn()
         self:spawn()
