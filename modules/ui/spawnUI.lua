@@ -75,9 +75,9 @@ function spawnUI.loadSpawnData(spawner)
             local variantInstance = variant:new()
             local info = { node = variantInstance.node, description = variantInstance.description, previewNote = variantInstance.previewNote }
             if variantInstance.spawnListType == "list" then
-                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant, info = info }
+                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant, info = info, isPaths = true }
             else
-                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant, info = info }
+                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant, info = info, isPaths = false }
             end
         end
     end
@@ -115,7 +115,11 @@ function spawnUI.updateFilter()
 
     spawnUI.filteredList = {}
     for _, data in pairs(spawnUI.getActiveSpawnList().data) do
-        if (data.name:lower():match(spawnUI.filter:lower())) ~= nil then
+        local name = data.name
+        if spawnUI.getActiveSpawnList().isPaths and settings.spawnUIOnlyNames then
+            name = utils.getFileName(data.name)
+        end
+        if (name:lower():match(spawnUI.filter:lower())) ~= nil then
             table.insert(spawnUI.filteredList, data)
         end
     end
@@ -160,6 +164,15 @@ function spawnUI.draw()
     settings.spawnNewSortAlphabetical, changed = ImGui.Checkbox("Sort alphabetically", settings.spawnNewSortAlphabetical)
     if changed then
         settings.save()
+    end
+
+    if spawnUI.getActiveSpawnList().isPaths then
+        ImGui.SameLine()
+        settings.spawnUIOnlyNames, changed = ImGui.Checkbox("Strip paths", settings.spawnUIOnlyNames)
+        if changed then
+            spawnUI.refresh()
+        end
+        style.tooltip("Only show the name of the file, without the full path")
     end
 
     style.spacedSeparator()
@@ -237,7 +250,12 @@ function spawnUI.draw()
                 isSpawned = true
             end
 
-            if ImGui.Button(entry.name) then
+            local buttonText = entry.name
+            if spawnUI.getActiveSpawnList().isPaths and settings.spawnUIOnlyNames then
+                buttonText = utils.getFileName(entry.name)
+            end
+
+            if ImGui.Button(buttonText) then
                 local parent = nil
                 if spawnUI.selectedGroup ~= 0 then
                     parent = spawnUI.spawner.baseUI.spawnedUI.groups[spawnUI.selectedGroup + 1].tab
@@ -282,7 +300,13 @@ end
 
 function spawnUI.sort()
     if settings.spawnNewSortAlphabetical then
-        table.sort(spawnUI.getActiveSpawnList().data, function(a, b) return a.name:lower() < b.name:lower() end)
+        table.sort(spawnUI.getActiveSpawnList().data, function(a, b)
+            if spawnUI.getActiveSpawnList().isPaths and settings.spawnUIOnlyNames then
+                return utils.getFileName(a.name) < utils.getFileName(b.name)
+            else
+                return a.name < b.name
+            end
+        end)
     end
 end
 

@@ -299,4 +299,8 @@ function miscUtils.log(...)
     print(str)
 end
 
+function miscUtils.getFileName(path)
+    return path:match("[^/\\]+$")
+end
+
 return miscUtils

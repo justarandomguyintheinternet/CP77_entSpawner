@@ -31,7 +31,10 @@ function element:new(sUI)
 
 	o.parent = nil
     o.childs = {}
+	o.expandable = false
 	o.selectedGroup = -1
+
+	o.icon = ""
 
 	o.type = "element"
 	o.color = {0, 255, 0}
