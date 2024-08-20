@@ -2,10 +2,20 @@
 
 local style = {
     mutedColor = 0xFFA5A19B,
+    extraMutedColor = 0x96A5A19B,
+    highlightColor = 0xFFDCD8D1,
     elementIndent = 35,
     draggedColor = 0xFF00007F,
     targetedColor = 0xFF00007F,
 }
+
+local initialized = false
+
+function style.initialize()
+    -- if initialized then return end
+    style.viewSize = ImGui.GetFontSize() / 15
+    initialized = true
+end
 
 function style.pushGreyedOut(state)
     if not state then return end
@@ -18,15 +28,46 @@ function style.pushGreyedOut(state)
     ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, 0xff777777)
     ImGui.PushStyleColor(ImGuiCol.FrameBgActive, 0xff777777)
 end
+
 function style.popGreyedOut(state)
     if not state then return end
 
     ImGui.PopStyleColor(6)
 end
 
+function style.pushStyleColor(state, style, ...)
+    if not state then return end
+
+    ImGui.PushStyleColor(style, ...)
+end
+
+---@param state boolean
+---@param count number?
+function style.popStyleColor(state, count)
+    if not state then return end
+
+    ImGui.PopStyleColor(count or 1)
+end
+
 function style.tooltip(text)
     if ImGui.IsItemHovered() then
         ImGui.SetTooltip(text)
+    end
+end
+
+function style.setCursorRelative(x, y)
+    local xC, yC = ImGui.GetMousePos()
+    ImGui.SetNextWindowPos(xC + x * style.viewSize, yC + y * style.viewSize, ImGuiCond.Always)
+end
+
+function style.lightToolTip(text)
+    if ImGui.IsItemHovered() then
+        local x, y = ImGui.GetMousePos()
+        ImGui.SetNextWindowPos(x + 5 * style.viewSize, y + 5 * style.viewSize, ImGuiCond.Always)
+        if ImGui.Begin("##tooltip", ImGuiWindowFlags.NoResize + ImGuiWindowFlags.NoMove + ImGuiWindowFlags.NoTitleBar + ImGuiWindowFlags.NoBackground) then
+            style.mutedText(text)
+            ImGui.End()
+        end
     end
 end
 
@@ -84,9 +125,20 @@ function style.sectionHeaderEnd(noSpacing)
 end
 
 function style.mutedText(text)
-    ImGui.PushStyleColor(ImGuiCol.Text, style.mutedColor)
+    style.styledText(text, style.mutedColor)
+end
+
+---@param text string
+---@param color number|table?
+---@param size number?
+function style.styledText(text, color, size)
+    style.pushStyleColor(color ~= nil, ImGuiCol.Text, color)
+    ImGui.SetWindowFontScale(size or 1)
+
     ImGui.Text(text)
-    ImGui.PopStyleColor()
+
+    style.popStyleColor(color ~= nil)
+    ImGui.SetWindowFontScale(1)
 end
 
 return style

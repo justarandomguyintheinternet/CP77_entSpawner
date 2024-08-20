@@ -327,7 +327,7 @@ function object:drawGroup()
 end
 
 function object:setSelectedGroupByPath(path)
-    self.sUI.getGroups()
+    self.sUI.cachePaths()
 
     local i = 0
     for _, group in pairs(self.sUI.groups) do

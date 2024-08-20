@@ -17,7 +17,7 @@ function miscUtils.deepcopy(origin)
     return copy
 end
 
----Returns the index of a value in a table, if not found 1
+---Returns the index of a value in a table, if not found -1
 ---@param table table
 ---@param value any
 ---@return integer
@@ -26,7 +26,7 @@ function miscUtils.indexValue(table, value)
     for k,v in pairs(table) do
         index[v]=k
     end
-    return index[value] or 1
+    return index[value] or -1
 end
 
 ---@param tab table

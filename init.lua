@@ -19,6 +19,8 @@ local builder = require("modules/utils/entityBuilder")
 local Cron = require("modules/utils/Cron")
 local cache = require("modules/utils/cache")
 local drag = require("modules/utils/dragHelper")
+local style = require("modules/ui/style")
+local history = require("modules/utils/history")
 
 ---@class spawner
 ---@field runtimeData table {cetOpen: boolean, inGame: boolean, inMenu: boolean}
@@ -60,12 +62,12 @@ function spawner:new()
         self.baseUI.spawnUI.filter = settings.spawnUIFilter
         self.baseUI.spawnUI.loadSpawnData(self)
 
-        self.baseUI.favUI.load(self)
         self.baseUI.spawnedUI.spawner = self
-        self.baseUI.spawnedUI.getGroups()
+        self.baseUI.spawnedUI.cachePaths()
         self.baseUI.savedUI.reload()
 
         self.baseUI.exportUI.init()
+        history.spawnedUI = self.baseUI.spawnedUI
 
         Observe('RadialWheelController', 'OnIsInMenuChanged', function(_, isInMenu)
             self.runtimeData.inMenu = isInMenu
@@ -96,6 +98,8 @@ function spawner:new()
     end)
 
     registerForEvent("onDraw", function()
+        style.initialize()
+
         if self.runtimeData.cetOpen then
             drag.draw()
             self.baseUI.draw(self)

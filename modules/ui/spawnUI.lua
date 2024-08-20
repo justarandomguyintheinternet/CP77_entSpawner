@@ -148,8 +148,8 @@ function spawnUI.draw()
     end
 
     local groups = {}
-	for _, group in pairs(spawnUI.spawner.baseUI.spawnedUI.groups) do
-		table.insert(groups, group.name)
+	for _, group in pairs(spawnUI.spawner.baseUI.spawnedUI.containerPaths) do
+		table.insert(groups, group.path)
 	end
 
     if spawnUI.selectedGroup >= #groups then

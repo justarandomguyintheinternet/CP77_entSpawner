@@ -116,7 +116,7 @@ function savedUI.draw(spawner)
     style.spacedSeparator()
 
     local _, wHeight = GetDisplayResolution()
-    ImGui.BeginChild("savedUI", 0, math.min(savedUI.getHeight(), wHeight - 250))
+    ImGui.BeginChild("savedUI")
 
     for _, file in pairs(dir("data/objects")) do
         if file.name:match("^.+(%..+)$") == ".json" then
@@ -194,27 +194,10 @@ function savedUI.drawGroup(group, spawner)
 
     style.spacedSeparator()
 
-    -- group.autoLoad, changed = ImGui.Checkbox("Auto Spawn", group.autoLoad)
-    -- if changed then config.saveFile("data/objects/" .. group.name .. ".json", group) end
-    -- ImGui.SameLine()
-    -- ImGui.PushItemWidth(100)
-    -- group.loadRange, changed = ImGui.InputFloat("Auto Spawn Range", group.loadRange, -9999, 9999, "%.1f")
-    -- if changed then config.saveFile("data/objects/" .. group.name .. ".json", group) end
-    -- ImGui.PopItemWidth()
-
-    -- ImGui.Separator()
-
-    if CPS.CPButton("Spawn") then
-        local g = gr:new(spawner.baseUI.spawnedUI)
-        g:load(group)
-        g:spawn()
-        table.insert(spawner.baseUI.spawnedUI.elements, g)
-    end
-    ImGui.SameLine()
     if CPS.CPButton("Load") then
-        local g = gr:new(spawner.baseUI.spawnedUI)
+        local g = require("modules/classes/spawn/group"):new(spawner.baseUI.spawnedUI)
         g:load(group)
-        table.insert(spawner.baseUI.spawnedUI.elements, g)
+        spawner.baseUI.spawnedUI.addRootElement(g)
     end
     ImGui.SameLine()
     if CPS.CPButton("TP to pos") then
@@ -227,23 +210,6 @@ function savedUI.drawGroup(group, spawner)
     ImGui.SameLine()
     if CPS.CPButton("Delete") then
         savedUI.deleteData(group)
-    end
-
-    if debug then
-        ImGui.SameLine()
-        if CPS.CPButton("TSE") then
-            local g = gr:new(spawner.baseUI.spawnedUI)
-            g:load(group)
-
-            local data = {objs = {}}
-            for _, obj in pairs(g:getObjects()) do
-                table.insert(data.objs, {path = obj.path, pos = utils.fromVector(obj.pos), rot = utils.fromEuler(obj.rot)})
-            end
-            data.pos = utils.fromVector(g:getCenter())
-            data.range = g.loadRange
-
-            config.saveFile("export/" .. g.name .. "_TSE.json", data)
-        end
     end
 
     ImGui.EndChild()
@@ -291,27 +257,10 @@ function savedUI.drawObject(obj, spawner)
 
     style.spacedSeparator()
 
-    -- obj.autoLoad, changed = ImGui.Checkbox("Auto Spawn", obj.autoLoad)
-    -- if changed then config.saveFile("data/objects/" .. obj.name .. ".json", obj) end
-    -- ImGui.SameLine()
-    -- ImGui.PushItemWidth(100)
-    -- obj.loadRange, changed = ImGui.InputFloat("Auto Spawn Range", obj.loadRange, -9999, 9999, "%.1f")
-    -- if changed then config.saveFile("data/objects/" .. obj.name .. ".json", obj) end
-    -- ImGui.PopItemWidth()
-
-    -- ImGui.Separator()
-
-    if CPS.CPButton("Spawn") then
-        local o = object:new(spawner.baseUI.spawnedUI)
-        o:load(obj)
-        o:spawn()
-        table.insert(spawner.baseUI.spawnedUI.elements, o)
-    end
-    ImGui.SameLine()
     if CPS.CPButton("Load") then
         local o = object:new(spawner.baseUI.spawnedUI)
         o:load(obj)
-        table.insert(spawner.baseUI.spawnedUI.elements, o)
+        spawner.baseUI.spawnedUI.addRootElement(o)
     end
     ImGui.SameLine()
     if CPS.CPButton("TP to pos") then

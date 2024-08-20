@@ -1,134 +1,35 @@
-local config = require("modules/utils/config")
 local object = require("modules/classes/spawn/object")
 local utils = require("modules/utils/utils")
 local CPS = require("CPStyling")
 local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
-local drag = require("modules/utils/dragHelper")
+
+local element = require("modules/classes/editor/element")
 
 ---Class for organizing multiple objects and or groups
----@class group
----@field public name string
----@field public childs object[]
----@field public parent group?
----@field public selectedGroup integer
----@field public type string
----@field public color table
----@field public box table {x: number, y: number}
----@field public id integer
----@field public headerOpen boolean
----@field public pos Vector4
----@field public rot EulerAngles
----@field public autoLoad boolean
----@field public loadRange number
----@field public isAutoLoaded boolean
----@field public sUI table
----@field public isUsingSpawnables boolean Signalizes that the groups has been converted from the old format
----@field public beingTargeted boolean
----@field public targetable boolean
----@field public beingDragged boolean
----@field public hovered boolean
-group = {}
+---@class group : element
+local group = setmetatable({}, { __index = element })
 
 function group:new(sUI)
-	local o = {}
+	local o = element.new(self, sUI)
 
 	o.name = "New Group"
-	o.newName = nil
-	o.childs = {}
-	o.parent = nil
-
-	o.selectedGroup = -1
-	o.type = "group"
-	o.color = {0, 255, 0}
-	o.box = {x = 650, y = 142}
-	o.id = math.random(1, 1000000000) -- Id for imgui child rng gods bls have mercy
-	o.headerOpen = settings.headerState
+	o.modulePath = "modules/classes/editor/group"
 
 	o.pos = Vector4.new(0, 0, 0, 0)
     o.rot = EulerAngles.new(0, 0, 0)
-
-	o.autoLoad = false
-	o.loadRange = settings.autoSpawnRange
-	o.isAutoLoaded = false
-
-	o.sUI = sUI
 	o.isUsingSpawnables = true
 
-	o.beingTargeted = false
-    o.targetable = true
-	o.beingDragged = false
-	o.hovered = false
-
-	self.__index = self
-   	return setmetatable(o, self)
+	setmetatable(o, { __index = self })
+   	return o
 end
 
----Loads the data from a given table, recursively building up the tree of child elements
----@param data table {name, childs, type, pos, rot, headerOpen, autoLoad, loadRange}
----@param silent boolean
-function group:load(data, silent)
-	self.name = data.name
+---@override
+function group:load(data)
+	element.load(self, data)
+
 	self.pos = utils.getVector(data.pos)
 	self.rot = utils.getEuler(data.rot)
-	self.headerOpen = data.headerOpen
-	self.autoLoad = data.autoLoad
-	self.loadRange = data.loadRange
-
-	for _, c in pairs(data.childs) do
-		if c.type == "group" then
-			local g = require("modules/classes/spawn/group"):new(self.sUI)
-			g.parent = self
-			g:load(c)
-			table.insert(self.childs, g)
-			if not silent then
-				table.insert(self.sUI.elements, g)
-			end
-		else
-			local o = object:new(self.sUI)
-			o:load(c)
-			o.parent = self
-			table.insert(self.childs, o)
-			if not silent then
-				table.insert(self.sUI.elements, o)
-			end
-		end
-	end
-end
-
----Try to draw as "main group"
-function group:tryMainDraw()
-	if self.parent == nil then
-		self:draw()
-	end
-end
-
----Update file name to new given
----@param name string
-function group:rename(name)
-	name = utils.createFileName(name)
-    os.rename("data/objects/" .. self.name .. ".json", "data/objects/" .. name .. ".json")
-    self.name = name
-	self.newName = name
-	self.sUI.spawner.baseUI.savedUI.reload()
-end
-
-function group:handleDrag()
-	local hovered = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem)
-
-	if hovered and not self.hovered then
-		drag.draggableHoveredIn(self)
-	elseif not hovered and self.hovered then
-		drag.draggableHoveredOut(self)
-	end
-
-	self.hovered = hovered
-end
-
----Callback for when this object gets dropped into another one
-function group:dropIn(target)
-	self:setSelectedGroupByPath(target:getOwnPath())
-	self:moveToSelectedGroup()
 end
 
 ---Draw func if this is just a sub group
@@ -254,65 +155,6 @@ function group:draw()
 end
 
 ---@protected
-function group:drawMoveGroup()
-	local gs = {}
-	for _, g in pairs(self.sUI.groups) do
-		table.insert(gs, g.name)
-	end
-
-	if self.selectedGroup == -1 then
-		self.selectedGroup = utils.indexValue(gs, self:getOwnPath(true)) - 1
-	end
-
-	ImGui.SetNextItemWidth(300)
-	self.selectedGroup = ImGui.Combo("##moveto", self.selectedGroup, gs, #gs)
-	ImGui.SameLine()
-	if ImGui.Button("Move to group", 150, 0) then
-		self:moveToSelectedGroup()
-	end
-end
-
-function group:setSelectedGroupByPath(path)
-    self.sUI.getGroups()
-
-    local i = 0
-    for _, group in pairs(self.sUI.groups) do
-        if group.name == path then
-            self.selectedGroup = i
-            break
-        end
-        i = i + 1
-    end
-end
-
-function group:moveToSelectedGroup()
-	if not self:verifyMove(self.sUI.groups[self.selectedGroup + 1].tab) then
-		return
-	end
-
-	if self.selectedGroup ~= 0 then
-		if self.parent == nil then
-			os.remove("data/objects/" .. self.name .. ".json")
-			self.sUI.spawner.baseUI.savedUI.reload()
-		end
-		if self.parent ~= nil then
-			utils.removeItem(self.parent.childs, self)
-		end
-		self.parent = self.sUI.groups[self.selectedGroup + 1].tab
-		table.insert(self.sUI.groups[self.selectedGroup + 1].tab.childs, self)
-		self:saveAfterMove()
-	else
-		if self.parent ~= nil then
-			utils.removeItem(self.parent.childs, self)
-			self.parent:saveAfterMove()
-		end
-
-		self.parent = nil
-		self:save()
-	end
-end
-
----@protected
 function group:drawPos()
 	ImGui.PushItemWidth(150)
 	local x = self.pos.x
@@ -429,18 +271,6 @@ function group:despawn()
 	end
 end
 
-function group:remove()
-	self:despawn()
-	if self.parent ~= nil then
-		utils.removeItem(self.parent.childs, self)
-		self.parent:saveAfterMove()
-	end
-	for _, c in pairs(self:getObjects()) do
-		utils.removeItem(self.sUI.elements, c)
-	end
-	utils.removeItem(self.sUI.elements, self)
-end
-
 function group:update(vec)
 	for _, obj in pairs(self:getObjects()) do
 		obj:setPosition(utils.addVector(obj:getPosition(), vec))
@@ -525,132 +355,6 @@ function group:getObjects()
 		end
 	end
 	return objects
-end
-
-function group:verifyMove(to) -- Make sure group doesnt get moved into child
-	local allowed = true
-	local childs = self:getPath()
-	for _, c in pairs(childs) do
-		if c.tab == to then
-			allowed = false
-		end
-	end
-
-	if to == self.parent then
-		allowed = false
-	end
-
-	return allowed
-end
-
-function group:getPath() -- Recursive function called from favUI to get all paths to all objects
-	local paths = {}
-	table.insert(paths, {name = self.name, tab = self})
-
-	if #self.childs ~= 0 then
-		for _, c in pairs(self.childs) do
-			if c.type == "group" then
-				local ps = c:getPath()
-				for _, p in pairs(ps) do
-					table.insert(paths, {name = self.name .. "/" .. p.name, tab = p.tab})
-				end
-			end
-		end
-	end
-
-	return paths
-end
-
-function group:save()
-	if self.parent == nil then
-		local data = { isUsingSpawnables = true, name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
-		for _, c in pairs(self.childs) do
-			table.insert(data.childs, c:save())
-		end
-		config.saveFile("data/objects/" .. self.name .. ".json", data)
-		self.sUI.spawner.baseUI.savedUI.reload()
-	else
-		local data = { isUsingSpawnables = true, name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
-		for _, c in pairs(self.childs) do
-			table.insert(data.childs, c:save())
-		end
-		return data
-	end
-end
-
-function group:toTable()
-	local data = { isUsingSpawnables = true, name = self.name, childs = {}, type = self.type, pos = utils.fromVector(self.pos), rot = utils.fromEuler(self.rot), headerOpen = self.headerOpen, autoLoad = self.autoLoad, loadRange = self.loadRange}
-	for _, c in pairs(self.childs) do
-		table.insert(data.childs, c:save())
-	end
-	return data
-end
-
-function group:saveAfterMove()
-	if self.parent == nil then
-		for _, file in pairs(dir("data/objects")) do
-			if file.name:match("^.+(%..+)$") == ".json" then
-				if file.name == self.name .. ".json" then
-					self:save()
-				end
-			end
-		end
-	else
-		self.parent:saveAfterMove()
-	end
-end
-
-function group:getOwnPath(first)
-    if self.parent == nil then
-        if first then
-            return "-- No group --"
-        else
-            return self.name
-        end
-    else
-        if first then
-            return self.parent:getOwnPath()
-        else
-            return tostring(self.parent:getOwnPath() .. "/" .. self.name)
-        end
-    end
-end
-
-function group:getHeight(yy)
-	local y = yy
-	if self.headerOpen then
-		y = y + self.box.y + 30
-		for _, c in pairs(self.childs) do
-			y = c:getHeight(y)
-		end
-		return y
-	else
-		return y + 28
-	end
-end
-
-function group:getWidth(x)
-	if self.headerOpen then
-		if self.parent ~= nil then
-			x = math.max(x, x + 35)
-		else
-			if x ~= self.box.x + 35 then
-				x = math.max(x, x + 35)
-			end
-		end
-		local once = false
-		for _, c in pairs(self.childs) do
-			if c.type == "object" then
-				if not once then
-					x = math.max(x, x + 35)
-				end
-				once = true
-			else
-				x = math.max(x, c:getWidth(x))
-			end
-		end
-	end
-	return x
 end
 
 return group

@@ -20,6 +20,8 @@ local config = require("modules/utils/config")
 ---@field public lastVariants table
 ---@field public spawnUIFilter string
 ---@field public savedUIFilter string
+---@field public windowStates table
+---@field public editorBottomSize integer
 local settingsData = {
     spawnPos = 2,
     spawnDist = 3,
@@ -41,7 +43,9 @@ local settingsData = {
     selectedType = "Entity",
     lastVariants = { Entity = "Template", Lights = "Light", Mesh = "Mesh", Collision = "Collision Shape", ["Deco"] = "Particles"},
     spawnUIFilter = "",
-    savedUIFilter = ""
+    savedUIFilter = "",
+    windowStates = {},
+    editorBottomSize = 200
 }
 
 local settingsFNs = {}
