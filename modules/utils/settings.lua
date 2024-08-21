@@ -14,7 +14,7 @@ local config = require("modules/utils/config")
 ---@field public groupExport boolean
 ---@field public autoSpawnRange number
 ---@field public spawnUIOnlyNames boolean
----@field public editor table {color: integer}
+---@field public editor {color: integer}
 ---@field public colliderColor integer
 ---@field public selectedType string
 ---@field public lastVariants table

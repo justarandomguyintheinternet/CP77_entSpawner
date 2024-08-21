@@ -141,4 +141,15 @@ function style.styledText(text, color, size)
     ImGui.SetWindowFontScale(1)
 end
 
+function style.pushButtonNoBG(push)
+    if push then
+        ImGui.PushStyleColor(ImGuiCol.Button, 0)
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, 1, 1, 1, 0.2)
+        ImGui.PushStyleVar(ImGuiStyleVar.ButtonTextAlign, 0.5, 0.5)
+    else
+        ImGui.PopStyleColor(2)
+        ImGui.PopStyleVar()
+    end
+end
+
 return style

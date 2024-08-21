@@ -11,7 +11,7 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@class mesh : spawnable
 ---@field public apps table
 ---@field public appIndex integer
----@field public scale table {x: number, y: number, z: number}
+---@field public scale {x: number, y: number, z: number}
 ---@field public bBox table {min: Vector4, max: Vector4}
 ---@field public colliderShape integer
 ---@field public scaleLocked boolean

@@ -9,7 +9,8 @@ local maxHistory = 100
 local history = {
     index = 0,
     actions = {},
-    spawnedUI = nil
+    spawnedUI = nil,
+    propBeingEdited = false
 }
 
 function history.getMoveToNewGroup(insert, remove, insertElement)
@@ -81,7 +82,7 @@ function history.getRename(data, current, new)
 end
 
 ---Must be called after the elements are inserted
----@param elements table {element}
+---@param elements element[]|{ path : string, ref : element }[]
 ---@return table
 function history.getInsert(elements)
     local action = history.getRemove(elements)
@@ -93,7 +94,7 @@ function history.getInsert(elements)
 end
 
 ---Must be called before the elements are removed / reparented
----@param elements table {element}
+---@param elements element[]|{ path : string, ref : element }[]
 ---@return table
 function history.getRemove(elements)
     local data = {}

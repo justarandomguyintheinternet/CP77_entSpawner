@@ -40,7 +40,8 @@ spawnedUI = {
     dividerHovered = false,
     dividerDragging = false,
     filteredWidestName = 0,
-    draggingSelected = false
+    draggingSelected = false,
+    draggingThreshold = 0.6
 }
 
 ---Populates paths, containerPaths, selectedPaths and filteredPaths, must be updated each frame
@@ -87,7 +88,7 @@ end
 
 ---Returns all the elements that are not children of any selected element
 ---@param elements {path : string, ref : element}[]
----@return table {element}
+---@return element[]
 function spawnedUI.getRoots(elements)
     local roots = {}
 
@@ -130,12 +131,12 @@ end
 
 ---@protected
 function spawnedUI.multiSelectActive()
-    return ImGui.IsKeyDown(ImGuiKey.LeftCtrl)
+    return ImGui.IsKeyDown(ImGuiKey.Tab)
 end
 
 ---@protected
 function spawnedUI.rangeSelectActive()
-    return ImGui.IsKeyDown(ImGuiKey.LeftShift)
+    return ImGui.IsKeyDown(ImGuiKey.Space)
 end
 
 function spawnedUI.unselectAll()
@@ -183,13 +184,13 @@ end
 ---@protected
 ---@param element element
 function spawnedUI.handleDrag(element)
-    if ImGui.IsItemHovered() and ImGui.IsMouseDragging(0, 0.5) and not spawnedUI.draggingSelected then -- Start dragging
+    if ImGui.IsItemHovered() and ImGui.IsMouseDragging(0, spawnedUI.draggingThreshold) and not spawnedUI.draggingSelected then -- Start dragging
         if not element.selected then
             spawnedUI.unselectAll()
             element.selected = true
         end
         spawnedUI.draggingSelected = true
-    elseif not ImGui.IsMouseDragging(0, 0.5) and ImGui.IsItemHovered() and spawnedUI.draggingSelected then -- Drop on element
+    elseif not ImGui.IsMouseDragging(0, spawnedUI.draggingThreshold) and ImGui.IsItemHovered() and spawnedUI.draggingSelected then -- Drop on element
         spawnedUI.draggingSelected = false
 
         if element:isValidDropTarget(spawnedUI.selectedPaths) and not element.selected then
@@ -267,7 +268,7 @@ function spawnedUI.drawDragWindow()
 
         local x, y = ImGui.GetMousePos()
         ImGui.SetNextWindowPos(x + 10 * style.viewSize, y + 10 * style.viewSize, ImGuiCond.Always)
-        if ImGui.Begin("##drag", ImGuiWindowFlags.NoResize + ImGuiWindowFlags.NoMove + ImGuiWindowFlags.NoTitleBar + ImGuiWindowFlags.NoBackground) then
+        if ImGui.Begin("##drag", ImGuiWindowFlags.NoResize + ImGuiWindowFlags.NoMove + ImGuiWindowFlags.NoTitleBar + ImGuiWindowFlags.NoBackground + ImGuiWindowFlags.AlwaysAutoResize) then
             local text = #spawnedUI.selectedPaths == 1 and spawnedUI.selectedPaths[1].ref.name or (#spawnedUI.selectedPaths .. " elements")
             ImGui.Text(text)
             ImGui.End()
@@ -586,7 +587,7 @@ end
 function spawnedUI.drawHierarchy()
     spawnedUI.elementCount = 0
     spawnedUI.depth = 0
-    spawnedUI.cellPadding = 5 * style.viewSize
+    spawnedUI.cellPadding = 3 * style.viewSize
 
     local _, ySpace = ImGui.GetContentRegionAvail()
     if ySpace - settings.editorBottomSize < 75 * style.viewSize then
@@ -597,7 +598,7 @@ function spawnedUI.drawHierarchy()
     ImGui.BeginChild("##hierarchy", 0, ySpace - settings.editorBottomSize)
 
     -- Start the table
-    ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, 15 * style.viewSize, spawnedUI.cellPadding)
+    ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, 7.5 * style.viewSize, spawnedUI.cellPadding)
     ImGui.PushStyleVar(ImGuiStyleVar.ScrollbarSize, 12 * style.viewSize)
     if ImGui.BeginTable("##hierarchyTable", 1, ImGuiTableFlags.ScrollX or ImGuiTableFlags.NoHostExtendX) then
         if spawnedUI.filter == "" then
@@ -685,7 +686,7 @@ function spawnedUI.drawTop()
                 e1:setParent(e)
     
                 for i = 1, math.random(1, 5) do
-                    local o = require("modules/classes/editor/element"):new(spawnedUI)
+                    local o = require("modules/classes/editor/positionable"):new(spawnedUI)
                     o.expandable = false
                     o.icon = IconGlyphs.LightbulbOn20
                     o.name = "Object"
@@ -721,9 +722,7 @@ function spawnedUI.drawTop()
         spawnedUI.addRootElement(g)
     end
 
-    ImGui.PushStyleColor(ImGuiCol.Button, 0)
-    ImGui.PushStyleColor(ImGuiCol.ButtonHovered, 1, 1, 1, 0.2)
-    ImGui.PushStyleVar(ImGuiStyleVar.ButtonTextAlign, 0.5, 0.5)
+    style.pushButtonNoBG(true)
 
     if ImGui.Button(IconGlyphs.CollapseAllOutline) then
         spawnedUI.root:setHeaderStateRecursive(false)
@@ -765,13 +764,12 @@ function spawnedUI.drawTop()
     if ImGui.IsItemHovered() then style.setCursorRelative(10, 10) end
     style.tooltip(tostring(#history.actions - history.index) .. " actions left")
 
-    ImGui.PopStyleVar()
-    ImGui.PopStyleColor(2)
+    style.pushButtonNoBG(false)
 end
 
 function spawnedUI.drawProperties()
     local _, wy = ImGui.GetContentRegionAvail()
-    ImGui.BeginChild("##properties", 0, wy)
+    ImGui.BeginChild("##properties", 0, wy, false, ImGuiWindowFlags.HorizontalScrollbar)
 
     local nSelected = #spawnedUI.selectedPaths
 
@@ -802,7 +800,7 @@ function spawnedUI.draw()
     spawnedUI.drawProperties()
 
     -- Dropped on not a valid target
-    if spawnedUI.draggingSelected and not ImGui.IsMouseDragging(0, 0.5) then
+    if spawnedUI.draggingSelected and not ImGui.IsMouseDragging(0, spawnedUI.draggingThreshold) then
         spawnedUI.draggingSelected = false
     end
 end

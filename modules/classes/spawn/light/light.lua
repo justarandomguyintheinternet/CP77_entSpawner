@@ -5,7 +5,7 @@ local utils = require("modules/utils/utils")
 
 ---Class for worldStaticLightNode
 ---@class light : spawnable
----@field public color table {r: number, g: number, b: number}
+---@field public color {r: number, g: number, b: number}
 ---@field public intensity number
 ---@field public innerAngle number
 ---@field public outerAngle number

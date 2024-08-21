@@ -7,7 +7,7 @@ local style = require("modules/ui/style")
 ---@field private horizontalFlip boolean
 ---@field private verticalFlip boolean
 ---@field private autoHideDistance number
----@field private scale table {x: number, y: number, z: number}
+---@field private scale {x: number, y: number, z: number}
 ---@field private scaleLocked boolean
 local decal = setmetatable({}, { __index = spawnable })
 

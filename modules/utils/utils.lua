@@ -303,4 +303,16 @@ function miscUtils.getFileName(path)
     return path:match("[^/\\]+$")
 end
 
+function miscUtils.combine(target, data)
+    for _, v in pairs(data) do
+        table.insert(target, v)
+    end
+
+    return target
+end
+
+function miscUtils.isA(object, class)
+    return miscUtils.has_value(object.class, class)
+end
+
 return miscUtils

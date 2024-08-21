@@ -37,7 +37,7 @@ end
 
 ---Creates and attached a box mesh, with the component name "box"
 ---@param entity entEntity
----@param scale table { x = number, y = number, z = number }
+---@param scale { x : number, y : number, z : number }
 ---@param color? string
 function visualizer.addBox(entity, scale, color)
     if not entity then return end
@@ -86,7 +86,7 @@ end
 
 ---Creates and attached the arrow mesh, with the component name "arrows"
 ---@param entity entEntity
----@param scale table { x = number, y = number, z = number }
+---@param scale { x : number, y : number, z : number }
 function visualizer.attachArrows(entity, scale, active, app)
     if not entity then return end
 
@@ -95,7 +95,7 @@ end
 
 ---Updates the scale of the given visualizer mesh
 ---@param entity entEntity
----@param scale table { x = number, y = number, z = number }
+---@param scale { x : number, y : number, z : number }
 ---@param componentName string box|sphere|arrows
 function visualizer.updateScale(entity, scale, componentName)
     if not entity then return end

@@ -15,7 +15,7 @@ local colors = { "red", "green", "blue" }
 ---@field private material integer
 ---@field private preset integer
 ---@field private shapeTypes table
----@field private extents table {x, y, z}
+---@field private extents {x : number, y : number, z : number}
 ---@field private height number
 ---@field private radius number
 ---@field public previewed boolean

@@ -23,7 +23,7 @@ local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 
 ---@class spawner
----@field runtimeData table {cetOpen: boolean, inGame: boolean, inMenu: boolean}
+---@field runtimeData {cetOpen: boolean, inGame: boolean, inMenu: boolean}
 ---@field baseUI baseUI
 spawner = {
     runtimeData = {

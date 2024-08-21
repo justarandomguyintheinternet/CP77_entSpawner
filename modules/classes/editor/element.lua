@@ -7,7 +7,7 @@ local history = require("modules/utils/history")
 ---@field name string
 ---@field newName string
 ---@field parent element
----@field childs table {element}
+---@field childs element[]
 ---@field modulePath string
 ---@field id number
 ---@field headerOpen boolean
@@ -44,6 +44,8 @@ function element:new(sUI)
 
 	o.sUI = sUI
 
+	o.class = { "element" }
+
 	self.__index = self
    	return setmetatable(o, self)
 end
@@ -57,7 +59,7 @@ function element:getModulePathByType(data)
 end
 
 ---Loads the data from a given table, containing the same data as exported during save()
----@param data table {name, childs, headerOpen, modulePath, visible}
+---@param data {name : string, childs : table, headerOpen : boolean, modulePath : string, visible : boolean}
 function element:load(data)
 	self.name = data.name
 	self.headerOpen = data.headerOpen
@@ -82,7 +84,7 @@ end
 
 ---Checks if there is another child which is not entry, with the same name
 ---@param entry element
----@param childs table {element}
+---@param childs element[]
 ---@return boolean
 local function hasChildWithSameName(entry, childs)
 	for _, child in pairs(childs) do
@@ -156,7 +158,7 @@ function element:isRoot(realRoot)
 end
 
 ---Base condition ensuring the target is not contained in a source
----@param paths table {path = string, ref = element}
+---@param paths {path : string, ref : element}[]
 ---@return boolean
 function element:isValidDropTarget(paths)
 	if self.expandable then
@@ -195,13 +197,14 @@ function element:drawName()
 	if ImGui.IsItemDeactivated() then
 		self.editName = false
 		if self.newName == "" then self.newName = self.name return end
+		if self.newName == self.name then return end
 		self:rename(self.newName)
 	end
 end
 
 ---Recursive function to get all elements, including root
 ---@param isRoot boolean? If true, self does not get added to the list
----@return table {path = string, ref = element}
+---@return {path : string, ref : element}[]
 function element:getPathsRecursive(isRoot)
 	local paths = {}
 
@@ -251,9 +254,9 @@ function element:setVisible(state, fromRecursive)
 end
 
 function element:setHiddenByParent(state)
-	if self.hiddenByParent or not self.visible then return end
-
 	self.hiddenByParent = state
+
+	if not self.visible then return end
 
 	for _, child in pairs(self.childs) do
 		child:setHiddenByParent(state)
