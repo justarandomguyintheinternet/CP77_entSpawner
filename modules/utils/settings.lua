@@ -22,6 +22,8 @@ local config = require("modules/utils/config")
 ---@field public savedUIFilter string
 ---@field public windowStates table
 ---@field public editorBottomSize integer
+---@field public gizmoActive boolean
+---@field public gizmoOnSelected boolean
 local settingsData = {
     spawnPos = 2,
     spawnDist = 3,
@@ -45,7 +47,9 @@ local settingsData = {
     spawnUIFilter = "",
     savedUIFilter = "",
     windowStates = {},
-    editorBottomSize = 200
+    editorBottomSize = 200,
+    gizmoActive = true,
+    gizmoOnSelected = false
 }
 
 local settingsFNs = {}

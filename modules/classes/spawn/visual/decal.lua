@@ -106,40 +106,6 @@ function decal:draw()
     ImGui.Spacing()
 
     ImGui.PushItemWidth(150)
-    self.scale.x, changed = ImGui.DragFloat("##xsize", self.scale.x, 0.01, -9999, 9999, "%.3f X Scale")
-    if changed then
-        if self.scaleLocked then
-            self.scale.y = self.scale.x
-            self.scale.z = self.scale.x
-        end
-        self:updateScale()
-    end
-    ImGui.SameLine()
-    self.scale.y, changed = ImGui.DragFloat("##ysize", self.scale.y, 0.01, -9999, 9999, "%.3f Y Scale")
-    if changed then
-        if self.scaleLocked then
-            self.scale.x = self.scale.y
-            self.scale.z = self.scale.y
-        end
-        self:updateScale()
-    end
-    ImGui.SameLine()
-    self.scale.z, changed = ImGui.DragFloat("##zsize", self.scale.z, 0.01, -9999, 9999, "%.3f Depth")
-    if changed then
-        if self.scaleLocked then
-            self.scale.x = self.scale.z
-            self.scale.y = self.scale.z
-        end
-        self:updateScale()
-    end
-
-    ImGui.PopItemWidth()
-
-    ImGui.SameLine()
-    self.scaleLocked = ImGui.Checkbox("Lock Axis", self.scaleLocked)
-    style.tooltip("Locks the X, Y, and Z axis scales together")
-
-    ImGui.PushItemWidth(150)
 
     self.alpha, changed = ImGui.DragFloat("##alpha", self.alpha, 0.01, 0, 100, "%.2f Alpha")
     self:updateFull(ImGui.IsItemDeactivatedAfterEdit())

@@ -50,6 +50,13 @@ function settingsUI.draw()
     settings.rotSteps, changed = ImGui.InputFloat("Rotation controls step size", settings.rotSteps, -9999, 9999, "%.4f")
     if changed then settings.save() end
 
+    settings.gizmoActive, changed = ImGui.Checkbox("Show arrows", settings.gizmoActive)
+    if changed then settings.save() end
+
+    settings.gizmoOnSelected, changed = ImGui.Checkbox("Show arrows when element is selected", settings.gizmoOnSelected)
+    if changed then settings.save() end
+    style.tooltip("Always show the arrows when an element is selected.\nDefault is to only show it when hovering the element or its transform controls.")
+
     style.sectionHeaderEnd()
     style.sectionHeaderStart("COLLIDERS")
 

@@ -152,4 +152,16 @@ function style.pushButtonNoBG(push)
     end
 end
 
+function style.toggleButton(text, state)
+    style.pushStyleColor(not state, ImGuiCol.Text, style.mutedColor)
+    style.pushButtonNoBG(true)
+	ImGui.Button(text)
+	style.popStyleColor(not state)
+	style.pushButtonNoBG(false)
+	if ImGui.IsItemClicked() then
+		return not state, true
+	end
+    return state, false
+end
+
 return style

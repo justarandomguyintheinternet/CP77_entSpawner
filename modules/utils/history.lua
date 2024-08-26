@@ -144,7 +144,7 @@ function history.getRemove(elements)
             for _, element in pairs(data) do
                 local parent = spawnedUI.getElementByPath(element.parentPath)
                 if parent then
-                    local new = require(element.data.modulePath):new(parent.sUI)
+                    local new = require(element.data.modulePath):new(history.spawnedUI)
                     new:load(element.data)
                     new:setParent(parent, element.index)
                 end

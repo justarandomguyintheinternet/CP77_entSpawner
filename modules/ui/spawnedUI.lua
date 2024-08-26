@@ -142,7 +142,7 @@ end
 
 function spawnedUI.unselectAll()
     for _, entry in pairs(spawnedUI.selectedPaths) do
-        entry.ref.selected = false
+        entry.ref:setSelected(false)
     end
 end
 
@@ -156,7 +156,7 @@ function spawnedUI.handleRangeSelect(element)
             if entry.ref == element then
                 break
             end
-            entry.ref.selected = true
+            entry.ref:setSelected(true)
         end
     else
         local inRange = false
@@ -176,7 +176,7 @@ function spawnedUI.handleRangeSelect(element)
                 end
             end
             if inRange then
-                entry.ref.selected = true
+                entry.ref:setSelected(true)
             end
         end
     end
@@ -188,7 +188,7 @@ function spawnedUI.handleDrag(element)
     if ImGui.IsItemHovered() and ImGui.IsMouseDragging(0, spawnedUI.draggingThreshold) and not spawnedUI.draggingSelected then -- Start dragging
         if not element.selected then
             spawnedUI.unselectAll()
-            element.selected = true
+            element:setSelected(true)
         end
         spawnedUI.draggingSelected = true
     elseif not ImGui.IsMouseDragging(0, spawnedUI.draggingThreshold) and ImGui.IsItemHovered() and spawnedUI.draggingSelected then -- Drop on element
@@ -253,7 +253,7 @@ function spawnedUI.paste(elements, element)
         local new = require(entry.modulePath):new(spawnedUI)
         new:load(entry)
         new:setParent(parent, index)
-        new.selected = true
+        new:setSelected(true)
         index = index + 1
         table.insert(pasted, new)
     end
@@ -342,7 +342,7 @@ function spawnedUI.drawContextMenu(element)
                 local insert = history.getInsert({ element })
                 history.addAction(history.getMove(remove, insert))
 
-                element.selected = true
+                element:setSelected(true)
                 spawnedUI.scrollToSelected = true
             end
         end
@@ -388,7 +388,7 @@ function spawnedUI.drawContextMenu(element)
             end
 
             spawnedUI.unselectAll()
-            group.selected = true
+            group:setSelected(true)
             group.editName = true
             group.focusNameEdit = 2
             spawnedUI.scrollToSelected = true
@@ -434,7 +434,7 @@ function spawnedUI.drawSideButtons(element)
     if spawnedUI.filter ~= "" then
         if ImGui.Button(IconGlyphs.ArrowTopRight) then
             spawnedUI.unselectAll()
-            element.selected = true
+            element:setSelected(true)
             element:expandAllParents()
             spawnedUI.scrollToSelected = true
             spawnedUI.filter = ""
@@ -507,7 +507,10 @@ function spawnedUI.drawElement(element, dummy)
     style.pushStyleColor(isGettingDragged, ImGuiCol.Header, 0, 0, 0, 0)
 
     local previous = element.selected
-    element.selected = ImGui.Selectable("##item" .. spawnedUI.elementCount, element.selected, ImGuiSelectableFlags.SpanAllColumns)
+    local newState = ImGui.Selectable("##item" .. spawnedUI.elementCount, element.selected, ImGuiSelectableFlags.SpanAllColumns)
+    element:setSelected(newState)
+    element:setHovered(ImGui.IsItemHovered())
+
     if element.selected then
         if spawnedUI.scrollToSelected then
             ImGui.SetScrollHereY(0.5)
@@ -519,11 +522,11 @@ function spawnedUI.drawElement(element, dummy)
 
     if not spawnedUI.multiSelectActive() and not spawnedUI.rangeSelectActive() and previous ~= element.selected and not spawnedUI.draggingSelected then
         for _, entry in pairs(spawnedUI.selectedPaths) do
-            entry.ref.selected = false
+            entry.ref:setSelected(false)
         end
-        if previous == true and #spawnedUI.selectedPaths > 1 then element.selected = true end
+        if previous == true and #spawnedUI.selectedPaths > 1 then element:setSelected(true) end
     elseif spawnedUI.draggingSelected and previous ~= element.selected then -- Disregard any changes due to dragging
-        element.selected = previous
+        element:setSelected(previous)
     end
 
     spawnedUI.handleDrag(element)
@@ -575,7 +578,7 @@ function spawnedUI.drawElement(element, dummy)
     if ImGui.IsItemHovered() and ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) then
         element.editName = true
         element.focusNameEdit = 1
-        element.selected = true
+        element:setSelected(true)
     end
 
     if spawnedUI.filter ~= "" then

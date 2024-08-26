@@ -296,6 +296,14 @@ function element:expandAllParents()
 	end
 end
 
+function element:setHovered(state)
+	self.hovered = state
+end
+
+function element:setSelected(state)
+	self.selected = state
+end
+
 function element:getPath()
 	if not self.parent then return "" end
 	if self.parent.parent == nil then return "/" .. self.name end
