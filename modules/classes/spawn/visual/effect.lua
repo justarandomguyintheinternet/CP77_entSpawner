@@ -15,6 +15,7 @@ function effect:new()
     o.modulePath = "visual/effect"
     o.node = "worldEffectNode"
     o.description = "Plays an effect, from a given .effect file"
+    o.icon = IconGlyphs.Creation
 
     o.disableCron = nil
 

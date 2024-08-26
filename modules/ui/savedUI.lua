@@ -1,11 +1,10 @@
 local config = require("modules/utils/config")
 local CPS = require("CPStyling")
-local object = require("modules/classes/spawn/object")
-local gr = require("modules/classes/spawn/group")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
 local amm = require("modules/utils/ammUtils")
+local history = require("modules/utils/history")
 
 local debug = false
 
@@ -134,9 +133,9 @@ function savedUI.draw(spawner)
 
     for _, d in pairs(savedUI.files) do
         if (d.name:lower():match(savedUI.filter:lower())) ~= nil then
-            if d.type == "group" then
+            if d.type == "group" or d.modulePath == "modules/classes/editor/positionableGroup" then
                 savedUI.drawGroup(d, spawner)
-            else
+            elseif d.type == "element" or d.modulePath == "modules/classes/editor/spawnableElement" then
                 savedUI.drawObject(d, spawner)
             end
         end
@@ -195,9 +194,10 @@ function savedUI.drawGroup(group, spawner)
     style.spacedSeparator()
 
     if CPS.CPButton("Load") then
-        local g = require("modules/classes/spawn/group"):new(spawner.baseUI.spawnedUI)
+        local g = require("modules/classes/editor/positionableGroup"):new(spawner.baseUI.spawnedUI)
         g:load(group)
         spawner.baseUI.spawnedUI.addRootElement(g)
+        history.addAction(history.getInsert({ g }))
     end
     ImGui.SameLine()
     if CPS.CPButton("TP to pos") then
@@ -258,9 +258,10 @@ function savedUI.drawObject(obj, spawner)
     style.spacedSeparator()
 
     if CPS.CPButton("Load") then
-        local o = object:new(spawner.baseUI.spawnedUI)
+        local o = require("modules/classes/editor/spawnableElement"):new(spawner.baseUI.spawnedUI)
         o:load(obj)
         spawner.baseUI.spawnedUI.addRootElement(o)
+        history.addAction(history.getInsert({ o }))
     end
     ImGui.SameLine()
     if CPS.CPButton("TP to pos") then
@@ -311,25 +312,6 @@ function savedUI.handlePopUp()
             ImGui.EndPopup()
         end
     end
-end
-
-function savedUI.getHeight()
-    local y = 0
-
-    for _, d in pairs(savedUI.files) do
-        if (d.name:lower():match(savedUI.filter:lower())) ~= nil then
-            if y ~= 0 then
-                y = y + ImGui.GetStyle().ItemSpacing.y
-            end
-            if d.type == "group" then
-                y = y + getGroupHeight()
-            else
-                y = y + getObjectHeight()
-            end
-        end
-    end
-
-    return y
 end
 
 function savedUI.reload()

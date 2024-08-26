@@ -93,7 +93,7 @@ function spawner:new()
 
     registerForEvent("onShutdown", function ()
         if settings.despawnOnReload then
-            self.baseUI.spawnedUI.despawnAll()
+            self.baseUI.spawnedUI.root:remove()
         end
     end)
 

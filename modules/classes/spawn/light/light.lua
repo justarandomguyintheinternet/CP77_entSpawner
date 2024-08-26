@@ -32,6 +32,7 @@ function light:new()
     o.modulePath = "light/light"
     o.node = "worldStaticLightNode"
     o.description = "Places a static light"
+    o.icon = IconGlyphs.LightbulbOn20
 
     o.color = { 1, 1, 1 }
     o.intensity = 100

@@ -23,6 +23,7 @@ function entity:new()
     o.spawnListType = "list"
     o.dataType = "Entity"
     o.modulePath = "entity/entity"
+    o.icon = IconGlyphs.AlphaEBoxOutline
 
     o.apps = {}
     o.appIndex = 0

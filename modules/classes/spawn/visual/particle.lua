@@ -16,6 +16,7 @@ function particle:new()
     o.modulePath = "visual/particle"
     o.node = "worldStaticParticleNode"
     o.description = "Plays a particle system, from a given .particle file"
+    o.icon = IconGlyphs.Shimmer
 
     o.emissionRate = 1
     o.respawnOnMove = false

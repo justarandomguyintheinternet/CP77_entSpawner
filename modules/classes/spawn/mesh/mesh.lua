@@ -27,6 +27,7 @@ function mesh:new()
     o.modulePath = "mesh/mesh"
     o.node = "worldMeshNode"
     o.description = "Places a static mesh, from a given .mesh file. This will not have any collision, but has an option to generate a fitting collider"
+    o.icon = IconGlyphs.CubeOutline
 
     o.apps = {}
     o.appIndex = 0

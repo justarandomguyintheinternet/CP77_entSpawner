@@ -17,6 +17,7 @@ function dynamicMesh:new()
     o.node = "worldDynamicMeshNode"
     o.description = "Places a mesh with simulated physics, from a given .mesh file. Not destructible."
     o.previewNote = "Dynamic meshes do not have simulated physics in the editor"
+    o.icon = IconGlyphs.CubeSend
 
     o.startAsleep = true
     o.hideGenerate = true

@@ -20,6 +20,7 @@ function rotatingMesh:new()
     o.modulePath = "mesh/rotatingMesh"
     o.node = "worldRotatingMeshNode"
     o.description = "Places a static mesh, from a given .mesh file, and rotates it around a given axis"
+    o.icon = IconGlyphs.FormatRotate90
 
     o.duration = 5
     o.axis = 0

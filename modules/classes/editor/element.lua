@@ -6,6 +6,7 @@ local history = require("modules/utils/history")
 ---@class element
 ---@field name string
 ---@field newName string
+---@field fileName string
 ---@field parent element
 ---@field childs element[]
 ---@field modulePath string
@@ -14,6 +15,14 @@ local history = require("modules/utils/history")
 ---@field sUI spawnedUI
 ---@field expandable boolean
 ---@field hideable boolean
+---@field visible boolean
+---@field hiddenByParent boolean
+---@field icon string
+---@field class string[]
+---@field hovered boolean
+---@field editName boolean
+---@field focusNameEdit number
+---@field quickOperations {[string]: {condition : fun(PARAM: element) : boolean, operation : fun(PARAM: element)}}
 ---@field selected boolean
 element = {}
 
@@ -22,6 +31,7 @@ function element:new(sUI)
 
 	o.name = "New Element"
 	o.newName = nil
+	o.fileName = ""
 
 	o.parent = nil
     o.childs = {}
@@ -30,6 +40,7 @@ function element:new(sUI)
 
 	o.expandable = true
 	o.hideable = true
+	o.quickOperations = {}
 
 	o.icon = ""
 
@@ -52,29 +63,37 @@ end
 
 function element:getModulePathByType(data)
 	if data.type == "group" then
-		return "modules/classes/editor/group"
+		return "modules/classes/editor/positionableGroup"
 	elseif data.type == "object" then
-		return "modules/classes/editor/object"
+		return "modules/classes/editor/spawnableElement"
 	end
 end
 
 ---Loads the data from a given table, containing the same data as exported during save()
----@param data {name : string, childs : table, headerOpen : boolean, modulePath : string, visible : boolean}
+---@param data {name : string, childs : table, headerOpen : boolean, modulePath : string, visible : boolean, selected : boolean, hiddenByParent : boolean}
 function element:load(data)
+	while self.childs[1] do -- Ensure any children get removed, important for undoing spawnables so that they despawn
+		self.childs[1]:remove()
+	end
+
+	self.fileName = data.name
 	self.name = data.name
-	self.headerOpen = data.headerOpen
 	self.modulePath = data.modulePath
-	self.visible = data.visible == nil and true or data.visible
-	self.selected = data.selected == nil and false or data.selected
-	self.hiddenByParent = data.hiddenByParent == nil and false or data.hiddenByParent
+	self.headerOpen = data.headerOpen
+	self.visible = data.visible
+	self.selected = data.selected
+	self.hiddenByParent = data.hiddenByParent
+	if self.visible == nil then self.visible = true end
+	if self.headerOpen == nil then self.headerOpen = settings.headerState end
+	if self.selected == nil then self.selected = false end
+	if self.hiddenByParent == nil then self.hiddenByParent = false end
 
 	self.modulePath = self.modulePath or self:getModulePathByType(data)
 
 	self.childs = {}
 	if data.childs then
 		for _, child in pairs(data.childs) do
-			child.modulePath = child.modulePath or child:getModulePathByType(data)
-
+			child.modulePath = child.modulePath or self:getModulePathByType(child)
 			local new = require(child.modulePath):new(self.sUI)
 			new:load(child)
 			new:setParent(self)
@@ -122,6 +141,7 @@ function element:addChild(new, index)
 
 	generateUniqueName(new, self.childs)
 	table.insert(self.childs, index, new)
+	new:setHiddenByParent(not self.visible or self.hiddenByParent)
 end
 
 function element:removeChild(child)
@@ -145,6 +165,12 @@ function element:remove()
 	if self.parent ~= nil then
 		self.parent:removeChild(self)
 	end
+
+	while self.childs[1] do
+		self.childs[1]:remove()
+	end
+
+	self.parent = nil
 end
 
 ---Checks if the element is a visual root, or true root of hierarchy
@@ -277,10 +303,6 @@ function element:getPath()
 	return self.parent:getPath() .. "/" .. self.name
 end
 
-function element:save()
-
-end
-
 function element:serialize()
 	local data = {
 		name = self.name,
@@ -290,6 +312,7 @@ function element:serialize()
 		hiddenByParent = self.hiddenByParent,
 		expandable = self.expandable,
 		selected = self.selected,
+		isUsingSpawnables = true,
 		childs = {}
 	}
 
@@ -298,6 +321,18 @@ function element:serialize()
 	end
 
 	return data
+end
+
+function element:save()
+	local data = self:serialize()
+
+	if self.fileName ~= self.name then
+		os.rename("data/objects/" .. self.fileName .. ".json", "data/objects/" .. self.name .. ".json")
+		self.fileName = self.name
+	end
+
+	config.saveFile("data/objects/" .. self.fileName .. ".json", data)
+	self.sUI.spawner.baseUI.savedUI.reload()
 end
 
 return element

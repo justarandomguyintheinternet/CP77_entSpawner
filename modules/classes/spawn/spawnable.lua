@@ -19,10 +19,11 @@ local settings = require("modules/utils/settings")
 ---@field protected spawned boolean
 ---@field public isHovered boolean
 ---@field protected arrowDirection string all|red|green|blue
----@field public object object? The object that is using this spawnable
+---@field public object element? The element that is using this spawnable
 ---@field public node string
 ---@field public description string
 ---@field public previewNote string
+---@field public icon string
 ---@field private rotationRelative boolean
 local spawnable = {}
 
@@ -37,6 +38,7 @@ function spawnable:new()
     o.node = "worldEntityNode"
     o.description = ""
     o.previewNote = "---"
+    o.icon = ""
 
     o.spawnData = "base\\spawner\\empty_entity.ent"
     o.app = ""

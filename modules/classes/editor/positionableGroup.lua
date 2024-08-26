@@ -3,9 +3,8 @@ local settings = require("modules/utils/settings")
 
 local positionable = require("modules/classes/editor/positionable")
 
----Class for organizing multiple objects and or groups
+---Class for organizing multiple objects and or groups, with position and rotation
 ---@class positionableGroup : positionable
----@field isUsingSpawnables boolean
 local positionableGroup = setmetatable({}, { __index = positionable })
 
 function positionableGroup:new(sUI)
@@ -14,26 +13,18 @@ function positionableGroup:new(sUI)
 	o.name = "New Group"
 	o.modulePath = "modules/classes/editor/positionableGroup"
 
-	o.isUsingSpawnables = true
 	o.class = utils.combine(o.class, { "positionableGroup" })
+	o.quickOperations = {
+		[IconGlyphs.ContentSaveOutline] = {
+			operation = positionableGroup.save,
+			condition = function (instance)
+				return instance.parent ~= nil and instance.parent:isRoot(true)
+			end
+		}
+	}
 
 	setmetatable(o, { __index = self })
    	return o
-end
-
----@override
-function positionableGroup:load(data)
-	positionable.load(self, data)
-
-	self.pos = utils.getVector(data.pos)
-end
-
----Draw func if this is just a sub group
----@protected
-function positionableGroup:drawProperties()
-	self.pos = self:getCenter()
-
-	positionable.drawProperties(self)
 end
 
 function positionableGroup:getDirection(direction)
@@ -60,13 +51,13 @@ function positionableGroup:getCenter()
 	return Vector4.new(center.x / #leafs, center.y / #leafs, center.z / #leafs, 0)
 end
 
----Gets all the positionable leaf objects, i.e. positionable's without childs#
+---Gets all the positionable leaf objects, i.e. positionable's without childs
 ---@return positionable[]
 function positionableGroup:getPositionableLeafs()
 	local objects = {}
 
 	for _, entry in pairs(self.childs) do
-		if utils.isA(entry, "object") then
+		if utils.isA(entry, "spawnableElement") then
 			table.insert(objects, entry)
 		elseif utils.isA(entry, "positionableGroup") then
 			objects = utils.combine(objects, entry:getPositionableLeafs())
@@ -77,8 +68,7 @@ function positionableGroup:getPositionableLeafs()
 end
 
 function positionableGroup:getPosition()
-	self.pos = self:getCenter()
-	return self.pos
+	return self:getCenter()
 end
 
 function positionableGroup:setPosition(delta)
@@ -87,32 +77,23 @@ function positionableGroup:setPosition(delta)
 	for _, entry in pairs(leafs) do
 		entry:setPosition(delta)
 	end
-
-	self.pos = self:getCenter()
 end
 
 function positionableGroup:setRotation(delta)
-	self.pos = self:getCenter()
+	local pos = self:getCenter()
 
 	local leafs = self:getPositionableLeafs()
 
 	local deltaRotation = Quaternion.SetAxisAngle(Vector4.new(1 * delta.roll, 1 * delta.pitch, 1 * delta.yaw, 0), Deg2Rad(delta.roll * 1 + delta.pitch * 1 + delta.yaw * 1))
 
 	for _, entry in pairs(leafs) do
-		local relativePosition = utils.subVector(entry:getPosition(), self.pos)
+		local relativePosition = utils.subVector(entry:getPosition(), pos)
 		relativePosition = deltaRotation:Transform(relativePosition)
-		entry:setPosition(utils.addVector(self.pos, relativePosition))
+		entry:setPosition(utils.addVector(pos, relativePosition))
 
 		local entryRot = entry:getRotation():ToQuat()
 		entry:setRotation(Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](deltaRotation, entryRot):ToEulerAngles())
 	end
-end
-
-function positionableGroup:serialize()
-	local data = positionable.serialize(self)
-	data.pos = self:getCenter()
-
-	return data
 end
 
 return positionableGroup

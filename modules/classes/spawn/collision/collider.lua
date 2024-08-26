@@ -31,6 +31,7 @@ function collider:new()
     o.modulePath = "collision/collider"
     o.node = "worldCollisionNode"
     o.description = "A collision shape, can be a box, capsule or sphere"
+    o.icon = IconGlyphs.TextureBox
 
     o.shape = 0
     o.material = 0

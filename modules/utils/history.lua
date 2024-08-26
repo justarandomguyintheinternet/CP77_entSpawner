@@ -44,6 +44,11 @@ end
 
 function history.getElementChange(element)
     local action = {}
+
+    if element == history.spawnedUI.multiSelectGroup then -- Multiselect group is not real
+        return history.getMultiSelectChange(element.childs)
+    end
+
     action.data = element:serialize()
     action.path = element:getPath()
 
@@ -56,6 +61,28 @@ function history.getElementChange(element)
         local old = history.spawnedUI.getElementByPath(action.path):serialize()
         history.spawnedUI.getElementByPath(action.path):load(action.data)
         action.data = old
+    end
+
+    return action
+end
+
+function history.getMultiSelectChange(elements)
+    local action = {}
+    action.actions = {}
+
+    for _, element in pairs(elements) do
+        table.insert(action.actions, history.getElementChange(element))
+    end
+
+    action.undo = function ()
+        for _, action in pairs(action.actions) do
+            action.undo()
+        end
+    end
+    action.redo = function ()
+        for _, action in pairs(action.actions) do
+            action.redo()
+        end
     end
 
     return action
@@ -128,7 +155,7 @@ end
 
 function history.addAction(action)
     if history.index < #history.actions then
-        for i = history.index, #history.actions do
+        for i = history.index + 1, #history.actions do
             history.actions[i] = nil
         end
     end

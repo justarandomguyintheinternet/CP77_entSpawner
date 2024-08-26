@@ -23,6 +23,7 @@ local history = require("modules/utils/history")
 ---@field draggingSelected boolean
 spawnedUI = {
     root = require("modules/classes/editor/element"):new(spawnedUI),
+    multiSelectGroup = require("modules/classes/editor/positionableGroup"):new(spawnedUI),
     filter = "",
     newGroupName = "New Group",
     spawner = nil,
@@ -83,17 +84,17 @@ end
 ---Adds an element to the root
 ---@param element element
 function spawnedUI.addRootElement(element)
-    spawnedUI.root:addChild(element)
+    element:setParent(spawnedUI.root)
 end
 
 ---Returns all the elements that are not children of any selected element
 ---@param elements {path : string, ref : element}[]
----@return element[]
+---@return {path : string, ref : element}[]
 function spawnedUI.getRoots(elements)
     local roots = {}
 
     for _, entry in pairs(elements) do
-        if not entry.ref.parent:isParentOrSelfSelected() then -- Check on parent
+        if entry.ref.parent ~= nil and not entry.ref.parent:isParentOrSelfSelected() then -- Check on parent
             table.insert(roots, entry)
         end
     end
@@ -252,8 +253,6 @@ function spawnedUI.paste(elements, element)
         local new = require(entry.modulePath):new(spawnedUI)
         new:load(entry)
         new:setParent(parent, index)
-        new.expandable = entry.expandable
-        new.icon = IconGlyphs.LightbulbOn20
         new.selected = true
         index = index + 1
         table.insert(pasted, new)
@@ -288,10 +287,8 @@ function spawnedUI.drawContextMenu(element)
         if ImGui.MenuItem("Delete", "DEL") then
             if isMulti then
                 history.addAction(history.getRemove(spawnedUI.getRoots(spawnedUI.selectedPaths)))
-                for _, entry in pairs(spawnedUI.selectedPaths) do
-                    if not entry.ref.parent:isParentOrSelfSelected() then
-                        entry.ref:remove()
-                    end
+                for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
+                    entry.ref:remove()
                 end
             else
                 history.addAction(history.getRemove({ element }))
@@ -309,11 +306,9 @@ function spawnedUI.drawContextMenu(element)
 
             if isMulti then
                 history.addAction(history.getRemove(spawnedUI.getRoots(spawnedUI.selectedPaths)))
-                for _, entry in pairs(spawnedUI.selectedPaths) do
-                    if not entry.ref.parent:isParentOrSelfSelected() then
-                        table.insert(spawnedUI.clipboard, entry.ref:serialize())
-                        entry.ref:remove()
-                    end
+                for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
+                    table.insert(spawnedUI.clipboard, entry.ref:serialize())
+                    entry.ref:remove()
                 end
             else
                 history.addAction(history.getRemove({ element }))
@@ -409,16 +404,32 @@ function spawnedUI.drawSideButtons(element)
     ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 2 * (ImGui.GetFontSize() / 15))
 
     -- Right side buttons
-    local eyeX, _ = ImGui.CalcTextSize(IconGlyphs.EyeOutline)
+    local totalX, _ = ImGui.CalcTextSize(IconGlyphs.EyeOutline)
     local gotoX, _ = ImGui.CalcTextSize(IconGlyphs.ArrowTopRight)
     if spawnedUI.filter ~= "" then
-        eyeX = eyeX + gotoX + ImGui.GetStyle().ItemSpacing.x
+        totalX = totalX + gotoX + ImGui.GetStyle().ItemSpacing.x
+    end
+
+    for icon, data in pairs(element.quickOperations) do
+        if data.condition(element) then
+            totalX = totalX + ImGui.CalcTextSize(icon) + ImGui.GetStyle().ItemSpacing.x
+        end
     end
 
     local scrollBarAddition = (ImGui.GetScrollMaxY() > 0 and not spawnedUI.dividerDragging) and ImGui.GetStyle().ScrollbarSize or 0
 
-    local cursorX = ImGui.GetWindowWidth() - eyeX - ImGui.GetStyle().CellPadding.x / 2 - scrollBarAddition
+    local cursorX = ImGui.GetWindowWidth() - totalX - ImGui.GetStyle().CellPadding.x / 2 - scrollBarAddition
     ImGui.SetCursorPosX(math.max(cursorX, ImGui.GetCursorPosX()))
+
+    for icon, data in pairs(element.quickOperations) do
+        if data.condition(element) then
+            if ImGui.Button(icon) then
+                data.operation(element)
+            end
+            ImGui.SameLine()
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 2 * (ImGui.GetFontSize() / 15))
+        end
+    end
 
     if spawnedUI.filter ~= "" then
         if ImGui.Button(IconGlyphs.ArrowTopRight) then
@@ -564,6 +575,7 @@ function spawnedUI.drawElement(element, dummy)
     if ImGui.IsItemHovered() and ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) then
         element.editName = true
         element.focusNameEdit = 1
+        element.selected = true
     end
 
     if spawnedUI.filter ~= "" then
@@ -673,26 +685,10 @@ local a = false
 function spawnedUI.drawTop()
     if not a then
         a = true
-        for i = 1, 4 do
-            local e = require("modules/classes/editor/element"):new(spawnedUI)
-            e.expandable = true
+        for i = 1, 2 do
+            local e = require("modules/classes/editor/positionableGroup"):new(spawnedUI)
             e.name = "Group"
             e:setParent(spawnedUI.root)
-
-            for i = 1, 4 do
-                local e1 = require("modules/classes/editor/element"):new(spawnedUI)
-                e1.expandable = true
-                e1.name = "Group"
-                e1:setParent(e)
-    
-                for i = 1, math.random(1, 5) do
-                    local o = require("modules/classes/editor/positionable"):new(spawnedUI)
-                    o.expandable = false
-                    o.icon = IconGlyphs.LightbulbOn20
-                    o.name = "Object"
-                    o:setParent(e1)
-                end
-            end
         end
     end
 
@@ -717,9 +713,10 @@ function spawnedUI.drawTop()
 
     ImGui.SameLine()
     if ImGui.Button("Add group") then
-        local g = group:new(spawnedUI)
-        g.name = utils.createFileName(spawnedUI.newGroupName)
-        spawnedUI.addRootElement(g)
+        local group = require("modules/classes/editor/positionableGroup"):new(spawnedUI)
+        group.name = spawnedUI.newGroupName
+        spawnedUI.addRootElement(group)
+        history.addAction(history.getInsert({ group }))
     end
 
     style.pushButtonNoBG(true)
@@ -772,13 +769,17 @@ function spawnedUI.drawProperties()
     ImGui.BeginChild("##properties", 0, wy, false, ImGuiWindowFlags.HorizontalScrollbar)
 
     local nSelected = #spawnedUI.selectedPaths
+    spawnedUI.multiSelectGroup.childs = {}
 
     if nSelected == 0 then
         style.mutedText("Nothing selected.")
     elseif nSelected == 1 then
         spawnedUI.selectedPaths[1].ref:drawProperties()
     else
-        style.mutedText("Multiple objects selected.")
+        for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
+            table.insert(spawnedUI.multiSelectGroup.childs, entry.ref)
+        end
+        spawnedUI.multiSelectGroup:drawProperties()
     end
 
     ImGui.EndChild()

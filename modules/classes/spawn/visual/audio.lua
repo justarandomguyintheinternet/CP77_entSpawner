@@ -16,6 +16,7 @@ function sound:new()
     o.node = "worldStaticSoundEmitterNode"
     o.description = "Plays a sound"
     o.previewNote = "A lot of the sounds might not work / play.\n\"amb_\" ones usually work.\nRadius is not previewed."
+    o.icon = IconGlyphs.VolumeHigh
 
     o.radius = 5
 

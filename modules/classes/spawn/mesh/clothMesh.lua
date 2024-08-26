@@ -17,6 +17,7 @@ function clothMesh:new()
     o.node = "worldClothMeshNode"
     o.description = "Places a cloth mesh with physics, from a given .mesh file"
     o.previewNote = "Cloth meshes do not have simulated physics in the editor"
+    o.icon = IconGlyphs.ReceiptOutline
 
     o.affectedByWind = false
     o.collisionType = 4

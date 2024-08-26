@@ -3,6 +3,7 @@ local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
 local amm = require("modules/utils/ammUtils")
+local history = require("modules/utils/history")
 
 local types = {
     ["Entity"] = {
@@ -147,7 +148,7 @@ function spawnUI.draw()
         end
     end
 
-    local groups = {}
+    local groups = { "Root" }
 	for _, group in pairs(spawnUI.spawner.baseUI.spawnedUI.containerPaths) do
 		table.insert(groups, group.path)
 	end
@@ -230,7 +231,7 @@ function spawnUI.draw()
 
     local _, wHeight = GetDisplayResolution()
 
-    ImGui.BeginChild("list", spawnUI.sizeX, wHeight - wHeight * 0.2)
+    ImGui.BeginChild("list")
 
     spawnUI.sizeX = 800
 
@@ -256,37 +257,26 @@ function spawnUI.draw()
             end
 
             if ImGui.Button(buttonText) then
-                local parent = nil
-                if spawnUI.selectedGroup ~= 0 then
-                    parent = spawnUI.spawner.baseUI.spawnedUI.groups[spawnUI.selectedGroup + 1].tab
-                end
-
                 ImGui.SetClipboardText(entry.name)
                 local class = spawnUI.getActiveSpawnList().class
-                entry.lastSpawned = spawnUI.spawner.baseUI.spawnedUI.spawnNewObject(entry, class, parent)
+                entry.lastSpawned = spawnUI.spawnNew(entry, class)
             end
 
             local x, _ = ImGui.GetItemRectSize()
             spawnUI.sizeX = math.max(x + 14, spawnUI.sizeX)
 
+            if entry.lastSpawned ~= nil and entry.lastSpawned.parent == nil then entry.lastSpawned = nil end
+
             if entry.lastSpawned ~= nil then
                 ImGui.SameLine()
                 if ImGui.Button("Despawn") then
-                    entry.lastSpawned:despawn()
-                    if entry.lastSpawned.parent ~= nil then
-                        utils.removeItem(entry.lastSpawned.parent.childs, entry.lastSpawned)
-                        entry.lastSpawned.parent:saveAfterMove()
-                    end
-                    utils.removeItem(spawnUI.spawner.baseUI.spawnedUI.elements, entry.lastSpawned)
+                    history.addAction(history.getRemove({ entry.lastSpawned }))
+                    entry.lastSpawned:remove()
                     entry.lastSpawned = nil
                 end
 
                 local deleteX, _ = ImGui.GetItemRectSize()
                 spawnUI.sizeX = math.max(x + deleteX + 14, spawnUI.sizeX)
-
-                if not utils.has_value(spawnUI.spawner.baseUI.spawnedUI.elements, entry.lastSpawned) and entry.lastSpawned ~= nil then
-                    entry.lastSpawned = nil
-                end
             end
 
             if isSpawned then ImGui.PopStyleColor(2) end
@@ -296,6 +286,41 @@ function spawnUI.draw()
     end
 
     ImGui.EndChild()
+end
+
+function spawnUI.spawnNew(entry, class)
+    local parent = spawnUI.spawner.baseUI.spawnedUI.root
+    if spawnUI.selectedGroup ~= 0 then
+        parent = spawnUI.spawner.baseUI.spawnedUI.containerPaths[spawnUI.selectedGroup].ref
+    end
+
+    local new = require("modules/classes/editor/spawnableElement"):new(spawnUI.spawner.baseUI.spawnedUI)
+    local rot = GetPlayer():GetWorldOrientation():ToEulerAngles()
+    local pos = GetPlayer():GetWorldPosition()
+
+    if settings.spawnPos == 2 then
+        local forward = GetPlayer():GetWorldForward()
+        pos.x = pos.x + forward.x * settings.spawnDist
+        pos.y = pos.y + forward.y * settings.spawnDist
+    end
+
+    local data = utils.deepcopy(entry.data)
+    data.modulePath = class:new().modulePath
+    data.position = { x = pos.x, y = pos.y, z = pos.z, w = 0 }
+    data.rotation = { roll = rot.roll, pitch = rot.pitch, yaw = rot.yaw }
+
+    new:load({
+        name = utils.getFileName(entry.name),
+        modulePath = new.modulePath,
+        spawnable = data
+    })
+
+    new:setParent(parent)
+    new.selected = true
+    spawnUI.spawner.baseUI.spawnedUI.unselectAll()
+    history.addAction(history.getInsert({ new }))
+
+    return new
 end
 
 function spawnUI.sort()

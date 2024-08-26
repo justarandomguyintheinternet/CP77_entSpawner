@@ -20,6 +20,7 @@ function decal:new()
     o.modulePath = "visual/decal"
     o.node = "worldStaticDecalNode"
     o.description = "Places a decal on the nearest surface, from a given .mi file"
+    o.icon = IconGlyphs.StickerOutline
 
     o.alpha = 1
     o.horizontalFlip = false
