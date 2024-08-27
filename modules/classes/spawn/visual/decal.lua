@@ -101,26 +101,34 @@ end
 function decal:draw()
     spawnable.draw(self)
 
-    ImGui.Spacing()
-    ImGui.Separator()
-    ImGui.Spacing()
-
     ImGui.PushItemWidth(150)
 
-    self.alpha, changed = ImGui.DragFloat("##alpha", self.alpha, 0.01, 0, 100, "%.2f Alpha")
+    self.alpha, changed, deactivatedAfterEdit = style.trackedDragFloat(self.object, "##alpha", self.alpha, 0.01, 0, 100, "%.2f Alpha")
+    self:updateFull(deactivatedAfterEdit)
+
+    ImGui.SameLine()
+    self.autoHideDistance = style.trackedDragFloat(self.object, "##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.2f Hide Dist.", 100)
+
+    self.verticalFlip, changed = style.trackedCheckbox(self.object, "Vertical Flip", self.verticalFlip)
     self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
 
     ImGui.SameLine()
-    self.autoHideDistance = ImGui.DragFloat("##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.2f Hide Dist.")
-
-    self.verticalFlip, changed = ImGui.Checkbox("Vertical Flip", self.verticalFlip)
-    self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
-
-    ImGui.SameLine()
-    self.horizontalFlip, changed = ImGui.Checkbox("Horizontal Flip", self.horizontalFlip)
+    self.horizontalFlip, changed = style.trackedCheckbox(self.object, "Horizontal Flip", self.horizontalFlip)
     self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
 
     ImGui.PopItemWidth()
+end
+
+function decal:getProperties()
+    local properties = spawnable.getProperties(self)
+    table.insert(properties, {
+        id = self.node,
+        name = self.dataType,
+        draw = function()
+            self:draw()
+        end
+    })
+    return properties
 end
 
 function decal:export()

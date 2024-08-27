@@ -140,10 +140,6 @@ end
 function mesh:draw()
     spawnable.draw(self)
 
-    ImGui.Spacing()
-    ImGui.Separator()
-    ImGui.Spacing()
-
     style.pushGreyedOut(#self.apps == 0)
 
     local list = self.apps
@@ -152,8 +148,7 @@ function mesh:draw()
         list = {"No apps"}
     end
 
-    ImGui.SetNextItemWidth(150)
-    local index, changed = ImGui.Combo("##app", self.appIndex, list, #list)
+    local index, changed = style.trackedCombo(self.object, "##app", self.appIndex, list, 110)
     style.tooltip("Select the mesh appearance")
     if changed and #self.apps > 0 then
         self.appIndex = index
@@ -180,6 +175,18 @@ function mesh:draw()
 
     ImGui.SetNextItemWidth(150)
     self.colliderShape, changed = ImGui.Combo("##colliderShape", self.colliderShape, colliderShapes, #colliderShapes)
+end
+
+function mesh:getProperties()
+    local properties = spawnable.getProperties(self)
+    table.insert(properties, {
+        id = self.node,
+        name = self.dataType,
+        draw = function()
+            self:draw()
+        end
+    })
+    return properties
 end
 
 ---@protected

@@ -71,12 +71,8 @@ end
 function particle:draw()
     spawnable.draw(self)
 
-    ImGui.Spacing()
-    ImGui.Separator()
-    ImGui.Spacing()
-
     ImGui.SetNextItemWidth(150)
-    self.emissionRate, changed = ImGui.DragFloat("Emission Rate", self.emissionRate, 0.01, 0, 9999, "%.2f")
+    self.emissionRate, changed = style.trackedDragFloat(self.object, "Emission Rate", self.emissionRate, 0.01, 0, 9999, "%.2f")
     if changed then
         self.emissionRate = math.max(self.emissionRate, 0)
 
@@ -87,9 +83,20 @@ function particle:draw()
         end
     end
 
-    ImGui.SameLine()
-    self.respawnOnMove, changed = ImGui.Checkbox("Respawn on Move", self.respawnOnMove)
+    self.respawnOnMove = style.trackedCheckbox(self.object, "Respawn on Move", self.respawnOnMove)
     style.tooltip("Respawns the particle system when the object is moved. Use this when the particle system does not move, or only parts of it")
+end
+
+function particle:getProperties()
+    local properties = spawnable.getProperties(self)
+    table.insert(properties, {
+        id = self.node,
+        name = self.dataType,
+        draw = function()
+            self:draw()
+        end
+    })
+    return properties
 end
 
 function particle:export()

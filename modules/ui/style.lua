@@ -1,5 +1,8 @@
 -- Most of the colors and style has been taken from https://github.com/psiberx/cp2077-red-hot-tools
 
+local history = require("modules/utils/history")
+local dragBeingEdited = false
+
 local style = {
     mutedColor = 0xFFA5A19B,
     extraMutedColor = 0x96A5A19B,
@@ -162,6 +165,65 @@ function style.toggleButton(text, state)
 		return not state, true
 	end
     return state, false
+end
+
+function style.trackedCheckbox(element, text, state)
+    local newState, changed = ImGui.Checkbox(text, state)
+    if changed then
+        history.addAction(history.getElementChange(element))
+    end
+    return newState, changed
+end
+
+function style.trackedDragFloat(element, text, value, step, min, max, format, width)
+    width = width or 80
+    ImGui.SetNextItemWidth(width * style.viewSize)
+    local newValue, changed = ImGui.DragFloat(text, value, step, min, max, format)
+
+    local finished = ImGui.IsItemDeactivatedAfterEdit()
+	if finished then
+		dragBeingEdited = false
+	end
+	if changed and not dragBeingEdited then
+		history.addAction(history.getElementChange(element))
+		dragBeingEdited = true
+	end
+
+    newValue = math.max(newValue, min)
+    newValue = math.min(newValue, max)
+
+    return newValue, changed, finished
+end
+
+function style.trackedCombo(element, text, selected, options, width)
+    width = width or 100
+    ImGui.SetNextItemWidth(width * style.viewSize)
+
+    local newValue, changed = ImGui.Combo(text, selected, options, #options)
+
+    if changed then
+        history.addAction(history.getElementChange(element))
+    end
+    return newValue, changed
+end
+
+function style.trackedColor(element, name, color, width)
+    width = width or 80
+    width = width * 3 + 2 * ImGui.GetStyle().ItemSpacing.x
+    ImGui.SetNextItemWidth(width * style.viewSize)
+
+    local newValue, changed = ImGui.ColorEdit3(name, color)
+
+    local finished = ImGui.IsItemDeactivatedAfterEdit()
+	if finished then
+		dragBeingEdited = false
+	end
+	if changed and not dragBeingEdited then
+		history.addAction(history.getElementChange(element))
+		dragBeingEdited = true
+	end
+
+    return newValue, changed, finished
 end
 
 return style

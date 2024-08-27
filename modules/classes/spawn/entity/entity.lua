@@ -5,6 +5,7 @@ local utils = require("modules/utils/utils")
 local cache = require("modules/utils/cache")
 local visualizer = require("modules/utils/visualizer")
 local red = require("modules/utils/redConverter")
+local style = require("modules/ui/style")
 
 ---Class for base entity handling
 ---@class entity : spawnable
@@ -148,10 +149,6 @@ end
 function entity:draw()
     spawnable.draw(self)
 
-    ImGui.Spacing()
-    ImGui.Separator()
-    ImGui.Spacing()
-
     style.pushGreyedOut(#self.apps == 0 or not self:isSpawned())
 
     local list = self.apps
@@ -160,8 +157,7 @@ function entity:draw()
         list = {"No apps"}
     end
 
-    ImGui.SetNextItemWidth(150)
-    local index, changed = ImGui.Combo("##app", self.appIndex, list, #list)
+    local index, changed = style.trackedCombo(self.object, "##app", self.appIndex, list, 110)
     if changed and #self.apps > 0 and self:isSpawned() then
         self.appIndex = index
         self.app = self.apps[self.appIndex + 1]
@@ -175,6 +171,18 @@ function entity:draw()
         end
     end
     style.popGreyedOut(#self.apps == 0 or not self:isSpawned())
+end
+
+function entity:getProperties()
+    local properties = spawnable.getProperties(self)
+    table.insert(properties, {
+        id = self.node,
+        name = self.dataType,
+        draw = function()
+            self:draw()
+        end
+    })
+    return properties
 end
 
 local function copyAndPrepareData(data, index)

@@ -640,7 +640,7 @@ function spawnedUI.drawHierarchy()
 end
 
 function spawnedUI.drawDivider()
-    local minSize = 150 * style.viewSize
+    local minSize = 200 * style.viewSize
 
     if spawnedUI.dividerHovered then
         ImGui.PushStyleColor(ImGuiCol.ChildBg, 0.4, 0.4, 0.4, 1.0) -- RGBA values
@@ -779,6 +779,8 @@ function spawnedUI.drawProperties()
     elseif nSelected == 1 then
         spawnedUI.selectedPaths[1].ref:drawProperties()
     else
+        style.mutedText("Selection (" .. nSelected .. " elements)")
+        style.spacedSeparator()
         for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
             table.insert(spawnedUI.multiSelectGroup.childs, entry.ref)
         end

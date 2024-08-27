@@ -1,5 +1,5 @@
 local spawnable = require("modules/classes/spawn/spawnable")
-local visualizer = require("modules/utils/visualizer")
+local style = require("modules/ui/style")
 
 ---Class for worldStaticSoundEmitterNode
 ---@class sound : spawnable
@@ -59,12 +59,20 @@ end
 function sound:draw()
     spawnable.draw(self)
 
-    ImGui.Spacing()
-    ImGui.Separator()
-    ImGui.Spacing()
-
     ImGui.SetNextItemWidth(150)
-    self.radius = ImGui.DragFloat("Radius", self.radius, 0.01, 0, 9999, "%.2f")
+    self.radius = style.trackedDragFloat(self.object, "Radius", self.radius, 0.01, 0, 9999, "%.2f")
+end
+
+function sound:getProperties()
+    local properties = spawnable.getProperties(self)
+    table.insert(properties, {
+        id = self.node,
+        name = self.dataType,
+        draw = function()
+            self:draw()
+        end
+    })
+    return properties
 end
 
 function sound:export()

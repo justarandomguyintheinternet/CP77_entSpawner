@@ -49,10 +49,12 @@ function spawnableElement:load(data)
 	end)
 end
 
-function spawnableElement:drawProperties()
-	positionable.drawProperties(self)
+function spawnableElement:getProperties()
+	local properties = positionable.getProperties(self)
 
-	self.spawnable:draw()
+	properties = utils.combine(properties, self.spawnable:getProperties())
+
+	return properties
 end
 
 function spawnableElement:setVisible(state, fromRecursive)
@@ -163,6 +165,10 @@ function spawnableElement:setScale(delta, finished)
 	if self.scaleLocked and delta.z ~= 0 then self.spawnable.scale.y = self.spawnable.scale.z  self.spawnable.scale.x = self.spawnable.scale.z end
 
 	self.spawnable:updateScale(finished)
+end
+
+function spawnableElement:onEdited()
+	self.spawnable:onEdited(true)
 end
 
 function spawnableElement:remove()

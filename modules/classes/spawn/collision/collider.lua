@@ -131,64 +131,58 @@ end
 function collider:draw()
     spawnable.draw(self)
 
-    ImGui.Spacing()
-    ImGui.Separator()
-    ImGui.Spacing()
-
     ImGui.PushItemWidth(150)
 
     ImGui.Text("Collision Shape")
     ImGui.SameLine()
-    self.shape, changed = ImGui.Combo("##type", self.shape, self.shapeTypes, #self.shapeTypes)
+    self.shape, changed = style.trackedCombo(self.object, "##type", self.shape, self.shapeTypes)
     self:updateFull(changed)
 
     ImGui.SameLine()
-    self.previewed, changed = ImGui.Checkbox("Preview shape", self.previewed)
+    self.previewed, changed = style.trackedCheckbox(self.object, "Preview shape", self.previewed)
     if changed then
         visualizer.toggleAll(self:getEntity(), self.previewed)
     end
 
     ImGui.Text("Collision Preset")
     ImGui.SameLine()
-    self.preset, changed = ImGui.Combo("##preset", self.preset, presets, #presets)
+    self.preset, changed = style.trackedCombo(self.object, "##preset", self.preset, presets)
     self:updateFull(changed)
     style.tooltip(hints[self.preset + 1])
 
-    ImGui.SameLine()
-
     ImGui.Text("Collision Material")
     ImGui.SameLine()
-    self.material, changed = ImGui.Combo("##material", self.material, materials, #materials)
+    self.material, changed = style.trackedCombo(self.object, "##material", self.material, materials)
     self:updateFull(changed)
 
     if self.shape == 0 then
-        self.extents.x, changed = ImGui.DragFloat("##extentsX", self.extents.x, 0.01, 0, 9999, "%.2f X Extents")
+        self.extents.x, changed, finished = style.trackedDragFloat(self.object, "##extentsX", self.extents.x, 0.01, 0, 9999, "%.2f X Extents", 100)
         if changed then
             visualizer.updateScale(self:getEntity(), self.extents, "box")
         end
-        self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
+        self:updateFull(finished)
         ImGui.SameLine()
-        self.extents.y, changed = ImGui.DragFloat("##extentsY", self.extents.y, 0.01, 0, 9999, "%.2f Y Extents")
+        self.extents.y, changed = style.trackedDragFloat(self.object, "##extentsY", self.extents.y, 0.01, 0, 9999, "%.2f Y Extents", 100)
         if changed then
             visualizer.updateScale(self:getEntity(), self.extents, "box")
         end
-        self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
+        self:updateFull(finished)
         ImGui.SameLine()
-        self.extents.z, changed = ImGui.DragFloat("##extentsZ", self.extents.z, 0.01, 0, 9999, "%.2f Z Extents")
+        self.extents.z, changed, finished = style.trackedDragFloat(self.object, "##extentsZ", self.extents.z, 0.01, 0, 9999, "%.2f Z Extents", 100)
         if changed then
             visualizer.updateScale(self:getEntity(), self.extents, "box")
         end
-        self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
+        self:updateFull(finished)
     elseif self.shape == 1 then
-        self.height, changed = ImGui.DragFloat("##height", self.height, 0.01, 0, 9999, "%.2f Height")
+        self.height, changed, finished = style.trackedDragFloat(self.object, "##height", self.height, 0.01, 0, 9999, "%.2f Height")
         if changed then
             visualizer.updateCapsuleScale(self:getEntity(), self.radius, self.height)
         end
-        self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
+        self:updateFull(finished)
         ImGui.SameLine()
     end
     if self.shape == 1 or self.shape == 2 then
-        self.radius, changed = ImGui.DragFloat("##radius", self.radius, 0.01, 0, 9999, "%.2f Radius")
+        self.radius, changed, finished = style.trackedDragFloat(self.object, "##radius", self.radius, 0.01, 0, 9999, "%.2f Radius")
         if changed then
             if self.shape == 1 then
                 visualizer.updateCapsuleScale(self:getEntity(), self.radius, self.height)
@@ -196,10 +190,22 @@ function collider:draw()
                 visualizer.updateScale(self:getEntity(), { x = self.radius, y = self.radius, z = self.radius }, "sphere")
             end
         end
-        self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
+        self:updateFull(finished)
     end
 
     ImGui.PopItemWidth()
+end
+
+function collider:getProperties()
+    local properties = spawnable.getProperties(self)
+    table.insert(properties, {
+        id = self.node,
+        name = "Collider",
+        draw = function()
+            self:draw()
+        end
+    })
+    return properties
 end
 
 function collider:export()

@@ -12,6 +12,7 @@ local history = require("modules/utils/history")
 ---@field modulePath string
 ---@field id number
 ---@field headerOpen boolean
+---@field propertyHeaderStates table
 ---@field sUI spawnedUI
 ---@field expandable boolean
 ---@field hideable boolean
@@ -48,6 +49,7 @@ function element:new(sUI)
 	o.id = math.random(1, 1000000000)
 
 	o.headerOpen = settings.headerState
+	o.propertyHeaderStates = {}
 	o.selected = false
 	o.hovered = false
 	o.editName = false
@@ -70,7 +72,7 @@ function element:getModulePathByType(data)
 end
 
 ---Loads the data from a given table, containing the same data as exported during save()
----@param data {name : string, childs : table, headerOpen : boolean, modulePath : string, visible : boolean, selected : boolean, hiddenByParent : boolean}
+---@param data {name : string, childs : table, headerOpen : boolean, modulePath : string, visible : boolean, selected : boolean, hiddenByParent : boolean, propertyHeaderStates: table}
 function element:load(data)
 	while self.childs[1] do -- Ensure any children get removed, important for undoing spawnables so that they despawn
 		self.childs[1]:remove()
@@ -83,6 +85,8 @@ function element:load(data)
 	self.visible = data.visible
 	self.selected = data.selected
 	self.hiddenByParent = data.hiddenByParent
+	self.propertyHeaderStates = data.propertyHeaderStates
+	if self.propertyHeaderStates == nil then self.propertyHeaderStates = {} end
 	if self.visible == nil then self.visible = true end
 	if self.headerOpen == nil then self.headerOpen = settings.headerState end
 	if self.selected == nil then self.selected = false end
@@ -213,7 +217,23 @@ function element:isParentOrSelfSelected()
 end
 
 function element:drawProperties()
-	ImGui.Text(tostring(self.hiddenByParent))
+	for _, prop in pairs(self:getProperties()) do
+		if self.propertyHeaderStates[prop.id] == nil then
+			self.propertyHeaderStates[prop.id] = true
+		end
+
+		ImGui.SetNextItemOpen(self.propertyHeaderStates[prop.id])
+		self.propertyHeaderStates[prop.id] = ImGui.TreeNodeEx(prop.name, ImGuiTreeNodeFlags.SpanFullWidth)
+
+		if self.propertyHeaderStates[prop.id] then
+			prop.draw()
+			ImGui.TreePop()
+		end
+	end
+end
+
+function element:getProperties()
+	return {}
 end
 
 function element:drawName()
@@ -316,6 +336,7 @@ function element:serialize()
 		name = self.name,
 		modulePath = self.modulePath,
 		headerOpen = self.headerOpen,
+		propertyHeaderStates = self.propertyHeaderStates,
 		visible = self.visible,
 		hiddenByParent = self.hiddenByParent,
 		expandable = self.expandable,

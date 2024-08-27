@@ -1,4 +1,5 @@
 local mesh = require("modules/classes/spawn/mesh/mesh")
+local style = require("modules/ui/style")
 
 ---Class for worldRotatingMeshNode
 ---@class clothMesh : mesh
@@ -21,6 +22,7 @@ function clothMesh:new()
 
     o.affectedByWind = false
     o.collisionType = 4
+    o.hideGenerate = true
 
     setmetatable(o, { __index = self })
    	return o
@@ -41,11 +43,9 @@ end
 function clothMesh:draw()
     mesh.draw(self)
 
-    ImGui.PushItemWidth(150)
-
-    self.affectedByWind, changed = ImGui.Checkbox("Affected By Wind", self.affectedByWind)
+    self.affectedByWind = style.trackedCheckbox(self.object, "Affected By Wind", self.affectedByWind)
     ImGui.SameLine()
-    self.collisionType, changed = ImGui.Combo("Collision Type", self.collisionType, collisionTypes, #collisionTypes)
+    self.collisionType = style.trackedCombo(self.object, "Collision Type", self.collisionType, collisionTypes)
 
     ImGui.PopItemWidth()
 end

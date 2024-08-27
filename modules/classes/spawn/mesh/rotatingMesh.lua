@@ -26,6 +26,7 @@ function rotatingMesh:new()
     o.axis = 0
     o.reverse = false
     o.axisTypes = utils.enumTable("gameTransformAnimation_RotateOnAxisAxis")
+    o.hideGenerate = true
 
     o.cronID = nil
 
@@ -83,19 +84,12 @@ end
 function rotatingMesh:draw()
     mesh.draw(self)
 
-    style.spacedSeparator()
-
-    ImGui.PushItemWidth(150)
-
-    self.duration, changed = ImGui.DragFloat("##duration", self.duration, 0.01, -9999, 9999, "%.2f Duration")
-    self.duration = math.max(self.duration, 0.01)
+    self.duration = style.trackedDragFloat(self.object, "##duration", self.duration, 0.01, 0.01, 9999, "%.2f Duration")
     ImGui.SameLine()
 
-    self.reverse, changed = ImGui.Checkbox("Reverse", self.reverse)
+    self.reverse = style.trackedCheckbox(self.object, "Reverse", self.reverse)
     ImGui.SameLine()
-    self.axis, changed = ImGui.Combo("Axis", self.axis, self.axisTypes, #self.axisTypes)
-
-    ImGui.PopItemWidth()
+    self.axis = style.trackedCombo(self.object, "Axis", self.axis, self.axisTypes)
 end
 
 function rotatingMesh:export()

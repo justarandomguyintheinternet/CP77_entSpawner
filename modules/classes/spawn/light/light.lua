@@ -127,82 +127,87 @@ end
 function light:draw()
     spawnable.draw(self)
 
-    ImGui.Spacing()
-    ImGui.Separator()
-    ImGui.Spacing()
-
-    ImGui.SetNextItemWidth(150)
-    self.intensity, changed = ImGui.DragFloat("##intensity", self.intensity, 0.1, 0, 9999, "%.1f Intensity")
+    self.intensity, changed = style.trackedDragFloat(self.object, "##intensity", self.intensity, 0.1, 0, 9999, "%.1f Intensity", 90)
     if changed then
         self:updateParameters()
     end
     ImGui.SameLine()
-    self.color, changed = ImGui.ColorEdit3("##color", self.color)
+    self.color, changed = style.trackedColor(self.object, "##color", self.color, 60)
     if changed then
         self:updateParameters()
     end
 
     ImGui.PushItemWidth(150)
     if self.lightType == 1 then
-        self.innerAngle, changed = ImGui.DragFloat("##inner", self.innerAngle, 0.1, 0, 9999, "%.1f Inner Angle")
+        self.innerAngle, changed = style.trackedDragFloat(self.object, "##inner", self.innerAngle, 0.1, 0, 9999, "%.1f Inner Angle", 105)
         if changed then
             self:updateParameters()
         end
         ImGui.SameLine()
-        self.outerAngle, changed = ImGui.DragFloat("##outer", self.outerAngle, 0.1, 0, 9999, "%.1f Outer Angle")
+        self.outerAngle, changed = style.trackedDragFloat(self.object, "##outer", self.outerAngle, 0.1, 0, 9999, "%.1f Outer Angle", 105)
         if changed then
             self:updateParameters()
         end
-        ImGui.SameLine()
     end
     if self.lightType == 1 or self.lightType == 2 then
-        self.radius, changed = ImGui.DragFloat("##radius", self.radius, 0.25, 0, 9999, "%.1f Radius")
+        self.radius, changed = style.trackedDragFloat(self.object, "##radius", self.radius, 0.25, 0, 9999, "%.1f Radius", 90)
         if changed then
             self:updateParameters()
         end
     end
     if self.lightType == 2 then
         ImGui.SameLine()
-        self.capsuleLength, _ = ImGui.DragFloat("##capsuleLength", self.capsuleLength, 0.05, 0, 9999, "%.2f Length")
-        self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
+        self.capsuleLength, _, finished = style.trackedDragFloat(self.object, "##capsuleLength", self.capsuleLength, 0.05, 0, 9999, "%.2f Length", 90)
+        self:updateFull(finished)
         ImGui.SameLine()
     end
     if self.lightType == 1 then
         ImGui.SameLine()
     end
-    self.autoHideDistance, _ = ImGui.DragFloat("##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.2f Hide Dist.")
-    self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
+    self.autoHideDistance, _, finished = style.trackedDragFloat(self.object, "##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.1f Hide Dist.", 90)
+    self:updateFull(finished)
 
     ImGui.Text("Light Type")
     ImGui.SameLine()
-    self.lightType, changed = ImGui.Combo("##type", self.lightType, self.lightTypes, #self.lightTypes)
+    self.lightType, changed = style.trackedCombo(self.object, "##type", self.lightType, self.lightTypes)
     self:updateFull(changed)
 
     ImGui.Text("Flicker Settings")
     style.tooltip("Controll light flickering, turn up strength to see effect")
     ImGui.SameLine()
-    self.flickerPeriod, changed = ImGui.DragFloat("##flickerPeriod", self.flickerPeriod, 0.01, 0, 9999, "%.2f Period")
-    if changed then
-        self.flickerPeriod = math.max(self.flickerPeriod, 0.05)
-        self:updateParameters()
-    end
-    ImGui.SameLine()
-    self.flickerStrength, changed = ImGui.DragFloat("##flickerStrength", self.flickerStrength, 0.01, 0, 9999, "%.2f Strength")
+    self.flickerPeriod, changed = style.trackedDragFloat(self.object, "##flickerPeriod", self.flickerPeriod, 0.01, 0.05, 9999, "%.2f Period", 90)
     if changed then
         self:updateParameters()
     end
     ImGui.SameLine()
-    self.flickerOffset, changed = ImGui.DragFloat("##flickerOffset", self.flickerOffset, 0.01, 0, 9999, "%.2f Offset")
+    self.flickerStrength, changed = style.trackedDragFloat(self.object, "##flickerStrength", self.flickerStrength, 0.01, 0, 9999, "%.2f Strength", 90)
+    if changed then
+        self:updateParameters()
+    end
+    ImGui.SameLine()
+    self.flickerOffset, changed = style.trackedDragFloat(self.object, "##flickerOffset", self.flickerOffset, 0.01, 0, 9999, "%.2f Offset", 90)
     if changed then
         self:updateParameters()
     end
 
     if self.lightType == 1 then
-        self.localShadows, changed = ImGui.Checkbox("Local Shadows", self.localShadows)
+        self.localShadows, changed = style.trackedCheckbox(self.object, "Local Shadows", self.localShadows)
         self:updateFull(changed)
     end
 
     ImGui.PopItemWidth()
+end
+
+function light:getProperties()
+    local properties = spawnable.getProperties(self)
+    table.insert(properties, {
+        id = self.node,
+        name = self.dataType,
+        draw = function()
+            self:draw()
+        end
+    })
+    return properties
 end
 
 function light:export()

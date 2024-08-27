@@ -146,8 +146,10 @@ function spawnable:save()
     }
 end
 
-function spawnable:draw()
-    -- TODO: Add collapsibles for spawnable props
+function spawnable:draw() end
+
+function spawnable:getProperties()
+    return {}
 end
 
 ---TODO: Implement better for each object

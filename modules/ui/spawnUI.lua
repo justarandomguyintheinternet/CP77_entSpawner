@@ -133,9 +133,7 @@ function spawnUI.refresh()
 end
 
 function spawnUI.draw()
-    -- TODO: Alias / Tag
-
-    spawnUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search by name...', spawnUI.filter, 100)
+    spawnUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search by name... (Supports pattern matching)', spawnUI.filter, 100)
     if changed then
         spawnUI.updateFilter()
     end

@@ -40,6 +40,8 @@ function record:loadSpawnData(data, position, rotation)
 end
 
 function record:spawn()
+    if self:isSpawned() then return end
+
     local spec = DynamicEntitySpec.new()
     spec.recordID = self.spawnData
     spec.position = self.position
@@ -66,8 +68,12 @@ function record:update()
     if not handle then return end
 
     if handle:GetClassName().value == "NPCPuppet" then
-        self:despawn()
-        self:spawn()
+        local cmd = AITeleportCommand.new()
+        cmd.position = self.position
+        cmd.rotation = self.rotation.yaw
+        cmd.doNavTest = false
+
+        handle:GetAIControllerComponent():SendCommand(cmd)
     else
         Game.GetTeleportationFacility():Teleport(handle, self.position,  self.rotation)
     end

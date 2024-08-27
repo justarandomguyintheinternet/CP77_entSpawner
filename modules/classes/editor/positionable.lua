@@ -46,31 +46,37 @@ function positionable:load(data)
 	if self.rotationRelative == nil then self.rotationRelative = false end
 end
 
----@protected
-function positionable:drawProperties()
-	ImGui.SetNextItemOpen(self.transformExpanded)
-	self.transformExpanded = ImGui.TreeNodeEx("Transform", ImGuiTreeNodeFlags.SpanFullWidth + ImGuiTreeNodeFlags.NoTreePushOnOpen)
+function positionable:drawTransform()
+	local position = self:getPosition()
+	local rotation = self:getRotation()
+	local scale = self:getScale()
+	self.controlsHovered = false
 
-	if self.transformExpanded then
-		local position = self:getPosition()
-		local rotation = self:getRotation()
-		local scale = self:getScale()
-		self.controlsHovered = false
+	self:drawPosition(position)
+	self:drawRelativePosition()
+	self:drawRotation(rotation)
+	self:drawScale(scale)
 
-		self:drawPosition(position)
-		self:drawRelativePosition()
-		self:drawRotation(rotation)
-		self:drawScale(scale)
-
-		if not self.controlsHovered and self.visualizerDirection ~= "all" then
-			self:setVisualizerDirection("all")
-			if not settings.gizmoOnSelected then
-				self:setVisualizerState(false)
-			end
+	if not self.controlsHovered and self.visualizerDirection ~= "all" then
+		self:setVisualizerDirection("all")
+		if not settings.gizmoOnSelected then
+			self:setVisualizerState(false)
 		end
-
-		ImGui.TreePop()
 	end
+end
+
+function positionable:getProperties()
+	local properties = element.getProperties(self)
+
+	table.insert(properties, {
+		id = "transform",
+		name = "Transform",
+		draw = function ()
+			self:drawTransform()
+		end
+	})
+
+	return properties
 end
 
 function positionable:setSelected(state)

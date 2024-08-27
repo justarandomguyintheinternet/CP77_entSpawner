@@ -1,6 +1,7 @@
 local mesh = require("modules/classes/spawn/mesh/mesh")
 local spawnable = require("modules/classes/spawn/spawnable")
 local visualizer = require("modules/utils/visualizer")
+local style = require("modules/ui/style")
 
 ---Class for worldDynamicMeshNode
 ---@class dynamicMesh : mesh
@@ -71,14 +72,9 @@ end
 function dynamicMesh:draw()
     mesh.draw(self)
 
-    self.startAsleep = ImGui.Checkbox("Start Asleep", self.startAsleep)
+    self.startAsleep = style.trackedCheckbox(self.object, "Start Asleep", self.startAsleep)
 
-    ImGui.SameLine()
-
-    ImGui.PushItemWidth(150)
-    self.forceAutoHideDistance = ImGui.InputFloat("Auto Hide Distance", self.forceAutoHideDistance, 0, 1000, "%.1f")
-
-    ImGui.PopItemWidth()
+    self.forceAutoHideDistance = style.trackedDragFloat(self.object, "Auto Hide Distance", self.forceAutoHideDistance, 0.1, 0, 1000, "%.1f")
 end
 
 function dynamicMesh:export()
