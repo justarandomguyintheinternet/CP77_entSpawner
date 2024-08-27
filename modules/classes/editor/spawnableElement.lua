@@ -24,7 +24,6 @@ function spawnableElement:new(sUI)
    	return o
 end
 
----@override
 function spawnableElement:load(data)
 	positionable.load(self, data)
 
@@ -93,6 +92,15 @@ function spawnableElement:setVisualizerDirection(direction)
 	if direction == "z" or direction == "relZ" or direction == "yaw" or direction == "scaleZ" then color = "blue" end
 
 	visualizer.highlightArrow(self.spawnable:getEntity(), color)
+
+	if not self.spawnable:isSpawned() or not self.visualizerState then return end
+
+	if direction == "x" or direction == "y" or direction == "z" then
+		local diff = Quaternion.MulInverse(EulerAngles.new(0, 0, 0):ToQuat(), self:getRotation():ToQuat())
+		self.spawnable:getEntity():FindComponentByName("arrows"):SetLocalOrientation(diff) -- This seems to fuck with component visibility
+	else
+		self.spawnable:getEntity():FindComponentByName("arrows"):SetLocalOrientation(EulerAngles.new(0, 0, 0):ToQuat())
+	end
 end
 
 function spawnableElement:getDirection(direction)

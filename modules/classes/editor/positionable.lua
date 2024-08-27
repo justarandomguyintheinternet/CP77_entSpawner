@@ -5,7 +5,7 @@ local style = require("modules/ui/style")
 
 local element = require("modules/classes/editor/element")
 
----Element with position and rotation, handles the rendering / editing of those. Values have to be provided by the inheriting class
+---Element with position, rotation and optionally scale, handles the rendering / editing of those. Values have to be provided by the inheriting class
 ---@class positionable : element
 ---@field transformExpanded boolean
 ---@field rotationRelative boolean
@@ -13,6 +13,7 @@ local element = require("modules/classes/editor/element")
 ---@field scaleLocked boolean
 ---@field visualizerState boolean
 ---@field visualizerDirection string
+---@field controlsHovered boolean
 local positionable = setmetatable({}, { __index = element })
 
 function positionable:new(sUI)
@@ -35,7 +36,6 @@ function positionable:new(sUI)
    	return o
 end
 
----@override
 function positionable:load(data)
 	element.load(self, data)
 	self.transformExpanded = data.transformExpanded

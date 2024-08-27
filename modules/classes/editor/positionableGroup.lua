@@ -48,7 +48,9 @@ function positionableGroup:getCenter()
 		center = utils.addVector(center, entry:getPosition())
 	end
 
-	return Vector4.new(center.x / #leafs, center.y / #leafs, center.z / #leafs, 0)
+	local nLeafs = math.max(1, #leafs)
+
+	return Vector4.new(center.x / nLeafs, center.y / nLeafs, center.z / nLeafs, 0)
 end
 
 ---Gets all the positionable leaf objects, i.e. positionable's without childs
