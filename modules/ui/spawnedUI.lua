@@ -492,7 +492,7 @@ function spawnedUI.drawContextMenu(element)
             local data = spawnedUI.copy(isMulti, element)
             history.addAction(history.getInsert(spawnedUI.paste(data, element)))
         end
-        if ImGui.MenuItem("Move to Root", "ENTER") then
+        if ImGui.MenuItem("Move to Root", "BACKSPACE") then
             spawnedUI.moveToRoot(isMulti, element)
         end
         if ImGui.MenuItem("Move to new group", "CTRL-G") then
