@@ -1,5 +1,5 @@
 local utils = require("modules/utils/utils")
-local settings = require("modules/utils/settings")
+local style = require("modules/ui/style")
 
 local positionable = require("modules/classes/editor/positionable")
 
@@ -81,20 +81,31 @@ function positionableGroup:setPosition(delta)
 	end
 end
 
+function positionableGroup:drawRotation(rotation)
+	ImGui.PushItemWidth(80 * style.viewSize)
+	style.pushGreyedOut(true)
+    self:drawProp(rotation.roll, "Roll", "roll")
+    ImGui.SameLine()
+    self:drawProp(rotation.pitch, "Pitch", "pitch")
+	style.popGreyedOut(true)
+    ImGui.SameLine()
+	self:drawProp(rotation.yaw, "Yaw", "yaw")
+    ImGui.SameLine()
+end
+
+-- TODO: Track rotation of group independently, use that for rotation axis for objects (In global space, convert group axis to local space (unit vector - (group axis - object axis)))
+
 function positionableGroup:setRotation(delta)
+	if delta.roll ~= 0 or delta.pitch ~= 0 or delta.yaw == 0 then return end
+
 	local pos = self:getCenter()
-
 	local leafs = self:getPositionableLeafs()
-
-	local deltaRotation = Quaternion.SetAxisAngle(Vector4.new(1 * delta.roll, 1 * delta.pitch, 1 * delta.yaw, 0), Deg2Rad(delta.roll * 1 + delta.pitch * 1 + delta.yaw * 1))
 
 	for _, entry in pairs(leafs) do
 		local relativePosition = utils.subVector(entry:getPosition(), pos)
-		relativePosition = deltaRotation:Transform(relativePosition)
-		entry:setPosition(utils.addVector(pos, relativePosition))
-
-		local entryRot = entry:getRotation():ToQuat()
-		entry:setRotation(Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](deltaRotation, entryRot):ToEulerAngles())
+		relativePosition = utils.subVector(Vector4.RotateAxis(relativePosition, Vector4.new(0, 0, 1, 0), Deg2Rad(delta.yaw)), relativePosition)
+		entry:setPosition(relativePosition)
+		entry:setRotation(delta)
 	end
 end
 

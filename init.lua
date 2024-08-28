@@ -89,7 +89,6 @@ function spawner:new()
     registerForEvent("onUpdate", function (dt)
         if self.runtimeData.inGame and not self.runtimeData.inMenu then
             Cron.Update(dt)
-            self.baseUI.savedUI.run(self)
         end
     end)
 
@@ -103,9 +102,9 @@ function spawner:new()
         style.initialize()
 
         if self.runtimeData.cetOpen then
-            input.update()
             drag.draw()
             self.baseUI.draw(self)
+            input.update()
         end
     end)
 

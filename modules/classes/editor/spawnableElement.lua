@@ -128,15 +128,7 @@ function spawnableElement:setRotation(delta)
 	if delta.roll == 0 and delta.pitch == 0 and delta.yaw == 0 then return end
 
 	if self.rotationRelative then
-		local rot
-		if delta.roll ~= 0 then
-			rot = Quaternion.SetAxisAngle(Vector4.new(0, 1, 0, 0), Deg2Rad(delta.roll))
-		elseif delta.pitch ~= 0 then
-			rot = Quaternion.SetAxisAngle(Vector4.new(1, 0, 0, 0), Deg2Rad(delta.pitch))
-		elseif delta.yaw ~= 0 then
-			rot = Quaternion.SetAxisAngle(Vector4.new(0, 0, 1, 0), Deg2Rad(delta.yaw))
-		end
-		self.spawnable.rotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.spawnable.rotation:ToQuat(), rot):ToEulerAngles()
+		self.spawnable.rotation = utils.addEulerRelative(self.spawnable.rotation, delta)
 	else
 		self.spawnable.rotation = utils.addEuler(self.spawnable.rotation, delta)
 	end

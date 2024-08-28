@@ -132,23 +132,23 @@ function spawnedUI.findCommonParent(elements)
 end
 
 function spawnedUI.registerHotkeys()
-    input.registerImGuiHotkey({ ImGuiKey.Z, ImGuiKey.LeftControl }, function()
+    input.registerImGuiHotkey({ ImGuiKey.Z, ImGuiKey.LeftCtrl }, function()
         history.undo()
     end)
-    input.registerImGuiHotkey({ ImGuiKey.Y, ImGuiKey.LeftControl }, function()
+    input.registerImGuiHotkey({ ImGuiKey.Y, ImGuiKey.LeftCtrl }, function()
         history.redo()
     end)
-    input.registerImGuiHotkey({ ImGuiKey.A, ImGuiKey.LeftControl }, function()
+    input.registerImGuiHotkey({ ImGuiKey.A, ImGuiKey.LeftCtrl }, function()
         for _, entry in pairs(spawnedUI.paths) do
             entry.ref:setSelected(true)
         end
     end)
-    input.registerImGuiHotkey({ ImGuiKey.C, ImGuiKey.LeftControl }, function()
+    input.registerImGuiHotkey({ ImGuiKey.C, ImGuiKey.LeftCtrl }, function()
         if #spawnedUI.selectedPaths == 0 then return end
 
         spawnedUI.clipboard = spawnedUI.copy(true)
     end)
-    input.registerImGuiHotkey({ ImGuiKey.V, ImGuiKey.LeftControl }, function()
+    input.registerImGuiHotkey({ ImGuiKey.V, ImGuiKey.LeftCtrl }, function()
         if #spawnedUI.clipboard == 0 then return end
 
         local target
@@ -158,19 +158,24 @@ function spawnedUI.registerHotkeys()
 
         history.addAction(history.getInsert(spawnedUI.paste(spawnedUI.clipboard, target)))
     end)
+    input.registerImGuiHotkey({ ImGuiKey.X, ImGuiKey.LeftCtrl }, function ()
+        if #spawnedUI.selectedPaths == 0 then return end
+
+        spawnedUI.cut(true)
+    end)
     input.registerImGuiHotkey({ ImGuiKey.Delete }, function()
         history.addAction(history.getRemove(spawnedUI.getRoots(spawnedUI.selectedPaths)))
         for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
             entry.ref:remove()
         end
     end)
-    input.registerImGuiHotkey({ ImGuiKey.D, ImGuiKey.LeftControl }, function()
+    input.registerImGuiHotkey({ ImGuiKey.D, ImGuiKey.LeftCtrl }, function()
         if #spawnedUI.selectedPaths == 0 then return end
 
         local data = spawnedUI.copy(true)
         history.addAction(history.getInsert(spawnedUI.paste(data, spawnedUI.selectedPaths[1].ref)))
     end)
-    input.registerImGuiHotkey({ ImGuiKey.G, ImGuiKey.LeftControl }, function()
+    input.registerImGuiHotkey({ ImGuiKey.G, ImGuiKey.LeftCtrl }, function()
         if #spawnedUI.selectedPaths == 0 then return end
 
         spawnedUI.moveToNewGroup(true)
@@ -375,7 +380,7 @@ end
 ---@param isMulti boolean
 ---@param element element?
 function spawnedUI.moveToNewGroup(isMulti, element)
-    local group = require("modules/classes/editor/element"):new(spawnedUI)
+    local group = require("modules/classes/editor/positionableGroup"):new(spawnedUI)
     group.name = "New Group"
 
     if isMulti then
@@ -422,6 +427,24 @@ function spawnedUI.moveToNewGroup(isMulti, element)
     spawnedUI.scrollToSelected = true
 end
 
+---@param isMulti boolean
+---@param element element?
+function spawnedUI.cut(isMulti, element)
+    spawnedUI.clipboard = {}
+
+    if isMulti then
+        history.addAction(history.getRemove(spawnedUI.getRoots(spawnedUI.selectedPaths)))
+        for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
+            table.insert(spawnedUI.clipboard, entry.ref:serialize())
+            entry.ref:remove()
+        end
+    elseif element then
+        history.addAction(history.getRemove({ element }))
+        table.insert(spawnedUI.clipboard, element:serialize())
+        element:remove()
+    end
+end
+
 function spawnedUI.drawDragWindow()
     if spawnedUI.draggingSelected then
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand)
@@ -463,19 +486,7 @@ function spawnedUI.drawContextMenu(element)
             history.addAction(history.getInsert(spawnedUI.paste(spawnedUI.clipboard, element)))
         end
         if ImGui.MenuItem("Cut", "CTRL-X") then
-            spawnedUI.clipboard = {}
-
-            if isMulti then
-                history.addAction(history.getRemove(spawnedUI.getRoots(spawnedUI.selectedPaths)))
-                for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
-                    table.insert(spawnedUI.clipboard, entry.ref:serialize())
-                    entry.ref:remove()
-                end
-            else
-                history.addAction(history.getRemove({ element }))
-                table.insert(spawnedUI.clipboard, element:serialize())
-                element:remove()
-            end
+            spawnedUI.cut(isMulti, element)
         end
         if ImGui.MenuItem("Duplicate", "CTRL-D") then
             local data = spawnedUI.copy(isMulti, element)
@@ -705,6 +716,7 @@ function spawnedUI.drawHierarchy()
     local nRows = math.floor((ySpace - settings.editorBottomSize) / (ImGui.GetFrameHeight() + spawnedUI.cellPadding * 2 - style.viewSize * 2))
 
     ImGui.BeginChild("##hierarchy", 0, ySpace - settings.editorBottomSize)
+    input.updateWindowState()
 
     -- Start the table
     ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, 7.5 * style.viewSize, spawnedUI.cellPadding)
@@ -776,19 +788,8 @@ function spawnedUI.drawDivider()
     ImGui.PopStyleColor()
 end
 
-local a = false
-
 ---@protected
 function spawnedUI.drawTop()
-    if not a then
-        a = true
-        for i = 1, 2 do
-            local e = require("modules/classes/editor/positionableGroup"):new(spawnedUI)
-            e.name = "Group"
-            e:setParent(spawnedUI.root)
-        end
-    end
-
     ImGui.PushItemWidth(200 * style.viewSize)
     spawnedUI.filter = ImGui.InputTextWithHint('##Filter', 'Search for element...', spawnedUI.filter, 100)
     ImGui.PopItemWidth()
