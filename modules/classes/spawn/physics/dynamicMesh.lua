@@ -35,7 +35,7 @@ function dynamicMesh:onAssemble(entity)
     component.mesh = ResRef.FromString(self.spawnData)
     component.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
     component.meshAppearance = self.app
-    component.simulationType = physicsSimulationType.Kinematic
+    component.simulationType = physicsSimulationType.Dynamic
 
     local filterData = physicsFilterData.new()
     filterData.preset = "World Dynamic"

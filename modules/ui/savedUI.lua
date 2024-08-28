@@ -145,14 +145,6 @@ function savedUI.draw(spawner)
     savedUI.handlePopUp()
 end
 
-local function getGroupHeight()
-    return 3 * ImGui.GetFrameHeight() + 2 * ImGui.GetStyle().WindowPadding.y + ImGui.GetStyle().ItemSpacing.y * 7
-end
-
-local function getObjectHeight()
-    return 4 * ImGui.GetFrameHeight() + 7 * ImGui.GetStyle().ItemSpacing.y + 2 * ImGui.GetStyle().WindowPadding.y
-end
-
 function savedUI.drawGroup(group, spawner)
     local pPos = Vector4.new(0, 0, 0, 0)
     if GetPlayer() then
@@ -172,11 +164,11 @@ function savedUI.drawGroup(group, spawner)
         ImGui.PopItemWidth()
 
         if ImGui.IsItemDeactivatedAfterEdit() then
-            savedUI.files[group.name] = nil
+            savedUI.files[group.name .. ".json"] = nil
             os.rename("data/objects/" .. group.name .. ".json", "data/objects/" .. group.newName .. ".json")
             group.name = group.newName
             config.saveFile("data/objects/" .. group.name .. ".json", group)
-            savedUI.files[group.name] = group
+            savedUI.files[group.name .. ".json"] = group
         end
 
         style.popGreyedOut(utils.hasIndex(savedUI.spawned, group.name))
@@ -226,11 +218,11 @@ function savedUI.drawObject(obj, spawner)
         ImGui.PopItemWidth()
 
         if ImGui.IsItemDeactivatedAfterEdit() then
-            savedUI.files[obj.name] = nil
+            savedUI.files[obj.name .. ".json"] = nil
             os.rename("data/objects/" .. obj.name .. ".json", "data/objects/" .. obj.newName .. ".json")
             obj.name = obj.newName
             config.saveFile("data/objects/" .. obj.name .. ".json", obj)
-            savedUI.files[obj.name] = obj
+            savedUI.files[obj.name .. ".json"] = obj
         end
 
         style.popGreyedOut(utils.hasIndex(savedUI.spawned, obj.name))

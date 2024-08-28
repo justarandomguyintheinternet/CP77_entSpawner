@@ -58,10 +58,10 @@ function positionable:drawTransform()
 	self:drawScale(scale)
 
 	if not self.controlsHovered and self.visualizerDirection ~= "all" then
-		self:setVisualizerDirection("all")
 		if not settings.gizmoOnSelected then
-			self:setVisualizerState(false)
+			self:setVisualizerState(false) -- Set vis state first, as loading the mesh app (vis direction) can screw with it
 		end
+		self:setVisualizerDirection("all")
 	end
 end
 
