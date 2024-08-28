@@ -671,6 +671,7 @@ function spawnedUI.drawElement(element, dummy)
     ImGui.SetCursorPosX((spawnedUI.depth) * 17 * style.viewSize + 25 * style.viewSize)
     ImGui.AlignTextToFramePadding()
     if element.editName then
+        input.windowHovered = false
         if element.focusNameEdit > 0 then
             ImGui.SetKeyboardFocusHere()
             element.focusNameEdit = element.focusNameEdit - 1

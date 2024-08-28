@@ -93,7 +93,7 @@ function spawnableElement:setVisualizerDirection(direction)
 	if direction == "y" or direction == "relY" or direction == "roll" or direction == "scaleY" then color = "green" end
 	if direction == "z" or direction == "relZ" or direction == "yaw" or direction == "scaleZ" then color = "blue" end
 
-	if not self.spawnable:isSpawned() or not self.visualizerState then return end
+	if not self.spawnable:isSpawned() or not self.spawnable:getEntity() or not self.visualizerState then return end
 
 	visualizer.highlightArrow(self.spawnable:getEntity(), color)
 	if direction == "x" or direction == "y" or direction == "z" then
