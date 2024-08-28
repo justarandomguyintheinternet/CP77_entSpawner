@@ -4,6 +4,7 @@ local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 local cache = require("modules/utils/cache")
 local visualizer = require("modules/utils/visualizer")
+local history = require("modules/utils/history")
 
 local colliderShapes = { "Box", "Capsule", "Sphere" }
 
@@ -191,9 +192,10 @@ end
 
 ---@protected
 function mesh:generateCollider()
-    local path = self.object:addGroupToParent(self.object.name .. "_grouped")
-    self.object:setSelectedGroupByPath(path)
-    self.object:moveToSelectedGroup()
+    local group = require("modules/classes/editor/positionableGroup"):new(self.object.sUI)
+    group.name = self.object.name .. "_grouped"
+    group:setParent(self.object.parent, utils.indexValue(self.object.parent.childs, self.object) + 1)
+    local insertGroup = history.getInsert({ group })
 
     local collider = require("modules/classes/spawn/collision/collider"):new()
 
@@ -231,7 +233,32 @@ function mesh:generateCollider()
 
     collider:loadSpawnData(data, pos, rotation)
 
-    self.object:addObjectToParent(collider, collider:generateName(self.object.name .. "_collider"), false)
+    local colliderElement = require("modules/classes/editor/spawnableElement"):new(self.object.sUI)
+    colliderElement.name = self.object.name .. "_collider"
+    colliderElement.spawnable = collider
+    colliderElement.icon = collider.icon
+    colliderElement:setParent(group)
+    local insertCollider = history.getInsert({ colliderElement })
+
+    local remove = history.getRemove({ self.object })
+    self.object:setParent(group)
+    local insert = history.getInsert({ self.object })
+    local move = history.getMove(remove, insert)
+
+    history.addAction({
+        undo = function ()
+            move.undo()
+            insertCollider.undo()
+            insertGroup.undo()
+        end,
+        redo = function ()
+            insertGroup.redo()
+            history.spawnedUI.cachePaths()
+            insertCollider.redo()
+            move.redo()
+        end
+    })
+
     self.object.headerOpen = false
 end
 

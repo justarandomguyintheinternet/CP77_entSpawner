@@ -3,6 +3,7 @@ local group = require("modules/classes/spawn/group")
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
+local input = require("modules/utils/input")
 
 ---@class spawnedUI
 ---@field root element
@@ -130,14 +131,90 @@ function spawnedUI.findCommonParent(elements)
     return spawnedUI.getElementByPath(commonPath)
 end
 
+function spawnedUI.registerHotkeys()
+    input.registerImGuiHotkey({ ImGuiKey.Z, ImGuiKey.LeftControl }, function()
+        history.undo()
+    end)
+    input.registerImGuiHotkey({ ImGuiKey.Y, ImGuiKey.LeftControl }, function()
+        history.redo()
+    end)
+    input.registerImGuiHotkey({ ImGuiKey.A, ImGuiKey.LeftControl }, function()
+        for _, entry in pairs(spawnedUI.paths) do
+            entry.ref:setSelected(true)
+        end
+    end)
+    input.registerImGuiHotkey({ ImGuiKey.C, ImGuiKey.LeftControl }, function()
+        if #spawnedUI.selectedPaths == 0 then return end
+
+        spawnedUI.clipboard = spawnedUI.copy(true)
+    end)
+    input.registerImGuiHotkey({ ImGuiKey.V, ImGuiKey.LeftControl }, function()
+        if #spawnedUI.clipboard == 0 then return end
+
+        local target
+        if #spawnedUI.selectedPaths > 0 then
+            target = spawnedUI.selectedPaths[1].ref
+        end
+
+        history.addAction(history.getInsert(spawnedUI.paste(spawnedUI.clipboard, target)))
+    end)
+    input.registerImGuiHotkey({ ImGuiKey.Delete }, function()
+        history.addAction(history.getRemove(spawnedUI.getRoots(spawnedUI.selectedPaths)))
+        for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
+            entry.ref:remove()
+        end
+    end)
+    input.registerImGuiHotkey({ ImGuiKey.D, ImGuiKey.LeftControl }, function()
+        if #spawnedUI.selectedPaths == 0 then return end
+
+        local data = spawnedUI.copy(true)
+        history.addAction(history.getInsert(spawnedUI.paste(data, spawnedUI.selectedPaths[1].ref)))
+    end)
+    input.registerImGuiHotkey({ ImGuiKey.G, ImGuiKey.LeftControl }, function()
+        if #spawnedUI.selectedPaths == 0 then return end
+
+        spawnedUI.moveToNewGroup(true)
+    end)
+    input.registerImGuiHotkey({ ImGuiKey.Backspace }, function()
+        if #spawnedUI.selectedPaths == 0 then return end
+        spawnedUI.moveToRoot(true)
+    end)
+    input.registerImGuiHotkey({ ImGuiKey.Escape }, function()
+        if #spawnedUI.selectedPaths == 0 then return end
+        spawnedUI.unselectAll()
+    end)
+    input.registerImGuiHotkey({ ImGuiKey.H }, function()
+        if #spawnedUI.selectedPaths == 0 then return end
+
+        local changes = {}
+        for _, entry in pairs(spawnedUI.selectedPaths) do
+		    table.insert(changes, history.getElementChange(entry.ref))
+            entry.ref:setVisible(not entry.ref.visible, true)
+        end
+
+        history.addAction({
+            undo = function()
+                for _, change in pairs(changes) do
+                    change.undo()
+                end
+            end,
+            redo = function()
+                for _, change in pairs(changes) do
+                    change.redo()
+                end
+            end
+        })
+    end)
+end
+
 ---@protected
 function spawnedUI.multiSelectActive()
-    return ImGui.IsKeyDown(ImGuiKey.Tab)
+    return ImGui.IsKeyDown(ImGuiKey.LeftCtrl)
 end
 
 ---@protected
 function spawnedUI.rangeSelectActive()
-    return ImGui.IsKeyDown(ImGuiKey.Space)
+    return ImGui.IsKeyDown(ImGuiKey.LeftShift)
 end
 
 function spawnedUI.unselectAll()
@@ -216,12 +293,12 @@ end
 
 ---@protected
 ---@param isMulti boolean
----@param element element
+---@param element element?
 ---@return table
 function spawnedUI.copy(isMulti, element)
     local copied = {}
 
-    if not element.selected or not isMulti then
+    if element and (not element.selected or not isMulti) then
         table.insert(copied, element:serialize())
     elseif isMulti then
         for _, entry in pairs(spawnedUI.selectedPaths) do
@@ -236,17 +313,22 @@ end
 
 ---@protected
 ---@param elements table Serialized elements
----@param element element The element to paste to
+---@param element element? The element to paste to
 ---@return element[]
 function spawnedUI.paste(elements, element)
     spawnedUI.unselectAll()
 
     local pasted = {}
-    local parent = element.parent
-    local index = utils.indexValue(parent.childs, element) + 1
-    if element.expandable then
-        parent = element
-        index = 1
+    local parent = spawnedUI.root
+    local index = #parent.childs + 1
+
+    if element then
+        parent = element.parent
+        index = utils.indexValue(parent.childs, element) + 1
+        if element.expandable then
+            parent = element
+            index = 1
+        end
     end
 
     for _, entry in pairs(elements) do
@@ -259,6 +341,85 @@ function spawnedUI.paste(elements, element)
     end
 
     return pasted
+end
+
+---@param isMulti boolean
+---@param element element?
+function spawnedUI.moveToRoot(isMulti, element)
+    if isMulti then
+        local elements = {}
+        for _, entry in pairs(spawnedUI.selectedPaths) do
+            if not entry.ref:isRoot(false) and not entry.ref.parent:isParentOrSelfSelected() then
+                table.insert(elements, entry.ref)
+            end
+        end
+        local remove = history.getRemove(elements)
+        for _, entry in pairs(elements) do
+            entry:setParent(spawnedUI.root)
+        end
+        local insert = history.getInsert(elements)
+        history.addAction(history.getMove(remove, insert))
+    elseif element then
+        spawnedUI.unselectAll()
+
+        local remove = history.getRemove({ element })
+        element:setParent(spawnedUI.root)
+        local insert = history.getInsert({ element })
+        history.addAction(history.getMove(remove, insert))
+
+        element:setSelected(true)
+        spawnedUI.scrollToSelected = true
+    end
+end
+
+---@param isMulti boolean
+---@param element element?
+function spawnedUI.moveToNewGroup(isMulti, element)
+    local group = require("modules/classes/editor/element"):new(spawnedUI)
+    group.name = "New Group"
+
+    if isMulti then
+        local parents = spawnedUI.getRoots(spawnedUI.selectedPaths)
+        local common = spawnedUI.findCommonParent(parents)
+
+        -- Find lowest index of element in common parent
+        local index = nil
+        for _, entry in pairs(parents) do
+            local indexInCommon = utils.indexValue(common.childs, entry.ref)
+
+            if indexInCommon ~= -1 then
+                if not index then index = indexInCommon end
+                index = math.min(index, indexInCommon)
+            end
+        end
+
+        if not index then index = 1 end
+
+        group:setParent(common, index)
+        local insert = history.getInsert({ group })
+        local remove = history.getRemove(parents)
+
+        for _, entry in pairs(parents) do
+            entry.ref:setParent(group)
+        end
+
+        local insertElements = history.getInsert(parents)
+        history.addAction(history.getMoveToNewGroup(insert, remove, insertElements))
+    elseif element then
+        group:setParent(element.parent, utils.indexValue(element.parent.childs, element))
+        local insert = history.getInsert({ group }) -- Insertion of group
+        local remove = history.getRemove({ element }) -- Removal of element
+        element:setParent(group)
+        local insertElement = history.getInsert({ element }) -- Insertion of element into group
+
+        history.addAction(history.getMoveToNewGroup(insert, remove, insertElement))
+    end
+
+    spawnedUI.unselectAll()
+    group:setSelected(true)
+    group.editName = true
+    group.focusNameEdit = 2
+    spawnedUI.scrollToSelected = true
 end
 
 function spawnedUI.drawDragWindow()
@@ -320,78 +481,11 @@ function spawnedUI.drawContextMenu(element)
             local data = spawnedUI.copy(isMulti, element)
             history.addAction(history.getInsert(spawnedUI.paste(data, element)))
         end
-        if ImGui.MenuItem("Move to Root", "HOME") then
-            if isMulti then
-                local elements = {}
-                for _, entry in pairs(spawnedUI.selectedPaths) do
-                    if not entry.ref:isRoot(false) and not entry.ref.parent:isParentOrSelfSelected() then
-                        table.insert(elements, entry.ref)
-                    end
-                end
-                local remove = history.getRemove(elements)
-                for _, entry in pairs(elements) do
-                    entry:setParent(spawnedUI.root)
-                end
-                local insert = history.getInsert(elements)
-                history.addAction(history.getMove(remove, insert))
-            else
-                spawnedUI.unselectAll()
-
-                local remove = history.getRemove({ element })
-                element:setParent(spawnedUI.root)
-                local insert = history.getInsert({ element })
-                history.addAction(history.getMove(remove, insert))
-
-                element:setSelected(true)
-                spawnedUI.scrollToSelected = true
-            end
+        if ImGui.MenuItem("Move to Root", "ENTER") then
+            spawnedUI.moveToRoot(isMulti, element)
         end
         if ImGui.MenuItem("Move to new group", "CTRL-G") then
-            local group = require("modules/classes/editor/element"):new(spawnedUI)
-            group.name = "New Group"
-
-            if isMulti then
-                local parents = spawnedUI.getRoots(spawnedUI.selectedPaths)
-                local common = spawnedUI.findCommonParent(parents)
-
-                -- Find lowest index of element in common parent
-                local index = nil
-                for _, entry in pairs(parents) do
-                    local indexInCommon = utils.indexValue(common.childs, entry.ref)
-
-                    if indexInCommon ~= -1 then
-                        if not index then index = indexInCommon end
-                        index = math.min(index, indexInCommon)
-                    end
-                end
-
-                if not index then index = 1 end
-
-                group:setParent(common, index)
-                local insert = history.getInsert({ group })
-                local remove = history.getRemove(parents)
-
-                for _, entry in pairs(parents) do
-                    entry.ref:setParent(group)
-                end
-
-                local insertElements = history.getInsert(parents)
-                history.addAction(history.getMoveToNewGroup(insert, remove, insertElements))
-            else
-                group:setParent(element.parent, utils.indexValue(element.parent.childs, element))
-                local insert = history.getInsert({ group }) -- Insertion of group
-                local remove = history.getRemove({ element }) -- Removal of element
-                element:setParent(group)
-                local insertElement = history.getInsert({ element }) -- Insertion of element into group
-
-                history.addAction(history.getMoveToNewGroup(insert, remove, insertElement))
-            end
-
-            spawnedUI.unselectAll()
-            group:setSelected(true)
-            group.editName = true
-            group.focusNameEdit = 2
-            spawnedUI.scrollToSelected = true
+            spawnedUI.moveToNewGroup(isMulti, element)
         end
 
         ImGui.EndPopup()

@@ -162,7 +162,7 @@ function collider:draw()
         end
         self:updateFull(finished)
         ImGui.SameLine()
-        self.extents.y, changed = style.trackedDragFloat(self.object, "##extentsY", self.extents.y, 0.01, 0, 9999, "%.2f Y Extents", 100)
+        self.extents.y, changed, finished = style.trackedDragFloat(self.object, "##extentsY", self.extents.y, 0.01, 0, 9999, "%.2f Y Extents", 100)
         if changed then
             visualizer.updateScale(self:getEntity(), self.extents, "box")
         end

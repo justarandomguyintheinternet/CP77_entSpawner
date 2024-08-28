@@ -21,6 +21,7 @@ local cache = require("modules/utils/cache")
 local drag = require("modules/utils/dragHelper")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
+local input = require("modules/utils/input")
 
 ---@class spawner
 ---@field runtimeData {cetOpen: boolean, inGame: boolean, inMenu: boolean}
@@ -64,6 +65,7 @@ function spawner:new()
 
         self.baseUI.spawnedUI.spawner = self
         self.baseUI.spawnedUI.cachePaths()
+        self.baseUI.spawnedUI.registerHotkeys()
         self.baseUI.savedUI.reload()
 
         self.baseUI.exportUI.init()
@@ -101,6 +103,7 @@ function spawner:new()
         style.initialize()
 
         if self.runtimeData.cetOpen then
+            input.update()
             drag.draw()
             self.baseUI.draw(self)
         end

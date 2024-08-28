@@ -19,7 +19,7 @@ function history.getMoveToNewGroup(insert, remove, insertElement)
     return {
         redo = function()
             insert.redo()
-            history.spawnedUI.cachePaths()
+            history.spawnedUI.cachePaths() -- VERY Important so that the path of the new group can be found
             move.redo()
         end,
         undo = function()

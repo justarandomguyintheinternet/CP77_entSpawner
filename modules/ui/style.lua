@@ -54,6 +54,8 @@ end
 
 function style.tooltip(text)
     if ImGui.IsItemHovered() then
+        style.setCursorRelative(8, 8)
+
         ImGui.SetTooltip(text)
     end
 end
@@ -76,6 +78,8 @@ end
 
 function style.spawnableInfo(info)
     if ImGui.IsItemHovered() then
+        style.setCursorRelative(8, 8)
+
         ImGui.BeginTooltip()
         ImGui.PushTextWrapPos(ImGui.GetFontSize() * 20)
 

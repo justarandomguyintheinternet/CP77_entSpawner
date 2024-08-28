@@ -11,7 +11,7 @@ local previewComponentNames = {
 local function addMesh(entity, name, mesh, scale, app, enabled)
     local parent = nil
     for _, component in pairs(entity:GetComponents()) do
-        if component:IsA("entMeshComponent") or component.name.value == "targeting" then
+        if component:IsA("entMeshComponent") or component.name.value == "Component" then -- Can be any placed component i think, TODO change this
             parent = component
             break
         end
