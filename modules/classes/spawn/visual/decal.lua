@@ -101,7 +101,7 @@ end
 function decal:draw()
     spawnable.draw(self)
 
-    ImGui.PushItemWidth(150)
+    ImGui.PushItemWidth(150 * style.viewSize)
 
     self.alpha, changed, deactivatedAfterEdit = style.trackedDragFloat(self.object, "##alpha", self.alpha, 0.01, 0, 100, "%.2f Alpha")
     self:updateFull(deactivatedAfterEdit)

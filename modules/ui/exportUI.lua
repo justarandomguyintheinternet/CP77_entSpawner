@@ -18,6 +18,13 @@ function exportUI.init()
     for _, file in pairs(dir("data/exportTemplates/")) do
         if file.name:match("^.+(%..+)$") == ".json" then
             local data = config.loadFile("data/exportTemplates/" .. file.name)
+
+            for key, group in pairs(data.groups) do
+                if not config.fileExists("data/objects/" .. group.name .. ".json") then
+                    data.groups[key] = nil
+                end
+            end
+
             exportUI.templates[data.projectName] = data
         end
     end
@@ -25,7 +32,6 @@ end
 
 function exportUI.drawGroups()
     if #exportUI.groups > 0 then
-        ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, 0)
         ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0)
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
         ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
@@ -47,13 +53,13 @@ function exportUI.drawGroups()
                 style.mutedText("Sector Category:")
                 style.tooltip("Select the type of the sector for the group, if in doubt use Interior or Exterior")
                 ImGui.SameLine()
-                ImGui.SetNextItemWidth(150)
+                ImGui.SetNextItemWidth(150 * style.viewSize)
                 group.category = ImGui.Combo("##category", group.category, sectorCategory, #sectorCategory)
 
                 style.mutedText("Sector Level:")
                 style.tooltip("Select the level of the sector for the group")
                 ImGui.SameLine()
-                ImGui.SetNextItemWidth(150)
+                ImGui.SetNextItemWidth(150 * style.viewSize)
                 group.level, changed = ImGui.InputInt("##level", group.level)
                 if changed then
                     group.level = math.min(math.max(group.level, 0), 6)
@@ -62,7 +68,7 @@ function exportUI.drawGroups()
                 style.mutedText("Streaming Box Extents:")
                 style.tooltip("Change the size of the streaming box for the sector, extends the given amount on each axis in both directions")
                 ImGui.SameLine()
-                ImGui.PushItemWidth(110)
+                ImGui.PushItemWidth(90 * style.viewSize)
                 group.streamingX = ImGui.DragFloat("##x", group.streamingX, 0.25, 0, 9999, "%.1f X Size")
                 ImGui.SameLine()
                 group.streamingY = ImGui.DragFloat("##y", group.streamingY, 0.25, 0, 9999, "%.1f Y Size")
@@ -83,7 +89,7 @@ function exportUI.drawGroups()
 
         ImGui.EndChildFrame()
         ImGui.PopStyleColor()
-        ImGui.PopStyleVar(3)
+        ImGui.PopStyleVar(2)
     else
         ImGui.PushStyleColor(ImGuiCol.Text, style.mutedColor)
         ImGui.TextWrapped("No groups yet added, add them from the \"Saved\" tab!")
@@ -93,7 +99,6 @@ end
 
 function exportUI.drawTemplates()
     if utils.tableLength(exportUI.templates) > 0 then
-        ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, 0)
         ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0)
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
         ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
@@ -131,7 +136,7 @@ function exportUI.drawTemplates()
 
         ImGui.EndChildFrame()
         ImGui.PopStyleColor()
-        ImGui.PopStyleVar(3)
+        ImGui.PopStyleVar(2)
     else
         ImGui.PushStyleColor(ImGuiCol.Text, style.mutedColor)
         ImGui.TextWrapped("No templates created yet.")
@@ -156,7 +161,7 @@ function exportUI.draw(spawner)
 
     ImGui.Text("Project Name")
     ImGui.SameLine()
-    ImGui.SetNextItemWidth(250)
+    ImGui.SetNextItemWidth(200 * style.viewSize)
     exportUI.projectName = ImGui.InputTextWithHint('##name', 'Export name...', exportUI.projectName, 100)
 
     style.sectionHeaderEnd()

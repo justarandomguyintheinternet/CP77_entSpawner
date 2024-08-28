@@ -137,7 +137,7 @@ function light:draw()
         self:updateParameters()
     end
 
-    ImGui.PushItemWidth(150)
+    ImGui.PushItemWidth(150 * style.viewSize)
     if self.lightType == 1 then
         self.innerAngle, changed = style.trackedDragFloat(self.object, "##inner", self.innerAngle, 0.1, 0, 9999, "%.1f Inner Angle", 105)
         if changed then
@@ -175,17 +175,17 @@ function light:draw()
     ImGui.Text("Flicker Settings")
     style.tooltip("Controll light flickering, turn up strength to see effect")
     ImGui.SameLine()
-    self.flickerPeriod, changed = style.trackedDragFloat(self.object, "##flickerPeriod", self.flickerPeriod, 0.01, 0.05, 9999, "%.2f Period", 90)
+    self.flickerPeriod, changed = style.trackedDragFloat(self.object, "##flickerPeriod", self.flickerPeriod, 0.01, 0.05, 9999, "%.2f Period", 85)
     if changed then
         self:updateParameters()
     end
     ImGui.SameLine()
-    self.flickerStrength, changed = style.trackedDragFloat(self.object, "##flickerStrength", self.flickerStrength, 0.01, 0, 9999, "%.2f Strength", 90)
+    self.flickerStrength, changed = style.trackedDragFloat(self.object, "##flickerStrength", self.flickerStrength, 0.01, 0, 9999, "%.2f Strength", 85)
     if changed then
         self:updateParameters()
     end
     ImGui.SameLine()
-    self.flickerOffset, changed = style.trackedDragFloat(self.object, "##flickerOffset", self.flickerOffset, 0.01, 0, 9999, "%.2f Offset", 90)
+    self.flickerOffset, changed = style.trackedDragFloat(self.object, "##flickerOffset", self.flickerOffset, 0.01, 0, 9999, "%.2f Offset", 85)
     if changed then
         self:updateParameters()
     end

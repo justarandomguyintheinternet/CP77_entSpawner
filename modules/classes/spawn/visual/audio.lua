@@ -59,8 +59,7 @@ end
 function sound:draw()
     spawnable.draw(self)
 
-    ImGui.SetNextItemWidth(150)
-    self.radius = style.trackedDragFloat(self.object, "Radius", self.radius, 0.01, 0, 9999, "%.2f")
+    self.radius = style.trackedDragFloat(self.object, "Radius", self.radius, 0.01, 0, 9999, "%.2f", 80)
 end
 
 function sound:getProperties()

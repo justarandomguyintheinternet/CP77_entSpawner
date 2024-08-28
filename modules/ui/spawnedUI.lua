@@ -789,7 +789,7 @@ function spawnedUI.drawTop()
         end
     end
 
-    ImGui.PushItemWidth(250)
+    ImGui.PushItemWidth(200 * style.viewSize)
     spawnedUI.filter = ImGui.InputTextWithHint('##Filter', 'Search for element...', spawnedUI.filter, 100)
     ImGui.PopItemWidth()
 
@@ -804,7 +804,7 @@ function spawnedUI.drawTop()
         end
     end
 
-    ImGui.PushItemWidth(250)
+    ImGui.PushItemWidth(200 * style.viewSize)
     spawnedUI.newGroupName = ImGui.InputTextWithHint('##newG', 'New group name...', spawnedUI.newGroupName, 100)
     ImGui.PopItemWidth()
 

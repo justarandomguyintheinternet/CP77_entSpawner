@@ -71,8 +71,7 @@ end
 function particle:draw()
     spawnable.draw(self)
 
-    ImGui.SetNextItemWidth(150)
-    self.emissionRate, changed = style.trackedDragFloat(self.object, "Emission Rate", self.emissionRate, 0.01, 0, 9999, "%.2f")
+    self.emissionRate, changed = style.trackedDragFloat(self.object, "Emission Rate", self.emissionRate, 0.01, 0, 9999, "%.2f", 80)
     if changed then
         self.emissionRate = math.max(self.emissionRate, 0)
 

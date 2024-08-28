@@ -133,6 +133,7 @@ function spawnUI.refresh()
 end
 
 function spawnUI.draw()
+    ImGui.SetNextItemWidth(300 * style.viewSize)
     spawnUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search by name... (Supports pattern matching)', spawnUI.filter, 100)
     if changed then
         spawnUI.updateFilter()
@@ -155,7 +156,7 @@ function spawnUI.draw()
         spawnUI.selectedGroup = 0
     end
 
-	ImGui.PushItemWidth(200)
+	ImGui.PushItemWidth(150 * style.viewSize)
 	spawnUI.selectedGroup = ImGui.Combo("Put new object into group", spawnUI.selectedGroup, groups, #groups)
     tooltip("Automatically place any newly spawned object into the selected group")
 	ImGui.PopItemWidth()
@@ -176,7 +177,7 @@ function spawnUI.draw()
 
     style.spacedSeparator()
 
-    ImGui.PushItemWidth(200)
+    ImGui.PushItemWidth(150 * style.viewSize)
 	spawnUI.selectedType, changed = ImGui.Combo("Object type", spawnUI.selectedType, typeNames, #typeNames)
     if changed then
         settings.selectedType = typeNames[spawnUI.selectedType + 1]

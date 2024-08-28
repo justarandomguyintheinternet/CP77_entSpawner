@@ -131,7 +131,7 @@ end
 function collider:draw()
     spawnable.draw(self)
 
-    ImGui.PushItemWidth(150)
+    ImGui.PushItemWidth(150 * style.viewSize)
 
     ImGui.Text("Collision Shape")
     ImGui.SameLine()

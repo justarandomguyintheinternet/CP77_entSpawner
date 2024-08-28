@@ -174,7 +174,7 @@ function mesh:draw()
 
     ImGui.SameLine()
 
-    ImGui.SetNextItemWidth(150)
+    ImGui.SetNextItemWidth(80 * style.viewSize)
     self.colliderShape, changed = ImGui.Combo("##colliderShape", self.colliderShape, colliderShapes, #colliderShapes)
 end
 
