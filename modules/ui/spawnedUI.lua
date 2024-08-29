@@ -107,6 +107,9 @@ end
 ---@param elements {path : string, tempPath: string, ref : element}[]
 ---@return element
 function spawnedUI.findCommonParent(elements)
+    if #elements == 0 then return spawnedUI.root end
+    if #elements == 1 then return elements[1].ref.parent end
+
     local commonPath = ""
 
     -- Avoid modifying original paths

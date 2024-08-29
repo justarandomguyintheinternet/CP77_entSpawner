@@ -1,6 +1,6 @@
 local utils = require("modules/utils/utils")
 
-local maxHistory = 100
+local maxHistory = 999
 
 ---@class history
 ---@field index number
@@ -158,6 +158,10 @@ function history.addAction(action)
         for i = history.index + 1, #history.actions do
             history.actions[i] = nil
         end
+    end
+
+    if #history.actions >= maxHistory then
+        table.remove(history.actions, 1)
     end
 
     table.insert(history.actions, action)
