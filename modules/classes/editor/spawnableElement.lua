@@ -8,6 +8,7 @@ local positionable = require("modules/classes/editor/positionable")
 ---Class for an element holding a spawnable
 ---@class spawnableElement : positionable
 ---@field spawnable spawnable
+---@field silent boolean
 local spawnableElement = setmetatable({}, { __index = positionable })
 
 function spawnableElement:new(sUI)
@@ -20,12 +21,14 @@ function spawnableElement:new(sUI)
 	o.class = utils.combine(o.class, { "spawnableElement" })
 	o.expandable = false
 
+	o.silent = false
+
 	setmetatable(o, { __index = self })
    	return o
 end
 
-function spawnableElement:load(data)
-	positionable.load(self, data)
+function spawnableElement:load(data, silent)
+	positionable.load(self, data, silent)
 
 	if self.spawnable then
 		self.spawnable:despawn()
@@ -38,6 +41,7 @@ function spawnableElement:load(data)
 	if self.spawnable.scale then
 		self.hasScale = true
 	end
+	self.silent = silent
 
 	self:setVisible(self.visible, true)
 
@@ -60,6 +64,8 @@ end
 function spawnableElement:setVisible(state, fromRecursive)
 	positionable.setVisible(self, state, fromRecursive)
 
+	if self.silent then return end
+
 	if self.visible == false or self.hiddenByParent then
 		self.spawnable:despawn()
 	else
@@ -69,6 +75,8 @@ end
 
 function spawnableElement:setHiddenByParent(state)
 	positionable.setHiddenByParent(self, state)
+
+	if self.silent then return end
 
 	if self.hiddenByParent or not self.visible then
 		self.spawnable:despawn()
@@ -174,6 +182,10 @@ function spawnableElement:serialize()
 	data.spawnable = self.spawnable:save()
 
 	return data
+end
+
+function spawnableElement:export(key, length)
+	return self.spawnable:export(key, length)
 end
 
 return spawnableElement

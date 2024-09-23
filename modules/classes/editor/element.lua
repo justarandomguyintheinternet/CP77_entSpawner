@@ -73,7 +73,8 @@ end
 
 ---Loads the data from a given table, containing the same data as exported during save()
 ---@param data {name : string, childs : table, headerOpen : boolean, modulePath : string, visible : boolean, selected : boolean, hiddenByParent : boolean, propertyHeaderStates: table}
-function element:load(data)
+---@param silent boolean? Optional parameter to signal that this load is purely for retrieving data
+function element:load(data, silent)
 	while self.childs[1] do -- Ensure any children get removed, important for undoing spawnables so that they despawn
 		self.childs[1]:remove()
 	end
@@ -99,7 +100,7 @@ function element:load(data)
 		for _, child in pairs(data.childs) do
 			child.modulePath = child.modulePath or self:getModulePathByType(child)
 			local new = require(child.modulePath):new(self.sUI)
-			new:load(child)
+			new:load(child, silent)
 			new:setParent(self)
 		end
 	end

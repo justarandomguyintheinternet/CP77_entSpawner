@@ -36,8 +36,8 @@ function positionable:new(sUI)
    	return o
 end
 
-function positionable:load(data)
-	element.load(self, data)
+function positionable:load(data, silent)
+	element.load(self, data, silent)
 	self.transformExpanded = data.transformExpanded
 	self.rotationRelative = data.rotationRelative
 	self.scaleLocked = data.scaleLocked

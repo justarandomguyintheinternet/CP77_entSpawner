@@ -77,7 +77,7 @@ function exportUI.drawGroups()
                 ImGui.PopItemWidth()
 
                 if ImGui.Button("Remove from list") then
-                   exportUI.groups[key] = nil
+                    table.remove(exportUI.groups, key)
                 end
 
                 ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
@@ -207,6 +207,7 @@ function exportUI.addGroup(name)
         streamingY = 150,
         streamingZ = 100
     }
+
     table.insert(exportUI.groups, data)
 end
 
@@ -219,8 +220,8 @@ function exportUI.exportGroup(group)
 
     local data = config.loadFile("data/objects/" .. group.name .. ".json")
 
-    local g = require("modules/classes/spawn/group"):new(exportUI.spawner.baseUI.spawnedUI)
-    g:load(data)
+    local g = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
+    g:load(data, true)
 
     local center = g:getCenter()
     local min = { x = center.x - group.streamingX, y = center.y - group.streamingY, z = center.z - group.streamingY }
@@ -235,10 +236,12 @@ function exportUI.exportGroup(group)
         nodes = {}
     }
 
-    local objects = g:getObjects()
+    local objects = g:getPathsRecursive(false)
 
     for key, object in pairs(objects) do
-        table.insert(exported.nodes, object.spawnable:export(key, #objects))
+        if utils.isA(object.ref, "spawnableElement") then
+            table.insert(exported.nodes, object.ref.spawnable:export(key, #objects))
+        end
     end
 
     return exported
