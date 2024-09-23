@@ -23,7 +23,6 @@ jobs:
         run: |
           sudo cp -r baseEntity.archive /entSpawnerPacked/archive/pc/mod
           sudo cp -r script /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
-          sudo cp -r CPStyling /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
           sudo cp -r data /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
           sudo cp -r export /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
           sudo cp -r modules /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
