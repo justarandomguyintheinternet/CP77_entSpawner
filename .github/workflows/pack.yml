@@ -29,7 +29,7 @@ jobs:
           sudo cp -r modules /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
           sudo cp -r init.lua /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
       - name: Upload zip
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
             name: entSpawnerPacked
             path: /entSpawnerPacked/
