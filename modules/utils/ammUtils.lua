@@ -62,14 +62,22 @@ local function getAMMLightByID(lights, id)
     end
 end
 
-local function generateObject(savedUI, data)
-    local newObject = require("modules/classes/spawn/object"):new(savedUI)
-    newObject.name = data.name
-    newObject.headerOpen = false
-    newObject.loadRange = 100
-    newObject.autoLoad = false
+local function generateElement(savedUI, data)
+    local element = require("modules/classes/editor/spawnableElement"):new(savedUI)
+    element.name = data.name
 
-    return newObject
+    return element
+end
+
+local function generateGroup(savedUI, name, parent)
+    local group = require("modules/classes/editor/positionableGroup"):new(savedUI)
+    group.name = name
+
+    if parent then
+        group:setParent(parent)
+    end
+
+    return group
 end
 
 local function convertLight(propData, data)
@@ -183,30 +191,21 @@ local function setInstanceDataLight(entity, lightData, spawnable)
     end
 end
 
-local function createGroup(savedUI, name, parent)
-    local group = gr:new(savedUI)
-    group.parent = parent
-    group.headerOpen = false
-    group.name = name
-
-    return group
-end
-
-function amm.importPreset(data, savedUI, importTasks)
+function amm.importPreset(data, spawnedUI, importTasks)
     local meshService = require("modules/utils/tasks"):new()
 
-    local root = createGroup(savedUI, data.file_name:gsub(".json", ""), nil)
-    local props = createGroup(savedUI, "Props", root)
-    local lights = createGroup(savedUI, "Lights", root)
-    local lightNodes = createGroup(savedUI, "Light Nodes", lights)
-    local lightCustom = createGroup(savedUI, "Customized Light Props", lights)
-    local scaledProps = createGroup(savedUI, "Scaled Props", root)
+    local root = generateGroup(spawnedUI, data.file_name:gsub(".json", ""), nil)
+    local props = generateGroup(spawnedUI, "Props", root)
+    local lights = generateGroup(spawnedUI, "Lights", root)
+    local lightNodes = generateGroup(spawnedUI, "Light Nodes", lights)
+    local lightCustom = generateGroup(spawnedUI, "Customized Light Props", lights)
+    local scaledProps = generateGroup(spawnedUI, "Scaled Props", root)
 
     for _, prop in pairs(data.props) do
         local propData = extractPropData(prop)
 
         --- Generate base object for hierarchy
-        local o = generateObject(savedUI, propData)
+        local o = generateElement(savedUI, propData)
 
         local isLight = getAMMLightByID(data.lights, propData.uid)
         local isAMMLight = propData.path:match(area) or propData.path:match(point) or propData.path:match(spot)
@@ -216,8 +215,7 @@ function amm.importPreset(data, savedUI, importTasks)
             -- Light Node
             o.spawnable = convertLight(propData, data)
             o.name = o.spawnable:generateName(propData.name)
-            o.parent = lightNodes
-            table.insert(lightNodes.childs, o)
+            o:setParent(lightNodes)
             amm.progress = amm.progress + 1
         elseif (isLight and not isAMMLight) or isScaled then
             if not Game.GetResourceDepot():ResourceExists(propData.path) then
@@ -237,9 +235,8 @@ function amm.importPreset(data, savedUI, importTasks)
 
                             if not isScaled then
                                 o.spawnable = spawnable
-                                o.parent = lightCustom
                                 o.name = o.spawnable:generateName(propData.name .. "_light")
-                                table.insert(lightCustom.childs, o)
+                                o:setParent(lightCustom)
                             end
 
                             print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. #spawnable.instanceData .. " light components.")
@@ -249,8 +246,7 @@ function amm.importPreset(data, savedUI, importTasks)
 
                             o.spawnable = spawnable
                             o.name = o.spawnable:generateName(propData.name)
-                            o.parent = scaledProps
-                            table.insert(scaledProps.childs, o)
+                            o:setParent(scaledProps)
 
                             print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. utils.tableLength(spawnable.instanceDataChanges) .. " mesh components.")
                         end
@@ -264,27 +260,13 @@ function amm.importPreset(data, savedUI, importTasks)
         else
             o.spawnable = convertProp(propData)
             o.name = o.spawnable:generateName(propData.name)
-            o.parent = props
-            table.insert(props.childs, o)
+            o:setParent(props)
 
             amm.progress = amm.progress + 1
         end
     end
 
     meshService:onFinalize(function ()
-        table.insert(root.childs, props)
-        table.insert(root.childs, lights)
-        table.insert(lights.childs, lightCustom)
-        table.insert(lights.childs, lightNodes)
-        table.insert(root.childs, scaledProps)
-
-        root.pos = root:getCenter()
-        lights.pos = lights:getCenter()
-        lightCustom.pos = lightCustom:getCenter()
-        lightNodes.pos = lightNodes:getCenter()
-        props.pos = props:getCenter()
-        scaledProps.pos = scaledProps:getCenter()
-
         root:save()
         print("[ObjectSpawner] Imported \"" .. data.file_name .. "\" from AMM.")
         -- os.remove("data/AMMImport/" .. data.file_name)

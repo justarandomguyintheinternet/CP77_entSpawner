@@ -234,6 +234,7 @@ function mesh:generateCollider()
     collider:loadSpawnData(data, pos, rotation)
 
     local colliderElement = require("modules/classes/editor/spawnableElement"):new(self.object.sUI)
+    collider.object = colliderElement
     colliderElement.name = self.object.name .. "_collider"
     colliderElement.spawnable = collider
     colliderElement.icon = collider.icon
