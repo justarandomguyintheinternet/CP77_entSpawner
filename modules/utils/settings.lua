@@ -5,6 +5,7 @@ local config = require("modules/utils/config")
 ---@field public spawnDist number
 ---@field public spawnNewSortAlphabetical boolean
 ---@field public posSteps number
+---@field public precisionMultiplier number
 ---@field public rotSteps number
 ---@field public despawnOnReload boolean
 ---@field public groupRot boolean
@@ -29,6 +30,7 @@ local settingsData = {
     spawnDist = 3,
     spawnNewSortAlphabetical = false,
     posSteps = 0.002,
+    precisionMultiplier = 0.2,
     rotSteps = 0.050,
     despawnOnReload = true,
     groupRot = true,

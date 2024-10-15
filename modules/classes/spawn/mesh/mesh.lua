@@ -168,14 +168,14 @@ function mesh:draw()
         return
     end
 
-    if ImGui.Button("Generate Collider") then
-        self:generateCollider()
-    end
+    ImGui.SetNextItemWidth(110 * style.viewSize)
+    self.colliderShape, changed = ImGui.Combo("##colliderShape", self.colliderShape, colliderShapes, #colliderShapes)
 
     ImGui.SameLine()
 
-    ImGui.SetNextItemWidth(80 * style.viewSize)
-    self.colliderShape, changed = ImGui.Combo("##colliderShape", self.colliderShape, colliderShapes, #colliderShapes)
+    if ImGui.Button("Generate Collider") then
+        self:generateCollider()
+    end
 end
 
 function mesh:getProperties()

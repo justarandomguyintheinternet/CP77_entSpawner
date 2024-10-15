@@ -24,7 +24,7 @@ function positionable:new(sUI)
 	o.transformExpanded = true
 	o.rotationRelative = false
 	o.hasScale = false
-	o.scaleLocked = false
+	o.scaleLocked = true
 
 	o.visualizerState = false
 	o.visualizerDirection = "all"
@@ -41,7 +41,7 @@ function positionable:load(data, silent)
 	self.transformExpanded = data.transformExpanded
 	self.rotationRelative = data.rotationRelative
 	self.scaleLocked = data.scaleLocked
-	if self.scaleLocked == nil then self.scaleLocked = false end
+	if self.scaleLocked == nil then self.scaleLocked = true end
 	if self.transformExpanded == nil then self.transformExpanded = true end
 	if self.rotationRelative == nil then self.rotationRelative = false end
 end
@@ -116,8 +116,14 @@ function positionable:onEdited() end
 ---@protected
 function positionable:drawProp(prop, name, axis)
 	local steps = (axis == "roll" or axis == "pitch" or axis == "yaw") and settings.rotSteps or settings.posSteps
+	local formatText = "%.2f"
 
-    local newValue, changed = ImGui.DragFloat("##" .. name, prop, steps, -99999, 99999, "%.2f " .. name)
+	if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
+		steps = steps * 0.1 * settings.precisionMultiplier -- Shift usually is a x10 multiplier, so get rid of that first
+		formatText = "%.3f"
+	end
+
+    local newValue, changed = ImGui.DragFloat("##" .. name, prop, steps, -99999, 99999, formatText .. " " .. name, ImGuiSliderFlags.NoRoundToFormat)
 	self.controlsHovered = (ImGui.IsItemHovered() or ImGui.IsItemActive()) or self.controlsHovered
 	if (ImGui.IsItemHovered() or ImGui.IsItemActive()) and axis ~= self.visualizerDirection then
 		self:setVisualizerDirection(axis)

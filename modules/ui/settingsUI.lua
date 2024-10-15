@@ -50,6 +50,10 @@ function settingsUI.draw()
     settings.rotSteps, changed = ImGui.InputFloat("Rotation controls step size", settings.rotSteps, -9999, 9999, "%.4f")
     if changed then settings.save() end
 
+    settings.precisionMultiplier, changed = ImGui.InputFloat("Precision multiplier", settings.precisionMultiplier, 0, 10, "%.3f")
+    if changed then settings.save() end
+    style.tooltip("When holding shift, the step size will be multiplied by this value")
+
     settings.gizmoActive, changed = ImGui.Checkbox("Show arrows", settings.gizmoActive)
     if changed then settings.save() end
 
