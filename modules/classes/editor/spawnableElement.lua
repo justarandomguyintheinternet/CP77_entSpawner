@@ -89,7 +89,7 @@ function spawnableElement:setVisualizerState(state)
 	positionable.setVisualizerState(self, state)
 
 	if not self.spawnable:isSpawned() then return end
-	visualizer.showArrows(self.spawnable:getEntity(), state)
+	visualizer.showArrows(self.spawnable:getEntity(), self.visualizerState)
 end
 
 function spawnableElement:setVisualizerDirection(direction)
