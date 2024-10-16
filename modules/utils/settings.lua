@@ -25,19 +25,18 @@ local config = require("modules/utils/config")
 ---@field public editorBottomSize integer
 ---@field public gizmoActive boolean
 ---@field public gizmoOnSelected boolean
+---@field tabSizes table
 local settingsData = {
-    spawnPos = 2,
+    spawnPos = 1,
     spawnDist = 3,
     spawnNewSortAlphabetical = false,
     posSteps = 0.002,
     precisionMultiplier = 0.2,
     rotSteps = 0.050,
     despawnOnReload = true,
-    groupRot = true,
     headerState = true,
     deleteConfirm = true,
     moveCloneToParent = 1,
-    groupExport = false,
     autoSpawnRange = 1000,
     spawnUIOnlyNames = false,
     editor = {
@@ -51,7 +50,9 @@ local settingsData = {
     windowStates = {},
     editorBottomSize = 200,
     gizmoActive = true,
-    gizmoOnSelected = false
+    gizmoOnSelected = false,
+
+    tabSizes = {}
 }
 
 local settingsFNs = {}

@@ -10,22 +10,22 @@ function settingsUI.draw()
 
     ImGui.Text("Spawn new objects: ")
     ImGui.SameLine()
-    if ImGui.RadioButton("At player pos", settings.spawnPos == 1) then
+    if ImGui.RadioButton("At selected", settings.spawnPos == 1) then
         settings.spawnPos = 1
         settings.save()
     end
+    style.tooltip("Spawn the new object at the position of the selected object(s), if none are selected, it will spawn in front of the player")
     ImGui.SameLine()
 
-    if ImGui.RadioButton("In front of player", settings.spawnPos == 2) then
+    if ImGui.RadioButton("Always in front of player", settings.spawnPos == 2) then
         settings.spawnPos = 2
         settings.save()
     end
     style.tooltip("Spawn position is relative to the players position and rotation, at the specified distance")
 
-    if settings.spawnPos == 2 then
-        settings.spawnDist, changed = ImGui.InputFloat("Spawn distance to player", settings.spawnDist, -9999, 9999, "%.1f")
-        if changed then settings.save() end
-    end
+    settings.spawnDist, changed = ImGui.InputFloat("Spawn distance to player", settings.spawnDist, -9999, 9999, "%.1f")
+    if changed then settings.save() end
+    style.tooltip("Distance from the player to spawn the object at, used for the fallback for \"At selected\", and always used for \"Always in front of player\"")
 
     style.sectionHeaderEnd()
     style.sectionHeaderStart("EDITING")
@@ -77,12 +77,6 @@ function settingsUI.draw()
     if changed then settings.save() end
 
     settings.despawnOnReload, changed = ImGui.Checkbox("Despawn everything on \"Reload all mods\"", settings.despawnOnReload)
-    if changed then settings.save() end
-
-    settings.groupExport, changed = ImGui.Checkbox("For mod creators: Export option (Output in /export folder)", settings.groupExport)
-    if changed then settings.save() end
-
-    settings.groupRot, changed = ImGui.Checkbox("EXPERIMENTAL: Group Rotation", settings.groupRot)
     if changed then settings.save() end
 
     style.sectionHeaderEnd(true)

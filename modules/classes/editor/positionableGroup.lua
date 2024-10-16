@@ -40,19 +40,6 @@ function positionableGroup:getDirection(direction)
 	return Vector4.new(dir.x / #leafs, dir.y / #leafs, dir.z / #leafs, 0)
 end
 
-function positionableGroup:getCenter()
-	local center = Vector4.new(0, 0, 0, 0)
-
-	local leafs = self:getPositionableLeafs()
-	for _, entry in pairs(leafs) do
-		center = utils.addVector(center, entry:getPosition())
-	end
-
-	local nLeafs = math.max(1, #leafs)
-
-	return Vector4.new(center.x / nLeafs, center.y / nLeafs, center.z / nLeafs, 0)
-end
-
 ---Gets all the positionable leaf objects, i.e. positionable's without childs
 ---@return positionable[]
 function positionableGroup:getPositionableLeafs()
@@ -70,7 +57,16 @@ function positionableGroup:getPositionableLeafs()
 end
 
 function positionableGroup:getPosition()
-	return self:getCenter()
+	local center = Vector4.new(0, 0, 0, 0)
+
+	local leafs = self:getPositionableLeafs()
+	for _, entry in pairs(leafs) do
+		center = utils.addVector(center, entry:getPosition())
+	end
+
+	local nLeafs = math.max(1, #leafs)
+
+	return Vector4.new(center.x / nLeafs, center.y / nLeafs, center.z / nLeafs, 0)
 end
 
 function positionableGroup:setPosition(delta)
@@ -98,7 +94,7 @@ end
 function positionableGroup:setRotation(delta)
 	if delta.roll ~= 0 or delta.pitch ~= 0 or delta.yaw == 0 then return end
 
-	local pos = self:getCenter()
+	local pos = self:getPosition()
 	local leafs = self:getPositionableLeafs()
 
 	for _, entry in pairs(leafs) do

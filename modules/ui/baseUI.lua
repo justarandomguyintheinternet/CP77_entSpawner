@@ -8,7 +8,9 @@ baseUI = {
     savedUI = require("modules/ui/savedUI"),
     exportUI = require("modules/ui/exportUI"),
     settingsUI = require("modules/ui/settingsUI"),
-    activeTab = 1
+    activeTab = 1,
+    loadTabSize = true,
+    loadWindowSize = nil
 }
 
 local menuButtonHovered = false
@@ -18,6 +20,7 @@ local tabs = {
         id = "spawn",
         name = "Spawn new",
         flags = ImGuiWindowFlags.None,
+        defaultSize = { 750, 1000 },
         draw = function ()
             baseUI.spawnedUI.cachePaths()
             baseUI.spawnUI.draw()
@@ -27,24 +30,28 @@ local tabs = {
         id = "spawned",
         name = "Spawned",
         flags = ImGuiWindowFlags.None,
+        defaultSize = { 600, 1200 },
         draw = baseUI.spawnedUI.draw
     },
     {
         id = "saved",
         name = "Saved",
         flags = ImGuiWindowFlags.None,
+        defaultSize = { 600, 700 },
         draw = baseUI.savedUI.draw
     },
     {
         id = "export",
         name = "Export",
         flags = ImGuiWindowFlags.None,
+        defaultSize = { 600, 700 },
         draw = baseUI.exportUI.draw
     },
     {
         id = "settings",
         name = "Settings",
         flags = ImGuiWindowFlags.AlwaysAutoResize,
+        defaultSize = { 600, 1200 },
         draw = baseUI.settingsUI.draw
     }
 }
@@ -79,6 +86,10 @@ local function drawMenuButton()
             if clicked and not isOnlyTab(tab.id) then
                 settings.windowStates[tab.id] = not settings.windowStates[tab.id]
                 settings.save()
+
+                if settings.windowStates[tab.id] then
+                    baseUI.loadWindowSize = tab.id
+                end
             end
         end
 
@@ -86,8 +97,28 @@ local function drawMenuButton()
     end
 end
 
+function baseUI.init()
+    for _, tab in pairs(tabs) do
+        if settings.tabSizes[tab.id] == nil then
+            settings.tabSizes[tab.id] = tab.defaultSize
+            settings.save()
+        end
+    end
+end
+
 function baseUI.draw(spawner)
+    if baseUI.loadTabSize then
+        ImGui.SetNextWindowSize(settings.tabSizes[tabs[baseUI.activeTab].id][1], settings.tabSizes[tabs[baseUI.activeTab].id][2])
+        baseUI.loadTabSize = false
+    end
+
     if ImGui.Begin("Object Spawner 2.0", tabs[baseUI.activeTab].flags) then
+        local x, y = ImGui.GetWindowSize()
+        if x ~= settings.tabSizes[tabs[baseUI.activeTab].id][1] or y ~= settings.tabSizes[tabs[baseUI.activeTab].id][2] then
+            settings.tabSizes[tabs[baseUI.activeTab].id] = { x, y }
+            settings.save()
+        end
+
         if ImGui.BeginTabBar("Tabbar", ImGuiTabItemFlags.NoTooltip) then
             for key, tab in ipairs(tabs) do
                 if settings.windowStates[tab.id] == nil then
@@ -97,7 +128,10 @@ function baseUI.draw(spawner)
 
                 if not settings.windowStates[tab.id] then
                     if ImGui.BeginTabItem(tab.name) then
-                        baseUI.activeTab = key
+                        if baseUI.activeTab ~= key then
+                            baseUI.activeTab = key
+                            baseUI.loadTabSize = true
+                        end
                         ImGui.Spacing()
                         tab.draw(spawner)
                         ImGui.EndTabItem()
@@ -116,7 +150,19 @@ function baseUI.draw(spawner)
 
     for key, tab in pairs(tabs) do
         if settings.windowStates[tab.id] then
+            if baseUI.loadWindowSize == tab.id then
+                ImGui.SetNextWindowSize(settings.tabSizes[tab.id][1], settings.tabSizes[tab.id][2])
+                baseUI.loadWindowSize = nil
+            end
+
             settings.windowStates[tab.id] = ImGui.Begin(tab.name, true, tabs[key].flags)
+
+            local x, y = ImGui.GetWindowSize()
+            if x ~= settings.tabSizes[tab.id][1] or y ~= settings.tabSizes[tab.id][2] then
+                settings.tabSizes[tab.id] = { x, y }
+                settings.save()
+            end
+
             if not settings.windowStates[tab.id] then
                 settings.save()
             end

@@ -260,6 +260,8 @@ function positionable:getScale()
 	return Vector4.new(1, 1, 1, 0)
 end
 
+---@param direction string
+---@return Vector4?
 function positionable:getDirection(direction)
 	if direction == "right" then
 		return Vector4.new(1, 0, 0, 0)

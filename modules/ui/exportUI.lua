@@ -223,7 +223,7 @@ function exportUI.exportGroup(group)
     local g = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
     g:load(data, true)
 
-    local center = g:getCenter()
+    local center = g:getPosition()
     local min = { x = center.x - group.streamingX, y = center.y - group.streamingY, z = center.z - group.streamingY }
     local max = { x = center.x + group.streamingX, y = center.y + group.streamingY, z = center.z + group.streamingY }
 

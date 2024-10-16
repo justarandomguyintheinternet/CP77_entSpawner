@@ -48,27 +48,29 @@ end
 ---@field selectedType number
 ---@field selectedVariant number
 ---@field sizeX number
----@field spawner? spawner
+---@field spawner? spawnedUI
 ---@field filteredList table
 spawnUI = {
+    spawnPosition = nil,
+    spawnAtPlayer = true,
     filter = "",
     selectedGroup = 0,
     selectedType = 0,
     selectedVariant = 0,
     sizeX = 0,
-    spawner = nil,
+    spawnedUI = nil,
     filteredList = {}
 }
 
 ---Loads the spawn data (Either list of e.g. paths, or exported object files) for each data variant
----@param spawner table
+---@param spawner spawner
 function spawnUI.loadSpawnData(spawner)
     typeNames = {}
     variantNames = {}
     spawnData = {}
 
     AMM = GetMod("AppearanceMenuMod")
-    spawnUI.spawner = spawner
+    spawnUI.spawnedUI = spawner.baseUI.spawnedUI
 
     for dataName, dataType in pairs(types) do
         spawnData[dataName] = {}
@@ -148,7 +150,7 @@ function spawnUI.draw()
     end
 
     local groups = { "Root" }
-	for _, group in pairs(spawnUI.spawner.baseUI.spawnedUI.containerPaths) do
+	for _, group in pairs(spawnUI.spawnedUI.containerPaths) do
 		table.insert(groups, group.path)
 	end
 
@@ -164,6 +166,7 @@ function spawnUI.draw()
     settings.spawnNewSortAlphabetical, changed = ImGui.Checkbox("Sort alphabetically", settings.spawnNewSortAlphabetical)
     if changed then
         settings.save()
+        spawnUI.sort()
     end
 
     if spawnUI.getActiveSpawnList().isPaths then
@@ -288,12 +291,12 @@ function spawnUI.draw()
 end
 
 function spawnUI.spawnNew(entry, class)
-    local parent = spawnUI.spawner.baseUI.spawnedUI.root
+    local parent = spawnUI.spawnedUI.root
     if spawnUI.selectedGroup ~= 0 then
-        parent = spawnUI.spawner.baseUI.spawnedUI.containerPaths[spawnUI.selectedGroup].ref
+        parent = spawnUI.spawnedUI.containerPaths[spawnUI.selectedGroup].ref
     end
 
-    local new = require("modules/classes/editor/spawnableElement"):new(spawnUI.spawner.baseUI.spawnedUI)
+    local new = require("modules/classes/editor/spawnableElement"):new(spawnUI.spawnedUI)
     local rot = GetPlayer():GetWorldOrientation():ToEulerAngles()
     local pos = GetPlayer():GetWorldPosition()
 
@@ -301,6 +304,14 @@ function spawnUI.spawnNew(entry, class)
         local forward = GetPlayer():GetWorldForward()
         pos.x = pos.x + forward.x * settings.spawnDist
         pos.y = pos.y + forward.y * settings.spawnDist
+    else
+        if #spawnUI.spawnedUI.selectedPaths == 1 and utils.isA(spawnUI.spawnedUI.selectedPaths[1].ref, "positionable") then
+            pos = spawnUI.spawnedUI.selectedPaths[1].ref:getPosition()
+            rot = spawnUI.spawnedUI.selectedPaths[1].ref:getRotation()
+        elseif #spawnUI.spawnedUI.selectedPaths > 1 then
+            pos = spawnUI.spawnedUI.multiSelectGroup:getPosition()
+            rot = spawnUI.spawnedUI.multiSelectGroup:getDirection("forward"):ToRotation()
+        end
     end
 
     local data = utils.deepcopy(entry.data)
@@ -316,7 +327,7 @@ function spawnUI.spawnNew(entry, class)
 
     new:setParent(parent)
     new.selected = true
-    spawnUI.spawner.baseUI.spawnedUI.unselectAll()
+    spawnUI.spawnedUI.unselectAll()
     history.addAction(history.getInsert({ new }))
 
     return new

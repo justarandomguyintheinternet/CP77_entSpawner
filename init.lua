@@ -57,6 +57,7 @@ function spawner:new()
         cache.load()
         cache.generateRecordsList()
 
+        self.baseUI.init()
         self.baseUI.savedUI.spawner = self
         self.baseUI.savedUI.backwardComp()
         self.baseUI.savedUI.filter = settings.savedUIFilter
