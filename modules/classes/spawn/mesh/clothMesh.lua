@@ -36,10 +36,6 @@ function clothMesh:save()
     return data
 end
 
-function clothMesh:getExtraHeight()
-    return mesh.getExtraHeight(self) + ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight()
-end
-
 function clothMesh:draw()
     mesh.draw(self)
 

@@ -71,13 +71,13 @@ function decal:save()
     return data
 end
 
-function decal:getExtraHeight()
-    return 6 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 3
-end
-
-function decal:getVisualScale()
+function decal:getVisualizerSize()
     local max = math.min(math.max(self.scale.x, self.scale.y, self.scale.z, 1) * 0.5, 3.5)
     return { x = max, y = max, z = max }
+end
+
+function decal:getSize()
+    return self.scale
 end
 
 function decal:updateScale()
@@ -124,6 +124,7 @@ function decal:getProperties()
     table.insert(properties, {
         id = self.node,
         name = self.dataType,
+        defaultHeader = true,
         draw = function()
             self:draw()
         end

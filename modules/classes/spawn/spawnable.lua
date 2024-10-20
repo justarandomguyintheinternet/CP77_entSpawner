@@ -1,8 +1,8 @@
 local utils = require("modules/utils/utils")
-local style = require("modules/ui/style")
 local builder = require("modules/utils/entityBuilder")
 local visualizer = require("modules/utils/visualizer")
-local settings = require("modules/utils/settings")
+local style = require("modules/ui/style")
+local history = require("modules/utils/history")
 
 ---Base class for any object / node that can be spawned
 ---@class spawnable
@@ -17,6 +17,11 @@ local settings = require("modules/utils/settings")
 ---@field public rotation EulerAngles
 ---@field protected entityID entEntityID
 ---@field protected spawned boolean
+---@field public primaryRange number
+---@field public secondaryRange number
+---@field public uk10 integer
+---@field public uk11 integer
+---@field private streamingMultiplier number
 ---@field public isHovered boolean
 ---@field protected arrowDirection string all|red|green|blue
 ---@field public object element? The element that is using this spawnable
@@ -41,12 +46,18 @@ function spawnable:new()
     o.icon = ""
 
     o.spawnData = "base\\spawner\\empty_entity.ent"
-    o.app = ""
+    o.app = "default"
 
     o.position = Vector4.new(0, 0, 0, 0)
     o.rotation = EulerAngles.new(0, 0, 0)
     o.entityID = entEntityID.new({hash = 0})
     o.spawned = false
+
+    o.primaryRange = 120
+    o.secondaryRange = 100
+    o.uk10 = 1024
+    o.uk11 = 512
+    o.streamingMultiplier = 1
 
     o.isHovered = false
     o.arrowDirection = "all"
@@ -59,7 +70,7 @@ function spawnable:new()
 end
 
 function spawnable:onAssemble(entity)
-    visualizer.attachArrows(entity, self:getVisualScale(), self.isHovered, self.arrowDirection)
+    visualizer.attachArrows(entity, self:getVisualizerSize(), self.isHovered, self.arrowDirection)
 end
 
 ---Spawns the spawnable if not spawned already, must register a callback for entityAssemble which calls onAssemble
@@ -142,27 +153,106 @@ function spawnable:save()
         spawnData = self.spawnData,
         dataType = self.dataType,
         app = self.app,
-        rotationRelative = self.rotationRelative
+        rotationRelative = self.rotationRelative,
+        primaryRange = self.primaryRange,
+        secondaryRange = self.secondaryRange,
+        uk10 = self.uk10,
+        uk11 = self.uk11
     }
 end
 
 function spawnable:draw() end
 
 function spawnable:getProperties()
-    return {}
+    local properties =  {}
+
+    table.insert(properties, {
+        id = "worldNode",
+        name = "World Node",
+        defaultHeader = false,
+        draw = function()
+            self.primaryRange, _, _ = style.trackedDragFloat(self.object, "Primary Range", self.primaryRange, 0.1, 0, 9999, "%.2f", 80)
+            ImGui.SameLine()
+            local distance = utils.distanceVector(self.position, GetPlayer():GetWorldPosition())
+            style.styledText(IconGlyphs.AxisArrowInfo, distance > self.primaryRange and 0xFF0000FF or 0xFF00FF00)
+            style.tooltip("Distance to player: " .. string.format("%.2f", distance))
+
+            self.secondaryRange, _, _ = style.trackedDragFloat(self.object, "Secondary Range", self.secondaryRange, 0.1, 0, 9999, "%.2f", 80)
+            ImGui.SameLine()
+            style.styledText(IconGlyphs.AxisArrowInfo, distance > self.secondaryRange and 0xFF0000FF or 0xFF00FF00)
+            style.tooltip("Distance to player: " .. string.format("%.2f", distance))
+
+            if ImGui.Button("Auto-Set") then
+                history.addAction(history.getElementChange(self.object))
+                local values = self:calculateStreamingValues(self.streamingMultiplier)
+
+                self.primaryRange = values.primary
+                self.secondaryRange = values.secondary
+            end
+
+            ImGui.SameLine()
+
+            ImGui.SetNextItemWidth(80 * style.viewSize)
+            self.streamingMultiplier, _ = ImGui.DragFloat("Multiplier", self.streamingMultiplier, 0.01, 0, 50, "%.2f")
+            style.tooltip("Multiplier for streaming values, when using \"Auto-Set\"")
+        end
+    })
+
+    return properties
 end
 
----TODO: Implement better for each object
---- Used for visualizer scales
-function spawnable:getVisualScale()
+function spawnable:getGroupedProperties()
+    local properties = {}
+
+    properties["streamingProperties"] = {
+		name = "World Node",
+		data = {
+            multiplier = 1
+        },
+		draw = function(element, entries)
+            if ImGui.Button("Calculate Streaming Distances") then
+                history.addAction(history.getMultiSelectChange(entries))
+
+                for _, entry in ipairs(entries) do
+                    local values = entry.spawnable:calculateStreamingValues(element.groupOperationData["streamingProperties"].multiplier)
+
+                    entry.spawnable.primaryRange = values.primary
+                    entry.spawnable.secondaryRange = values.secondary
+                end
+            end
+
+            ImGui.SameLine()
+
+            ImGui.SetNextItemWidth(80 * style.viewSize)
+            element.groupOperationData["streamingProperties"].multiplier, _ = ImGui.DragFloat("Multiplier", element.groupOperationData["streamingProperties"].multiplier, 0.01, 0, 50, "%.2f")
+            style.tooltip("Multiplier for streaming values, when using \"Calculate Streaming Distances\"")
+		end,
+		entries = { self.object }
+	}
+
+    return properties
+end
+
+function spawnable:getSize()
     return { x = 1, y = 1, z = 1 }
 end
 
----Amount of extra height to be added to 
----@see object.draw
----@return integer
-function spawnable:getExtraHeight()
-    return 0
+function spawnable:getVisualizerSize()
+    return { x = 1, y = 1, z = 1 }
+end
+
+---Calculates the streaming distance values for the spawnable based on getSize()
+---@param multiplier number
+---@return table {primary, secondary, uk10, uk11}
+function spawnable:calculateStreamingValues(multiplier)
+    -- TODO: Maybe make the multiplier scale non-linearly, so small things get boosted less than big things
+    -- multiplier = math.min(1, math.max(0, falloffRange * math.log(math.max(0, maxAxis + minSize))))
+    local scale = self:getSize()
+
+    local primary = math.max(math.max(scale.x, scale.y, scale.z) * multiplier * 60, 25)
+    local secondary = primary * 0.8
+
+    return { primary = primary, secondary = secondary, uk10 = self.uk10, uk11 = self.uk11 }
 end
 
 ---Load data blob, position and rotation for spawning
@@ -177,6 +267,10 @@ function spawnable:loadSpawnData(data, position, rotation)
     self.position = position
     self.rotation = rotation
     self.rotationRelative = data.rotationRelative or false
+    self.primaryRange = data.primaryRange or 100
+    self.secondaryRange = data.secondaryRange or 120
+    self.uk10 = data.uk10 or self.uk10
+    self.uk11 = data.uk11 or self.uk11
 end
 
 ---Export the spawnable for WScript import, using same structure for `data` as JSON formated node
@@ -188,6 +282,10 @@ function spawnable:export(key, length)
         position = utils.fromVector(self.position),
         rotation = utils.fromQuaternion(self.rotation:ToQuat()),
         scale = { x = 1, y = 1, z = 1 },
+        primaryRange = self.primaryRange,
+        secondaryRange = self.secondaryRange,
+        uk10 = self.uk10,
+        uk11 = self.uk11,
         type = "worldEntityNode",
         name = self.object.name,
         data = {

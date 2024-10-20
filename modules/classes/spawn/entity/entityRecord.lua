@@ -3,9 +3,11 @@ local builder = require("modules/utils/entityBuilder")
 local utils = require("modules/utils/utils")
 local cache = require("modules/utils/cache")
 local spawnable = require("modules/classes/spawn/spawnable")
+local style = require("modules/ui/style")
 
 ---Class for entity records spawned via worldPopulationSpawnerNode
 ---@class record : entity
+---@field public spawnOnStart boolean
 local record = setmetatable({}, { __index = entity })
 
 function record:new()
@@ -17,6 +19,8 @@ function record:new()
     o.icon = IconGlyphs.AlphaRBoxOutline
     o.node = "worldPopulationSpawnerNode"
     o.description = "Spawns an entity from a given TweakDB record"
+
+    o.spawnOnStart = true
 
     setmetatable(o, { __index = self })
    	return o
@@ -38,6 +42,14 @@ function record:loadSpawnData(data, position, rotation)
     end
 
     self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
+end
+
+function record:save()
+    local data = entity.save(self)
+    data.spawnOnStart = self.spawnOnStart
+    if data.spawnOnStart == nil then data.spawnOnStart = true end
+
+    return data
 end
 
 function record:spawn()
@@ -85,6 +97,12 @@ function record:getEntity()
     return Game.GetDynamicEntitySystem():GetEntity(self.entityID)
 end
 
+function record:draw()
+    entity.draw(self)
+
+    self.spawnOnStart, _ = style.trackedCheckbox(self.object, "Spawn on start", self.spawnOnStart)
+end
+
 function record:export()
     local data = spawnable.export(self)
     data.type = "worldPopulationSpawnerNode"
@@ -97,7 +115,7 @@ function record:export()
             ["$storage"] = "string",
             ["$value"] = self.spawnData
         },
-        spawnOnStart = 1
+        spawnOnStart = self.spawnOnStart and 1 or 0
     }
 
     return data

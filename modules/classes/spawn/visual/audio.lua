@@ -52,10 +52,6 @@ function sound:save()
     return data
 end
 
-function sound:getExtraHeight()
-    return 4 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight()
-end
-
 function sound:draw()
     spawnable.draw(self)
 
@@ -67,6 +63,7 @@ function sound:getProperties()
     table.insert(properties, {
         id = self.node,
         name = self.dataType,
+        defaultHeader = true,
         draw = function()
             self:draw()
         end

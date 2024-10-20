@@ -94,14 +94,6 @@ function light:save()
     return data
 end
 
-function light:getExtraHeight()
-    local h = 7 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 4
-    if self.lightType == 1 then
-        h = h + ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight()
-    end
-    return h
-end
-
 ---Update the light parameters without respawning (Color, Intensity, Angles, Radius, Flicker)
 ---@protected
 function light:updateParameters()
@@ -203,6 +195,7 @@ function light:getProperties()
     table.insert(properties, {
         id = self.node,
         name = self.dataType,
+        defaultHeader = true,
         draw = function()
             self:draw()
         end

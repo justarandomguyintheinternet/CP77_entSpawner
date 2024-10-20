@@ -24,6 +24,7 @@ local history = require("modules/utils/history")
 ---@field editName boolean
 ---@field focusNameEdit number
 ---@field quickOperations {[string]: {condition : fun(PARAM: element) : boolean, operation : fun(PARAM: element)}}
+---@field groupOperationData table
 ---@field selected boolean
 element = {}
 
@@ -42,6 +43,7 @@ function element:new(sUI)
 	o.expandable = true
 	o.hideable = true
 	o.quickOperations = {}
+	o.groupOperationData = {}
 
 	o.icon = ""
 
@@ -218,9 +220,10 @@ function element:isParentOrSelfSelected()
 end
 
 function element:drawProperties()
+	-- Draw properties of actual element
 	for _, prop in pairs(self:getProperties()) do
 		if self.propertyHeaderStates[prop.id] == nil then
-			self.propertyHeaderStates[prop.id] = true
+			self.propertyHeaderStates[prop.id] = prop.defaultHeader
 		end
 
 		ImGui.SetNextItemOpen(self.propertyHeaderStates[prop.id])
@@ -231,9 +234,56 @@ function element:drawProperties()
 			ImGui.TreePop()
 		end
 	end
+
+	-- Collect and reduce any potential grouped properties, store data for group operations
+	local groupedProperties = {}
+
+	for _, child in pairs(self:getPathsRecursive(true)) do
+		for key, property in pairs(child.ref:getGroupedProperties()) do
+			if not groupedProperties[key] then
+				groupedProperties[key] = { name = property.name, draw = property.draw, entries = property.entries }
+			else
+				table.insert(groupedProperties[key].entries, child.ref)
+			end
+
+			if not self.groupOperationData[key] then
+				self.groupOperationData[key] = property.data
+			end
+		end
+	end
+
+	-- Draw grouped properties
+	if utils.tableLength(groupedProperties) > 0 then
+		if self.propertyHeaderStates["groupedProperties"] == nil then
+			self.propertyHeaderStates["groupedProperties"] = false
+		end
+
+		ImGui.SetNextItemOpen(self.propertyHeaderStates["groupedProperties"])
+		self.propertyHeaderStates["groupedProperties"] = ImGui.TreeNodeEx("Group Properties", ImGuiTreeNodeFlags.SpanFullWidth)
+
+		if self.propertyHeaderStates["groupedProperties"] then
+			for key, property in pairs(groupedProperties) do
+				if self.propertyHeaderStates[key] == nil then
+					self.propertyHeaderStates[key] = false
+				end
+
+				ImGui.SetNextItemOpen(self.propertyHeaderStates[key])
+				self.propertyHeaderStates[key] = ImGui.TreeNodeEx(property.name, ImGuiTreeNodeFlags.SpanFullWidth)
+
+				if self.propertyHeaderStates[key] then
+					property.draw(self, property.entries)
+					ImGui.TreePop()
+				end
+			end
+		end
+	end
 end
 
 function element:getProperties()
+	return {}
+end
+
+function element:getGroupedProperties()
 	return {}
 end
 

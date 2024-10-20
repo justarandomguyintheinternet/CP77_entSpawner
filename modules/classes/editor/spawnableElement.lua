@@ -61,6 +61,16 @@ function spawnableElement:getProperties()
 	return properties
 end
 
+function spawnableElement:getGroupedProperties()
+	local properties = positionable.getGroupedProperties(self)
+
+	for key, value in pairs(self.spawnable:getGroupedProperties()) do
+		properties[key] = value
+	end
+
+	return properties
+end
+
 function spawnableElement:setVisible(state, fromRecursive)
 	positionable.setVisible(self, state, fromRecursive)
 

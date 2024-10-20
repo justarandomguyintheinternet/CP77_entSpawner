@@ -34,6 +34,8 @@ function entity:new()
     o.instanceData = {}
     o.instanceDataChanges = {}
 
+    o.uk10 = 1056
+
     setmetatable(o, { __index = self })
    	return o
 end
@@ -113,7 +115,7 @@ function entity:onAssemble(entity)
         self.bBox.min = ToVector4(box.min)
         self.bBox.max = ToVector4(box.max)
 
-        visualizer.updateScale(entity, self:getVisualScale(), "arrows")
+        visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
 
         if self.bBoxCallback then
             self.bBoxCallback(entity)
@@ -133,17 +135,15 @@ function entity:onBBoxLoaded(callback)
     self.bBoxCallback = callback
 end
 
-function entity:getVisualScale()
-    local x = self.bBox.max.x - self.bBox.min.x
-    local y = self.bBox.max.y - self.bBox.min.y
-    local z = self.bBox.max.z - self.bBox.min.z
-
-    local max = math.min(math.max(x, y, z, 1) * 0.5, 3.5)
-    return { x = max, y = max, z = max }
+function entity:getSize()
+    return { x = self.bBox.max.x - self.bBox.min.x, y = self.bBox.max.y - self.bBox.min.y, z = self.bBox.max.z - self.bBox.min.z }
 end
 
-function entity:getExtraHeight()
-    return 4 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 1
+function entity:getVisualizerSize()
+    local size = self:getSize()
+
+    local max = math.min(math.max(size.x, size.y, size.z, 1) * 0.5, 3.5)
+    return { x = max, y = max, z = max }
 end
 
 function entity:draw()
@@ -178,6 +178,7 @@ function entity:getProperties()
     table.insert(properties, {
         id = self.node,
         name = self.dataType,
+        defaultHeader = true,
         draw = function()
             self:draw()
         end

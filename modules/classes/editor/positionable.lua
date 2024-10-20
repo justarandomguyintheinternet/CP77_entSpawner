@@ -71,6 +71,7 @@ function positionable:getProperties()
 	table.insert(properties, {
 		id = "transform",
 		name = "Transform",
+		defaultHeader = true,
 		draw = function ()
 			self:drawTransform()
 		end

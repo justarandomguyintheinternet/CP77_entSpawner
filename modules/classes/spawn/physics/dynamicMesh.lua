@@ -54,7 +54,7 @@ function dynamicMesh:onAssemble(entity)
 
     entity:AddComponent(component)
 
-    visualizer.updateScale(entity, self:getVisualScale(), "arrows")
+    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
 end
 
 function dynamicMesh:save()
@@ -63,10 +63,6 @@ function dynamicMesh:save()
     data.forceAutoHideDistance = self.forceAutoHideDistance or 150
 
     return data
-end
-
-function dynamicMesh:getExtraHeight()
-    return mesh.getExtraHeight(self) + ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight()
 end
 
 function dynamicMesh:draw()

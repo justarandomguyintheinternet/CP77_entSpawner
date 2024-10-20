@@ -39,6 +39,8 @@ function mesh:new()
     o.scaleLocked = true
     o.hideGenerate = false
 
+    o.uk10 = 1040
+
     setmetatable(o, { __index = self })
    	return o
 end
@@ -64,7 +66,7 @@ function mesh:loadSpawnData(data, position, rotation)
 
             self.bBox.min = resource.boundingBox.Min
             self.bBox.max = resource.boundingBox.Max
-            visualizer.updateScale(entity, self:getVisualScale(), "arrows")
+            visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
 
             -- Save to cache
             cache.addValue(self.spawnData .. "_apps", self.apps)
@@ -88,7 +90,7 @@ function mesh:onAssemble(entity)
     component.meshAppearance = self.app
     entity:AddComponent(component)
 
-    visualizer.updateScale(entity, self:getVisualScale(), "arrows")
+    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
 end
 
 function mesh:spawn()
@@ -118,24 +120,18 @@ function mesh:updateScale()
     component:Toggle(false)
     component:Toggle(true)
 
-    visualizer.updateScale(entity, self:getVisualScale(), "arrows")
+    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
 end
 
-function mesh:getVisualScale()
-    local x = (self.bBox.max.x - self.bBox.min.x) * math.abs(self.scale.x)
-    local y = (self.bBox.max.y - self.bBox.min.y) * math.abs(self.scale.y)
-    local z = (self.bBox.max.z - self.bBox.min.z) * math.abs(self.scale.z)
+function mesh:getSize()
+    return { x = (self.bBox.max.x - self.bBox.min.x) * math.abs(self.scale.x), y = (self.bBox.max.y - self.bBox.min.y) * math.abs(self.scale.y), z = (self.bBox.max.z - self.bBox.min.z) * math.abs(self.scale.z) }
+end
 
-    local max = math.min(math.max(x, y, z, 1.5) * 0.5, 3)
+function mesh:getVisualizerSize()
+    local size = self:getSize()
+
+    local max = math.min(math.max(size.x, size.y, size.z, 1.5) * 0.5, 3)
     return { x = max, y = max, z = max }
-end
-
-function mesh:getExtraHeight()
-    local height = 5 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight() * 2
-    if not self.hideGenerate then
-        height = height + ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight()
-    end
-    return height
 end
 
 function mesh:draw()
@@ -183,6 +179,7 @@ function mesh:getProperties()
     table.insert(properties, {
         id = self.node,
         name = self.dataType,
+        defaultHeader = true,
         draw = function()
             self:draw()
         end

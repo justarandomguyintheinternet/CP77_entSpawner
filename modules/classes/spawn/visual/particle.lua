@@ -64,10 +64,6 @@ function particle:save()
     return data
 end
 
-function particle:getExtraHeight()
-    return 4 * ImGui.GetStyle().ItemSpacing.y + ImGui.GetFrameHeight()
-end
-
 function particle:draw()
     spawnable.draw(self)
 
@@ -91,6 +87,7 @@ function particle:getProperties()
     table.insert(properties, {
         id = self.node,
         name = self.dataType,
+        defaultHeader = true,
         draw = function()
             self:draw()
         end

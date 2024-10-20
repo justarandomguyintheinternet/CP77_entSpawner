@@ -77,10 +77,6 @@ function rotatingMesh:save()
     return data
 end
 
-function rotatingMesh:getExtraHeight()
-    return mesh.getExtraHeight(self) + ImGui.GetStyle().ItemSpacing.y * 4 + ImGui.GetFrameHeight()
-end
-
 function rotatingMesh:draw()
     mesh.draw(self)
 

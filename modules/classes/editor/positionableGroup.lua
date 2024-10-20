@@ -86,7 +86,6 @@ function positionableGroup:drawRotation(rotation)
 	style.popGreyedOut(true)
     ImGui.SameLine()
 	self:drawProp(rotation.yaw, "Yaw", "yaw")
-    ImGui.SameLine()
 end
 
 -- TODO: Track rotation of group independently, use that for rotation axis for objects (In global space, convert group axis to local space (unit vector - (group axis - object axis)))

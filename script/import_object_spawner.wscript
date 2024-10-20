@@ -68,11 +68,11 @@ const insertNode = (sector, node) => {
 	nodeData.Position.Z = node.position.z
 	
 	// Default values
-	nodeData.MaxStreamingDistance = 20000
-	nodeData.UkFloat1 = 20000
-	nodeData.Uk10 = 1024
-	nodeData.Uk11 = 1024
-	
+	nodeData.MaxStreamingDistance = node.secondaryRange
+	nodeData.UkFloat1 = node.primaryRange
+	nodeData.Uk10 = node.uk10
+	nodeData.Uk11 = node.uk11
+
 	// Pivot
 	nodeData.Pivot.X = node.position.x
 	nodeData.Pivot.Y = node.position.y

@@ -300,11 +300,11 @@ function spawnUI.spawnNew(entry, class)
     local rot = GetPlayer():GetWorldOrientation():ToEulerAngles()
     local pos = GetPlayer():GetWorldPosition()
 
-    if settings.spawnPos == 2 then
-        local forward = GetPlayer():GetWorldForward()
-        pos.x = pos.x + forward.x * settings.spawnDist
-        pos.y = pos.y + forward.y * settings.spawnDist
-    else
+    local forward = GetPlayer():GetWorldForward()
+    pos.x = pos.x + forward.x * settings.spawnDist
+    pos.y = pos.y + forward.y * settings.spawnDist
+
+    if settings.spawnPos == 1 then
         if #spawnUI.spawnedUI.selectedPaths == 1 and utils.isA(spawnUI.spawnedUI.selectedPaths[1].ref, "positionable") then
             pos = spawnUI.spawnedUI.selectedPaths[1].ref:getPosition()
             rot = spawnUI.spawnedUI.selectedPaths[1].ref:getRotation()
