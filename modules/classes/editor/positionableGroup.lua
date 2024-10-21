@@ -1,12 +1,10 @@
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
-local history = require("modules/utils/history")
 
 local positionable = require("modules/classes/editor/positionable")
 
 ---Class for organizing multiple objects and or groups, with position and rotation
 ---@class positionableGroup : positionable
----@field lastSaved number
 local positionableGroup = setmetatable({}, { __index = positionable })
 
 function positionableGroup:new(sUI)
@@ -14,38 +12,19 @@ function positionableGroup:new(sUI)
 
 	o.name = "New Group"
 	o.modulePath = "modules/classes/editor/positionableGroup"
-	o.lastSaved = 0
 
 	o.class = utils.combine(o.class, { "positionableGroup" })
 	o.quickOperations = {
 		[IconGlyphs.ContentSaveOutline] = {
-			operation = function () end,
-			condition = function (instance)
-				return instance.parent ~= nil and instance.parent:isRoot(true) and instance.lastSaved >= history.index
-			end
-		},
-		[IconGlyphs.ContentSaveAlertOutline] = {
 			operation = positionableGroup.save,
 			condition = function (instance)
-				return instance.parent ~= nil and instance.parent:isRoot(true) and instance.lastSaved ~= history.index
+				return instance.parent ~= nil and instance.parent:isRoot(true)
 			end
 		}
 	}
 
 	setmetatable(o, { __index = self })
    	return o
-end
-
-function positionableGroup:load(data, silent)
-	positionable.load(self, data, silent)
-
-	self.lastSaved = history.index + 1
-end
-
-function positionableGroup:save()
-	positionable.save(self)
-
-	self.lastSaved = history.index
 end
 
 function positionableGroup:getDirection(direction)
