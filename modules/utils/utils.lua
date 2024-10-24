@@ -315,4 +315,27 @@ function miscUtils.isA(object, class)
     return miscUtils.has_value(object.class, class)
 end
 
+function miscUtils.setNestedValue(tbl, keys, data)
+    local value = tbl
+    for i, key in ipairs(keys) do
+        if i == #keys then
+            value[key] = data
+            return
+        else
+            value = value[key]
+        end
+    end
+end
+
+function miscUtils.getNestedValue(tbl, keys)
+    local value = tbl
+    for _, key in ipairs(keys) do
+        if value[key] == nil then
+            return nil
+        end
+        value = value[key]
+    end
+    return value
+end
+
 return miscUtils
