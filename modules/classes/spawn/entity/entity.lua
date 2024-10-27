@@ -152,9 +152,23 @@ function entity:drawResetProp(componentID, path)
     local modified = self.instanceDataChanges[componentID] ~= nil and utils.getNestedValue(self.instanceDataChanges[componentID], path) ~= nil
 
     if ImGui.BeginPopupContextItem("##resetComponentProperty" .. componentID .. table.concat(path), ImGuiPopupFlags.MouseButtonRight) then
-        if ImGui.MenuItem("Reset") and modified then
+        local isArray = type(path[#path]) == "number"
+
+        -- Might be array of handles, so check one path index up (.../->index<-/Data)
+        if not isArray and #path > 1 then
+            isArray = type(path[#path - 1]) == "number"
+            path = utils.deepcopy(path)
+            table.remove(path, #path)
+        end
+        local text = isArray and "Remove" or "Reset"
+
+        if ImGui.MenuItem(text) and modified then
             history.addAction(history.getElementChange(self.object))
-            self:updatePropValue(componentID, path, utils.deepcopy(utils.getNestedValue(self.defaultComponentData[componentID], path)))
+            if not isArray then
+                self:updatePropValue(componentID, path, utils.deepcopy(utils.getNestedValue(self.defaultComponentData[componentID], path)))
+            else
+                self:updatePropValue(componentID, path, nil)
+            end
             self:respawn()
         end
         ImGui.EndPopup()
@@ -215,17 +229,63 @@ function entity:drawNumericProp(componentID, key, data, path, type, isFloat, has
     end
 end
 
+function entity:getDerivedClasses(base)
+    local classes = { base }
+
+    for _, derived in pairs(Reflection.GetDerivedClasses(base)) do
+        if derived:GetName().value ~= base then
+            for _, class in pairs(self:getDerivedClasses(derived:GetName().value)) do
+                table.insert(classes, class)
+            end
+        end
+    end
+
+    return classes
+end
+
+function entity:drawAddArrayEntry(prop, componentID, path, data)
+    if prop and prop:IsArray() then
+        ImGui.Button("+")
+        if ImGui.BeginPopupContextItem("##" .. componentID .. table.concat(path), ImGuiPopupFlags.MouseButtonLeft) then
+            local base = prop:GetInnerType()
+            local isHandle = base:GetMetaType() == ERTTIType.Handle
+            if isHandle then base = base:GetInnerType() end
+
+            if base:GetMetaType() ~= ERTTIType.Class then
+                ImGui.Text("Type not yet supported")
+            else
+                for _, class in pairs(self:getDerivedClasses(base:GetName().value)) do
+                    if ImGui.MenuItem(class) then
+                        local newPath = utils.deepcopy(path)
+                        table.insert(newPath, #data + 1)
+                        if isHandle then
+                            self:updatePropValue(componentID, newPath, { HandleId = 0, Data = red.redDataToJSON(NewObject(class)) })
+                        else
+                            self:updatePropValue(componentID, newPath, red.redDataToJSON(NewObject(class)))
+                        end
+                    end
+                end
+            end
+            ImGui.EndPopup()
+        end
+    end
+end
+
+---Draw either a class by iterating over each property, or specical cases like DepotPath, CName etc.
+---@param componentID number
+---@param key string
+---@param data any
+---@param path table Path to the data, from the root of the component
+---@param max number Maximum width of a label text
 function entity:drawTableProp(componentID, key, data, path, max)
+    -- Step one down, to avoid handle structure, gets really fucking ugly later
     if data.HandleId then
         table.insert(path, "Data")
         self:drawInstanceDataProperty(componentID, key, data.Data, path, max)
         return
     end
 
-    local dataType = data["$type"] or "Unknown"
-    if utils.tableLength(data) == 0 then
-        dataType = "Empty Array"
-    end
+    local dataType, _, prop = self:getPropTypeInfo(componentID, path, key)
 
     if data["DepotPath"] then
         table.insert(path, "DepotPath")
@@ -259,25 +319,72 @@ function entity:drawTableProp(componentID, key, data, path, max)
         open = true
 
         local keys, max = self:getSortedKeys(data)
+        -- Array uses numeric keys
+        if prop and prop:IsArray() then
+            keys = {}
+            for key, _ in pairs(data) do table.insert(keys, key) end
+        end
+
         for _, propKey in pairs(keys) do
             local entry = data[propKey]
             local propPath = utils.deepcopy(path)
             table.insert(propPath, propKey)
             self:drawInstanceDataProperty(componentID, propKey, entry, propPath, max)
         end
+
+        self:drawAddArrayEntry(prop, componentID, path, data)
+
         ImGui.TreePop()
     end
     if not open then self:drawResetProp(componentID, path) end
 end
 
+---Hell (Attempt to get the type of the data at the specified path)
+---@param componentID number
+---@param path table
+---@param key string
+---@return string
+---@return boolean
+---@return any
 function entity:getPropTypeInfo(componentID, path, key)
+    -- Step one up, so we can get class of parent, then use that to get property type
     local parentPath = utils.deepcopy(path)
     table.remove(parentPath, #parentPath)
-    local dataType = Reflection.GetClass(utils.getNestedValue(self.defaultComponentData[componentID], parentPath)["$type"]):GetProperty(key):GetType()
-    local isEnum = dataType:IsEnum()
-    dataType = dataType:GetName().value
 
-    return dataType, isEnum
+    local value = utils.getNestedValue(self.defaultComponentData[componentID], parentPath)
+    if not value then -- Might be a custom array entry, only present in instanceDataChanges
+        value = utils.getNestedValue(self.instanceDataChanges[componentID], parentPath)
+    end
+
+    -- Handle or array entry
+    if not value["$type"] then
+        if value["HandleId"] then
+            -- Step one further up, to get the class of the parent of the handle
+            table.remove(parentPath, #parentPath)
+        end
+        if type(key) == "number" then -- Is array entry
+            if value["HandleId"] then
+                -- Type of handle, by stepping down
+                return value["Data"]["$type"], false, nil
+            else
+                if not value[key] then
+                    value = utils.getNestedValue(self.instanceDataChanges[componentID], parentPath)
+                end
+                return value[key]["$type"], false, nil
+            end
+        end
+    end
+
+    value = utils.getNestedValue(self.defaultComponentData[componentID], parentPath) -- Re-Fetch, in case it was a handle and we changed the path
+    if not value then -- Array entry, only present in instanceDataChanges
+        value = utils.getNestedValue(self.instanceDataChanges[componentID], parentPath)
+    end
+
+    local prop = Reflection.GetClass(value["$type"]):GetProperty(key):GetType()
+    local isEnum = prop:IsEnum()
+    local dataType = prop:GetName().value
+
+    return dataType, isEnum, prop
 end
 
 ---@private
@@ -399,12 +506,12 @@ function entity:getSortedKeys(tbl)
     local max = 0
 
     for key, _ in pairs(tbl) do
-        max = math.max(max, ImGui.CalcTextSize(key))
+        max = math.max(max, ImGui.CalcTextSize(tostring(key)))
         table.insert(keys, key)
     end
 
     table.sort(keys, function (a, b)
-        return string.lower(a) < string.lower(b)
+        return string.lower(tostring(a)) < string.lower(tostring(b))
     end)
 
     return keys, max
