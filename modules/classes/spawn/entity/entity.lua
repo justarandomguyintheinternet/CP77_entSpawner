@@ -84,7 +84,6 @@ function entity:loadInstanceData(entity)
             end
         end
     end
-
 end
 
 function entity:onAssemble(entity)
@@ -152,17 +151,10 @@ end
 function entity:drawResetProp(componentID, path)
     local modified = self.instanceDataChanges[componentID] ~= nil and utils.getNestedValue(self.instanceDataChanges[componentID], path) ~= nil
 
-    if ImGui.BeginPopupContextItem("##resetComponentProperty" .. componentID .. path[1] .. path[#path], ImGuiPopupFlags.MouseButtonRight) then
+    if ImGui.BeginPopupContextItem("##resetComponentProperty" .. componentID .. table.concat(path), ImGuiPopupFlags.MouseButtonRight) then
         if ImGui.MenuItem("Reset") and modified then
             history.addAction(history.getElementChange(self.object))
-            if #path == 1 or (#path == 2 and self.instanceDataChanges[componentID][path[1]]["HandleId"] ~= nil) then -- Get rid of changes
-                self.instanceDataChanges[componentID][path[1]] = nil
-                if utils.tableLength(self.instanceDataChanges[componentID]) == 0 then
-                    self.instanceDataChanges[componentID] = nil
-                end
-            else
-                utils.setNestedValue(self.instanceDataChanges[componentID], path, utils.deepcopy(utils.getNestedValue(self.defaultComponentData[componentID], path)))
-            end
+            self:updatePropValue(componentID, path, utils.deepcopy(utils.getNestedValue(self.defaultComponentData[componentID], path)))
             self:respawn()
         end
         ImGui.EndPopup()
@@ -176,95 +168,186 @@ function entity:updatePropValue(componentID, path, value)
     if not self.instanceDataChanges[componentID][path[1]] then
         self.instanceDataChanges[componentID][path[1]] = utils.deepcopy(self.defaultComponentData[componentID][path[1]])
     end
+
     utils.setNestedValue(self.instanceDataChanges[componentID], path, value)
-    -- TODO: If value is the same as default, remove it from instanceDataChanges
+    if utils.deepcompare(self.defaultComponentData[componentID][path[1]], self.instanceDataChanges[componentID][path[1]], false) then
+        self.instanceDataChanges[componentID][path[1]] = nil
+        if utils.tableLength(self.instanceDataChanges[componentID]) == 0 then
+            self.instanceDataChanges[componentID] = nil
+        end
+    end
+
     self:respawn()
 end
 
----@private
-function entity:drawInstanceDataProperty(componentID, key, data, path)
-    local dataType = type(data)
+function entity:drawStringProp(componentID, key, data, path, type, width, max)
+    ImGui.Text(key)
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
+    ImGui.SetNextItemWidth(width * style.viewSize)
+    local value, changed = ImGui.InputText("##" .. componentID .. table.concat(path), data, 100)
+    style.tooltip(type)
+    self:drawResetProp(componentID, path)
+    if changed then
+        history.addAction(history.getElementChange(self.object))
+        self:updatePropValue(componentID, path, value)
+    end
+end
 
-    if dataType == "table" then
-        if utils.tableLength(data) == 0 then
-            ImGui.Text(key .. " Empty Array")
-            return
-        end
-        if data.HandleId then
-            local dataPath = utils.deepcopy(path)
-            table.insert(dataPath, "Data")
-            self:drawInstanceDataProperty(componentID, key, data.Data, dataPath)
-            return
-        end
-
-        local dataType = data["$type"]
-        if not dataType then
-            if data["DepotPath"] then
-                dataType = "Resource"
-            else
-                dataType = "Unknown"
-            end
-        end
-
-        local name = dataType .. " | " .. key
-
-        local open = false
-        if ImGui.TreeNodeEx(name, ImGuiTreeNodeFlags.SpanFullWidth) then
-            self:drawResetProp(componentID, path)
-            open = true
-            for _, propKey in pairs(self:getSortedKeys(data)) do
-                local entry = data[propKey]
-                local propPath = utils.deepcopy(path)
-                table.insert(propPath, propKey)
-                self:drawInstanceDataProperty(componentID, propKey, entry, propPath)
-            end
-            ImGui.TreePop()
-        end
-        if not open then self:drawResetProp(componentID, path) end
+function entity:drawNumericProp(componentID, key, data, path, type, isFloat, hasText, format)
+    if hasText then
+        ImGui.Text(key)
+        ImGui.SameLine()
+    end
+    ImGui.SetNextItemWidth(100 * style.viewSize)
+    local value, changed
+    if isFloat then
+        value, changed = ImGui.InputFloat("##" .. componentID .. table.concat(path), data, 0.05, 0.1, format)
     else
-        -- TODO: Clean all of this up, make it more modular, make it easy to have bespoke editing of e.g. worldposition / color, make use of drag inputs
-    -- if type(data) == "number" then
-    --     local value, changed = ImGui.InputInt(key, data)
-    --     if changed then
-    --         history.addAction(history.getElementChange(self.object))
-    --         self:updatePropValue(componentID, path, value)
-    --     end
-    --     self:drawResetProp(componentID, path)
-    -- elseif type(data) == "string" then
-    --     ImGui.Text(key .. tostring(data))
-    --     self:drawResetProp(componentID, path)
-    -- elseif type(data) == "boolean" then
-        if key == "$type" or key == "$storage" or key == "Flags" then return end
-        if key == "$value" then
-            ImGui.Text(key .. " " .. data)
-            self:drawResetProp(componentID, path)
-            return
-        end
+        value, changed = ImGui.InputInt("##" .. componentID .. table.concat(path), data, 1, 10, format)
+    end
+    style.tooltip(type)
+    self:drawResetProp(componentID, path)
 
-        local parentPath = utils.deepcopy(path)
-        table.remove(parentPath, #parentPath)
-        local dataType = Reflection.GetClass(utils.getNestedValue(self.defaultComponentData[componentID], parentPath)["$type"]):GetProperty(key):GetType():GetName().value
+    if changed then
+        history.addAction(history.getElementChange(self.object))
+        self:updatePropValue(componentID, path, value)
+    end
+end
+
+function entity:drawTableProp(componentID, key, data, path, max)
+    if data.HandleId then
+        table.insert(path, "Data")
+        self:drawInstanceDataProperty(componentID, key, data.Data, path, max)
+        return
+    end
+
+    local dataType = data["$type"] or "Unknown"
+    if utils.tableLength(data) == 0 then
+        dataType = "Empty Array"
+    end
+
+    if data["DepotPath"] then
+        table.insert(path, "DepotPath")
+        table.insert(path, "$value")
+        self:drawStringProp(componentID, key, data["DepotPath"]["$value"], path, "Resource", 300, max)
+        return
+    elseif dataType == "FixedPoint" then
+        table.insert(path, "Bits")
+
+        ImGui.Text(key)
+        ImGui.SameLine()
+        ImGui.SetNextItemWidth(100 * style.viewSize)
+        local value, changed = ImGui.InputFloat("##" .. componentID .. table.concat(path), data["Bits"] / 131072, 0, 0, "%.2f")
+        if changed then
+            history.addAction(history.getElementChange(self.object))
+            self:updatePropValue(componentID, path, value * 131072)
+        end
+        self:drawResetProp(componentID, path)
+        return
+    elseif dataType == "TweakDBID" or dataType == "CName" or dataType == "NodeRef" then
+        table.insert(path, "$value")
+        self:drawStringProp(componentID, key, data["$value"], path, dataType, 150, max)
+        return
+    end
+
+    local name = dataType .. " | " .. key
+
+    local open = false
+    if ImGui.TreeNodeEx(name, ImGuiTreeNodeFlags.SpanFullWidth) then
+        self:drawResetProp(componentID, path)
+        open = true
+
+        local keys, max = self:getSortedKeys(data)
+        for _, propKey in pairs(keys) do
+            local entry = data[propKey]
+            local propPath = utils.deepcopy(path)
+            table.insert(propPath, propKey)
+            self:drawInstanceDataProperty(componentID, propKey, entry, propPath, max)
+        end
+        ImGui.TreePop()
+    end
+    if not open then self:drawResetProp(componentID, path) end
+end
+
+function entity:getPropTypeInfo(componentID, path, key)
+    local parentPath = utils.deepcopy(path)
+    table.remove(parentPath, #parentPath)
+    local dataType = Reflection.GetClass(utils.getNestedValue(self.defaultComponentData[componentID], parentPath)["$type"]):GetProperty(key):GetType()
+    local isEnum = dataType:IsEnum()
+    dataType = dataType:GetName().value
+
+    return dataType, isEnum
+end
+
+---@private
+---@param componentID number
+---@param key string Key of data within the parent
+---@param data table
+---@param path table Path to the data, from the root of the component
+---@param max number Maximum width of a text
+function entity:drawInstanceDataProperty(componentID, key, data, path, max)
+    if key == "$type" or key == "$storage" or key == "Flags" then return end
+
+    local modified = false
+    if self.instanceDataChanges[componentID] and self.instanceDataChanges[componentID][path[1]] then
+        if not utils.deepcompare(data, utils.getNestedValue(self.defaultComponentData[componentID], path), false) then
+            modified = true
+        end
+    end
+
+    if type(data) == "table" then
+        self:drawTableProp(componentID, key, data, path, max)
+    else
+        local dataType, isEnum = self:getPropTypeInfo(componentID, path, key)
+
+        ImGui.Text(key)
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
 
         if dataType == "Bool" then
-            ImGui.Text(key)
-            ImGui.SameLine()
-            local value, changed = ImGui.Checkbox("##" .. key .. componentID .. path[1], data == 1 and true or false)
+            local value, changed = ImGui.Checkbox("##" .. componentID .. table.concat(path), data == 1 and true or false)
             if changed then
                 history.addAction(history.getElementChange(self.object))
                 self:updatePropValue(componentID, path, value and 1 or 0)
             end
         elseif dataType == "Float" then
-            ImGui.Text(key)
-            ImGui.SameLine()
-            ImGui.SetNextItemWidth(100)
-            local value, changed = ImGui.InputFloat("##" .. key .. componentID .. path[1], data)
+            ImGui.SetNextItemWidth(100 * style.viewSize)
+            local value, changed = ImGui.InputFloat("##" .. componentID .. table.concat(path), data, 0, 0, "%.2f")
             if changed then
                 history.addAction(history.getElementChange(self.object))
                 self:updatePropValue(componentID, path, value)
             end
+        elseif dataType == "Uint64" or dataType == "CRUID" or dataType == "String" then
+            ImGui.SetNextItemWidth(100 * style.viewSize)
+
+            local value, changed = ImGui.InputText("##" .. componentID .. table.concat(path), data, 100)
+            if changed then
+                history.addAction(history.getElementChange(self.object))
+                self:updatePropValue(componentID, path, value)
+            end
+        elseif string.match(dataType, "int") or string.match(dataType, "Int") then
+            ImGui.SetNextItemWidth(100 * style.viewSize)
+
+            local value, changed = ImGui.InputInt("##" .. componentID .. table.concat(path), data, 0)
+            if changed then
+                history.addAction(history.getElementChange(self.object))
+                self:updatePropValue(componentID, path, value)
+            end
+        elseif isEnum then
+            local values = utils.enumTable(dataType)
+
+            ImGui.SetNextItemWidth(100 * style.viewSize)
+            local value, changed = ImGui.Combo("##" .. componentID .. table.concat(path), utils.indexValue(values, data) - 1, values, #values)
+            if changed then
+                history.addAction(history.getElementChange(self.object))
+                self:updatePropValue(componentID, path, values[value + 1])
+            end
         else
             ImGui.Text(key .. " " .. dataType)
         end
+
+        style.tooltip(dataType)
         self:drawResetProp(componentID, path)
     end
 end
@@ -290,13 +373,14 @@ function entity:drawInstanceData()
             expanded = true
             self:drawResetComponent(key)
 
-            for _, propKey in pairs(self:getSortedKeys(component)) do
+            local keys, max = self:getSortedKeys(component)
+            for _, propKey in pairs(keys) do
                 local entry = component[propKey]
                 local modified = self.instanceDataChanges[key] and self.instanceDataChanges[key][propKey]
                 if modified then entry = self.instanceDataChanges[key][propKey] end
 
                 style.pushStyleColor(not modified, ImGuiCol.Text, style.mutedColor)
-                self:drawInstanceDataProperty(key, propKey, entry, { propKey })
+                self:drawInstanceDataProperty(key, propKey, entry, { propKey }, max)
 
                 style.popStyleColor(not modified)
             end
@@ -311,33 +395,19 @@ function entity:drawInstanceData()
 end
 
 function entity:getSortedKeys(tbl)
-    local order = {"$type", "id", "name"}
     local keys = {}
+    local max = 0
 
     for key, _ in pairs(tbl) do
+        max = math.max(max, ImGui.CalcTextSize(key))
         table.insert(keys, key)
     end
 
     table.sort(keys, function (a, b)
-        local aIndex = utils.indexValue(order, a)
-        local bIndex = utils.indexValue(order, b)
-
-        if aIndex ~= -1 and bIndex ~= -1 then
-            return aIndex < bIndex
-        end
-
-        if aIndex ~= -1 then
-            return true
-        end
-
-        if bIndex ~= -1 then
-            return false
-        end
-
         return string.lower(a) < string.lower(b)
     end)
 
-    return keys
+    return keys, max
 end
 
 function entity:draw()
