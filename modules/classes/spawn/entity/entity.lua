@@ -375,7 +375,7 @@ function entity:drawStringProp(componentID, key, data, path, type, width, max)
     ImGui.SameLine()
     ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
     ImGui.SetNextItemWidth(width * style.viewSize)
-    local value, changed = ImGui.InputText("##" .. componentID .. table.concat(path), data, 100)
+    local value, changed = ImGui.InputText("##" .. componentID .. table.concat(path), data, 250)
     style.tooltip(type)
     self:drawResetProp(componentID, path)
     if changed then
@@ -589,7 +589,7 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
         elseif info.typeName == "Uint64" or info.typeName == "CRUID" or info.typeName == "String" then
             ImGui.SetNextItemWidth(100 * style.viewSize)
 
-            local value, changed = ImGui.InputText("##" .. componentID .. table.concat(path), data, 100)
+            local value, changed = ImGui.InputText("##" .. componentID .. table.concat(path), data, 250)
             if changed then
                 history.addAction(history.getElementChange(self.object))
                 self:updatePropValue(componentID, path, value)
