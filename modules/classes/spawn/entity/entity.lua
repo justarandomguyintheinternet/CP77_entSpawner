@@ -34,6 +34,8 @@ function entity:new()
 
     o.instanceDataChanges = {}
     o.defaultComponentData = {}
+    o.typeInfo = {}
+    o.enumInfo = {}
 
     o.uk10 = 1056
 
@@ -301,9 +303,7 @@ end
 ---@param componentID number
 ---@param path table
 ---@param key string
----@return string
----@return boolean
----@return any
+---@return table { typeName: string, isEnum: boolean, propType: CName }
 function entity:getPropTypeInfo(componentID, path, key)
     -- Step one up, so we can get class of parent, then use that to get property type
     local parentPath = utils.deepcopy(path)
@@ -323,13 +323,13 @@ function entity:getPropTypeInfo(componentID, path, key)
         if type(key) == "number" then -- Is array entry
             if value["HandleId"] then
                 -- Type of handle, by stepping down
-                return value["Data"]["$type"], false, nil
+                return { typeName = value["Data"]["$type"], isEnum = false, propType = nil}
             else
                 -- If its not a handle, parentPath will be prop which exists on default data (value ~= nil), but the actual array entry does only exist in instanceDataChanges
                 if not value[key] then
                     value = utils.getNestedValue(self.instanceDataChanges[componentID], parentPath)
                 end
-                return value[key]["$type"], false, nil
+                return { typeName = value[key]["$type"], isEnum = false, propType = nil}
             end
         end
     end
@@ -339,11 +339,16 @@ function entity:getPropTypeInfo(componentID, path, key)
         value = utils.getNestedValue(self.instanceDataChanges[componentID], parentPath)
     end
 
-    local prop = Reflection.GetClass(value["$type"]):GetProperty(key):GetType()
-    local isEnum = prop:IsEnum()
-    local dataType = prop:GetName().value
+    local fullPath = table.concat(path, "/")
+    if not self.typeInfo[fullPath] then
+        local propType = Reflection.GetClass(value["$type"]):GetProperty(key):GetType()
+        local propEnum = propType:IsEnum()
+        local propTypeName = propType:GetName().value
 
-    return dataType, isEnum, prop
+        self.typeInfo[fullPath] = { typeName = propTypeName, isEnum = propEnum, propType = propType }
+    end
+
+    return self.typeInfo[fullPath]
 end
 
 function entity:updatePropValue(componentID, path, value)
@@ -421,7 +426,6 @@ function entity:drawResetProp(componentID, path)
             else
                 self:updatePropValue(componentID, path, nil)
             end
-            self:respawn()
         end
         ImGui.EndPopup()
     end
@@ -480,7 +484,7 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
         return
     end
 
-    local dataType, _, prop = self:getPropTypeInfo(componentID, path, key)
+    local info = self:getPropTypeInfo(componentID, path, key)
 
     style.pushStyleColor(modified, ImGuiCol.Text, style.regularColor)
     if data["DepotPath"] then
@@ -489,7 +493,7 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
         self:drawStringProp(componentID, key, data["DepotPath"]["$value"], path, "Resource", 300, max)
         style.popStyleColor(modified)
         return
-    elseif dataType == "FixedPoint" then
+    elseif info.typeName == "FixedPoint" then
         table.insert(path, "Bits")
 
         ImGui.Text(key)
@@ -503,14 +507,14 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
         self:drawResetProp(componentID, path)
         style.popStyleColor(modified)
         return
-    elseif dataType == "TweakDBID" or dataType == "CName" or dataType == "NodeRef" then
+    elseif info.typeName == "TweakDBID" or info.typeName == "CName" or info.typeName == "NodeRef" then
         table.insert(path, "$value")
-        self:drawStringProp(componentID, key, data["$value"], path, dataType, 150, max)
+        self:drawStringProp(componentID, key, data["$value"], path, info.typeName, 150, max)
         style.popStyleColor(modified)
         return
     end
 
-    local name = dataType .. " | " .. key
+    local name = info.typeName .. " | " .. key
 
     local open = false
     if ImGui.TreeNodeEx(name, ImGuiTreeNodeFlags.SpanFullWidth) then
@@ -520,7 +524,7 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
 
         local keys, max = self:getSortedKeys(data)
         -- Array uses numeric keys
-        if prop and prop:IsArray() then
+        if info.propType and info.propType:IsArray() then
             keys = {}
             for key, _ in pairs(data) do table.insert(keys, key) end
         end
@@ -532,7 +536,7 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
             self:drawInstanceDataProperty(componentID, propKey, entry, propPath, max)
         end
 
-        self:drawAddArrayEntry(prop, componentID, path, data)
+        self:drawAddArrayEntry(info.propType, componentID, path, data)
 
         ImGui.TreePop()
     end
@@ -563,26 +567,26 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
     else
         style.pushStyleColor(modified, ImGuiCol.Text, style.regularColor)
 
-        local dataType, isEnum = self:getPropTypeInfo(componentID, path, key)
+        local info = self:getPropTypeInfo(componentID, path, key)
 
         ImGui.Text(key)
         ImGui.SameLine()
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
 
-        if dataType == "Bool" then
+        if info.typeName == "Bool" then
             local value, changed = ImGui.Checkbox("##" .. componentID .. table.concat(path), data == 1 and true or false)
             if changed then
                 history.addAction(history.getElementChange(self.object))
                 self:updatePropValue(componentID, path, value and 1 or 0)
             end
-        elseif dataType == "Float" then
+        elseif info.typeName == "Float" then
             ImGui.SetNextItemWidth(100 * style.viewSize)
             local value, changed = ImGui.InputFloat("##" .. componentID .. table.concat(path), data, 0, 0, "%.2f")
             if changed then
                 history.addAction(history.getElementChange(self.object))
                 self:updatePropValue(componentID, path, value)
             end
-        elseif dataType == "Uint64" or dataType == "CRUID" or dataType == "String" then
+        elseif info.typeName == "Uint64" or info.typeName == "CRUID" or info.typeName == "String" then
             ImGui.SetNextItemWidth(100 * style.viewSize)
 
             local value, changed = ImGui.InputText("##" .. componentID .. table.concat(path), data, 100)
@@ -590,7 +594,7 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
                 history.addAction(history.getElementChange(self.object))
                 self:updatePropValue(componentID, path, value)
             end
-        elseif string.match(dataType, "int") or string.match(dataType, "Int") then
+        elseif string.match(info.typeName, "int") or string.match(info.typeName, "Int") then
             ImGui.SetNextItemWidth(100 * style.viewSize)
 
             local value, changed = ImGui.InputInt("##" .. componentID .. table.concat(path), data, 0)
@@ -598,8 +602,11 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
                 history.addAction(history.getElementChange(self.object))
                 self:updatePropValue(componentID, path, value)
             end
-        elseif isEnum then
-            local values = utils.enumTable(dataType)
+        elseif info.isEnum then
+            if not self.enumInfo[info.typeName] then
+                self.enumInfo[info.typeName] = utils.enumTable(info.typeName)
+            end
+            local values = self.enumInfo[info.typeName]
 
             ImGui.SetNextItemWidth(100 * style.viewSize)
             local value, changed = ImGui.Combo("##" .. componentID .. table.concat(path), utils.indexValue(values, data) - 1, values, #values)
@@ -608,10 +615,10 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
                 self:updatePropValue(componentID, path, values[value + 1])
             end
         else
-            ImGui.Text(key .. " " .. dataType)
+            ImGui.Text(key .. " " .. info.typeName)
         end
 
-        style.tooltip(dataType)
+        style.tooltip(info.typeName)
         self:drawResetProp(componentID, path)
         style.popStyleColor(modified)
     end
