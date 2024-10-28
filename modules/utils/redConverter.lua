@@ -18,7 +18,7 @@ local exportExludes = {
 }
 
 local function convertCName(propValue)
-    if propValue and propValue.value ~= "" and propValue.value ~= "None" then
+    if propValue then
         return {
             ["$type"] = "CName",
             ["$storage"] = "string",
@@ -47,12 +47,24 @@ local function convertSimple(propValue, propClass)
     elseif propClass == "CRUID" then
         propData = tostring(CRUIDToHash(propValue)):gsub("ULL", "")
     elseif propClass == "TweakDBID" then
-        if propValue and propValue.hash ~= 0 then
-            propData = {
-                ["$type"] = "TweakDBID",
-                ["$storage"] = "string",
-                ["$value"] = propValue.value
-            }
+        if propValue then
+            if propValue.value:match("<TDBID:") then
+                local hash = propValue.value:match(":.*:"):gsub(":", "")
+                local length = propValue.value:match(":..>"):gsub(":", ""):gsub(">", "")
+                local hex = "0x" .. length .. hash
+
+                propData = {
+                    ["$type"] = "TweakDBID",
+                    ["$storage"] = "uint64",
+                    ["$value"] = tostring(tonumber(hex))
+                }
+            else
+                propData = {
+                    ["$type"] = "TweakDBID",
+                    ["$storage"] = "string",
+                    ["$value"] = propValue.value
+                }
+            end
         else
             propData = nil
         end
@@ -113,18 +125,14 @@ local function convertResRef(propValue)
         string = ResRef.FromHash(hash):ToString()
     end
 
-    if string ~= "" then
-        return {
-            DepotPath = {
-                ["$type"] = "ResourcePath",
-                ["$storage"] = "string",
-                ["$value"] = string
-            },
-            Flags = "Default"
-        }
-    end
-
-    return nil
+    return {
+        DepotPath = {
+            ["$type"] = "ResourcePath",
+            ["$storage"] = "string",
+            ["$value"] = string
+        },
+        Flags = "Default"
+    }
 end
 
 function red.redDataToJSON(data)

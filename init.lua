@@ -26,7 +26,9 @@ local input = require("modules/utils/input")
 ---@class spawner
 ---@field runtimeData {cetOpen: boolean, inGame: boolean, inMenu: boolean}
 ---@field baseUI baseUI
+---@field player any
 spawner = {
+    player = nil,
     runtimeData = {
         cetOpen = false,
         inGame = false,
@@ -47,12 +49,15 @@ spawner = {
     GameUI = require("modules/utils/GameUI")
 }
 
+-- local x = collectgarbage("count")
+
 function spawner:new()
     registerForEvent("onHook", function ()
         builder.hook()
     end)
 
     registerForEvent("onInit", function()
+        self.player = Game.GetPlayer()
         settings.load()
         cache.load()
         cache.generateRecordsList()
@@ -107,6 +112,12 @@ function spawner:new()
             self.baseUI.draw(self)
             input.update()
         end
+
+        -- if ImGui.Begin("Collect", ImGuiWindowFlags.AlwaysAutoResize) then
+        --     ImGui.Text("Memory delta: " .. string.format("%.2f", collectgarbage("count") - x) .. " KB")
+        --     x = collectgarbage("count")
+        --     ImGui.End()
+        -- end
     end)
 
     registerForEvent("onOverlayOpen", function()

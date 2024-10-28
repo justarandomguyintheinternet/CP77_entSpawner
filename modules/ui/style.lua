@@ -10,6 +10,7 @@ local style = {
     elementIndent = 35,
     draggedColor = 0xFF00007F,
     targetedColor = 0xFF00007F,
+    regularColor = 0xFFFFFFFF
 }
 
 local initialized = false

@@ -118,13 +118,7 @@ function savedUI.draw(spawner)
 
     for _, file in pairs(dir("data/objects")) do
         if file.name:match("^.+(%..+)$") == ".json" then
-            local exists = false
-            for k, _ in pairs(savedUI.files) do
-                if k == file.name then
-                    exists = true
-                end
-            end
-            if not exists then
+            if not savedUI.files[file.name] then
                 savedUI.files[file.name] = config.loadFile("data/objects/" .. file.name)
             end
         end
@@ -146,13 +140,13 @@ function savedUI.draw(spawner)
 end
 
 function savedUI.drawGroup(group, spawner)
-    local pPos = Vector4.new(0, 0, 0, 0)
-    if GetPlayer() then
-        pPos = GetPlayer():GetWorldPosition()
-    end
-    local posString = ("X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(group.pos.x, group.pos.y, group.pos.z, ToVector4(group.pos):Distance(pPos))
-
     if ImGui.TreeNodeEx(group.name) then
+        local pPos = Vector4.new(0, 0, 0, 0)
+        if spawner.player then
+            pPos = spawner.player:GetWorldPosition()
+        end
+        local posString = ("X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(group.pos.x, group.pos.y, group.pos.z, ToVector4(group.pos):Distance(pPos))
+
         if group.newName == nil then group.newName = group.name end
 
         style.pushGreyedOut(utils.hasIndex(savedUI.spawned, group.name))
@@ -202,13 +196,13 @@ function savedUI.drawGroup(group, spawner)
 end
 
 function savedUI.drawObject(obj, spawner)
-    local pPos = Vector4.new(0, 0, 0, 0)
-    if GetPlayer() then
-        pPos = GetPlayer():GetWorldPosition()
-    end
-    local posString = ("X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(obj.spawnable.position.x, obj.spawnable.position.y, obj.spawnable.position.z, ToVector4(obj.spawnable.position):Distance(pPos))
-
     if ImGui.TreeNodeEx(group.name) then
+        local pPos = Vector4.new(0, 0, 0, 0)
+        if spawner.player then
+            pPos = spawner.player:GetWorldPosition()
+        end
+        local posString = ("X=%.1f Y=%.1f Z=%.1f, Distance: %.1f"):format(obj.spawnable.position.x, obj.spawnable.position.y, obj.spawnable.position.z, ToVector4(obj.spawnable.position):Distance(pPos))
+
         if obj.newName == nil then obj.newName = obj.name end
 
         style.pushGreyedOut(utils.hasIndex(savedUI.spawned, obj.name))

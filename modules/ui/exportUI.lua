@@ -8,10 +8,11 @@ local style = require("modules/ui/style")
 local sectorCategory
 
 exportUI = {
-    projectName = "new_project",
+    projectName = "",
     groups = {},
     templates = {},
-    spawner = nil
+    spawner = nil,
+    exportHovered = false
 }
 
 function exportUI.init()
@@ -159,7 +160,9 @@ function exportUI.draw(spawner)
 
     style.sectionHeaderStart("PROPERTIES")
 
+    style.pushStyleColor(exportUI.projectName == "" and exportUI.exportHovered, ImGuiCol.Text, 0xFF0000FF)
     ImGui.Text("Project Name")
+    style.popStyleColor(exportUI.projectName == "" and exportUI.exportHovered)
     ImGui.SameLine()
     ImGui.SetNextItemWidth(200 * style.viewSize)
     exportUI.projectName = ImGui.InputTextWithHint('##name', 'Export name...', exportUI.projectName, 100)
@@ -172,11 +175,12 @@ function exportUI.draw(spawner)
     style.sectionHeaderEnd()
     style.sectionHeaderStart("EXPORT AND SAVE")
 
-    style.pushGreyedOut(#exportUI.groups == 0)
-    if ImGui.Button("Export") and #exportUI.groups > 0 then
+    style.pushGreyedOut(#exportUI.groups == 0 or exportUI.projectName == "")
+    if ImGui.Button("Export") and #exportUI.groups > 0  and exportUI.projectName ~= "" then
         exportUI.export()
     end
     style.tooltip("Export the currently selected groups to a .json file, ready for import into WKit")
+    exportUI.exportHovered = ImGui.IsItemHovered()
 
     ImGui.SameLine()
     if ImGui.Button("Save as Template") and #exportUI.groups > 0 then
@@ -189,7 +193,7 @@ function exportUI.draw(spawner)
     end
     style.tooltip("Save the current export setup as a template for later (re)usage")
 
-    style.popGreyedOut(#exportUI.groups == 0)
+    style.popGreyedOut(#exportUI.groups == 0 or exportUI.projectName == "")
 
     style.sectionHeaderEnd(true)
 end
