@@ -267,7 +267,6 @@ end
 
 -- Instance Data (Mess)
 
-
 function entity:getSortedKeys(tbl)
     local keys = {}
     local max = 0
@@ -318,7 +317,7 @@ function entity:getPropTypeInfo(componentID, path, key)
     -- Handle or array entry
     if not value["$type"] then
         if value["HandleId"] then
-            -- Step one further up, to get the class of the parent of the handle
+            -- Step one further up, to get the class of the parent of the handle (Could also step down and retrieve type there)
             table.remove(parentPath, #parentPath)
         end
         if type(key) == "number" then -- Is array entry
@@ -326,6 +325,7 @@ function entity:getPropTypeInfo(componentID, path, key)
                 -- Type of handle, by stepping down
                 return value["Data"]["$type"], false, nil
             else
+                -- If its not a handle, parentPath will be prop which exists on default data (value ~= nil), but the actual array entry does only exist in instanceDataChanges
                 if not value[key] then
                     value = utils.getNestedValue(self.instanceDataChanges[componentID], parentPath)
                 end
