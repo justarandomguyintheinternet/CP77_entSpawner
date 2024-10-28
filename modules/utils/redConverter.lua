@@ -125,18 +125,14 @@ local function convertResRef(propValue)
         string = ResRef.FromHash(hash):ToString()
     end
 
-    if string ~= "" then
-        return {
-            DepotPath = {
-                ["$type"] = "ResourcePath",
-                ["$storage"] = "string",
-                ["$value"] = string
-            },
-            Flags = "Default"
-        }
-    end
-
-    return nil
+    return {
+        DepotPath = {
+            ["$type"] = "ResourcePath",
+            ["$storage"] = "string",
+            ["$value"] = string
+        },
+        Flags = "Default"
+    }
 end
 
 function red.redDataToJSON(data)
