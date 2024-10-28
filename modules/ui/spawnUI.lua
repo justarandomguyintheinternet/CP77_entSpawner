@@ -27,7 +27,8 @@ local types = {
         ["Particles"] = require("modules/classes/spawn/visual/particle"),
         ["Decals"] = require("modules/classes/spawn/visual/decal"),
         ["Effects"] = require("modules/classes/spawn/visual/effect"),
-        ["Static Audio Emitter"] = require("modules/classes/spawn/visual/audio")
+        ["Static Audio Emitter"] = require("modules/classes/spawn/visual/audio"),
+        ["Water Patch"] = require("modules/classes/spawn/visual/waterPatch")
     }
 }
 
