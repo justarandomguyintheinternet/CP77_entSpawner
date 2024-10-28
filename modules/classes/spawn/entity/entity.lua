@@ -472,7 +472,7 @@ end
 ---@param data any
 ---@param path table Path to the data, from the root of the component
 ---@param max number Maximum width of a label text
-function entity:drawTableProp(componentID, key, data, path, max)
+function entity:drawTableProp(componentID, key, data, path, max, modified)
     -- Step one down, to avoid handle structure, gets really fucking ugly later
     if data.HandleId then
         table.insert(path, "Data")
@@ -482,10 +482,12 @@ function entity:drawTableProp(componentID, key, data, path, max)
 
     local dataType, _, prop = self:getPropTypeInfo(componentID, path, key)
 
+    style.pushStyleColor(modified, ImGuiCol.Text, style.regularColor)
     if data["DepotPath"] then
         table.insert(path, "DepotPath")
         table.insert(path, "$value")
         self:drawStringProp(componentID, key, data["DepotPath"]["$value"], path, "Resource", 300, max)
+        style.popStyleColor(modified)
         return
     elseif dataType == "FixedPoint" then
         table.insert(path, "Bits")
@@ -499,10 +501,12 @@ function entity:drawTableProp(componentID, key, data, path, max)
             self:updatePropValue(componentID, path, value * 131072)
         end
         self:drawResetProp(componentID, path)
+        style.popStyleColor(modified)
         return
     elseif dataType == "TweakDBID" or dataType == "CName" or dataType == "NodeRef" then
         table.insert(path, "$value")
         self:drawStringProp(componentID, key, data["$value"], path, dataType, 150, max)
+        style.popStyleColor(modified)
         return
     end
 
@@ -512,6 +516,7 @@ function entity:drawTableProp(componentID, key, data, path, max)
     if ImGui.TreeNodeEx(name, ImGuiTreeNodeFlags.SpanFullWidth) then
         self:drawResetProp(componentID, path)
         open = true
+        style.popStyleColor(modified)
 
         local keys, max = self:getSortedKeys(data)
         -- Array uses numeric keys
@@ -531,7 +536,10 @@ function entity:drawTableProp(componentID, key, data, path, max)
 
         ImGui.TreePop()
     end
-    if not open then self:drawResetProp(componentID, path) end
+    if not open then
+        self:drawResetProp(componentID, path)
+        style.popStyleColor(modified)
+    end
 end
 
 ---@private
@@ -543,16 +551,18 @@ end
 function entity:drawInstanceDataProperty(componentID, key, data, path, max)
     if key == "$type" or key == "$storage" or key == "Flags" then return end
 
-    -- local modified = false
-    -- if self.instanceDataChanges[componentID] and self.instanceDataChanges[componentID][path[1]] then
-    --     if not utils.deepcompare(data, utils.getNestedValue(self.defaultComponentData[componentID], path), false) then
-    --         modified = true
-    --     end
-    -- end
+    local modified = false
+    if self.instanceDataChanges[componentID] and self.instanceDataChanges[componentID][path[1]] then
+        if not utils.deepcompare(data, utils.getNestedValue(self.defaultComponentData[componentID], path), false) then
+            modified = true
+        end
+    end
 
     if type(data) == "table" then
-        self:drawTableProp(componentID, key, data, path, max)
+        self:drawTableProp(componentID, key, data, path, max, modified)
     else
+        style.pushStyleColor(modified, ImGuiCol.Text, style.regularColor)
+
         local dataType, isEnum = self:getPropTypeInfo(componentID, path, key)
 
         ImGui.Text(key)
@@ -603,6 +613,7 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
 
         style.tooltip(dataType)
         self:drawResetProp(componentID, path)
+        style.popStyleColor(modified)
     end
 end
 
@@ -615,6 +626,7 @@ function entity:drawInstanceData()
         if ImGui.TreeNodeEx(name, ImGuiTreeNodeFlags.SpanFullWidth) then
             expanded = true
             self:drawResetComponent(key)
+            style.popStyleColor(not self.instanceDataChanges[key])
 
             local keys, max = self:getSortedKeys(component)
             for _, propKey in pairs(keys) do
@@ -622,18 +634,17 @@ function entity:drawInstanceData()
                 local modified = self.instanceDataChanges[key] and self.instanceDataChanges[key][propKey]
                 if modified then entry = self.instanceDataChanges[key][propKey] end
 
-                style.pushStyleColor(not modified, ImGuiCol.Text, style.mutedColor)
+                style.pushStyleColor(true, ImGuiCol.Text, style.mutedColor)
                 self:drawInstanceDataProperty(key, propKey, entry, { propKey }, max)
 
-                style.popStyleColor(not modified)
+                style.popStyleColor(true)
             end
             ImGui.TreePop()
         end
         if not expanded then
             self:drawResetComponent(key)
+            style.popStyleColor(not self.instanceDataChanges[key])
         end
-
-        style.popStyleColor(not self.instanceDataChanges[key])
     end
 end
 
