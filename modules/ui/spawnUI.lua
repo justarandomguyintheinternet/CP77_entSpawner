@@ -49,7 +49,8 @@ end
 ---@field selectedType number
 ---@field selectedVariant number
 ---@field sizeX number
----@field spawner? spawnedUI
+---@field spawnedUI? spawnedUI
+---@field spawner? spawner
 ---@field filteredList table
 spawnUI = {
     spawnPosition = nil,
@@ -60,6 +61,7 @@ spawnUI = {
     selectedVariant = 0,
     sizeX = 0,
     spawnedUI = nil,
+    spawner = nil,
     filteredList = {}
 }
 
@@ -72,6 +74,7 @@ function spawnUI.loadSpawnData(spawner)
 
     AMM = GetMod("AppearanceMenuMod")
     spawnUI.spawnedUI = spawner.baseUI.spawnedUI
+    spawnUI.spawner = spawner
 
     for dataName, dataType in pairs(types) do
         spawnData[dataName] = {}
@@ -218,9 +221,9 @@ function spawnUI.draw()
         style.pushGreyedOut(not AMM)
         if not amm.importing then
             if ImGui.Button("Generate AMM Props") and AMM then
-                amm.generateProps(spawnUI, AMM)
+                amm.generateProps(spawnUI, AMM, spawnUI.spawner)
             end
-            style.tooltip("[THIS WILL LAG] Generate files for spawning, from current list of AMM props")
+            style.tooltip("Generate files for spawning, from current list of AMM props")
         else
             ImGui.ProgressBar(amm.progress / amm.total, 200, 30, string.format("%.2f%%", (amm.progress / amm.total) * 100))
         end

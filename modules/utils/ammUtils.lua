@@ -1,6 +1,3 @@
-local object = require("modules/classes/spawn/object")
-local gr = require("modules/classes/spawn/group")
-local cache = require("modules/utils/cache")
 local utils = require("modules/utils/utils")
 local red = require("modules/utils/redConverter")
 local entityBuilder = require("modules/utils/entityBuilder")
@@ -17,14 +14,14 @@ local spot = "base\\amm_props\\entity\\ambient_spot_light"
 
 ---@param spawnUI spawnUI
 ---@param AMM table
-function amm.generateProps(spawnUI, AMM)
+function amm.generateProps(spawnUI, AMM, spawner)
     local props = AMM.API.GetAMMProps()
 
     local propsService = require("modules/utils/tasks"):new()
 
     for _, prop in pairs(props) do
         propsService:addTask(function ()
-            local new = object:new(spawnUI)
+            local new = require("modules/classes/editor/spawnableElement"):new(spawnUI)
             new.spawnable = require("modules/classes/spawn/entity/ammEntity"):new()
             new.spawnable:loadSpawnData({ spawnData = prop.path }, Vector4.new(0, 0, 0, 0), EulerAngles.new(0, 0, 0))
             new.name = new.spawnable:generateName(prop.name)
@@ -34,7 +31,7 @@ function amm.generateProps(spawnUI, AMM)
                 name = "unnamed"
             end
 
-            config.saveFile("data/spawnables/entity/amm/" .. name .. ".json", new:getState())
+            config.saveFile("data/spawnables/entity/amm/" .. name .. ".json", new:serialize())
 
             amm.progress = amm.progress + 1
             propsService:taskCompleted()
@@ -49,7 +46,7 @@ function amm.generateProps(spawnUI, AMM)
     propsService:run(true)
 
     propsService:onFinalize(function ()
-        spawnUI.loadSpawnData(spawnUI.spawner)
+        spawnUI.loadSpawnData(spawner)
         amm.importing = false
     end)
 end
