@@ -134,16 +134,23 @@ end
 local function convertResRefAsync(propValue)
     local hash = propValue.hash
 
-    local string = ""
+    local str = ""
     if hash then
-        string = ResRef.FromHash(hash):ToString()
+        str = ResRef.FromHash(hash):ToString()
+    end
+
+    local storage = "string"
+
+    if str == "" then
+        storage = "uint64"
+        str = tostring(hash):gsub("ULL", "")
     end
 
     return {
         DepotPath = {
             ["$type"] = "ResourcePath",
-            ["$storage"] = "string",
-            ["$value"] = string
+            ["$storage"] = storage,
+            ["$value"] = str
         },
         Flags = "Default"
     }
