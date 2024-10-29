@@ -43,7 +43,10 @@ local function convertSimple(propValue, propClass)
     local propData = tostring(propValue)
 
     if propClass == "LocalizationString" then
-        propData = GameDump(propValue)
+        propData = {
+            ["unk1"] = "0",
+            ["value"] = GameDump(propValue)
+        }
     elseif propClass == "CRUID" then
         propData = tostring(CRUIDToHash(propValue)):gsub("ULL", "")
     elseif propClass == "TweakDBID" then
@@ -234,7 +237,7 @@ local function importSimple(value, propType)
     local propData = nil
 
     if propType == "LocalizationString" then
-        propData = value
+        propData = ToLocalizationString(value["value"])
     elseif propType == "CRUID" then
         propData = CreateCRUID(loadstring("return " .. value .. "ULL", "")())
     elseif propType == "TweakDBID" then

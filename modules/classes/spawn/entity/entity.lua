@@ -69,18 +69,24 @@ end
 function entity:loadInstanceData(entity)
     self.defaultComponentData = {}
 
-    for _, component in pairs(entity:GetComponents()) do
+    local components = {}
+    for _, component in pairs (entity:GetComponents()) do
+        components[tostring(CRUIDToHash(component.id)):gsub("ULL", "")] = component
+    end
+    -- components["0"] = entity
+
+    for id, component in pairs(components) do
         local ignore = false
 
         if component:IsA("entMeshComponent") or component:IsA("entSkinnedMeshComponent") then
             ignore = ResRef.FromHash(component.mesh.hash):ToString():match("base\\spawner") or ResRef.FromHash(component.mesh.hash):ToString():match("base\\amm_props\\mesh\\invis_")
         end
         if not ignore then
-            self.defaultComponentData[tostring(CRUIDToHash(component.id)):gsub("ULL", "")] = red.redDataToJSON(component)
+            self.defaultComponentData[id] = red.redDataToJSON(component)
         end
 
         for key, data in pairs(utils.deepcopy(self.instanceDataChanges)) do
-            if key == tostring(CRUIDToHash(component.id)):gsub("ULL", "") then
+            if key == id then
                 assembleInstanceData(data, utils.deepcopy(self.defaultComponentData[key]))
                 red.JSONToRedData(data, component)
             end
@@ -236,9 +242,9 @@ function entity:export(index, length)
 
         local combinedData = {}
 
-        for _, data in pairs(utils.deepcopy(self.defaultComponentData)) do
-            if self.instanceDataChanges[data.id] then
-                assembleInstanceData(self.instanceDataChanges[data.id], data)
+        for key, data in pairs(utils.deepcopy(self.defaultComponentData)) do
+            if self.instanceDataChanges[key] then
+                assembleInstanceData(self.instanceDataChanges[key], data)
                 table.insert(combinedData, data)
             end
         end
@@ -512,6 +518,11 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
         self:drawStringProp(componentID, key, data["$value"], path, info.typeName, 150, max)
         style.popStyleColor(modified)
         return
+    elseif info.typeName == "LocalizationString" then
+        table.insert(path, "value")
+        self:drawStringProp(componentID, key, data["value"], path, info.typeName, 150, max)
+        style.popStyleColor(modified)
+        return
     end
 
     local name = info.typeName .. " | " .. key
@@ -626,7 +637,10 @@ end
 
 function entity:drawInstanceData()
     for key, component in pairs(self.defaultComponentData) do
-        local name = component["$type"] .. " | " .. component.name["$value"]
+        local name = component["$type"]
+        if component.name then
+            name = name .. " | " .. component.name["$value"]
+        end
         style.pushStyleColor(not self.instanceDataChanges[key], ImGuiCol.Text, style.mutedColor)
 
         local expanded = false
