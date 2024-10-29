@@ -117,7 +117,18 @@ local function convertHandle(propValue)
     return nil
 end
 
-local function convertResRef(propValue)
+local function convertResRef(data, key)
+    return {
+        DepotPath = {
+            ["$type"] = "ResourcePath",
+            ["$storage"] = "string",
+            ["$value"] = ResourceHelper.GetReferencePath(data, key):ToString()
+        },
+        Flags = "Default"
+    }
+end
+
+local function convertResRefAsync(propValue)
     local hash = propValue.hash
 
     local string = ""
@@ -172,8 +183,10 @@ function red.redDataToJSON(data)
                     propData = convertArray(propValue, prop)
                 elseif propType == ERTTIType.Handle or propType == ERTTIType.WeakHandle then
                     propData = convertHandle(propValue)
-                elseif propType == ERTTIType.ResourceReference or propType == ERTTIType.ResourceAsyncReference then
-                    propData = convertResRef(propValue)
+                elseif propType == ERTTIType.ResourceReference then
+                    propData = convertResRef(data, prop:GetName().value)
+                elseif propType == ERTTIType.ResourceAsyncReference then
+                    propData = convertResRefAsync(propValue)
                 else
                     utils.log("Unsupported type: ", propType)
                 end
@@ -286,7 +299,11 @@ local function importHandle(value, data, key)
     return propData
 end
 
-local function importResource(value)
+local function importResourceRef(data, value, key)
+    ResourceHelper.LoadReferenceResource(data, key, value["DepotPath"]["$value"], true)
+end
+
+local function importResourceRefAsync(value)
     if value["DepotPath"]["$storage"] == "string" then
         return ResRef.FromString(value["DepotPath"]["$value"])
     else
@@ -318,8 +335,10 @@ function red.JSONToRedData(json, data)
             propData = importArray(value, data, key)
         elseif metaType == ERTTIType.Handle or metaType == ERTTIType.WeakHandle then
             propData = importHandle(value, data, key)
-        elseif metaType == ERTTIType.ResourceReference or metaType == ERTTIType.ResourceAsyncReference then
-            propData = importResource(value)
+        elseif metaType == ERTTIType.ResourceReference then
+            propData = importResourceRef(data, value, key)
+        elseif metaType == ERTTIType.ResourceAsyncReference then
+            propData = importResourceRefAsync(value)
         else
             utils.log("Unsupported type: ", metaType)
         end
