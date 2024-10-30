@@ -232,29 +232,42 @@ end
 function collider:getGroupedProperties()
     local properties = spawnable.getGroupedProperties(self)
 
-    properties["collider"] = {
-		name = "Collider",
+    properties["visualization"] = {
+		name = "Visualization",
+        id = "collider",
 		data = {},
 		draw = function(_, entries)
-			if ImGui.Button("Preview off") then
+            ImGui.Text("Collider")
+
+            ImGui.SameLine()
+
+            ImGui.PushID("collider")
+
+			if ImGui.Button("Off") then
                 history.addAction(history.getMultiSelectChange(entries))
 
 				for _, entry in ipairs(entries) do
-					entry.spawnable.previewed = false
-                    visualizer.toggleAll(entry.spawnable:getEntity(), entry.spawnable.previewed)
+                    if entry.spawnable.node == "worldCollisionNode" then
+                        entry.spawnable.previewed = false
+                        visualizer.toggleAll(entry.spawnable:getEntity(), entry.spawnable.previewed)
+                    end
 				end
 			end
 
             ImGui.SameLine()
 
-            if ImGui.Button("Preview on") then
+            if ImGui.Button("On") then
                 history.addAction(history.getMultiSelectChange(entries))
 
 				for _, entry in ipairs(entries) do
-					entry.spawnable.previewed = true
-                    visualizer.toggleAll(entry.spawnable:getEntity(), entry.spawnable.previewed)
+                    if entry.spawnable.node == "worldCollisionNode" then
+                        entry.spawnable.previewed = true
+                        visualizer.toggleAll(entry.spawnable:getEntity(), entry.spawnable.previewed)
+                    end
 				end
 			end
+
+            ImGui.PopID()
 		end,
 		entries = { self.object }
 	}

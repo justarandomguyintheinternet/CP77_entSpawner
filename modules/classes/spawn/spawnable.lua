@@ -206,6 +206,7 @@ function spawnable:getGroupedProperties()
 
     properties["streamingProperties"] = {
 		name = "World Node",
+        id = "worldNode",
 		data = {
             multiplier = 1
         },

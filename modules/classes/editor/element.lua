@@ -241,10 +241,11 @@ function element:drawProperties()
 	for _, child in pairs(self:getPathsRecursive(true)) do
 		for key, property in pairs(child.ref:getGroupedProperties()) do
 			if not groupedProperties[key] then
-				groupedProperties[key] = { name = property.name, draw = property.draw, entries = property.entries }
-			else
-				table.insert(groupedProperties[key].entries, child.ref)
+				groupedProperties[key] = { name = property.name, draw = { [property.id] = property.draw }, entries = {} }
+			elseif not groupedProperties[key].draw[property.id] then
+				groupedProperties[key].draw[property.id] = property.draw
 			end
+			table.insert(groupedProperties[key].entries, child.ref)
 
 			if not self.groupOperationData[key] then
 				self.groupOperationData[key] = property.data
@@ -271,7 +272,9 @@ function element:drawProperties()
 				self.propertyHeaderStates[key] = ImGui.TreeNodeEx(property.name, ImGuiTreeNodeFlags.SpanFullWidth)
 
 				if self.propertyHeaderStates[key] then
-					property.draw(self, property.entries)
+					for _, draw in pairs(property.draw) do
+						draw(self, property.entries)
+					end
 					ImGui.TreePop()
 				end
 			end

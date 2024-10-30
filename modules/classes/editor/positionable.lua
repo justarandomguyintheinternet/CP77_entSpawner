@@ -222,6 +222,7 @@ function positionable:drawRotation(rotation)
 end
 
 function positionable:drawScale(scale)
+	-- TODO: Allow for each axis to be disabled individually
 	if not self.hasScale then return end
 
 	ImGui.PushItemWidth(80 * style.viewSize)

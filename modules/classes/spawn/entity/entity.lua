@@ -87,7 +87,6 @@ function entity:loadInstanceData(entity)
 
         for key, data in pairs(utils.deepcopy(self.instanceDataChanges)) do
             if key == id then
-                assembleInstanceData(data, utils.deepcopy(self.defaultComponentData[key]))
                 red.JSONToRedData(data, component)
             end
         end
@@ -377,6 +376,8 @@ function entity:updatePropValue(componentID, path, value)
 end
 
 function entity:drawStringProp(componentID, key, data, path, type, width, max)
+    key = tostring(key)
+
     ImGui.Text(key)
     ImGui.SameLine()
     ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
@@ -391,6 +392,8 @@ function entity:drawStringProp(componentID, key, data, path, type, width, max)
 end
 
 function entity:drawNumericProp(componentID, key, data, path, type, isFloat, hasText, format)
+    key = tostring(key)
+
     if hasText then
         ImGui.Text(key)
         ImGui.SameLine()

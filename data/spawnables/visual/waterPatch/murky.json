@@ -1,0 +1,50 @@
+{
+    "rotationRelative": false,
+    "scaleLocked": true,
+    "pos": {
+        "y": 0,
+        "w": 0,
+        "z": 0,
+        "x": 0
+    },
+    "hiddenByParent": false,
+    "transformExpanded": true,
+    "propertyHeaderStates": [],
+    "expandable": false,
+    "childs": [],
+    "selected": false,
+    "visible": true,
+    "spawnable": {
+        "rotationRelative": false,
+        "scaleLocked": true,
+        "scale": {
+            "y": 1,
+            "z": 1,
+            "x": 1
+        },
+        "app": "murky",
+        "depth": 2,
+        "uk10": 1040,
+        "spawnData": "engine\\meshes\\global_ocean_patch\\global_ocean_patch.mesh",
+        "modulePath": "visual/waterPatch",
+        "primaryRange": 90,
+        "secondaryRange": 70,
+        "uk11": 512,
+        "dataType": "Water Patch",
+        "position": {
+            "y": 0,
+            "w": 0,
+            "z": 0,
+            "x": 0
+        },
+        "rotation": {
+            "pitch": 0,
+            "yaw": 0,
+            "roll": 0
+        }
+    },
+    "name": "Water Patch - Murky",
+    "isUsingSpawnables": true,
+    "headerOpen": false,
+    "modulePath": "modules/classes/editor/spawnableElement"
+}

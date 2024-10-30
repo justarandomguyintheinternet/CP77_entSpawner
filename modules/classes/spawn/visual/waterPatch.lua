@@ -4,9 +4,7 @@ local style = require("modules/ui/style")
 ---Class for worldWaterPatchNode
 ---@class waterPatch : mesh
 ---@field private depth number
----@field private waterType integer
 local waterPatch = setmetatable({}, { __index = mesh })
-
 
 function waterPatch:new()
 	local o = mesh.new(self)
@@ -31,9 +29,14 @@ function waterPatch:save()
     local data = mesh.save(self)
 
     data.depth = self.depth
-    data.waterType = self.waterType
 
     return data
+end
+
+function waterPatch:updateScale()
+    mesh.updateScale(self)
+
+    self.scale.z = 1
 end
 
 function waterPatch:draw()

@@ -44,7 +44,7 @@ local settingsData = {
     },
     colliderColor = 0,
     selectedType = "Entity",
-    lastVariants = { Entity = "Template", Lights = "Light", Mesh = "Mesh", Collision = "Collision Shape", ["Deco"] = "Particles"},
+    lastVariants = { Entity = "Template", Lights = "Light", Mesh = "Mesh", Collision = "Collision Shape", ["Deco"] = "Particles", ["Meta"] = "Occluder" },
     spawnUIFilter = "",
     savedUIFilter = "",
     windowStates = {},
