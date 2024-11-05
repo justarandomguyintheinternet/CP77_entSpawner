@@ -305,6 +305,7 @@ function spawnUI.spawnNew(entry, class)
 
     local new = require("modules/classes/editor/spawnableElement"):new(spawnUI.spawnedUI)
     local rot = GetPlayer():GetWorldOrientation():ToEulerAngles()
+    rot.yaw = rot.yaw + 180
     local pos = GetPlayer():GetWorldPosition()
 
     local forward = GetPlayer():GetWorldForward()

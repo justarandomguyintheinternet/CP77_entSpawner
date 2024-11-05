@@ -719,7 +719,7 @@ function spawnedUI.drawHierarchy()
     end
     local nRows = math.floor((ySpace - settings.editorBottomSize) / (ImGui.GetFrameHeight() + spawnedUI.cellPadding * 2 - style.viewSize * 2))
 
-    ImGui.BeginChild("##hierarchy", 0, ySpace - settings.editorBottomSize)
+    ImGui.BeginChild("##hierarchy", 0, ySpace - settings.editorBottomSize, false, ImGuiWindowFlags.NoMove)
     input.updateWindowState()
 
     -- Start the table

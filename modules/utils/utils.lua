@@ -152,6 +152,7 @@ function miscUtils.createFileName(name)
     name = name:gsub("|", "_")
     name = name:gsub("?", "_")
     name = name:gsub("*", "_")
+    name = name:gsub("'", "_")
 
     return name
 end

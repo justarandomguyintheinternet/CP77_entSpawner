@@ -20,6 +20,15 @@ local utils = require("modules/utils/utils")
 ---@field private lightTypes table
 ---@field private temperature number
 ---@field private scaleVolFog number
+---@field private useInParticles boolean
+---@field private useInTransparents boolean
+---@field private ev number
+---@field private shadowFadeDistance number
+---@field private shadowFadeRange number
+---@field private contactShadows number
+---@field private shadowHeaderState boolean
+---@field private miscHeaderState boolean
+---@field private contactShadowsTypes table
 local light = setmetatable({}, { __index = spawnable })
 
 function light:new()
@@ -49,6 +58,16 @@ function light:new()
     o.lightTypes = utils.enumTable("ELightType")
     o.temperature = -1
     o.scaleVolFog = 0
+    o.useInParticles = true
+    o.useInTransparents = true
+    o.ev = 0
+    o.shadowFadeDistance = 10
+    o.shadowFadeRange = 5
+    o.contactShadows = 0
+    o.contactShadowsTypes = utils.enumTable("rendContactShadowReciever")
+
+    o.shadowHeaderState = false
+    o.miscHeaderState = false
 
     setmetatable(o, { __index = self })
    	return o
@@ -72,6 +91,13 @@ function light:onAssemble(entity)
     component.enableLocalShadows = self.localShadows
     component.temperature = self.temperature
     component.scaleVolFog = self.scaleVolFog
+    component.useInParticles = self.useInParticles
+    component.useInTransparents = self.useInTransparents
+    component.EV = self.ev
+    component.shadowFadeDistance = self.shadowFadeDistance
+    component.shadowFadeRange = self.shadowFadeRange
+    component.contactShadows = Enum.new("rendContactShadowReciever", self.contactShadows)
+
     entity:AddComponent(component)
 end
 
@@ -90,6 +116,12 @@ function light:save()
     data.lightType = self.lightType
     data.temperature = self.temperature
     data.scaleVolFog = self.scaleVolFog
+    data.useInParticles = self.useInParticles
+    data.useInTransparents = self.useInTransparents
+    data.ev = self.ev
+    data.shadowFadeDistance = self.shadowFadeDistance
+    data.shadowFadeRange = self.shadowFadeRange
+    data.contactShadows = self.contactShadows
 
     return data
 end
@@ -119,11 +151,19 @@ end
 function light:draw()
     spawnable.draw(self)
 
+    ImGui.Text("Light Type")
+    ImGui.SameLine()
+    self.lightType, changed = style.trackedCombo(self.object, "##type", self.lightType, self.lightTypes)
+    self:updateFull(changed)
+
     self.intensity, changed = style.trackedDragFloat(self.object, "##intensity", self.intensity, 0.1, 0, 9999, "%.1f Intensity", 90)
     if changed then
         self:updateParameters()
     end
     ImGui.SameLine()
+    self.ev, _, finished = style.trackedDragFloat(self.object, "##ev", self.ev, 0.1, 0, 9999, "%.1f EV", 90)
+    self:updateFull(finished)
+
     self.color, changed = style.trackedColor(self.object, "##color", self.color, 60)
     if changed then
         self:updateParameters()
@@ -140,6 +180,7 @@ function light:draw()
         if changed then
             self:updateParameters()
         end
+        ImGui.SameLine()
     end
     if self.lightType == 1 or self.lightType == 2 then
         self.radius, changed = style.trackedDragFloat(self.object, "##radius", self.radius, 0.25, 0, 9999, "%.1f Radius", 90)
@@ -151,40 +192,63 @@ function light:draw()
         ImGui.SameLine()
         self.capsuleLength, _, finished = style.trackedDragFloat(self.object, "##capsuleLength", self.capsuleLength, 0.05, 0, 9999, "%.2f Length", 90)
         self:updateFull(finished)
-        ImGui.SameLine()
-    end
-    if self.lightType == 1 then
-        ImGui.SameLine()
-    end
-    self.autoHideDistance, _, finished = style.trackedDragFloat(self.object, "##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.1f Hide Dist.", 90)
-    self:updateFull(finished)
-
-    ImGui.Text("Light Type")
-    ImGui.SameLine()
-    self.lightType, changed = style.trackedCombo(self.object, "##type", self.lightType, self.lightTypes)
-    self:updateFull(changed)
-
-    ImGui.Text("Flicker Settings")
-    style.tooltip("Controll light flickering, turn up strength to see effect")
-    ImGui.SameLine()
-    self.flickerPeriod, changed = style.trackedDragFloat(self.object, "##flickerPeriod", self.flickerPeriod, 0.01, 0.05, 9999, "%.2f Period", 85)
-    if changed then
-        self:updateParameters()
-    end
-    ImGui.SameLine()
-    self.flickerStrength, changed = style.trackedDragFloat(self.object, "##flickerStrength", self.flickerStrength, 0.01, 0, 9999, "%.2f Strength", 85)
-    if changed then
-        self:updateParameters()
-    end
-    ImGui.SameLine()
-    self.flickerOffset, changed = style.trackedDragFloat(self.object, "##flickerOffset", self.flickerOffset, 0.01, 0, 9999, "%.2f Offset", 85)
-    if changed then
-        self:updateParameters()
     end
 
-    if self.lightType == 1 then
-        self.localShadows, changed = style.trackedCheckbox(self.object, "Local Shadows", self.localShadows)
+    self.shadowHeaderState = ImGui.TreeNodeEx("Shadow Settings")
+
+    if self.shadowHeaderState then
+        self.contactShadows, changed = style.trackedCombo(self.object, "##contactShadows", self.contactShadows, self.contactShadowsTypes)
         self:updateFull(changed)
+
+        if self.lightType == 1 or lightType == 2 then
+            ImGui.SameLine()
+            self.localShadows, changed = style.trackedCheckbox(self.object, "Local Shadows", self.localShadows)
+            self:updateFull(changed)
+        end
+
+        self.shadowFadeDistance, _, finished = style.trackedDragFloat(self.object, "##shadowFadeDistance", self.shadowFadeDistance, 0.01, 0, 9999, "%.1f Shadow Fade Dist.", 140)
+        self:updateFull(finished)
+        ImGui.SameLine()
+        self.shadowFadeRange, _, finished = style.trackedDragFloat(self.object, "##shadowFadeRange", self.shadowFadeRange, 0.01, 0, 9999, "%.1f Shadow Fade Range", 140)
+        self:updateFull(finished)
+
+        ImGui.TreePop()
+    end
+
+    self.miscHeaderState = ImGui.TreeNodeEx("Misc. Settings")
+
+    if self.miscHeaderState then
+        ImGui.Text("Flicker Settings")
+        style.tooltip("Controll light flickering, turn up strength to see effect")
+        ImGui.SameLine()
+        self.flickerPeriod, changed = style.trackedDragFloat(self.object, "##flickerPeriod", self.flickerPeriod, 0.01, 0.05, 9999, "%.2f Period", 85)
+        if changed then
+            self:updateParameters()
+        end
+        ImGui.SameLine()
+        self.flickerStrength, changed = style.trackedDragFloat(self.object, "##flickerStrength", self.flickerStrength, 0.01, 0, 9999, "%.2f Strength", 85)
+        if changed then
+            self:updateParameters()
+        end
+        ImGui.SameLine()
+        self.flickerOffset, changed = style.trackedDragFloat(self.object, "##flickerOffset", self.flickerOffset, 0.01, 0, 9999, "%.2f Offset", 85)
+        if changed then
+            self:updateParameters()
+        end
+
+        self.useInParticles, changed = style.trackedCheckbox(self.object, "Use in particles", self.useInParticles)
+        self:updateFull(changed)
+        ImGui.SameLine()
+        self.useInTransparents, changed = style.trackedCheckbox(self.object, "Use in transparents", self.useInTransparents)
+        self:updateFull(changed)
+        ImGui.SameLine()
+        self.scaleVolFog, _, finished = style.trackedDragFloat(self.object, "##scaleVolFog", self.scaleVolFog, 0.01, 0, 9999, "%.2f Scale Vol. Fog", 120)
+        self:updateFull(finished)
+
+        self.autoHideDistance, _, finished = style.trackedDragFloat(self.object, "##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.1f Hide Dist.", 90)
+        self:updateFull(finished)
+
+        ImGui.TreePop()
     end
 
     ImGui.PopItemWidth()
@@ -227,7 +291,14 @@ function light:export()
         radius = self.radius,
         type = self.lightTypes[self.lightType + 1],
         allowDistantLight = 0,
-        lightChannel = "LC_Channel1, LC_Channel2, LC_Channel3, LC_Channel4, LC_Channel5, LC_Channel6, LC_Channel7, LC_Channel8, LC_ChannelWorld"
+        lightChannel = "LC_Channel1, LC_Channel2, LC_Channel3, LC_Channel4, LC_Channel5, LC_Channel6, LC_Channel7, LC_Channel8, LC_ChannelWorld",
+        scaleVolFog = self.scaleVolFog,
+        useInParticles = self.useInParticles and 1 or 0,
+        useInTransparents = self.useInTransparents and 1 or 0,
+        EV = self.ev,
+        shadowFadeDistance = self.shadowFadeDistance,
+        shadowFadeRange = self.shadowFadeRange,
+        contactShadows = self.contactShadowsTypes[self.contactShadows + 1]
     }
 
     return data

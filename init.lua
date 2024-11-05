@@ -42,7 +42,7 @@ spawner = {
 
     i = function(data)
         local red = require("modules/utils/redConverter")
-        red.JSONToRedData(config.loadFile("export.json"), data)
+        red.JSONToRedData(config.loadFile("wkit.json"), data)
     end,
 
     baseUI = require("modules/ui/baseUI"),

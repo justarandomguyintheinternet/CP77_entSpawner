@@ -94,16 +94,9 @@ local function convertArray(propValue, prop)
     local innerType = prop:GetType():GetInnerType():GetMetaType()
 
     for _, entry in pairs(propValue) do
-        local innerData = red.redDataToJSON(entry)
+        local innerData = red.convertAny(innerType, prop:GetType():GetInnerType():GetName().value, entry, prop, propValue)
 
-        if innerType == ERTTIType.Handle or innerType == ERTTIType.WeakHandle then
-            table.insert(propData, {
-                HandleId = "0",
-                Data = innerData
-            })
-        else
-            table.insert(propData, innerData)
-        end
+        table.insert(propData, innerData)
     end
 
     return propData
@@ -156,6 +149,43 @@ local function convertResRefAsync(propValue)
     }
 end
 
+---@private
+---@param metaType ERTTIType
+---@param propType string
+---@param value ISerializable
+---@param prop ReflectionProp
+---@param data ISerializable Parent of value
+function red.convertAny(metaType, propType, value, prop, data)
+    local propData = nil
+
+    if metaType == ERTTIType.Name then
+        propData = convertCName(value)
+    elseif metaType == ERTTIType.Fundamental then
+        propData = convertFundamental(value, propType)
+    elseif metaType == ERTTIType.Class then
+        propData = red.redDataToJSON(value)
+    elseif metaType == ERTTIType.Simple then -- LocalizationString, Buffers, CRUID
+        propData = convertSimple(value, propType)
+    elseif metaType == ERTTIType.Enum then
+        propData = tostring(value):match(":%s*(.+)%s")
+    elseif metaType == ERTTIType.Array or metaType == ERTTIType.StaticArray or metaType == ERTTIType.NativeArray or metaType == ERTTIType.FixedArray then
+        propData = convertArray(value, prop)
+    elseif metaType == ERTTIType.Handle or metaType == ERTTIType.WeakHandle then
+        propData = convertHandle(value)
+    elseif metaType == ERTTIType.ResourceReference then
+        propData = convertResRef(data, prop:GetName().value)
+    elseif metaType == ERTTIType.ResourceAsyncReference then
+        propData = convertResRefAsync(value)
+    else
+        utils.log("Unsupported type: ", metaType)
+    end
+
+    return propData
+end
+
+---Converts a ISerializable instance to json data
+---@param data ISerializable
+---@return table
 function red.redDataToJSON(data)
     local root = Reflection.GetClassOf(ToVariant(data), true)
 
@@ -173,33 +203,13 @@ function red.redDataToJSON(data)
 
     for _, class in pairs(classes) do
         for _, prop in pairs(class:GetProperties()) do
-            local propType = prop:GetType():GetMetaType()
             local propData = nil
-            local propValue = FromVariant(prop:GetValue(ToVariant(data)))
-            local propClass = prop:GetType():GetName().value
+            local metaType = prop:GetType():GetMetaType()
+            local propType = prop:GetType():GetName().value
+            local value = FromVariant(prop:GetValue(ToVariant(data)))
 
             if not utils.has_value(exportExludes, prop:GetName().value) then
-                if propType == ERTTIType.Name then
-                    propData = convertCName(propValue)
-                elseif propType == ERTTIType.Fundamental then
-                    propData = convertFundamental(propValue, propClass)
-                elseif propType == ERTTIType.Class then
-                    propData = red.redDataToJSON(propValue)
-                elseif propType == ERTTIType.Simple then -- LocalizationString, Buffers, CRUID
-                    propData = convertSimple(propValue, propClass)
-                elseif propType == ERTTIType.Enum then
-                    propData = tostring(propValue):match(":%s*(.+)%s")
-                elseif propType == ERTTIType.Array or propType == ERTTIType.StaticArray or propType == ERTTIType.NativeArray or propType == ERTTIType.FixedArray then
-                    propData = convertArray(propValue, prop)
-                elseif propType == ERTTIType.Handle or propType == ERTTIType.WeakHandle then
-                    propData = convertHandle(propValue)
-                elseif propType == ERTTIType.ResourceReference then
-                    propData = convertResRef(data, prop:GetName().value)
-                elseif propType == ERTTIType.ResourceAsyncReference then
-                    propData = convertResRefAsync(propValue)
-                else
-                    utils.log("Unsupported type: ", propType)
-                end
+                propData = red.convertAny(metaType, propType, value, prop, data)
             end
 
             if propData then
@@ -275,12 +285,12 @@ local function importClass(value, propType)
     return propData
 end
 
-local function importEnum(value, propType, prop)
+local function importEnum(value, propType, enumName)
     local propData = nil
 
     for _, enum in pairs(Reflection.GetTypeOf(ToVariant(Enum.new(propType, 0))):GetConstants()) do
         if enum:GetName().value == value then
-            propData = Enum.new(prop:GetType():GetName().value, tonumber(enum:GetValue()))
+            propData = Enum.new(enumName, tonumber(enum:GetValue()))
             break
         end
     end
@@ -288,15 +298,24 @@ local function importEnum(value, propType, prop)
     return propData
 end
 
-local function importArray(value, data, key)
+local function importArray(value, data, key, prop)
     local propData = {}
 
     for index, entry in pairs(value) do
+        local innerType = prop:GetType():GetInnerType()
+
         if entry.HandleId then
             entry = entry.Data
+            innerType = innerType:GetInnerType()
         end
-        local entryData = data[key][index] or NewObject(entry["$type"])
-        red.JSONToRedData(entry, entryData)
+
+        local entryInstance
+        if innerType:GetMetaType() == ERTTIType.Class then
+            entryInstance = data[key][index] or NewObject(entry["$type"])
+        end
+
+        local entryData = red.importAny(innerType:GetMetaType(), entry["$type"], entry, nil, entryInstance, index)
+
         table.insert(propData, entryData)
     end
 
@@ -321,6 +340,42 @@ local function importResourceRefAsync(value)
     end
 end
 
+---@private
+---@param metaType ERTTIType
+---@param propType string
+---@param value table
+---@param prop ReflectionProp
+---@param data ISerializable Parent of value
+---@param key string
+---@return any
+function red.importAny(metaType, propType, value, prop, data, key)
+    local propData = nil
+
+    if metaType == ERTTIType.Name then
+        propData = importCName(value)
+    elseif metaType == ERTTIType.Fundamental then
+        propData = importFundamental(value, propType)
+    elseif metaType == ERTTIType.Simple then
+        propData = importSimple(value, propType)
+    elseif metaType == ERTTIType.Class then
+        propData = importClass(value, propType)
+    elseif metaType == ERTTIType.Enum then
+        propData = importEnum(value, propType, propType)
+    elseif metaType == ERTTIType.Array or metaType == ERTTIType.StaticArray or metaType == ERTTIType.NativeArray or metaType == ERTTIType.FixedArray then
+        propData = importArray(value, data, key, prop)
+    elseif metaType == ERTTIType.Handle or metaType == ERTTIType.WeakHandle then
+        propData = importHandle(value, data, key)
+    elseif metaType == ERTTIType.ResourceReference then
+        propData = importResourceRef(data, value, key)
+    elseif metaType == ERTTIType.ResourceAsyncReference then
+        propData = importResourceRefAsync(value)
+    else
+        utils.log("Unsupported type: ", metaType)
+    end
+
+    return propData
+end
+
 function red.JSONToRedData(json, data)
     json["$type"] = nil
 
@@ -329,29 +384,7 @@ function red.JSONToRedData(json, data)
         local propType = prop:GetType():GetName().value
         local metaType = prop:GetType():GetMetaType()
 
-        local propData = nil
-
-        if metaType == ERTTIType.Name then
-            propData = importCName(value)
-        elseif metaType == ERTTIType.Fundamental then
-            propData = importFundamental(value, propType)
-        elseif metaType == ERTTIType.Simple then
-            propData = importSimple(value, propType)
-        elseif metaType == ERTTIType.Class then
-            propData = importClass(value, propType)
-        elseif metaType == ERTTIType.Enum then
-            propData = importEnum(value, propType, prop)
-        elseif metaType == ERTTIType.Array or metaType == ERTTIType.StaticArray or metaType == ERTTIType.NativeArray or metaType == ERTTIType.FixedArray then
-            propData = importArray(value, data, key)
-        elseif metaType == ERTTIType.Handle or metaType == ERTTIType.WeakHandle then
-            propData = importHandle(value, data, key)
-        elseif metaType == ERTTIType.ResourceReference then
-            propData = importResourceRef(data, value, key)
-        elseif metaType == ERTTIType.ResourceAsyncReference then
-            propData = importResourceRefAsync(value)
-        else
-            utils.log("Unsupported type: ", metaType)
-        end
+        local propData = red.importAny(metaType, propType, value, prop, data, key)
 
         if propData then
             data[key] = propData
