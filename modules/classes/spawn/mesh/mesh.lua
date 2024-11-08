@@ -72,6 +72,8 @@ function mesh:loadSpawnData(data, position, rotation)
             cache.addValue(self.spawnData .. "_apps", self.apps)
             cache.addValue(self.spawnData .. "_bBox_max", utils.fromVector(self.bBox.max))
             cache.addValue(self.spawnData .. "_bBox_min", utils.fromVector(self.bBox.min))
+
+            self:onSpawnedAndCached()
         end)
     else
         self.bBox.max = ToVector4(self.bBox.max)

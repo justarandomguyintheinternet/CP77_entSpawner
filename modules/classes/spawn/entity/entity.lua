@@ -121,6 +121,7 @@ function entity:onAssemble(entity)
 
         visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
 
+        self:onSpawnedAndCached()
         if self.bBoxCallback then
             self.bBoxCallback(entity)
         end
@@ -140,6 +141,8 @@ function entity:save()
     return data
 end
 
+---Gets called once the entity is spawned and the BBox is cached. Gets passed the entity as param
+---@param callback any
 function entity:onBBoxLoaded(callback)
     self.bBoxCallback = callback
 end
