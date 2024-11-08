@@ -30,6 +30,7 @@ local history = require("modules/utils/history")
 ---@field public previewNote string
 ---@field public icon string
 ---@field private rotationRelative boolean
+---@field private spawnedAndCachedCallback function[]
 local spawnable = {}
 
 function spawnable:new()
@@ -52,6 +53,7 @@ function spawnable:new()
     o.rotation = EulerAngles.new(0, 0, 0)
     o.entityID = entEntityID.new({hash = 0})
     o.spawned = false
+    o.spawnedAndCachedCallback = {}
 
     o.primaryRange = 120
     o.secondaryRange = 100
@@ -71,6 +73,19 @@ end
 
 function spawnable:onAssemble(entity)
     visualizer.attachArrows(entity, self:getVisualizerSize(), self.isHovered, self.arrowDirection)
+end
+
+function spawnable:onSpawnedAndCached()
+    for _, fn in ipairs(self.spawnedAndCachedCallback) do
+        fn(self)
+    end
+end
+
+---Register a callback for when the entity is spawned and cached.
+---onSpawnedAndCached must be explicitly called by inheriting classes, if registerSpawnedAndCachedCallback wants to be used.
+---@param fn function
+function spawnable:registerSpawnedAndCachedCallback(fn)
+    table.insert(self.spawnedAndCachedCallback, fn)
 end
 
 ---Spawns the spawnable if not spawned already, must register a callback for entityAssemble which calls onAssemble
