@@ -114,11 +114,17 @@ local function convertHandle(propValue)
 end
 
 local function convertResRef(data, key)
+    local value = ""
+
+    if data then
+        value = ResourceHelper.GetReferencePath(data, key):ToString()
+    end
+
     return {
         DepotPath = {
             ["$type"] = "ResourcePath",
             ["$storage"] = "string",
-            ["$value"] = ResourceHelper.GetReferencePath(data, key):ToString()
+            ["$value"] = value
         },
         Flags = "Default"
     }

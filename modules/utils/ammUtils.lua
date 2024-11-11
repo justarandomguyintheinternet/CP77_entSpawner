@@ -139,9 +139,6 @@ end
 local function setInstanceDataMesh(entity, propData, spawnable)
     for _, component in pairs(entity:GetComponents()) do
         if entityBuilder.shouldUseMesh(component) and component:IsA("entMeshComponent") then
-            local default = red.redDataToJSON(component)
-            table.insert(spawnable.instanceData, default)
-
             local change = {}
             if propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0 then
                 change = {chunkMask = "0"}
@@ -164,7 +161,6 @@ end
 local function setInstanceDataLight(entity, lightData, spawnable)
     for _, component in pairs(entity:GetComponents()) do
         if component:IsA("gameLightComponent") then
-            local data = red.redDataToJSON(component)
             local angles = loadstring("return " .. lightData.angles, "")()
             local color = loadstring("return " .. lightData.color, "")()
 
@@ -182,7 +178,6 @@ local function setInstanceDataLight(entity, lightData, spawnable)
                 radius = lightData.radius
             }
 
-            table.insert(spawnable.instanceData, data)
             spawnable.instanceDataChanges[tostring(CRUIDToHash(component.id)):gsub("ULL", "")] = change
         end
     end
@@ -236,7 +231,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
                                 o:setParent(lightCustom)
                             end
 
-                            print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. #spawnable.instanceData .. " light components.")
+                            print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. utils.tableLength(spawnable.instanceDataChanges) .. " light components.")
                         end
                         if isScaled then
                             setInstanceDataMesh(entity, propData, spawnable)
