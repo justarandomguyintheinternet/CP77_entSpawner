@@ -55,19 +55,21 @@ local utils = require("modules/utils/utils")
 local edit = false
 local components = {}
 local dist = -4
+local x = 300
 
-local function screenToWorld(x, y, pitch)
-    local cameraPosition = Game.GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
+local function screenToWorld(x, y)
+    local cameraPosition = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
+    local cameraRotation = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation()
     local pov = Game.GetPlayer():GetFPPCameraComponent():GetFOV()
     local width, height = GetDisplayResolution()
 
     local vertical = EulerAngles.new(0, pov / 2, 0):GetForward()
-    local vec = Vector4.new(vertical.z * (width / height) * x, vertical.y * 1, vertical.z * y, 0)
+    local vecRelative = Vector4.new(vertical.z * (width / height) * x, vertical.y * 1, vertical.z * y, 0)
 
-    vec = Vector4.RotateAxis(vec, Vector4.new(1, 0, 0, 0), math.rad(pitch))
-    vec = Vector4.RotateAxis(vec, Vector4.new(0, 0, 1, 0), math.rad(GetPlayer():GetWorldOrientation():ToEulerAngles().yaw))
+    vec = Vector4.RotateAxis(vecRelative, Vector4.new(1, 0, 0, 0), math.rad(cameraRotation.pitch))
+    vec = Vector4.RotateAxis(vec, Vector4.new(0, 0, 1, 0), math.rad(cameraRotation.yaw))
 
-    return Vector4.new(cameraPosition.x + vec.x, cameraPosition.y + vec.y, cameraPosition.z + vec.z)
+    return Vector4.new(cameraPosition.x + vec.x, cameraPosition.y + vec.y, cameraPosition.z + vec.z), vecRelative
 end
 
 function spawner:new()
@@ -131,6 +133,8 @@ function spawner:new()
             self.baseUI.draw(self)
             input.update()
 
+            if not GetPlayer() then return end
+
             local rot = Game.GetPlayer():GetWorldOrientation():ToEulerAngles()
 
             if ImGui.IsMouseDragging(ImGuiMouseButton.Middle, 0) then
@@ -170,7 +174,24 @@ function spawner:new()
             -- vec = Vector4.RotateAxis(vec, Vector4.new(0, 0, 1, 0), math.rad(0));
             -- print(camP.x + vec.x, camP.y + vec.y, camP.z + vec.z);
 
-            if ImGui.Begin("Editor", ImGuiWindowFlags.AlwaysAutoResize) then
+            local width, height = GetDisplayResolution()
+            ImGui.SetNextWindowSizeConstraints(250, height, width / 2, height)
+            ImGui.SetNextWindowPos(width, 0, ImGuiCond.Always, 1, 0)
+
+            style.pushStyleColor(true, ImGuiCol.WindowBg, 0, 0, 0, 1)
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0)
+
+            if ImGui.Begin("Editor", true, ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.NoTitleBar) then
+                local xSize, _ = ImGui.GetWindowSize()
+
+                local centerXCoord = - (xSize / width)
+                local _, centerDir = screenToWorld(centerXCoord, 0)
+                local camXOffset = ((1 / centerDir.y) * dist) * centerDir.x
+
+                if edit then
+                    Game.GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(camXOffset, dist, 0, 1.0))
+                end
+
                 edit, changed = ImGui.Checkbox("Edit", edit)
                 if changed then
                     if edit then
@@ -199,16 +220,18 @@ function spawner:new()
 
                     local spec = StaticEntitySpec.new()
                     spec.templatePath = "base\\open_world\\props\\synthetic_can_a_soda.ent"
-                    spec.position = screenToWorld(((x / width) * 2) - 1, - (((y / height) * 2) - 1), pitch)
+                    local pos, _ = screenToWorld(((x / width) * 2) - 1, - (((y / height) * 2) - 1))
+                    spec.position = pos
                     spec.orientation = Quaternion.new()
                     spec.attached = true
                     Game.GetStaticEntitySystem():SpawnEntity(spec)
-
-                    print(screenToWorld(0, 0, pitch), ((x / width) * 2) - 1, ((y / height) * 2) - 1)
                 end
 
                 ImGui.End()
             end
+
+            style.popStyleColor(true)
+            ImGui.PopStyleVar()
         end
 
         -- if ImGui.Begin("Collect", ImGuiWindowFlags.AlwaysAutoResize) then
