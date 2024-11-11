@@ -1,4 +1,5 @@
 local utils = require("modules/utils/utils")
+local tween = require("modules/tween/tween")
 
 local camera = {
     active = false,
@@ -9,7 +10,9 @@ local camera = {
     cameraPosition = nil,
     translateSpeed = 3,
     rotateSpeed = 0.4,
-    zoomSpeed = 2.75
+    zoomSpeed = 2.75,
+    transitionTween = nil,
+    suspendState = false
 }
 
 local function setSceneTier(tier)
@@ -19,7 +22,7 @@ local function setSceneTier(tier)
 end
 
 function camera.toggle(state)
-    if not playerPosition then
+    if not camera.playerPosition then
         camera.playerPosition = GetPlayer():GetWorldPosition()
         camera.cameraPosition = GetPlayer():GetWorldPosition()
     end
@@ -40,6 +43,8 @@ function camera.toggle(state)
         end
 
         camera.playerPosition = GetPlayer():GetWorldPosition()
+
+        -- camera.transition(camera.playerPosition, camera.cameraPosition, 1)
         camera.update()
     else
         GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0.0, 0, 0, 0))
@@ -50,6 +55,7 @@ function camera.toggle(state)
         end
 
         camera.components = {}
+        camera.transitionTween = nil
         camera.cameraPosition = GetPlayer():GetWorldPosition()
 
         Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.playerPosition, GetPlayer():GetWorldOrientation():ToEulerAngles())
@@ -58,10 +64,32 @@ function camera.toggle(state)
     GetPlayer():DisableCameraBobbing(camera.active)
 end
 
-function camera.update()
-    if not camera.active or not GetPlayer() then return end
+function camera.suspend(state)
+    if camera.active and not state and not camera.suspendState then
+        camera.suspendState = true
+        camera.toggle(false)
+    elseif not camera.active and state and camera.suspendState then
+        camera.suspendState = false
+        camera.toggle(true)
+    end
+end
 
+function camera.update()
     local cameraRotation = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation()
+
+    if camera.transitionTween then
+        local done = camera.transitionTween:update(camera.deltaTime)
+
+        if done then
+            camera.transitionTween = nil
+        else
+            camera.cameraPosition = Vector4.new(camera.transitionTween.subject.x, camera.transitionTween.subject.y, camera.transitionTween.subject.z, 0)
+            Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.cameraPosition, cameraRotation)
+            return
+        end
+    end
+
+    if not camera.active then return end
 
     if ImGui.IsMouseDragging(ImGuiMouseButton.Middle, 0) then
         local x, y = ImGui.GetMouseDragDelta(ImGuiMouseButton.Middle, 0)
@@ -95,8 +123,8 @@ function camera.updateXOffset(adjustedCenterX)
     GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(-camXOffset, - camera.distance, 0, 0))
 end
 
-function camera.setPosition(position, smooth, duration)
-    
+function camera.transition(from, to, duration)
+    camera.transitionTween = tween.new(duration, { x = from.x, y = from.y, z = from.z }, { x = to.x, y = to.y, z = to.z }, tween.easing.inOutQuad)
 end
 
 function camera.screenToWorld(x, y)
