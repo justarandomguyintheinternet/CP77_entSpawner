@@ -50,27 +50,7 @@ spawner = {
 }
 
 -- local x = collectgarbage("count")
-local pitch = 0
-local utils = require("modules/utils/utils")
 local edit = false
-local components = {}
-local dist = -4
-local x = 300
-
-local function screenToWorld(x, y)
-    local cameraPosition = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
-    local cameraRotation = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation()
-    local pov = Game.GetPlayer():GetFPPCameraComponent():GetFOV()
-    local width, height = GetDisplayResolution()
-
-    local vertical = EulerAngles.new(0, pov / 2, 0):GetForward()
-    local vecRelative = Vector4.new(vertical.z * (width / height) * x, vertical.y * 1, vertical.z * y, 0)
-
-    vec = Vector4.RotateAxis(vecRelative, Vector4.new(1, 0, 0, 0), math.rad(cameraRotation.pitch))
-    vec = Vector4.RotateAxis(vec, Vector4.new(0, 0, 1, 0), math.rad(cameraRotation.yaw))
-
-    return Vector4.new(cameraPosition.x + vec.x, cameraPosition.y + vec.y, cameraPosition.z + vec.z), vecRelative
-end
 
 function spawner:new()
     registerForEvent("onHook", function ()
@@ -98,6 +78,8 @@ function spawner:new()
         self.baseUI.exportUI.init()
         history.spawnedUI = self.baseUI.spawnedUI
 
+        self.camera = require("modules/utils/editor/camera")
+
         Observe('RadialWheelController', 'OnIsInMenuChanged', function(_, isInMenu)
             self.runtimeData.inMenu = isInMenu
         end)
@@ -117,6 +99,8 @@ function spawner:new()
         if self.runtimeData.inGame and not self.runtimeData.inMenu then
             Cron.Update(dt)
         end
+
+        self.camera.deltaTime = dt
     end)
 
     registerForEvent("onShutdown", function ()
@@ -132,47 +116,7 @@ function spawner:new()
             drag.draw()
             self.baseUI.draw(self)
             input.update()
-
-            if not GetPlayer() then return end
-
-            local rot = Game.GetPlayer():GetWorldOrientation():ToEulerAngles()
-
-            if ImGui.IsMouseDragging(ImGuiMouseButton.Middle, 0) then
-                local x, y = ImGui.GetMouseDragDelta(ImGuiMouseButton.Middle, 0)
-                ImGui.ResetMouseDragDelta(ImGuiMouseButton.Middle)
-
-                if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
-                    local camRot = EulerAngles.new(0, pitch, rot.yaw)
-
-                    local pos = GetPlayer():GetWorldPosition()
-                    pos = utils.addVector(pos, utils.multVector(camRot:GetUp(), y / 50))
-                    pos = utils.subVector(pos, utils.multVector(camRot:GetRight(), x / 50))
-
-                    Game.GetTeleportationFacility():Teleport(Game.GetPlayer(), pos, rot)
-                elseif ImGui.IsKeyDown(ImGuiKey.LeftCtrl) then
-                    dist = dist + y / 20
-
-                    Game.GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0, dist, 0, 1.0))
-                else
-                    Game.GetTeleportationFacility():Teleport(Game.GetPlayer(), GetPlayer():GetWorldPosition(), EulerAngles.new(rot.roll, rot.pitch, rot.yaw - x / 20))
-
-                    pitch = pitch - y / 20
-                    Game.GetPlayer():GetFPPCameraComponent().pitchMax = pitch
-                    Game.GetPlayer():GetFPPCameraComponent().pitchMin = pitch
-                end
-            else
-                Game.GetTeleportationFacility():Teleport(Game.GetPlayer(), GetPlayer():GetWorldPosition(), rot)
-            end
-
-            --horizontal = vertical
-            -- print(camP.x + vertical.z * 1.7777 * 1, camP.y + vertical.y * 1, camP.z + vertical.z * 1);
-            -- camP = Game.GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation();
-            -- pov = Game.GetPlayer():GetFPPCameraComponent():GetFOV();
-            -- vertical = EulerAngles.new(0, pov / 2, 0):GetForward();
-            -- vec = Vector4.new(vertical.z * 1.7777 * 1, vertical.y * 1, vertical.z * 1, 0);
-            -- vec = Vector4.RotateAxis(vec, Vector4.new(1, 0, 0, 0), math.rad(0));
-            -- vec = Vector4.RotateAxis(vec, Vector4.new(0, 0, 1, 0), math.rad(0));
-            -- print(camP.x + vec.x, camP.y + vec.y, camP.z + vec.z);
+            self.camera.update()
 
             local width, height = GetDisplayResolution()
             ImGui.SetNextWindowSizeConstraints(250, height, width / 2, height)
@@ -184,48 +128,25 @@ function spawner:new()
             if ImGui.Begin("Editor", true, ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.NoTitleBar) then
                 local xSize, _ = ImGui.GetWindowSize()
 
-                local centerXCoord = - (xSize / width)
-                local _, centerDir = screenToWorld(centerXCoord, 0)
-                local camXOffset = ((1 / centerDir.y) * dist) * centerDir.x
-
-                if edit then
-                    Game.GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(camXOffset, dist, 0, 1.0))
-                end
+                self.camera.updateXOffset(- (xSize / width))
 
                 edit, changed = ImGui.Checkbox("Edit", edit)
                 if changed then
-                    if edit then
-                        components = {}
-
-                        for _, c in pairs(GetPlayer():GetComponents()) do
-                            if c:IsA("entIVisualComponent") then
-                                table.insert(components, c.name.value)
-                                c:Toggle(false)
-                            end
-                        end
-
-                        Game.GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0, dist, 0, 1.0))
-                    else
-                        for _, c in pairs(components) do
-                            GetPlayer():FindComponentByName(c):Toggle(true)
-                        end
-
-                        Game.GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0.0, 0, 0, 1.0))
-                    end
+                    self.camera.toggle(edit)
                 end
 
-                if ImGui.IsKeyDown(ImGuiKey.X) then
-                    local x, y = ImGui.GetMousePos()
-                    local width, height = GetDisplayResolution()
+                -- if ImGui.IsKeyDown(ImGuiKey.X) then
+                --     local x, y = ImGui.GetMousePos()
+                --     local width, height = GetDisplayResolution()
 
-                    local spec = StaticEntitySpec.new()
-                    spec.templatePath = "base\\open_world\\props\\synthetic_can_a_soda.ent"
-                    local pos, _ = screenToWorld(((x / width) * 2) - 1, - (((y / height) * 2) - 1))
-                    spec.position = pos
-                    spec.orientation = Quaternion.new()
-                    spec.attached = true
-                    Game.GetStaticEntitySystem():SpawnEntity(spec)
-                end
+                --     local spec = StaticEntitySpec.new()
+                --     spec.templatePath = "base\\open_world\\props\\synthetic_can_a_soda.ent"
+                --     local pos, _ = screenToWorld(((x / width) * 2) - 1, - (((y / height) * 2) - 1))
+                --     spec.position = pos
+                --     spec.orientation = Quaternion.new()
+                --     spec.attached = true
+                --     Game.GetStaticEntitySystem():SpawnEntity(spec)
+                -- end
 
                 ImGui.End()
             end
