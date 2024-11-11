@@ -823,6 +823,14 @@ function spawnedUI.drawTop()
 
     style.pushButtonNoBG(true)
 
+    if ImGui.Button(IconGlyphs.ContentSaveAllOutline) then
+        for _, entry in pairs(spawnedUI.paths) do
+            if utils.isA(entry.ref, "positionableGroup") and entry.ref.parent ~= nil and entry.ref.parent:isRoot(true) then
+                entry.ref:save()
+            end
+        end
+    end
+    ImGui.SameLine()
     if ImGui.Button(IconGlyphs.CollapseAllOutline) then
         spawnedUI.root:setHeaderStateRecursive(false)
     end
