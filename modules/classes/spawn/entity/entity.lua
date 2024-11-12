@@ -66,28 +66,34 @@ local function assembleInstanceData(instanceDataPart, instanceData)
     end
 end
 
+local function CRUIDToString(id)
+    return tostring(CRUIDToHash(id)):gsub("ULL", "")
+end
+
 function entity:loadInstanceData(entity)
     self.defaultComponentData = {}
 
-    local components = {}
-    for _, component in pairs (entity:GetComponents()) do
-        components[tostring(CRUIDToHash(component.id)):gsub("ULL", "")] = component
-    end
+    -- Gotta go through all components, even such with identicaly IDs, due to AMM props using the same ID for all components
+    local components = entity:GetComponents()
     -- components["0"] = entity
 
-    for id, component in pairs(components) do
+    for _, component in pairs(components) do
         local ignore = false
 
         if component:IsA("entMeshComponent") or component:IsA("entSkinnedMeshComponent") then
             ignore = ResRef.FromHash(component.mesh.hash):ToString():match("base\\spawner") or ResRef.FromHash(component.mesh.hash):ToString():match("base\\amm_props\\mesh\\invis_")
         end
         if not ignore then
-            self.defaultComponentData[id] = red.redDataToJSON(component)
-        end
+            if not component.name.value:match("amm_prop_slot") then
+                self.defaultComponentData[CRUIDToString(component.id)] = red.redDataToJSON(component)
+            elseif not self.defaultComponentData[CRUIDToString(component.id)] then
+                self.defaultComponentData[CRUIDToString(component.id)] = red.redDataToJSON(component)
+            end
 
-        for key, data in pairs(utils.deepcopy(self.instanceDataChanges)) do
-            if key == id then
-                red.JSONToRedData(data, component)
+            for key, data in pairs(utils.deepcopy(self.instanceDataChanges)) do
+                if key == CRUIDToString(component.id) then
+                    red.JSONToRedData(data, component)
+                end
             end
         end
     end

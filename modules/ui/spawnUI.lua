@@ -260,6 +260,23 @@ function spawnUI.draw()
                 isSpawned = true
             end
 
+            local x, _ = ImGui.GetItemRectSize()
+            spawnUI.sizeX = math.max(x + 14, spawnUI.sizeX)
+
+            if entry.lastSpawned ~= nil and entry.lastSpawned.parent == nil then entry.lastSpawned = nil end
+
+            if entry.lastSpawned ~= nil then
+                if ImGui.Button("Despawn") then
+                    history.addAction(history.getRemove({ entry.lastSpawned }))
+                    entry.lastSpawned:remove()
+                    entry.lastSpawned = nil
+                end
+                ImGui.SameLine()
+
+                local deleteX, _ = ImGui.GetItemRectSize()
+                spawnUI.sizeX = math.max(x + deleteX + 14, spawnUI.sizeX)
+            end
+
             local buttonText = entry.name
             if spawnUI.getActiveSpawnList().isPaths and settings.spawnUIOnlyNames then
                 buttonText = utils.getFileName(entry.name)
@@ -269,23 +286,6 @@ function spawnUI.draw()
                 ImGui.SetClipboardText(entry.name)
                 local class = spawnUI.getActiveSpawnList().class
                 entry.lastSpawned = spawnUI.spawnNew(entry, class)
-            end
-
-            local x, _ = ImGui.GetItemRectSize()
-            spawnUI.sizeX = math.max(x + 14, spawnUI.sizeX)
-
-            if entry.lastSpawned ~= nil and entry.lastSpawned.parent == nil then entry.lastSpawned = nil end
-
-            if entry.lastSpawned ~= nil then
-                ImGui.SameLine()
-                if ImGui.Button("Despawn") then
-                    history.addAction(history.getRemove({ entry.lastSpawned }))
-                    entry.lastSpawned:remove()
-                    entry.lastSpawned = nil
-                end
-
-                local deleteX, _ = ImGui.GetItemRectSize()
-                spawnUI.sizeX = math.max(x + deleteX + 14, spawnUI.sizeX)
             end
 
             if isSpawned then ImGui.PopStyleColor(2) end
