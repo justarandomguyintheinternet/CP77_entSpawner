@@ -266,7 +266,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
         importTasks:taskCompleted()
     end)
 
-    meshService.taskDelay = 0.05
+    meshService.taskDelay = 0.075
     meshService:run(true)
 end
 
