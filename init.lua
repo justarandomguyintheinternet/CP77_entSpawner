@@ -74,7 +74,7 @@ function spawner:new()
         self.baseUI.spawnedUI.registerHotkeys()
         self.baseUI.savedUI.reload()
 
-        self.baseUI.exportUI.init()
+        self.baseUI.exportUI.init(self)
         history.spawnedUI = self.baseUI.spawnedUI
 
         Observe('RadialWheelController', 'OnIsInMenuChanged', function(_, isInMenu)

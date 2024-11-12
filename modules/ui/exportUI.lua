@@ -1,7 +1,4 @@
 local config = require("modules/utils/config")
-local CPS = require("CPStyling")
-local object = require("modules/classes/spawn/object")
-local gr = require("modules/classes/spawn/group")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 
@@ -15,7 +12,7 @@ exportUI = {
     exportHovered = false
 }
 
-function exportUI.init()
+function exportUI.init(spawner)
     for _, file in pairs(dir("data/exportTemplates/")) do
         if file.name:match("^.+(%..+)$") == ".json" then
             local data = config.loadFile("data/exportTemplates/" .. file.name)
@@ -29,6 +26,8 @@ function exportUI.init()
             exportUI.templates[data.projectName] = data
         end
     end
+
+    exportUI.spawner = spawner
 end
 
 function exportUI.drawGroups()
@@ -76,6 +75,24 @@ function exportUI.drawGroups()
                 ImGui.SameLine()
                 group.streamingZ = ImGui.DragFloat("##z", group.streamingZ, 0.25, 0, 9999, "%.1f Z Size")
                 ImGui.PopItemWidth()
+                ImGui.SameLine()
+
+                local outOfBox = false
+
+                local playerPos = GetPlayer():GetWorldPosition()
+                if group.center.x + group.streamingX < playerPos.x or group.center.x - group.streamingX > playerPos.x then
+                    outOfBox = true
+                end
+                if group.center.y + group.streamingY < playerPos.y or group.center.y - group.streamingY > playerPos.y then
+                    outOfBox = true
+                end
+                if group.center.z + group.streamingZ < playerPos.z or group.center.z - group.streamingZ > playerPos.z then
+                    outOfBox = true
+                end
+
+                local distance = utils.distanceVector(group.center, playerPos)
+                style.styledText(IconGlyphs.AxisArrowInfo, outOfBox and 0xFF0000FF or 0xFF00FF00)
+                style.tooltip("Distance to player: " .. string.format("%.2f", distance))
 
                 if ImGui.Button("Remove from list") then
                     table.remove(exportUI.groups, key)
@@ -145,12 +162,10 @@ function exportUI.drawTemplates()
     end
 end
 
-function exportUI.draw(spawner)
+function exportUI.draw()
     if not sectorCategory then
         sectorCategory = utils.enumTable("worldStreamingSectorCategory")
     end
-
-    exportUI.spawner = spawner
 
     style.sectionHeaderStart("EXPORT TEMPLATES", "Templates let you save an export setup for later usage, without having to setup what groups/settings to use each time.")
 
@@ -209,14 +224,19 @@ function exportUI.addGroup(name)
         level = 1,
         streamingX = 150,
         streamingY = 150,
-        streamingZ = 100
+        streamingZ = 100,
+        center = nil
     }
 
     table.insert(exportUI.groups, data)
-end
 
-function exportUI.flatExport(name)
+    if not config.fileExists("data/objects/" .. name .. ".json") then return end
 
+    local blob = config.loadFile("data/objects/" .. name .. ".json")
+    local g = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
+    g:load(blob, true)
+
+    data.center = g:getPosition()
 end
 
 function exportUI.exportGroup(group)
