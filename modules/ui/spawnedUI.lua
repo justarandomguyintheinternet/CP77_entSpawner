@@ -1,5 +1,5 @@
 local utils = require("modules/utils/utils")
-local group = require("modules/classes/spawn/group")
+local editor = require("modules/utils/editor/editor")
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
@@ -823,6 +823,15 @@ function spawnedUI.drawTop()
 
     style.pushButtonNoBG(true)
 
+    style.pushStyleColor(editor.active, ImGuiCol.Text, 0xfffcdb03)
+    if ImGui.Button(IconGlyphs.Rotate3d) then
+        style.popStyleColor(editor.active)
+        editor.toggle(not editor.active)
+    else
+        style.popStyleColor(editor.active)
+    end
+    style.tooltip("Toggle 3D-Editor mode")
+    ImGui.SameLine()
     if ImGui.Button(IconGlyphs.ContentSaveAllOutline) then
         for _, entry in pairs(spawnedUI.paths) do
             if utils.isA(entry.ref, "positionableGroup") and entry.ref.parent ~= nil and entry.ref.parent:isRoot(true) then

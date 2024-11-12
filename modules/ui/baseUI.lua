@@ -82,15 +82,6 @@ local function drawMenuButton()
     if ImGui.BeginPopupContextItem("##windowMenu", ImGuiPopupFlags.MouseButtonLeft) then
         style.styledText("Separated Tabs:", style.mutedColor, 0.85)
 
-        local _, clicked = ImGui.MenuItem("Edit Mode", '', editor.active)
-        if clicked then
-            editor.toggle(not editor.active)
-
-            if not editor.active then
-                baseUI.loadTabSize = true
-            end
-        end
-
         for _, tab in pairs(tabs) do
             local _, clicked = ImGui.MenuItem(tab.name, '', settings.windowStates[tab.id])
             if clicked and not isOnlyTab(tab.id) then
