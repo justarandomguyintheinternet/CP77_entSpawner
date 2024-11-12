@@ -4,6 +4,7 @@ local tween = require("modules/tween/tween")
 local camera = {
     active = false,
     distance = 3,
+    xOffset = 0,
     deltaTime = 0,
     components = {},
     playerPosition = nil,
@@ -32,7 +33,7 @@ function camera.toggle(state)
     camera.active = state
 
     if camera.active then
-        Game.GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0, - camera.distance, 0, 0))
+        Game.GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(- camera.xOffset, - camera.distance, 0, 0))
         setSceneTier(4)
 
         for _, component in pairs(GetPlayer():GetComponents()) do
@@ -118,9 +119,9 @@ function camera.updateXOffset(adjustedCenterX)
     if not camera.active then return end
 
     local centerDir, _ = camera.screenToWorld(adjustedCenterX, 0)
-    local camXOffset = ((1 / centerDir.y) * camera.distance) * centerDir.x
+    camera.xOffset = ((1 / centerDir.y) * camera.distance) * centerDir.x
 
-    GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(-camXOffset, - camera.distance, 0, 0))
+    GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(- camera.xOffset, - camera.distance, 0, 0))
 end
 
 function camera.transition(from, to, duration)

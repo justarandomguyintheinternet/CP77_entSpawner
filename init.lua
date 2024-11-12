@@ -46,11 +46,11 @@ spawner = {
     end,
 
     baseUI = require("modules/ui/baseUI"),
+    editor = require("modules/utils/editor/editor"),
     GameUI = require("modules/utils/GameUI")
 }
 
 -- local x = collectgarbage("count")
-local edit = false
 
 function spawner:new()
     registerForEvent("onHook", function ()
@@ -78,7 +78,7 @@ function spawner:new()
         self.baseUI.exportUI.init()
         history.spawnedUI = self.baseUI.spawnedUI
 
-        self.camera = require("modules/utils/editor/camera")
+        self.editor.init(self)
 
         Observe('RadialWheelController', 'OnIsInMenuChanged', function(_, isInMenu)
             self.runtimeData.inMenu = isInMenu
@@ -100,7 +100,7 @@ function spawner:new()
             Cron.Update(dt)
         end
 
-        self.camera.deltaTime = dt
+        self.editor.camera.deltaTime = dt
     end)
 
     registerForEvent("onShutdown", function ()
@@ -111,49 +111,13 @@ function spawner:new()
 
     registerForEvent("onDraw", function()
         style.initialize()
-        self.camera.suspend(self.runtimeData.cetOpen)
+        self.editor.camera.suspend(self.runtimeData.cetOpen)
 
         if self.runtimeData.cetOpen then
             drag.draw()
+            self.editor.onDraw()
             self.baseUI.draw(self)
             input.update()
-            self.camera.update()
-
-            local width, height = GetDisplayResolution()
-            ImGui.SetNextWindowSizeConstraints(250, height, width / 2, height)
-            ImGui.SetNextWindowPos(width, 0, ImGuiCond.Always, 1, 0)
-
-            style.pushStyleColor(true, ImGuiCol.WindowBg, 0, 0, 0, 1)
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0)
-
-            if ImGui.Begin("Editor", true, ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.NoTitleBar) then
-                local xSize, _ = ImGui.GetWindowSize()
-
-                self.camera.updateXOffset(- (xSize / width))
-
-                edit, changed = ImGui.Checkbox("Edit", edit)
-                if changed then
-                    self.camera.toggle(edit)
-                end
-
-                -- if ImGui.IsKeyDown(ImGuiKey.X) then
-                --     local x, y = ImGui.GetMousePos()
-                --     local width, height = GetDisplayResolution()
-
-                --     local spec = StaticEntitySpec.new()
-                --     spec.templatePath = "base\\open_world\\props\\synthetic_can_a_soda.ent"
-                --     local pos, _ = screenToWorld(((x / width) * 2) - 1, - (((y / height) * 2) - 1))
-                --     spec.position = pos
-                --     spec.orientation = Quaternion.new()
-                --     spec.attached = true
-                --     Game.GetStaticEntitySystem():SpawnEntity(spec)
-                -- end
-
-                ImGui.End()
-            end
-
-            style.popStyleColor(true)
-            ImGui.PopStyleVar()
         end
 
         -- if ImGui.Begin("Collect", ImGuiWindowFlags.AlwaysAutoResize) then

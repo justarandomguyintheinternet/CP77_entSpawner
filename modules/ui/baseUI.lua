@@ -1,5 +1,6 @@
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
+local editor = require("modules/utils/editor/editor")
 
 ---@class baseUI
 baseUI = {
@@ -81,6 +82,15 @@ local function drawMenuButton()
     if ImGui.BeginPopupContextItem("##windowMenu", ImGuiPopupFlags.MouseButtonLeft) then
         style.styledText("Separated Tabs:", style.mutedColor, 0.85)
 
+        local _, clicked = ImGui.MenuItem("Edit Mode", '', editor.active)
+        if clicked then
+            editor.toggle(not editor.active)
+
+            if not editor.active then
+                baseUI.loadTabSize = true
+            end
+        end
+
         for _, tab in pairs(tabs) do
             local _, clicked = ImGui.MenuItem(tab.name, '', settings.windowStates[tab.id])
             if clicked and not isOnlyTab(tab.id) then
@@ -107,17 +117,34 @@ function baseUI.init()
 end
 
 function baseUI.draw(spawner)
-    if baseUI.loadTabSize then
+    local screenWidth, screenHeight = GetDisplayResolution()
+
+    if baseUI.loadTabSize and not editor.active then
         ImGui.SetNextWindowSize(settings.tabSizes[tabs[baseUI.activeTab].id][1], settings.tabSizes[tabs[baseUI.activeTab].id][2])
         baseUI.loadTabSize = false
     end
+    if editor.active then
+        ImGui.SetNextWindowSizeConstraints(250, screenHeight, screenWidth / 2, screenHeight)
+        ImGui.SetNextWindowPos(screenWidth, 0, ImGuiCond.Always, 1, 0)
+        baseUI.loadTabSize = false
+    end
 
-    if ImGui.Begin("Object Spawner 2.0", tabs[baseUI.activeTab].flags) then
+    style.pushStyleColor(editor.active, ImGuiCol.WindowBg, 0, 0, 0, 1)
+    style.pushStyleVar(editor.active, ImGuiStyleVar.WindowRounding, 0)
+
+    local flags = tabs[baseUI.activeTab].flags
+    if editor.active then
+        flags = flags + ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.NoTitleBar
+    end
+
+    if ImGui.Begin("Object Spawner 2.0", flags) then
         local x, y = ImGui.GetWindowSize()
-        if x ~= settings.tabSizes[tabs[baseUI.activeTab].id][1] or y ~= settings.tabSizes[tabs[baseUI.activeTab].id][2] then
+        if not editor.active and (x ~= settings.tabSizes[tabs[baseUI.activeTab].id][1] or y ~= settings.tabSizes[tabs[baseUI.activeTab].id][2]) then
             settings.tabSizes[tabs[baseUI.activeTab].id] = { x, y }
             settings.save()
         end
+
+        editor.camera.updateXOffset(- (x / screenWidth))
 
         if ImGui.BeginTabBar("Tabbar", ImGuiTabItemFlags.NoTooltip) then
             for key, tab in ipairs(tabs) do
@@ -147,6 +174,9 @@ function baseUI.draw(spawner)
 
         ImGui.End()
     end
+
+    style.popStyleColor(editor.active)
+    style.popStyleVar(editor.active)
 
     for key, tab in pairs(tabs) do
         if settings.windowStates[tab.id] then
