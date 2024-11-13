@@ -11,7 +11,9 @@ baseUI = {
     settingsUI = require("modules/ui/settingsUI"),
     activeTab = 1,
     loadTabSize = true,
-    loadWindowSize = nil
+    loadWindowSize = nil,
+    mainWindowPosition = { 0, 0 },
+    restoreWindowPosition = false
 }
 
 local menuButtonHovered = false
@@ -76,8 +78,8 @@ local function drawMenuButton()
     style.pushStyleColor(menuButtonHovered, ImGuiCol.Text, style.mutedColor)
     ImGui.SetItemAllowOverlap()
     ImGui.Text(IconGlyphs.DotsHorizontal)
-    menuButtonHovered = ImGui.IsItemHovered()
     style.popStyleColor(menuButtonHovered)
+    menuButtonHovered = ImGui.IsItemHovered()
 
     if ImGui.BeginPopupContextItem("##windowMenu", ImGuiPopupFlags.MouseButtonLeft) then
         style.styledText("Separated Tabs:", style.mutedColor, 0.85)
@@ -119,6 +121,10 @@ function baseUI.draw(spawner)
         ImGui.SetNextWindowPos(screenWidth, 0, ImGuiCond.Always, 1, 0)
         baseUI.loadTabSize = false
     end
+    if baseUI.restoreWindowPosition then
+        ImGui.SetNextWindowPos(baseUI.mainWindowPosition[1], baseUI.mainWindowPosition[2], ImGuiCond.Always, 0, 0)
+        baseUI.restoreWindowPosition = false
+    end
 
     style.pushStyleColor(editor.active, ImGuiCol.WindowBg, 0, 0, 0, 1)
     style.pushStyleVar(editor.active, ImGuiStyleVar.WindowRounding, 0)
@@ -129,6 +135,10 @@ function baseUI.draw(spawner)
     end
 
     if ImGui.Begin("Object Spawner 2.0", flags) then
+        if not editor.active then
+            baseUI.mainWindowPosition = { ImGui.GetWindowPos() }
+        end
+
         local x, y = ImGui.GetWindowSize()
         if not editor.active and (x ~= settings.tabSizes[tabs[baseUI.activeTab].id][1] or y ~= settings.tabSizes[tabs[baseUI.activeTab].id][2]) then
             settings.tabSizes[tabs[baseUI.activeTab].id] = { x, y }
@@ -159,9 +169,9 @@ function baseUI.draw(spawner)
                 end
             end
             ImGui.EndTabBar()
-
-            drawMenuButton()
         end
+
+        drawMenuButton()
 
         ImGui.End()
     end

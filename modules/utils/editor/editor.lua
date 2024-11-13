@@ -21,7 +21,11 @@ end
 function editor.toggle(state)
     editor.active = state
     editor.camera.toggle(state)
-    editor.baseUI.loadTabSize = true
+
+    if not state then
+        editor.baseUI.loadTabSize = true
+        editor.baseUI.restoreWindowPosition = true
+    end
 end
 
 return editor

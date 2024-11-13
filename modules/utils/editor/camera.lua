@@ -7,8 +7,8 @@ local camera = {
     xOffset = 0,
     deltaTime = 0,
     components = {},
-    playerPosition = nil,
-    cameraPosition = nil,
+    playerTransform = nil,
+    cameraTransform = nil,
     translateSpeed = 3,
     rotateSpeed = 0.4,
     zoomSpeed = 2.75,
@@ -23,9 +23,9 @@ local function setSceneTier(tier)
 end
 
 function camera.toggle(state)
-    if not camera.playerPosition then
-        camera.playerPosition = GetPlayer():GetWorldPosition()
-        camera.cameraPosition = GetPlayer():GetWorldPosition()
+    if not camera.playerTransform then
+        camera.playerTransform = { position = GetPlayer():GetWorldPosition(), rotation = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation() }
+        camera.cameraTransform = { position = GetPlayer():GetWorldPosition(), rotation = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation() }
     end
 
     if state == camera.active then return end
@@ -43,9 +43,13 @@ function camera.toggle(state)
             end
         end
 
-        camera.playerPosition = GetPlayer():GetWorldPosition()
+        camera.playerTransform.position = GetPlayer():GetWorldPosition()
+        camera.playerTransform.rotation = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation()
 
-        -- camera.transition(camera.playerPosition, camera.cameraPosition, 1)
+        GetPlayer():GetFPPCameraComponent().pitchMax = camera.cameraTransform.rotation.pitch
+        GetPlayer():GetFPPCameraComponent().pitchMin = camera.cameraTransform.rotation.pitch
+
+        -- camera.transition(camera.playerTransform.position, camera.cameraTransform.position, 1)
         camera.update()
     else
         GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0.0, 0, 0, 0))
@@ -57,9 +61,11 @@ function camera.toggle(state)
 
         camera.components = {}
         camera.transitionTween = nil
-        camera.cameraPosition = GetPlayer():GetWorldPosition()
+        camera.cameraTransform.position = GetPlayer():GetWorldPosition()
 
-        Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.playerPosition, GetPlayer():GetWorldOrientation():ToEulerAngles())
+        Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.playerTransform.position, camera.playerTransform.rotation)
+        GetPlayer():GetFPPCameraComponent().pitchMax = camera.playerTransform.rotation.pitch
+        GetPlayer():GetFPPCameraComponent().pitchMin = camera.playerTransform.rotation.pitch
     end
 
     GetPlayer():DisableCameraBobbing(camera.active)
@@ -76,16 +82,14 @@ function camera.suspend(state)
 end
 
 function camera.update()
-    local cameraRotation = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation()
-
     if camera.transitionTween then
         local done = camera.transitionTween:update(camera.deltaTime)
 
         if done then
             camera.transitionTween = nil
         else
-            camera.cameraPosition = Vector4.new(camera.transitionTween.subject.x, camera.transitionTween.subject.y, camera.transitionTween.subject.z, 0)
-            Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.cameraPosition, cameraRotation)
+            camera.cameraTransform.position = Vector4.new(camera.transitionTween.subject.x, camera.transitionTween.subject.y, camera.transitionTween.subject.z, 0)
+            Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.cameraTransform.position, camera.cameraTransform.rotation)
             return
         end
     end
@@ -97,22 +101,22 @@ function camera.update()
         ImGui.ResetMouseDragDelta(ImGuiMouseButton.Middle)
 
         if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
-            camera.cameraPosition = utils.addVector(camera.cameraPosition, utils.multVector(cameraRotation:GetUp(), (y / camera.translateSpeed) * camera.deltaTime))
-            camera.cameraPosition = utils.subVector(camera.cameraPosition, utils.multVector(cameraRotation:GetRight(), (x / camera.translateSpeed) * camera.deltaTime))
+            camera.cameraTransform.position = utils.addVector(camera.cameraTransform.position, utils.multVector(camera.cameraTransform.rotation:GetUp(), (y / camera.translateSpeed) * camera.deltaTime))
+            camera.cameraTransform.position = utils.subVector(camera.cameraTransform.position, utils.multVector(camera.cameraTransform.rotation:GetRight(), (x / camera.translateSpeed) * camera.deltaTime))
         elseif ImGui.IsKeyDown(ImGuiKey.LeftCtrl) then
             camera.distance = camera.distance + (y / camera.zoomSpeed) * camera.deltaTime
             camera.distance = math.max(0.1, camera.distance)
 
             GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0, - camera.distance, 0, 0))
         else
-            cameraRotation.yaw = cameraRotation.yaw - (x / camera.rotateSpeed) * camera.deltaTime
-            local pitch = cameraRotation.pitch - (y / camera.rotateSpeed) * camera.deltaTime
-            GetPlayer():GetFPPCameraComponent().pitchMax = pitch
-            GetPlayer():GetFPPCameraComponent().pitchMin = pitch
+            camera.cameraTransform.rotation.yaw = camera.cameraTransform.rotation.yaw - (x / camera.rotateSpeed) * camera.deltaTime
+            camera.cameraTransform.rotation.pitch = camera.cameraTransform.rotation.pitch - (y / camera.rotateSpeed) * camera.deltaTime
+            GetPlayer():GetFPPCameraComponent().pitchMax = camera.cameraTransform.rotation.pitch
+            GetPlayer():GetFPPCameraComponent().pitchMin = camera.cameraTransform.rotation.pitch
         end
     end
 
-    Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.cameraPosition, cameraRotation)
+    Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.cameraTransform.position, camera.cameraTransform.rotation)
 end
 
 function camera.updateXOffset(adjustedCenterX)
