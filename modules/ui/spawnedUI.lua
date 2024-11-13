@@ -526,8 +526,8 @@ function spawnedUI.drawSideButtons(element)
 
     local scrollBarAddition = (ImGui.GetScrollMaxY() > 0 and not spawnedUI.dividerDragging) and ImGui.GetStyle().ScrollbarSize or 0
 
-    local cursorX = ImGui.GetWindowWidth() - totalX - ImGui.GetStyle().CellPadding.x / 2 - scrollBarAddition
-    ImGui.SetCursorPosX(math.max(cursorX, ImGui.GetCursorPosX()))
+    local cursorX = ImGui.GetWindowWidth() - totalX - ImGui.GetStyle().CellPadding.x / 2 - scrollBarAddition + ImGui.GetScrollX()
+    ImGui.SetCursorPosX(cursorX)
 
     for icon, data in pairs(element.quickOperations) do
         if data.condition(element) then
