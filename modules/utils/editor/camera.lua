@@ -9,7 +9,7 @@ local camera = {
     components = {},
     playerTransform = nil,
     cameraTransform = nil,
-    translateSpeed = 3,
+    translateSpeed = 4,
     rotateSpeed = 0.4,
     zoomSpeed = 2.75,
     transitionTween = nil,
@@ -23,6 +23,8 @@ local function setSceneTier(tier)
 end
 
 function camera.toggle(state)
+    if not Game.GetPlayer() then return end
+
     if not camera.playerTransform then
         camera.playerTransform = { position = GetPlayer():GetWorldPosition(), rotation = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation() }
         camera.cameraTransform = { position = GetPlayer():GetWorldPosition(), rotation = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation() }
@@ -49,7 +51,6 @@ function camera.toggle(state)
         GetPlayer():GetFPPCameraComponent().pitchMax = camera.cameraTransform.rotation.pitch
         GetPlayer():GetFPPCameraComponent().pitchMin = camera.cameraTransform.rotation.pitch
 
-        -- camera.transition(camera.playerTransform.position, camera.cameraTransform.position, 1)
         camera.update()
     else
         GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0.0, 0, 0, 0))
@@ -100,11 +101,13 @@ function camera.update()
         local x, y = ImGui.GetMouseDragDelta(ImGuiMouseButton.Middle, 0)
         ImGui.ResetMouseDragDelta(ImGuiMouseButton.Middle)
 
+        local distanceMultiplier = math.max(1, (camera.distance / 10))
+
         if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
-            camera.cameraTransform.position = utils.addVector(camera.cameraTransform.position, utils.multVector(camera.cameraTransform.rotation:GetUp(), (y / camera.translateSpeed) * camera.deltaTime))
-            camera.cameraTransform.position = utils.subVector(camera.cameraTransform.position, utils.multVector(camera.cameraTransform.rotation:GetRight(), (x / camera.translateSpeed) * camera.deltaTime))
+            camera.cameraTransform.position = utils.addVector(camera.cameraTransform.position, utils.multVector(camera.cameraTransform.rotation:GetUp(), (y / camera.translateSpeed) * camera.deltaTime  * distanceMultiplier))
+            camera.cameraTransform.position = utils.subVector(camera.cameraTransform.position, utils.multVector(camera.cameraTransform.rotation:GetRight(), (x / camera.translateSpeed) * camera.deltaTime  * distanceMultiplier))
         elseif ImGui.IsKeyDown(ImGuiKey.LeftCtrl) then
-            camera.distance = camera.distance + (y / camera.zoomSpeed) * camera.deltaTime
+            camera.distance = camera.distance + (y / camera.zoomSpeed) * camera.deltaTime * distanceMultiplier
             camera.distance = math.max(0.1, camera.distance)
 
             GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0, - camera.distance, 0, 0))

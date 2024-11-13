@@ -793,6 +793,19 @@ function spawnedUI.drawDivider()
 end
 
 ---@protected
+function spawnedUI.drawEditorSettings()
+    if not editor.active then return end
+
+    if ImGui.TreeNodeEx("Edit Mode Settings") then
+        if ImGui.Button("Reset Camera") then
+            editor.camera.transition(editor.camera.cameraTransform.position, editor.camera.playerTransform.position, math.max(0.5, (1 / 250) * utils.distanceVector(editor.camera.cameraTransform.position, editor.camera.playerTransform.position)))
+        end
+
+        ImGui.TreePop()
+    end
+end
+
+---@protected
 function spawnedUI.drawTop()
     ImGui.PushItemWidth(200 * style.viewSize)
     spawnedUI.filter = ImGui.InputTextWithHint('##Filter', 'Search for element...', spawnedUI.filter, 100)
@@ -824,11 +837,11 @@ function spawnedUI.drawTop()
     style.pushButtonNoBG(true)
 
     local state = editor.active
-    style.pushStyleColor(state, ImGuiCol.Text, 0xfffcdb03)
+    -- style.pushStyleColor(state, ImGuiCol.Text, 0xfffcdb03)
     if ImGui.Button(IconGlyphs.Rotate3d) then
         editor.toggle(not editor.active)
     end
-    style.popStyleColor(state)
+    -- style.popStyleColor(state)
     style.tooltip("Toggle 3D-Editor mode")
     ImGui.SameLine()
     if ImGui.Button(IconGlyphs.ContentSaveAllOutline) then
@@ -880,6 +893,8 @@ function spawnedUI.drawTop()
     style.tooltip(tostring(#history.actions - history.index) .. " actions left")
 
     style.pushButtonNoBG(false)
+
+    spawnedUI.drawEditorSettings()
 end
 
 function spawnedUI.drawProperties()

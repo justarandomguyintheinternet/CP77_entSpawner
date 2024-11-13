@@ -14,6 +14,7 @@ function builder.hook()
                 args = {'handle:EntityLifecycleEvent'},
                 callback = function (event)
                     if not event then return end
+                    if type(event.GetEntity) ~= "function" then return end
 
                     local entity = event:GetEntity()
 
