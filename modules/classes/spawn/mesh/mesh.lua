@@ -5,6 +5,7 @@ local utils = require("modules/utils/utils")
 local cache = require("modules/utils/cache")
 local visualizer = require("modules/utils/visualizer")
 local history = require("modules/utils/history")
+local intersection = require("modules/utils/editor/intersection")
 
 local colliderShapes = { "Box", "Capsule", "Sphere" }
 
@@ -134,6 +135,18 @@ function mesh:getVisualizerSize()
 
     local max = math.min(math.max(size.x, size.y, size.z, 1.5) * 0.5, 3)
     return { x = max, y = max, z = max }
+end
+
+function mesh:calculateIntersection(origin, ray)
+    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, self.bBox)
+
+    return {
+        hit = result.hit,
+        position = result.position,
+        collisionType = "bbox",
+        distance = result.distance,
+        size = self:getSize()
+    }
 end
 
 function mesh:draw()

@@ -1,6 +1,7 @@
 local utils = require("modules/utils/utils")
 local tween = require("modules/tween/tween")
 
+---@class camera
 local camera = {
     active = false,
     distance = 3,

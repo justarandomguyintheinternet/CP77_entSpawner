@@ -249,12 +249,24 @@ function spawnable:getGroupedProperties()
     return properties
 end
 
+---Gets the actual physical size of the spawnable, usually BBOX
+---@return table {x, y, z}
 function spawnable:getSize()
     return { x = 1, y = 1, z = 1 }
 end
 
 function spawnable:getVisualizerSize()
     return { x = 1, y = 1, z = 1 }
+end
+
+function spawnable:calculateIntersection(origin, ray)
+    return {
+        hit = false,
+        position = Vector4.new(0, 0, 0, 0),
+        collisionType = "bbox",
+        distance = 0,
+        size = self:getSize()
+    }
 end
 
 ---Calculates the streaming distance values for the spawnable based on getSize()

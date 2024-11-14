@@ -1,4 +1,4 @@
-local style = require("modules/ui/style")
+local intersection = require("modules/utils/editor/intersection")
 local spawnable = require("modules/classes/spawn/spawnable")
 local builder = require("modules/utils/entityBuilder")
 local utils = require("modules/utils/utils")
@@ -162,6 +162,18 @@ function entity:getVisualizerSize()
 
     local max = math.min(math.max(size.x, size.y, size.z, 1) * 0.5, 3.5)
     return { x = max, y = max, z = max }
+end
+
+function entity:calculateIntersection(origin, ray)
+    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, self.bBox)
+
+    return {
+        hit = result.hit,
+        position = result.position,
+        collisionType = "bbox",
+        distance = result.distance,
+        size = self:getSize()
+    }
 end
 
 function entity:draw()
