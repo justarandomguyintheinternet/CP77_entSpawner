@@ -531,6 +531,7 @@ function spawnedUI.drawSideButtons(element)
 
     for icon, data in pairs(element.quickOperations) do
         if data.condition(element) then
+            ImGui.SetNextItemAllowOverlap()
             if ImGui.Button(icon) then
                 data.operation(element)
             end
@@ -540,6 +541,7 @@ function spawnedUI.drawSideButtons(element)
     end
 
     if spawnedUI.filter ~= "" then
+        ImGui.SetNextItemAllowOverlap()
         if ImGui.Button(IconGlyphs.ArrowTopRight) then
             spawnedUI.unselectAll()
             element:setSelected(true)
@@ -554,6 +556,7 @@ function spawnedUI.drawSideButtons(element)
     local visible = element.visible and not isGettingDragged
     style.pushStyleColor(not visible, ImGuiCol.Text, style.mutedColor)
 
+    ImGui.SetNextItemAllowOverlap()
     if ImGui.Button(IconGlyphs.EyeOutline) then
         if spawnedUI.multiSelectActive() then
             element:setVisibleRecursive(not element.visible)
@@ -615,7 +618,7 @@ function spawnedUI.drawElement(element, dummy)
     style.pushStyleColor(isGettingDragged, ImGuiCol.Header, 0, 0, 0, 0)
 
     local previous = element.selected
-    local newState = ImGui.Selectable("##item" .. spawnedUI.elementCount, element.selected, ImGuiSelectableFlags.SpanAllColumns)
+    local newState = ImGui.Selectable("##item" .. spawnedUI.elementCount, element.selected, ImGuiSelectableFlags.SpanAllColumns + ImGuiSelectableFlags.AllowOverlap)
     element:setSelected(newState)
     element:setHovered(ImGui.IsItemHovered())
 
@@ -653,13 +656,13 @@ function spawnedUI.drawElement(element, dummy)
     style.pushStyleColor(isGettingDragged, ImGuiCol.Text, style.extraMutedColor)
 
     -- Icon or expand button
-    ImGui.SetItemAllowOverlap()
     if not element.expandable and element.icon ~= "" then
         ImGui.AlignTextToFramePadding()
         ImGui.Text(element.icon)
     elseif element.expandable then
         ImGui.PushID(element.name)
         local text = element.headerOpen and IconGlyphs.MenuDownOutline or IconGlyphs.MenuRightOutline
+        ImGui.SetNextItemAllowOverlap()
         if ImGui.Button(text) then
             if spawnedUI.multiSelectActive() then
                 element:setHeaderStateRecursive(not element.headerOpen)
@@ -681,10 +684,12 @@ function spawnedUI.drawElement(element, dummy)
         end
         element:drawName()
     else
+        ImGui.SetNextItemAllowOverlap()
         ImGui.Text(element.name)
+        print(element.hovered, ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
     end
 
-    if ImGui.IsItemHovered() and ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) then
+    if element.hovered and ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) then
         element.editName = true
         element.focusNameEdit = 1
         element:setSelected(true)
