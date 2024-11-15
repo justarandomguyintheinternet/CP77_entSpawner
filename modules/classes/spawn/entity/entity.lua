@@ -7,6 +7,7 @@ local visualizer = require("modules/utils/visualizer")
 local red = require("modules/utils/redConverter")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
+local entityBuilder = require("modules/utils/entityBuilder")
 
 ---Class for base entity handling
 ---@class entity : spawnable
@@ -122,8 +123,16 @@ function entity:onAssemble(entity)
     .found(function ()
         utils.log("[Entity] BBOX for entity " .. self.spawnData .. " found.")
         local box = cache.getValue(self.spawnData .. "_bBox")
+
+        if math.abs(box.min.x) > 100000000 then
+            cache.addValue(self.spawnData .. "_bBox", { min = utils.fromVector(Vector4.new()), max = utils.fromVector(Vector4.new()) })
+            box.min = Vector4.new()
+            box.max = Vector4.new()
+        end
+
         self.bBox.min = ToVector4(box.min)
         self.bBox.max = ToVector4(box.max)
+        print(self.bBox.min.x, self.bBox.min.y, self.bBox.min.z, self.bBox.max.x, self.bBox.max.y, self.bBox.max.z)
 
         visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
 
@@ -153,19 +162,79 @@ function entity:onBBoxLoaded(callback)
     self.bBoxCallback = callback
 end
 
+---@param entity entity?
+---@return table
 function entity:getSize()
-    return { x = self.bBox.max.x - self.bBox.min.x, y = self.bBox.max.y - self.bBox.min.y, z = self.bBox.max.z - self.bBox.min.z }
+    -- BBOX does not account for scaled mesh components
+
+    local meshes = cache.getValue(self.spawnData .. "_meshes")
+    local vectors = {}
+
+    if self.spawned and meshes and self:getEntity() then
+        for _, mesh in pairs(meshes) do
+            local component = self:getEntity():FindComponentByName(mesh.name)
+            local min = cache.getValue(mesh.path .. "_bBox_min")
+            local max = cache.getValue(mesh.path .. "_bBox_max")
+
+            local transform = entityBuilder.getComponentOffset(self:getEntity(), component)
+
+            if component and min and max then
+                table.insert(vectors, utils.addVector(
+                    transform:GetOrientation():Transform(utils.multVecXVec(utils.getVector(min), Vector4.Vector3To4(component.visualScale))),
+                    transform:GetWorldPosition():ToVector4()
+                ))
+                table.insert(vectors, utils.addVector(
+                    transform:GetOrientation():Transform(utils.multVecXVec(utils.getVector(max), Vector4.Vector3To4(component.visualScale))),
+                    transform:GetWorldPosition():ToVector4()
+                ))
+            end
+        end
+
+        local bboxMin, bboxMax = utils.getVector4BBox(vectors)
+
+        print(bboxMax.x - bboxMin.x, bboxMax.y - bboxMin.y, bboxMax.z - bboxMin.z )
+
+        return { x = bboxMax.x - bboxMin.x, y = bboxMax.y - bboxMin.y, z = bboxMax.z - bboxMin.z }
+    else
+        return { x = self.bBox.max.x - self.bBox.min.x, y = self.bBox.max.y - self.bBox.min.y, z = self.bBox.max.z - self.bBox.min.z }
+    end
 end
 
 function entity:getVisualizerSize()
     local size = self:getSize()
-
     local max = math.min(math.max(size.x, size.y, size.z, 1) * 0.5, 3.5)
     return { x = max, y = max, z = max }
 end
 
 function entity:calculateIntersection(origin, ray)
-    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, self.bBox)
+    local meshes = cache.getValue(self.spawnData .. "_meshes")
+    local vectors = {}
+    local bboxMin, bboxMax
+
+    if self.spawned and meshes and self:getEntity() then
+        for _, mesh in pairs(meshes) do
+            local component = self:getEntity():FindComponentByName(mesh.name)
+            local min = cache.getValue(mesh.path .. "_bBox_min")
+            local max = cache.getValue(mesh.path .. "_bBox_max")
+
+            local transform = entityBuilder.getComponentOffset(self:getEntity(), component)
+
+            if component and min and max then
+                table.insert(vectors, utils.addVector(
+                    transform:GetOrientation():Transform(utils.multVecXVec(utils.getVector(min), Vector4.Vector3To4(component.visualScale))),
+                    transform:GetWorldPosition():ToVector4()
+                ))
+                table.insert(vectors, utils.addVector(
+                    transform:GetOrientation():Transform(utils.multVecXVec(utils.getVector(max), Vector4.Vector3To4(component.visualScale))),
+                    transform:GetWorldPosition():ToVector4()
+                ))
+            end
+        end
+
+        bboxMin, bboxMax = utils.getVector4BBox(vectors)
+    end
+
+    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, { min = bboxMin or self.bBox.min, max = bboxMax or self.bBox.max })
 
     return {
         hit = result.hit,

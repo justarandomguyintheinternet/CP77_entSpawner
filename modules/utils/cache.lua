@@ -6,7 +6,7 @@ local sanitizeSpawnData = false
 local data = {}
 local cache = {}
 
-local version = 7
+local version = 9
 
 function cache.load()
     config.tryCreateConfig("data/cache.json", { version = version })

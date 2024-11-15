@@ -74,12 +74,19 @@ function builder.registerLoadResource(path, callback)
     end
 end
 
----Gets the approximate offset of a component, not considering the parent componentes
+---Gets the approximate offset of a component, not considering the parent components
 ---@param component entIComponent
-local function getComponentOffset(component)
+function builder.getComponentOffset(entity, component)
+    local localToWorld = component:GetLocalToWorld()
+
+    print(component.name.value, localToWorld:GetTranslation(), entity:GetWorldPosition())
+
+    local posDiff = utils.subVector(localToWorld:GetTranslation(), entity:GetWorldPosition())
+    local rotDiff = Quaternion.MulInverse(localToWorld:GetRotation():ToQuat(), entity:GetWorldOrientation())
+
     local offset = WorldTransform.new()
-    offset:SetPosition(component:GetLocalPosition())
-    offset:SetOrientation(component:GetLocalOrientation())
+    offset:SetPosition(posDiff)
+    offset:SetOrientation(rotDiff)
 
     return offset
 end
@@ -116,7 +123,7 @@ function builder.getEntityBBox(entity, callback)
             end
 
             meshesTask:addTask(function ()
-                local offset = getComponentOffset(component)
+                local offset = builder.getComponentOffset(entity, component)
                 utils.log("[entityBuilder] task for mesh " .. path)
 
                 cache.tryGet(path .. "_bBox_max", path .. "_bBox_min", path .. "_collisions")
@@ -150,8 +157,8 @@ function builder.getEntityBBox(entity, callback)
                         hasScale = component:IsA("entMeshComponent")
                     })
 
-                    table.insert(bBoxPoints, offset:GetOrientation():Transform(min))
-                    table.insert(bBoxPoints, offset:GetOrientation():Transform(max))
+                    table.insert(bBoxPoints, utils.addVector(offset:GetOrientation():Transform(min), offset:GetWorldPosition():ToVector4()))
+                    table.insert(bBoxPoints, utils.addVector(offset:GetOrientation():Transform(max), offset:GetWorldPosition():ToVector4()))
 
                     utils.log("[entityBuilder] found BBOX for mesh " .. path)
                     utils.log("[entityBuilder] meshesTask todo: " .. meshesTask.tasksTodo - 1)
