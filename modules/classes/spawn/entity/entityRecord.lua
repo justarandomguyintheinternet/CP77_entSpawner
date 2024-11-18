@@ -62,10 +62,13 @@ function record:spawn()
     spec.alwaysSpawned = true
     spec.appearanceName = self.app
     self.entityID = Game.GetDynamicEntitySystem():CreateEntity(spec)
-    self.spawned = true
 
     builder.registerAssembleCallback(self.entityID, function (entity)
         self:onAssemble(entity)
+    end)
+
+    builder.registerAttachCallback(self.entityID, function (entity)
+        self:onAttached(entity)
     end)
 end
 

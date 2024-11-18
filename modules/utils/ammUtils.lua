@@ -231,6 +231,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
                                 o:setParent(lightCustom)
                             end
 
+                            o.spawnable:loadInstanceData(entity, true)
                             print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. utils.tableLength(spawnable.instanceDataChanges) .. " light components.")
                         end
                         if isScaled then
@@ -240,6 +241,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
                             o.name = o.spawnable:generateName(propData.name)
                             o:setParent(scaledProps)
 
+                            o.spawnable:loadInstanceData(entity, true)
                             print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. utils.tableLength(spawnable.instanceDataChanges) .. " mesh components.")
                         end
 

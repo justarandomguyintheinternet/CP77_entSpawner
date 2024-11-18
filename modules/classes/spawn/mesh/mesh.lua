@@ -73,8 +73,6 @@ function mesh:loadSpawnData(data, position, rotation)
             cache.addValue(self.spawnData .. "_apps", self.apps)
             cache.addValue(self.spawnData .. "_bBox_max", utils.fromVector(self.bBox.max))
             cache.addValue(self.spawnData .. "_bBox_min", utils.fromVector(self.bBox.min))
-
-            self:onSpawnedAndCached()
         end)
     else
         self.bBox.max = ToVector4(self.bBox.max)
@@ -138,14 +136,24 @@ function mesh:getVisualizerSize()
 end
 
 function mesh:calculateIntersection(origin, ray)
-    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, self.bBox)
+    if not self:getEntity() then
+        return { hit = false }
+    end
+
+    local scaledBBox = {
+        min = {  x = self.bBox.min.x * math.abs(self.scale.x), y = self.bBox.min.y * math.abs(self.scale.y), z = self.bBox.min.z * math.abs(self.scale.z) },
+        max = {  x = self.bBox.max.x * math.abs(self.scale.x), y = self.bBox.max.y * math.abs(self.scale.y), z = self.bBox.max.z * math.abs(self.scale.z) }
+    }
+    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, scaledBBox)
 
     return {
         hit = result.hit,
         position = result.position,
         collisionType = "bbox",
         distance = result.distance,
-        size = self:getSize()
+        bBox = scaledBBox,
+        objectOrigin = self.position,
+        objectRotation = self.rotation
     }
 end
 

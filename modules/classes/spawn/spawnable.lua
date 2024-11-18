@@ -17,6 +17,7 @@ local history = require("modules/utils/history")
 ---@field public rotation EulerAngles
 ---@field protected entityID entEntityID
 ---@field protected spawned boolean
+---@field protected spawning boolean
 ---@field public primaryRange number
 ---@field public secondaryRange number
 ---@field public uk10 integer
@@ -53,6 +54,7 @@ function spawnable:new()
     o.rotation = EulerAngles.new(0, 0, 0)
     o.entityID = entEntityID.new({hash = 0})
     o.spawned = false
+    o.spawning = false
     o.spawnedAndCachedCallback = {}
 
     o.primaryRange = 120
@@ -75,22 +77,14 @@ function spawnable:onAssemble(entity)
     visualizer.attachArrows(entity, self:getVisualizerSize(), self.isHovered, self.arrowDirection)
 end
 
-function spawnable:onSpawnedAndCached()
-    for _, fn in ipairs(self.spawnedAndCachedCallback) do
-        fn(self)
-    end
-end
-
----Register a callback for when the entity is spawned and cached.
----onSpawnedAndCached must be explicitly called by inheriting classes, if registerSpawnedAndCachedCallback wants to be used.
----@param fn function
-function spawnable:registerSpawnedAndCachedCallback(fn)
-    table.insert(self.spawnedAndCachedCallback, fn)
+function spawnable:onAttached(entity)
+    self.spawned = true
+    self.spawning = false
 end
 
 ---Spawns the spawnable if not spawned already, must register a callback for entityAssemble which calls onAssemble
 function spawnable:spawn()
-    if self:isSpawned() then return end
+    if self:isSpawned() or self.spawning then return end
 
     local spec = StaticEntitySpec.new()
     spec.templatePath = self.spawnData
@@ -99,12 +93,15 @@ function spawnable:spawn()
     spec.attached = true
     spec.appearanceName = self.app
     self.entityID = Game.GetStaticEntitySystem():SpawnEntity(spec)
+    self.spawning = true
 
     builder.registerAssembleCallback(self.entityID, function (entity)
         self:onAssemble(entity)
     end)
 
-    self.spawned = true
+    builder.registerAttachCallback(self.entityID, function (entity) 
+        self:onAttached(entity)
+    end)
 end
 
 ---@return boolean
@@ -260,12 +257,16 @@ function spawnable:getVisualizerSize()
 end
 
 function spawnable:calculateIntersection(origin, ray)
+    local size = self:getSize()
+
     return {
         hit = false,
         position = Vector4.new(0, 0, 0, 0),
         collisionType = "bbox",
         distance = 0,
-        size = self:getSize()
+        bBox = { min = { x = -size.x / 2, y = -size.y / 2, z = -size.z / 2 }, max = { x = size.x / 2, y = size.y / 2, z = size.z / 2 } },
+        objectOrigin = self.position,
+        objectRotation = self.rotation
     }
 end
 

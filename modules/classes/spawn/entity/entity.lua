@@ -15,6 +15,7 @@ local entityBuilder = require("modules/utils/entityBuilder")
 ---@field public appIndex integer
 ---@field private bBoxCallback function
 ---@field public bBox table {min: Vector4, max: Vector4}
+---@field public meshes table
 ---@field public instanceDataChanges table Changes to the default data, regardless of app (Matched by ID)
 ---@field public defaultComponentData table Default data for each component, regardless of whether it was changed. Keeps up to date with app changes
 local entity = setmetatable({}, { __index = spawnable })
@@ -32,6 +33,7 @@ function entity:new()
     o.appIndex = 0
     o.bBoxCallback = nil
     o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
+    o.meshes = {}
 
     o.instanceDataChanges = {}
     o.defaultComponentData = {}
@@ -71,12 +73,16 @@ local function CRUIDToString(id)
     return tostring(CRUIDToHash(id)):gsub("ULL", "")
 end
 
-function entity:loadInstanceData(entity)
+function entity:loadInstanceData(entity, forceLoadDefault)
     self.defaultComponentData = {}
+
+    -- Only generate upon change
+    if not forceLoadDefault and utils.tableLength(self.instanceDataChanges) == 0 then
+        return
+    end
 
     -- Gotta go through all components, even such with identicaly IDs, due to AMM props using the same ID for all components
     local components = entity:GetComponents()
-    -- components["0"] = entity
 
     for _, component in pairs(components) do
         local ignore = false
@@ -103,40 +109,19 @@ end
 function entity:onAssemble(entity)
     spawnable.onAssemble(self, entity)
 
-    self:loadInstanceData(entity)
+    self:loadInstanceData(entity, false)
+end
 
-    cache.tryGet(self.spawnData .. "_bBox", self.spawnData .. "_meshes")
-    .notFound(function (task)
-        builder.getEntityBBox(entity, function (data)
-            local meshes = {}
-            for _, mesh in pairs(data.meshes) do
-                table.insert(meshes, { app = mesh.app, path = mesh.path, pos = utils.fromVector(mesh.pos), rot = utils.fromEuler(mesh.rot), name = mesh.name, scaled = mesh.hasScale })
-            end
+function entity:onAttached(entity)
+    spawnable.onAttached(self, entity)
 
-            cache.addValue(self.spawnData .. "_bBox", { min = utils.fromVector(data.bBox.min), max = utils.fromVector(data.bBox.max) })
-            cache.addValue(self.spawnData .. "_meshes", meshes)
-            print("[Entity] Loaded and cached BBOX for entity " .. self.spawnData .. " with " .. #meshes .. " meshes.")
-
-            task:taskCompleted()
-        end)
-    end)
-    .found(function ()
-        utils.log("[Entity] BBOX for entity " .. self.spawnData .. " found.")
-        local box = cache.getValue(self.spawnData .. "_bBox")
-
-        if math.abs(box.min.x) > 100000000 then
-            cache.addValue(self.spawnData .. "_bBox", { min = utils.fromVector(Vector4.new()), max = utils.fromVector(Vector4.new()) })
-            box.min = Vector4.new()
-            box.max = Vector4.new()
-        end
-
-        self.bBox.min = ToVector4(box.min)
-        self.bBox.max = ToVector4(box.max)
-        print(self.bBox.min.x, self.bBox.min.y, self.bBox.min.z, self.bBox.max.x, self.bBox.max.y, self.bBox.max.z)
+    builder.getEntityBBox(entity, function (data)
+        utils.log("[Entity] Loaded initial BBOX for entity " .. self.spawnData .. " with " .. #data.meshes .. " meshes.")
+        self.bBox = data.bBox
+        self.meshes = data.meshes
 
         visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
 
-        self:onSpawnedAndCached()
         if self.bBoxCallback then
             self.bBoxCallback(entity)
         end
@@ -165,39 +150,8 @@ end
 ---@param entity entity?
 ---@return table
 function entity:getSize()
-    -- BBOX does not account for scaled mesh components
-
-    local meshes = cache.getValue(self.spawnData .. "_meshes")
-    local vectors = {}
-
-    if self.spawned and meshes and self:getEntity() then
-        for _, mesh in pairs(meshes) do
-            local component = self:getEntity():FindComponentByName(mesh.name)
-            local min = cache.getValue(mesh.path .. "_bBox_min")
-            local max = cache.getValue(mesh.path .. "_bBox_max")
-
-            local transform = entityBuilder.getComponentOffset(self:getEntity(), component)
-
-            if component and min and max then
-                table.insert(vectors, utils.addVector(
-                    transform:GetOrientation():Transform(utils.multVecXVec(utils.getVector(min), Vector4.Vector3To4(component.visualScale))),
-                    transform:GetWorldPosition():ToVector4()
-                ))
-                table.insert(vectors, utils.addVector(
-                    transform:GetOrientation():Transform(utils.multVecXVec(utils.getVector(max), Vector4.Vector3To4(component.visualScale))),
-                    transform:GetWorldPosition():ToVector4()
-                ))
-            end
-        end
-
-        local bboxMin, bboxMax = utils.getVector4BBox(vectors)
-
-        print(bboxMax.x - bboxMin.x, bboxMax.y - bboxMin.y, bboxMax.z - bboxMin.z )
-
-        return { x = bboxMax.x - bboxMin.x, y = bboxMax.y - bboxMin.y, z = bboxMax.z - bboxMin.z }
-    else
-        return { x = self.bBox.max.x - self.bBox.min.x, y = self.bBox.max.y - self.bBox.min.y, z = self.bBox.max.z - self.bBox.min.z }
-    end
+    print(self.bBox.max.x - self.bBox.min.x, self.bBox.max.y - self.bBox.min.y, self.bBox.max.z - self.bBox.min.z)
+    return { x = self.bBox.max.x - self.bBox.min.x, y = self.bBox.max.y - self.bBox.min.y, z = self.bBox.max.z - self.bBox.min.z }
 end
 
 function entity:getVisualizerSize()
@@ -207,41 +161,35 @@ function entity:getVisualizerSize()
 end
 
 function entity:calculateIntersection(origin, ray)
-    local meshes = cache.getValue(self.spawnData .. "_meshes")
-    local vectors = {}
-    local bboxMin, bboxMax
-
-    if self.spawned and meshes and self:getEntity() then
-        for _, mesh in pairs(meshes) do
-            local component = self:getEntity():FindComponentByName(mesh.name)
-            local min = cache.getValue(mesh.path .. "_bBox_min")
-            local max = cache.getValue(mesh.path .. "_bBox_max")
-
-            local transform = entityBuilder.getComponentOffset(self:getEntity(), component)
-
-            if component and min and max then
-                table.insert(vectors, utils.addVector(
-                    transform:GetOrientation():Transform(utils.multVecXVec(utils.getVector(min), Vector4.Vector3To4(component.visualScale))),
-                    transform:GetWorldPosition():ToVector4()
-                ))
-                table.insert(vectors, utils.addVector(
-                    transform:GetOrientation():Transform(utils.multVecXVec(utils.getVector(max), Vector4.Vector3To4(component.visualScale))),
-                    transform:GetWorldPosition():ToVector4()
-                ))
-            end
-        end
-
-        bboxMin, bboxMax = utils.getVector4BBox(vectors)
+    if not self:getEntity() then
+        return { hit = false }
     end
 
-    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, { min = bboxMin or self.bBox.min, max = bboxMax or self.bBox.max })
+    local hit = nil
+
+    for _, mesh in pairs(self.meshes) do
+        local meshPosition = utils.addVector(mesh.position, self.position)
+        local meshRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.rotation:ToQuat(), mesh.rotation)
+
+        local result = intersection.getBoxIntersection(origin, ray, meshPosition, meshRotation, mesh.bbox)
+        print(result.hit, origin, ray, meshPosition, meshRotation:ToEulerAngles(), mesh.bbox.min, mesh.bbox.max, "mesh")
+        if result.hit then
+            if not hit or result.distance < hit.distance then
+                hit = result
+            end
+        end
+    end
+
+    if not hit then return { hit = false } end
 
     return {
-        hit = result.hit,
-        position = result.position,
+        hit = hit.hit,
+        position = hit.position,
         collisionType = "bbox",
-        distance = result.distance,
-        size = self:getSize()
+        distance = hit.distance,
+        bBox = self.bBox,
+        objectOrigin = self.position,
+        objectRotation = self.rotation
     }
 end
 
@@ -729,6 +677,17 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
 end
 
 function entity:drawInstanceData()
+    if utils.tableLength(self.defaultComponentData) == 0 then
+        local entity = self:getEntity()
+
+        if entity then
+            self:loadInstanceData(entity, true)
+        else
+            ImGui.Text("Entity not spawned")
+            return
+        end
+    end
+
     for key, component in pairs(self.defaultComponentData) do
         local name = component["$type"]
         if component.name then

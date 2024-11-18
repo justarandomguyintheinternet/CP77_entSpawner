@@ -3,6 +3,40 @@ local epsilon = 0.00001
 
 local intersection = {}
 
+--Very rough frustum check
+local function isObjectInFrustum(cameraForward, cameraPosition, objectPosition, objectSize, maxFov)
+    local angle = cameraForward:Dot(utils.subVector(objectPosition, cameraPosition))
+    --angle must be less than maxFov scaled by object size
+end
+
+---Return a factor to be scaled with the objects BBox, hardcoded for special cases like AMM miniatures (Wrong mesh bbox) and foliage (Usually too big)
+---@param path any
+function intersection.getResourcePathScalingFactor(path)
+    
+end
+
+function intersection.pointInsideBox(point, boxOrigin, boxRotation, box)
+    local matrix = Matrix.BuiltRTS(boxRotation, boxOrigin, Vector4.new(1, 1, 1, 0))
+
+    local delta = utils.subVector(point, boxOrigin)
+
+    local axis = {
+        ["x"] = matrix:GetAxisX(),
+        ["y"] = matrix:GetAxisY(),
+        ["z"] = matrix:GetAxisZ()
+    }
+
+    for axisName, axisDirection in pairs(axis) do
+        local e = axisDirection:Dot(delta) -- Distance of ray origin to box origin along the box's x/y/z axis
+
+        if e < box.min[axisName] or e > box.max[axisName] then
+            return false
+        end
+    end
+
+    return true
+end
+
 --https://github.com/opengl-tutorials/ogl/blob/master/misc05_picking/misc05_picking_custom.cpp
 function intersection.getBoxIntersection(rayOrigin, ray, boxOrigin, boxRotation, box)
     local matrix = Matrix.BuiltRTS(boxRotation, boxOrigin, Vector4.new(1, 1, 1, 0))
@@ -17,8 +51,6 @@ function intersection.getBoxIntersection(rayOrigin, ray, boxOrigin, boxRotation,
         ["y"] = matrix:GetAxisY(),
         ["z"] = matrix:GetAxisZ()
     }
-
-    print(ray)
 
     for axisName, axisDirection in pairs(axis) do
         local e = axisDirection:Dot(delta) -- Distance of ray origin to box origin along the box's x/y/z axis
