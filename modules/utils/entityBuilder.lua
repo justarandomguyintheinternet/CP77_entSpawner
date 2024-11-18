@@ -1,6 +1,7 @@
 local cache = require("modules/utils/cache")
 local utils = require("modules/utils/utils")
 local task = require("modules/utils/tasks")
+local intersection = require("modules/utils/editor/intersection")
 
 local builder = {
     assembleCallbacks = {},
@@ -109,7 +110,7 @@ function builder.getComponentOffset(entity, component)
 
     local posDiff = utils.subVector(localToWorld:GetTranslation(), entity:GetWorldPosition())
     local rotDiff = Quaternion.MulInverse(localToWorld:GetRotation():ToQuat(), entity:GetWorldOrientation())
-    print(localToWorld:GetRotation(), entity:GetWorldOrientation():ToEulerAngles())
+
     local offset = WorldTransform.new()
     offset:SetPosition(posDiff)
     offset:SetOrientation(rotDiff)
@@ -119,16 +120,17 @@ end
 
 function builder.shouldUseMesh(component)
     local enabled = component:IsEnabled()
+    local isDestruction = component:IsA("entPhysicalDestructionComponent")
     local isMesh = component:IsA("entMeshComponent") or component:IsA("entSkinnedMeshComponent")
     local ignore = false
     local meshExists = false
 
-    if isMesh then
+    if isMesh or isDestruction then
         ignore = ResRef.FromHash(component.mesh.hash):ToString():match("base\\spawner") or ResRef.FromHash(component.mesh.hash):ToString():match("base\\amm_props\\mesh\\invis_")
         meshExists = Game.GetResourceDepot():ResourceExists(ResRef.FromHash(component.mesh.hash))
     end
 
-    return enabled and isMesh and meshExists and not ignore
+    return { use = enabled and isMesh and meshExists and not ignore, meshExists = meshExists, isDestruction = isDestruction }
 end
 
 ---Gets the bounding box of an entity, if not yet loaded, it will load the meshes and cache their bboxes
@@ -143,7 +145,9 @@ function builder.getEntityBBox(entity, callback)
     local meshesTask = task:new()
 
     for _, component in ipairs(components) do
-        if builder.shouldUseMesh(component) then
+        local use = builder.shouldUseMesh(component)
+
+        if use.use or (use.isDestruction and use.meshExists) then
             local path = ResRef.FromHash(component.mesh.hash):ToString()
             if path == "" then
                 path = tostring(component.mesh.hash)
@@ -170,8 +174,12 @@ function builder.getEntityBBox(entity, callback)
                     end)
                 end)
                 .found(function ()
-                    local min = utils.multVecXVec(ToVector4(cache.getValue(path .. "_bBox_min")), Vector4.Vector3To4(component.visualScale))
-                    local max = utils.multVecXVec(ToVector4(cache.getValue(path .. "_bBox_max")), Vector4.Vector3To4(component.visualScale))
+                    local scale = Vector4.Vector3To4(component.visualScale or Vector3.new(1, 1, 1))
+                    local scalingFactor = intersection.getResourcePathScalingFactor(path, scale)
+                    scale = utils.multVecXVec(scale, scalingFactor)
+
+                    local min = utils.multVecXVec(ToVector4(cache.getValue(path .. "_bBox_min")), scale)
+                    local max = utils.multVecXVec(ToVector4(cache.getValue(path .. "_bBox_max")), scale)
 
                     table.insert(bBoxPoints, utils.addVector(
                         offset:GetOrientation():Transform(min),
@@ -188,7 +196,8 @@ function builder.getEntityBBox(entity, callback)
                         bbox = {
                             min = min,
                             max = max
-                        }
+                        },
+                        path = path
                     })
 
                     utils.log("[entityBuilder] FOUND: BBOX for mesh " .. path)

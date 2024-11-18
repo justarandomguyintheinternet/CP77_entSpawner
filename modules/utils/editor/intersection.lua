@@ -9,10 +9,39 @@ local function isObjectInFrustum(cameraForward, cameraPosition, objectPosition, 
     --angle must be less than maxFov scaled by object size
 end
 
+local function scalePalm()
+
+end
+
 ---Return a factor to be scaled with the objects BBox, hardcoded for special cases like AMM miniatures (Wrong mesh bbox) and foliage (Usually too big)
 ---@param path any
-function intersection.getResourcePathScalingFactor(path)
-    
+function intersection.getResourcePathScalingFactor(path, initalScale)
+    --base\environment\vegetation\palms\fan_palm\fan_palm_cut_lying.mesh
+
+    if path == "base\\amm_props\\mesh\\props\\shuttle.mesh" or path == "base\\amm_props\\mesh\\props\\shuttle_platform.mesh" then
+        return Vector4.new(21 / 20000, 26 / 20000, 165 / 80000, 0)
+    end
+
+    if string.match(path, "base\\environment\\vegetation\\palms\\") or string.match(path, "yucca") then
+        return Vector4.new(0.175, 0.175, 0.7, 0)
+    end
+
+    if string.match(path, "base\\environment\\vegetation\\") or string.match(path, "[^s]tree") then
+        return Vector4.new(0.35, 0.35, 0.7, 0)
+    end
+
+    local newScale = Vector4.new(1, 1, 1, 0)
+    if initalScale.x > 0.1 then
+        newScale.x = 0.9
+    end
+    if initalScale.y > 0.1 then
+        newScale.y = 0.9
+    end
+    if initalScale.z > 0.1 then
+        newScale.z = 0.9
+    end
+
+    return newScale
 end
 
 function intersection.pointInsideBox(point, boxOrigin, boxRotation, box)

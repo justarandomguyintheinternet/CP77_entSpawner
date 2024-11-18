@@ -140,9 +140,11 @@ function mesh:calculateIntersection(origin, ray)
         return { hit = false }
     end
 
+    local scaleFactor = intersection.getResourcePathScalingFactor(self.spawnData, self:getSize())
+
     local scaledBBox = {
-        min = {  x = self.bBox.min.x * math.abs(self.scale.x), y = self.bBox.min.y * math.abs(self.scale.y), z = self.bBox.min.z * math.abs(self.scale.z) },
-        max = {  x = self.bBox.max.x * math.abs(self.scale.x), y = self.bBox.max.y * math.abs(self.scale.y), z = self.bBox.max.z * math.abs(self.scale.z) }
+        min = {  x = self.bBox.min.x * math.abs(self.scale.x) * scaleFactor.x, y = self.bBox.min.y * math.abs(self.scale.y) * scaleFactor.y, z = self.bBox.min.z * math.abs(self.scale.z) * scaleFactor.z },
+        max = {  x = self.bBox.max.x * math.abs(self.scale.x) * scaleFactor.x, y = self.bBox.max.y * math.abs(self.scale.y) * scaleFactor.y, z = self.bBox.max.z * math.abs(self.scale.z) * scaleFactor.z }
     }
     local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, scaledBBox)
 

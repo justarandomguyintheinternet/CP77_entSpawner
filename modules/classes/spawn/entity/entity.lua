@@ -171,7 +171,7 @@ function entity:calculateIntersection(origin, ray)
         local meshPosition = utils.addVector(mesh.position, self.position)
         local meshRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.rotation:ToQuat(), mesh.rotation)
 
-        local result = intersection.getBoxIntersection(origin, ray, meshPosition, meshRotation, mesh.bbox)
+        local result = intersection.getBoxIntersection(origin, ray, meshPosition, meshRotation:ToEulerAngles(), mesh.bbox)
         print(result.hit, origin, ray, meshPosition, meshRotation:ToEulerAngles(), mesh.bbox.min, mesh.bbox.max, "mesh")
         if result.hit then
             if not hit or result.distance < hit.distance then

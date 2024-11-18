@@ -24,6 +24,11 @@ function editor.init(spawner)
     editor.camera = require("modules/utils/editor/camera")
 
     input.registerMouseAction(ImGuiMouseButton.Right, editor.calculateTarget)
+    input.registerImGuiHotkey({ ImGuiKey.G }, function ()
+        local pos = Vector4.new(editor.spawnedUI.selectedPaths[1].ref.spawnable.position)
+        pos.z = pos.z - 1.5
+        editor.camera.transition(editor.camera.cameraTransform.position, pos, 0.5)
+    end, true)
 end
 
 function editor.removeHighlight(onlySelected)
@@ -79,7 +84,7 @@ function editor.calculateTarget()
 
     -- If there is a hit inside the primary hit, use that one instead (To prefer things inside the bbox of the primary hit, can often be the case)
     local bestHitIdx = 1
-    while bestHitIdx + 1 <= #hits and intersection.pointInsideBox(hits[bestHitIdx + 1].position, hits[bestHitIdx].objectOrigin, hits[bestHitIdx].objectRotation, hits[bestHitIdx].bBox) do
+    while bestHitIdx + 1 <= #hits and editor.BBoxInsideBBox(hits[bestHitIdx].objectOrigin, hits[bestHitIdx].objectRotation, hits[bestHitIdx].bBox, hits[bestHitIdx + 1].objectOrigin, hits[bestHitIdx + 1].objectRotation, hits[bestHitIdx + 1].bBox) do
         bestHitIdx = bestHitIdx + 1
     end
     bestHitIdx = math.min(bestHitIdx, #hits)

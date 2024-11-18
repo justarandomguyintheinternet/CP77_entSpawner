@@ -4,8 +4,8 @@ local input = {
     windowHovered = false
 }
 
-function input.registerImGuiHotkey(keys, callback)
-    table.insert(input.hotkeys, {keys = keys, active = false, callback = callback})
+function input.registerImGuiHotkey(keys, callback, alwaysActive)
+    table.insert(input.hotkeys, {keys = keys, active = false, callback = callback, alwaysActive = alwaysActive})
 end
 
 function input.registerMouseAction(mouseKey, callback)
@@ -25,7 +25,7 @@ function input.update()
         end
 
         if pressed and not hotkey.active then
-            if input.windowHovered then
+            if input.windowHovered or hotkey.alwaysActive then
                 hotkey.callback()
             end
             hotkey.active = true
