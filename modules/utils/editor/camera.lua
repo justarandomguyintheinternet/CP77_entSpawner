@@ -91,6 +91,9 @@ function camera.update()
             camera.transitionTween = nil
         else
             camera.cameraTransform.position = Vector4.new(camera.transitionTween.subject.x, camera.transitionTween.subject.y, camera.transitionTween.subject.z, 0)
+            camera.distance = camera.transitionTween.subject.distance
+
+            GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0, - camera.distance, 0, 0))
             Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.cameraTransform.position, camera.cameraTransform.rotation)
             return
         end
@@ -132,8 +135,8 @@ function camera.updateXOffset(adjustedCenterX)
     GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(- camera.xOffset, - camera.distance, 0, 0))
 end
 
-function camera.transition(from, to, duration)
-    camera.transitionTween = tween.new(duration, { x = from.x, y = from.y, z = from.z }, { x = to.x, y = to.y, z = to.z }, tween.easing.inOutQuad)
+function camera.transition(from, to, toDistance, duration)
+    camera.transitionTween = tween.new(duration, { x = from.x, y = from.y, z = from.z, distance = camera.distance }, { x = to.x, y = to.y, z = to.z, distance = toDistance }, tween.easing.inOutQuad)
 end
 
 function camera.screenToWorld(x, y)

@@ -253,7 +253,13 @@ function spawnable:getSize()
 end
 
 function spawnable:getVisualizerSize()
-    return { x = 1, y = 1, z = 1 }
+    local size = self:getSize()
+    local max = math.min(math.max(size.x, size.y, size.z, 0.75) * 0.4, 1)
+    return { x = max, y = max, z = max }
+end
+
+function spawnable:getCenter()
+    return self.position
 end
 
 function spawnable:calculateIntersection(origin, ray)

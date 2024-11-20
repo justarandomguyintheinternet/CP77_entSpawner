@@ -103,13 +103,6 @@ function occluder:getSize()
     return self.scale
 end
 
-function occluder:getVisualizerSize()
-    local size = self:getSize()
-
-    local max = math.min(math.max(size.x, size.y, size.z, 1.5) * 0.5, 3)
-    return { x = max, y = max, z = max }
-end
-
 function occluder:draw()
     spawnable.draw(self)
 

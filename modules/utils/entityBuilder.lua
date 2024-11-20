@@ -126,7 +126,8 @@ function builder.shouldUseMesh(component)
     local meshExists = false
 
     if isMesh or isDestruction then
-        ignore = ResRef.FromHash(component.mesh.hash):ToString():match("base\\spawner") or ResRef.FromHash(component.mesh.hash):ToString():match("base\\amm_props\\mesh\\invis_")
+        local path = ResRef.FromHash(component.mesh.hash):ToString()
+        ignore = path:match("base\\spawner") or path:match("base\\amm_props\\mesh\\invis_")
         meshExists = Game.GetResourceDepot():ResourceExists(ResRef.FromHash(component.mesh.hash))
     end
 

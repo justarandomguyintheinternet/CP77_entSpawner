@@ -798,7 +798,7 @@ function spawnedUI.drawEditorSettings()
 
     if ImGui.TreeNodeEx("Edit Mode Settings") then
         if ImGui.Button("Reset Camera") then
-            editor.camera.transition(editor.camera.cameraTransform.position, editor.camera.playerTransform.position, math.max(0.5, (1 / 250) * utils.distanceVector(editor.camera.cameraTransform.position, editor.camera.playerTransform.position)))
+            editor.camera.transition(editor.camera.cameraTransform.position, editor.camera.playerTransform.position, 3, math.max(0.5, (1 / 175) * utils.distanceVector(editor.camera.cameraTransform.position, editor.camera.playerTransform.position)))
         end
 
         ImGui.TreePop()
@@ -837,11 +837,11 @@ function spawnedUI.drawTop()
     style.pushButtonNoBG(true)
 
     local state = editor.active
-    -- style.pushStyleColor(state, ImGuiCol.Text, 0xfffcdb03)
+    style.pushStyleColor(state, ImGuiCol.Text, 0xfffcdb03)
     if ImGui.Button(IconGlyphs.Rotate3d) then
         editor.toggle(not editor.active)
     end
-    -- style.popStyleColor(state)
+    style.popStyleColor(state)
     style.tooltip("Toggle 3D-Editor mode")
     ImGui.SameLine()
     if ImGui.Button(IconGlyphs.ContentSaveAllOutline) then

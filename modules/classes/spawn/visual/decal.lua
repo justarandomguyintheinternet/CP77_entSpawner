@@ -71,11 +71,6 @@ function decal:save()
     return data
 end
 
-function decal:getVisualizerSize()
-    local max = math.min(math.max(self.scale.x, self.scale.y, self.scale.z, 1) * 0.5, 3.5)
-    return { x = max, y = max, z = max }
-end
-
 function decal:getSize()
     return self.scale
 end

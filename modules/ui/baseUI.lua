@@ -141,7 +141,7 @@ function baseUI.draw(spawner)
 
         local x, y = ImGui.GetWindowSize()
         if not editor.active and (x ~= settings.tabSizes[tabs[baseUI.activeTab].id][1] or y ~= settings.tabSizes[tabs[baseUI.activeTab].id][2]) then
-            settings.tabSizes[tabs[baseUI.activeTab].id] = { x, y }
+            settings.tabSizes[tabs[baseUI.activeTab].id] = { math.min(x, 5000), y }
             settings.save()
         end
 

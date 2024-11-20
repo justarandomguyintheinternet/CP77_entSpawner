@@ -24,11 +24,33 @@ function editor.init(spawner)
     editor.camera = require("modules/utils/editor/camera")
 
     input.registerMouseAction(ImGuiMouseButton.Right, editor.calculateTarget)
-    input.registerImGuiHotkey({ ImGuiKey.G }, function ()
-        local pos = Vector4.new(editor.spawnedUI.selectedPaths[1].ref.spawnable.position)
-        pos.z = pos.z - 1.5
-        editor.camera.transition(editor.camera.cameraTransform.position, pos, 0.5)
-    end, true)
+    input.registerImGuiHotkey({ ImGuiKey.Tab }, editor.centerCamera, function ()
+        return editor.spawnedUI.selectedPaths[1] and editor.active
+    end)
+    --TODO CONTEXT; depth menu
+end
+
+function editor.centerCamera()
+    if #editor.spawnedUI.selectedPaths == 0 then
+        return
+    end
+
+    local singleTarget = editor.spawnedUI.selectedPaths[1].ref.spawnable
+    local pos = Vector4.new(singleTarget:getCenter())
+
+    if utils.distanceVector(pos, singleTarget.position) > 25 then
+        pos = Vector4.new(singleTarget.position)
+    end
+
+    local size = singleTarget:getSize()
+    local distance = math.min(5, math.max(size.x, size.y, size.z, 1) * 1.35)
+    if #editor.spawnedUI.selectedPaths > 1 then
+        pos = Vector4.new(spawnedUI.multiSelectGroup:getPosition())
+        distance = editor.camera.distance
+    end
+
+    pos.z = pos.z - 1.5
+    editor.camera.transition(editor.camera.cameraTransform.position, pos, distance, 0.5)
 end
 
 function editor.removeHighlight(onlySelected)
@@ -43,13 +65,6 @@ function editor.removeHighlight(onlySelected)
             }))
         end
     end
-end
-
-function editor.BBoxInsideBBox(outerOrigin, outerRotation, outerBox, innerOrigin, innerRotation, innerBox)
-    local min = utils.addVector(innerOrigin, innerRotation:ToQuat():Transform(ToVector4(innerBox.min)))
-    local max = utils.addVector(innerOrigin, innerRotation:ToQuat():Transform(ToVector4(innerBox.max)))
-
-    return intersection.pointInsideBox(min, outerOrigin, outerRotation, outerBox) and intersection.pointInsideBox(max, outerOrigin, outerRotation, outerBox)
 end
 
 function editor.calculateTarget()
@@ -83,8 +98,9 @@ function editor.calculateTarget()
     end
 
     -- If there is a hit inside the primary hit, use that one instead (To prefer things inside the bbox of the primary hit, can often be the case)
+    -- TODO: Maybe scale bbox of next best hit a bit down
     local bestHitIdx = 1
-    while bestHitIdx + 1 <= #hits and editor.BBoxInsideBBox(hits[bestHitIdx].objectOrigin, hits[bestHitIdx].objectRotation, hits[bestHitIdx].bBox, hits[bestHitIdx + 1].objectOrigin, hits[bestHitIdx + 1].objectRotation, hits[bestHitIdx + 1].bBox) do
+    while bestHitIdx + 1 <= #hits and intersection.BBoxInsideBBox(hits[bestHitIdx].objectOrigin, hits[bestHitIdx].objectRotation, hits[bestHitIdx].bBox, hits[bestHitIdx + 1].objectOrigin, hits[bestHitIdx + 1].objectRotation, hits[bestHitIdx + 1].bBox) do
         bestHitIdx = bestHitIdx + 1
     end
     bestHitIdx = math.min(bestHitIdx, #hits)

@@ -154,10 +154,22 @@ function entity:getSize()
     return { x = self.bBox.max.x - self.bBox.min.x, y = self.bBox.max.y - self.bBox.min.y, z = self.bBox.max.z - self.bBox.min.z }
 end
 
-function entity:getVisualizerSize()
+function entity:getCenter()
     local size = self:getSize()
-    local max = math.min(math.max(size.x, size.y, size.z, 1) * 0.5, 3.5)
-    return { x = max, y = max, z = max }
+    local offset = Vector4.new(
+        self.bBox.min.x + size.x / 2,
+        self.bBox.min.y + size.y / 2,
+        self.bBox.min.z + size.z / 2,
+        0
+    )
+    offset = self.rotation:ToQuat():Transform(offset)
+
+    return Vector4.new(
+        self.position.x + offset.x,
+        self.position.y + offset.y,
+        self.position.z + offset.z,
+        0
+    )
 end
 
 function entity:calculateIntersection(origin, ray)
