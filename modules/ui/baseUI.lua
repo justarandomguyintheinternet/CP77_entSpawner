@@ -112,11 +112,13 @@ end
 function baseUI.draw(spawner)
     local screenWidth, screenHeight = GetDisplayResolution()
 
-    if baseUI.loadTabSize and not editor.active then
+    local editorActive = editor.active
+
+    if baseUI.loadTabSize and not editorActive then
         ImGui.SetNextWindowSize(settings.tabSizes[tabs[baseUI.activeTab].id][1], settings.tabSizes[tabs[baseUI.activeTab].id][2])
         baseUI.loadTabSize = false
     end
-    if editor.active then
+    if editorActive then
         ImGui.SetNextWindowSizeConstraints(250, screenHeight, screenWidth / 2, screenHeight)
         ImGui.SetNextWindowPos(screenWidth, 0, ImGuiCond.Always, 1, 0)
         baseUI.loadTabSize = false
@@ -126,21 +128,21 @@ function baseUI.draw(spawner)
         baseUI.restoreWindowPosition = false
     end
 
-    style.pushStyleColor(editor.active, ImGuiCol.WindowBg, 0, 0, 0, 1)
-    style.pushStyleVar(editor.active, ImGuiStyleVar.WindowRounding, 0)
+    style.pushStyleColor(editorActive, ImGuiCol.WindowBg, 0, 0, 0, 1)
+    style.pushStyleVar(editorActive, ImGuiStyleVar.WindowRounding, 0)
 
     local flags = tabs[baseUI.activeTab].flags
-    if editor.active then
+    if editorActive then
         flags = flags + ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.NoTitleBar
     end
 
     if ImGui.Begin("Object Spawner 2.0", flags) then
-        if not editor.active then
+        if not editorActive then
             baseUI.mainWindowPosition = { ImGui.GetWindowPos() }
         end
 
         local x, y = ImGui.GetWindowSize()
-        if not editor.active and (x ~= settings.tabSizes[tabs[baseUI.activeTab].id][1] or y ~= settings.tabSizes[tabs[baseUI.activeTab].id][2]) then
+        if not editorActive and (x ~= settings.tabSizes[tabs[baseUI.activeTab].id][1] or y ~= settings.tabSizes[tabs[baseUI.activeTab].id][2]) then
             settings.tabSizes[tabs[baseUI.activeTab].id] = { math.min(x, 5000), y }
             settings.save()
         end
@@ -176,8 +178,8 @@ function baseUI.draw(spawner)
         ImGui.End()
     end
 
-    style.popStyleColor(editor.active)
-    style.popStyleVar(editor.active)
+    style.popStyleColor(editorActive)
+    style.popStyleVar(editorActive)
 
     for key, tab in pairs(tabs) do
         if settings.windowStates[tab.id] then
