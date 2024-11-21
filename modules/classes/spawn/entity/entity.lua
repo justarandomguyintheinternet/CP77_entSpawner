@@ -298,7 +298,7 @@ function entity:export(index, length)
             end
         end
 
-        local baseHandle = length + 10 + index * 25 -- 10 offset to last handle of nodeData, 25 handleIDs per entity for instance data
+        local baseHandle = length + 10 + index * 100 -- 10 offset to last handle of nodeData, 100 handleIDs per entity for instance data
 
         data.data.instanceData = {
             ["HandleId"] = tostring(baseHandle), -- 10 offset to last handle of nodeData, 25 handleIDs per entity for instance data

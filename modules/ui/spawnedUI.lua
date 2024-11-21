@@ -667,6 +667,7 @@ function spawnedUI.drawElement(element, dummy)
                 element.headerOpen = not element.headerOpen
             end
         end
+        ImGui.PopID()
     end
 
     ImGui.SameLine()
