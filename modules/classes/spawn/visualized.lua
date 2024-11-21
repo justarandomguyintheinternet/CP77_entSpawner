@@ -1,6 +1,4 @@
 local spawnable = require("modules/classes/spawn/spawnable")
-local style = require("modules/ui/style")
-local utils = require("modules/utils/utils")
 local visualizer = require("modules/utils/visualizer")
 
 ---Class for any spawnable that has a "basic" visualizer
@@ -18,7 +16,7 @@ function visualized:new()
 
     o.previewed = false
     o.previewShape = "sphere"
-    o.previewColor = "green"
+    o.previewColor = "blue"
 
     setmetatable(o, { __index = self })
    	return o
@@ -68,18 +66,18 @@ function visualized:getGroupedProperties()
 
     properties["visualization"] = {
 		name = "Visualization",
-        id = "occluder",
+        id = self.dataType,
 		data = {},
 		draw = function(_, entries)
-            ImGui.Text("Occluder")
+            ImGui.Text(self.dataType)
 
             ImGui.SameLine()
 
-            ImGui.PushID("occluder")
+            ImGui.PushID(self.dataType)
 
 			if ImGui.Button("Off") then
 				for _, entry in ipairs(entries) do
-                    if entry.spawnable.node == "worldStaticOccluderMeshNode" then
+                    if entry.spawnable.node == self.node then
                         entry.spawnable.previewed = false
                         visualizer.toggleAll(entry.spawnable:getEntity(), entry.spawnable.previewed)
                     end
@@ -90,7 +88,7 @@ function visualized:getGroupedProperties()
 
             if ImGui.Button("On") then
 				for _, entry in ipairs(entries) do
-                    if entry.spawnable.node == "worldStaticOccluderMeshNode" then
+                    if entry.spawnable.node == self.node then
                         entry.spawnable.previewed = true
                         visualizer.toggleAll(entry.spawnable:getEntity(), entry.spawnable.previewed)
                     end
