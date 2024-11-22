@@ -60,7 +60,7 @@ function occluder:onAssemble(entity)
     component.occluderType = Enum.new("visWorldOccluderType", self.occluderType)
     entity:AddComponent(component)
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
     visualizer.toggleAll(entity, self.previewed)
 end
 
@@ -95,7 +95,7 @@ function occluder:updateScale(finished)
         scale = { x = scale.x, y = 0.01, z = scale.z }
     end
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
     visualizer.updateScale(entity, scale, "box")
 end
 

@@ -1,14 +1,14 @@
-local spawnable = require("modules/classes/spawn/spawnable")
+local visualized = require("modules/classes/spawn/visualized")
 local style = require("modules/ui/style")
 
 ---Class for worldStaticParticleNode
----@class particle : spawnable
+---@class particle : visualized
 ---@field emissionRate number
 ---@field respawnOnMove boolean
-local particle = setmetatable({}, { __index = spawnable })
+local particle = setmetatable({}, { __index = visualized })
 
 function particle:new()
-	local o = spawnable.new(self)
+	local o = visualized.new(self)
 
     o.spawnListType = "list"
     o.dataType = "Particles"
@@ -20,13 +20,14 @@ function particle:new()
 
     o.emissionRate = 1
     o.respawnOnMove = false
+    o.previewColor = "magenta"
 
     setmetatable(o, { __index = self })
    	return o
 end
 
 function particle:onAssemble(entity)
-    spawnable.onAssemble(self, entity)
+    visualized.onAssemble(self, entity)
 
     local component = entParticlesComponent.new()
     ResourceHelper.LoadReferenceResource(component, "particleSystem", self.spawnData, true)
@@ -39,13 +40,13 @@ function particle:spawn()
     local particle = self.spawnData
     self.spawnData = "base\\spawner\\empty_entity.ent"
 
-    spawnable.spawn(self)
+    visualized.spawn(self)
     self.spawnData = particle
 end
 
 function particle:update()
     if not self.respawnOnMove then
-        spawnable.update(self)
+        visualized.update(self)
     end
 end
 
@@ -57,15 +58,19 @@ function particle:onEdited(edited)
 end
 
 function particle:save()
-    local data = spawnable.save(self)
+    local data = visualized.save(self)
     data.emissionRate = self.emissionRate
     data.respawnOnMove = self.respawnOnMove
 
     return data
 end
 
+function particle:getVisualizerSize()
+    return { x = 0.15, y = 0.15, z = 0.15 }
+end
+
 function particle:draw()
-    spawnable.draw(self)
+    visualized.draw(self)
 
     self.emissionRate, changed = style.trackedDragFloat(self.object, "Emission Rate", self.emissionRate, 0.01, 0, 9999, "%.2f", 80)
     if changed then
@@ -80,10 +85,12 @@ function particle:draw()
 
     self.respawnOnMove = style.trackedCheckbox(self.object, "Respawn on Move", self.respawnOnMove)
     style.tooltip("Respawns the particle system when the object is moved. Use this when the particle system does not move, or only parts of it")
+
+    self:drawPreviewCheckbox()
 end
 
 function particle:getProperties()
-    local properties = spawnable.getProperties(self)
+    local properties = visualized.getProperties(self)
     table.insert(properties, {
         id = self.node,
         name = self.dataType,
@@ -96,7 +103,7 @@ function particle:getProperties()
 end
 
 function particle:export()
-    local data = spawnable.export(self)
+    local data = visualized.export(self)
     data.type = "worldStaticParticleNode"
     data.data = {
         emissionRate = self.emissionRate,

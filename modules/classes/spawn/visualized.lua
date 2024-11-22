@@ -1,9 +1,11 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local visualizer = require("modules/utils/visualizer")
+local style = require("modules/ui/style")
+local intersection = require("modules/utils/editor/intersection")
 
 ---Class for any spawnable that has a "basic" visualizer
 ---@class visualized : spawnable
----@field private previewed boolean
+---@field public previewed boolean
 ---@field private previewShape string
 ---@field private previewColor string
 local visualized = setmetatable({}, { __index = spawnable })
@@ -25,13 +27,15 @@ end
 function visualized:onAssemble(entity)
     spawnable.onAssemble(self, entity)
 
+    local visualizerSize = self:getVisualizerSize()
+
     if self.previewShape == "sphere" then
-        visualizer.addSphere(entity, self:getVisualizerSize(), self.previewColor)
+        visualizer.addSphere(entity, visualizerSize, self.previewColor)
     elseif self.previewShape == "box" then
-        visualizer.addBox(entity, self:getVisualizerSize(), self.previewColor)
+        visualizer.addBox(entity, visualizerSize, self.previewColor)
     end
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
     visualizer.toggleAll(entity, self.previewed)
 end
 
@@ -48,8 +52,42 @@ function visualized:updateScale()
     local entity = self:getEntity()
     if not entity then return end
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
     visualizer.updateScale(entity, self:getVisualizerSize(), self.previewShape)
+end
+
+function visualized:getVisualizerSize()
+    return self:getArrowSize()
+end
+
+function visualized:calculateIntersection(origin, ray)
+    if not self:getEntity() or not self.previewed then
+        return { hit = false }
+    end
+
+    local result
+    local bbox
+    if self.previewShape == "sphere" then
+        local radius = self:getVisualizerSize().x
+
+        result = intersection.getSphereIntersection(origin, ray, self.position, radius)
+        bbox = {
+            min = { x = -radius, y = -radius, z = -radius },
+            max = { x = radius, y = radius, z = radius }
+        }
+    else
+        print("Box intersection not implemented")
+    end
+
+    return {
+        hit = result.hit,
+        position = result.position,
+        collisionType = "shape",
+        distance = result.distance,
+        bBox = bbox,
+        objectOrigin = self.position,
+        objectRotation = self.rotation
+    }
 end
 
 function visualized:setPreview(state)
@@ -59,6 +97,13 @@ function visualized:setPreview(state)
     if not entity then return end
 
     visualizer.toggleAll(entity, self.previewed)
+end
+
+function visualized:drawPreviewCheckbox(text)
+    self.previewed, changed = style.trackedCheckbox(self.object, text or "Visualize", self.previewed)
+    if changed then
+        self:setPreview(self.previewed)
+    end
 end
 
 function visualized:getGroupedProperties()

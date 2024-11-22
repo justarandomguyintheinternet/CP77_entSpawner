@@ -69,7 +69,7 @@ function collider:onAssemble(entity)
     elseif self.shape == 2 then
         actor = physicsColliderSphere.new()
         actor.radius = self.radius
-        visualizer.addSphere(entity, self.radius, color)
+        visualizer.addSphere(entity, { x = self.radius, y = self.radius, z = self.radius }, color)
     end
 
     actor.material = materials[self.material + 1]
@@ -128,7 +128,7 @@ function collider:getSize()
     end
 end
 
-function collider:getVisualizerSize()
+function collider:getArrowSize()
     local max = math.max(self.extents.x, self.extents.y, self.extents.z)
     if self.shape == 1 then
         max = math.max(self.radius, self.height)

@@ -117,4 +117,25 @@ function intersection.getBoxIntersection(rayOrigin, ray, boxOrigin, boxRotation,
     return { hit = true, position = utils.addVector(rayOrigin, utils.multVector(ray:Normalize(), tMin)), distance = tMin }
 end
 
+function intersection.getSphereIntersection(rayOrigin, ray, sphereOrigin, sphereRadius)
+    local delta = utils.subVector(sphereOrigin, rayOrigin)
+
+    local a = ray:Dot(ray)
+    local b = 2 * ray:Dot(delta)
+    local c = delta:Dot(delta) - sphereRadius * sphereRadius
+    local discriminant = b * b - 4 * a * c
+
+    if discriminant < 0 then
+        return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0 }
+    else
+        local t = - (-b - math.sqrt(discriminant)) / (2 * a)
+
+        if t < 0 then
+            return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0 }
+        end
+
+        return { hit = true, position = utils.addVector(rayOrigin, utils.multVector(ray:Normalize(), t)), distance = t }
+    end
+end
+
 return intersection

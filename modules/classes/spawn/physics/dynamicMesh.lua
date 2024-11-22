@@ -54,7 +54,7 @@ function dynamicMesh:onAssemble(entity)
 
     entity:AddComponent(component)
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
 end
 
 function dynamicMesh:save()

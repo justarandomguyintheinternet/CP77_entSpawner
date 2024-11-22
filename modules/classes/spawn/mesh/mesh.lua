@@ -67,7 +67,7 @@ function mesh:loadSpawnData(data, position, rotation)
 
             self.bBox.min = resource.boundingBox.Min
             self.bBox.max = resource.boundingBox.Max
-            visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+            visualizer.updateScale(entity, self:getArrowSize(), "arrows")
 
             -- Save to cache
             cache.addValue(self.spawnData .. "_apps", self.apps)
@@ -91,7 +91,7 @@ function mesh:onAssemble(entity)
     component.meshAppearance = self.app
     entity:AddComponent(component)
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
 end
 
 function mesh:spawn()
@@ -121,7 +121,7 @@ function mesh:updateScale()
     component:Toggle(false)
     component:Toggle(true)
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
 end
 
 function mesh:getSize()

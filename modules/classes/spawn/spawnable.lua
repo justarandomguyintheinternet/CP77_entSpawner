@@ -74,7 +74,7 @@ function spawnable:new()
 end
 
 function spawnable:onAssemble(entity)
-    visualizer.attachArrows(entity, self:getVisualizerSize(), self.isHovered, self.arrowDirection)
+    visualizer.attachArrows(entity, self:getArrowSize(), self.isHovered, self.arrowDirection)
 end
 
 function spawnable:onAttached(entity)
@@ -99,7 +99,7 @@ function spawnable:spawn()
         self:onAssemble(entity)
     end)
 
-    builder.registerAttachCallback(self.entityID, function (entity) 
+    builder.registerAttachCallback(self.entityID, function (entity)
         self:onAttached(entity)
     end)
 end
@@ -252,7 +252,7 @@ function spawnable:getSize()
     return { x = 1, y = 1, z = 1 }
 end
 
-function spawnable:getVisualizerSize()
+function spawnable:getArrowSize()
     local size = self:getSize()
     local max = math.min(math.max(size.x, size.y, size.z, 0.75) * 0.4, 1)
     return { x = max, y = max, z = max }

@@ -120,7 +120,7 @@ function entity:onAttached(entity)
         self.bBox = data.bBox
         self.meshes = data.meshes
 
-        visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+        visualizer.updateScale(entity, self:getArrowSize(), "arrows")
 
         if self.bBoxCallback then
             self.bBoxCallback(entity)

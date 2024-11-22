@@ -1,5 +1,6 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local style = require("modules/ui/style")
+local intersection = require("modules/utils/editor/intersection")
 
 ---Class for worldStaticDecalNode
 ---@class decal : spawnable
@@ -73,6 +74,31 @@ end
 
 function decal:getSize()
     return self.scale
+end
+
+function decal:calculateIntersection(origin, ray)
+    if not self:getEntity() then
+        return { hit = false }
+    end
+
+    local scaleFactor = 0.8
+
+    local scaledBBox = {
+        min = {  x = -math.abs(self.scale.x) * scaleFactor / 2, y = -math.abs(self.scale.y) * scaleFactor / 2, z = -math.abs(self.scale.y) * 0.05 / 2 },
+        max = {  x = math.abs(self.scale.x) * scaleFactor / 2, y = math.abs(self.scale.y) * scaleFactor / 2, z = math.abs(self.scale.y) * 0.05 / 2 }
+    }
+
+    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, scaledBBox)
+
+    return {
+        hit = result.hit,
+        position = result.position,
+        collisionType = "bbox",
+        distance = result.distance,
+        bBox = scaledBBox,
+        objectOrigin = self.position,
+        objectRotation = self.rotation
+    }
 end
 
 function decal:updateScale()

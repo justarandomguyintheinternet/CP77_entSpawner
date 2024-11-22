@@ -1,13 +1,13 @@
-local spawnable = require("modules/classes/spawn/spawnable")
+local visualized = require("modules/classes/spawn/visualized")
 local Cron = require("modules/utils/Cron")
 
 ---Class for worldEffectNode
----@class effect : spawnable
+---@class effect : visualized
 ---@field private disableCron integer
-local effect = setmetatable({}, { __index = spawnable })
+local effect = setmetatable({}, { __index = visualized })
 
 function effect:new()
-	local o = spawnable.new(self)
+	local o = visualized.new(self)
 
     o.spawnListType = "list"
     o.dataType = "Effects"
@@ -17,6 +17,8 @@ function effect:new()
     o.description = "Plays an effect, from a given .effect file"
     o.icon = IconGlyphs.Creation
 
+    o.previewColor = "brown"
+
     o.disableCron = nil
 
     setmetatable(o, { __index = self })
@@ -24,7 +26,7 @@ function effect:new()
 end
 
 function effect:onAssemble(entity)
-    spawnable.onAssemble(self, entity)
+    visualized.onAssemble(self, entity)
 
     local component = entEffectSpawnerComponent.new()
     component.name = "effect"
@@ -47,7 +49,7 @@ function effect:spawn()
     local effect = self.spawnData
     self.spawnData = "base\\spawner\\empty_game_object.ent"
 
-    spawnable.spawn(self)
+    visualized.spawn(self)
     self.spawnData = effect
 end
 
@@ -56,7 +58,7 @@ function effect:despawn()
 
     -- Needs some time for StopEffectEvent to be sent to the entity
     self.disableCron = Cron.After(0.1, function ()
-        spawnable.despawn(self)
+        visualized.despawn(self)
         self.disableCron = nil
     end)
 end
@@ -69,8 +71,31 @@ function effect:respawn()
     self:spawn()
 end
 
+function effect:getVisualizerSize()
+    return { x = 0.15, y = 0.15, z = 0.15 }
+end
+
+function effect:draw()
+    visualized.draw(self)
+
+    self:drawPreviewCheckbox()
+end
+
+function effect:getProperties()
+    local properties = visualized.getProperties(self)
+    table.insert(properties, {
+        id = self.node,
+        name = self.dataType,
+        defaultHeader = true,
+        draw = function()
+            self:draw()
+        end
+    })
+    return properties
+end
+
 function effect:export()
-    local data = spawnable.export(self)
+    local data = visualized.export(self)
     data.type = "worldEffectNode"
     data.data = {
         streamingDistanceOverride = -1,

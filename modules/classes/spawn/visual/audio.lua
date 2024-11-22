@@ -1,13 +1,14 @@
-local spawnable = require("modules/classes/spawn/spawnable")
+local visualized = require("modules/classes/spawn/visualized")
 local style = require("modules/ui/style")
+local intersection = require("modules/utils/editor/intersection")
 
 ---Class for worldStaticSoundEmitterNode
----@class sound : spawnable
+---@class sound : visualized
 ---@field private radius number
-local sound = setmetatable({}, { __index = spawnable })
+local sound = setmetatable({}, { __index = visualized })
 
 function sound:new()
-	local o = spawnable.new(self)
+	local o = visualized.new(self)
 
     o.spawnListType = "list"
     o.dataType = "Sounds"
@@ -19,20 +20,19 @@ function sound:new()
     o.icon = IconGlyphs.VolumeHigh
 
     o.radius = 5
+    o.previewColor = "mediumvioletred"
 
     setmetatable(o, { __index = self })
    	return o
 end
 
 function sound:onAssemble(entity)
-    spawnable.onAssemble(self, entity)
+    visualized.onAssemble(self, entity)
 
     -- Needed for sound to play
     local component = gameaudioSoundComponent.new()
     component.name = "sound"
     entity:AddComponent(component)
-
-    -- visualizer.addSphere(entity, 0.5, "green")
 
     entity:QueueEvent(SoundPlayEvent.new ({ soundName = self.spawnData }))
 end
@@ -41,25 +41,41 @@ function sound:spawn()
     local audio = self.spawnData
     self.spawnData = "base\\spawner\\empty_entity.ent"
 
-    spawnable.spawn(self)
+    visualized.spawn(self)
     self.spawnData = audio
 end
 
 function sound:save()
-    local data = spawnable.save(self)
+    local data = visualized.save(self)
     data.radius = self.radius
 
     return data
 end
 
 function sound:draw()
-    spawnable.draw(self)
+    visualized.draw(self)
 
-    self.radius = style.trackedDragFloat(self.object, "Radius", self.radius, 0.01, 0, 9999, "%.2f", 80)
+    self.radius, change = style.trackedDragFloat(self.object, "Radius", self.radius, 0.01, 0, 9999, "%.2f", 80)
+    if change then
+        self:updateScale()
+    end
+
+    self:drawPreviewCheckbox()
+end
+
+function sound:getArrowSize()
+    local max = math.min(math.max(self.radius / 30, 0.6), 0.8)
+    return { x = max, y = max, z = max }
+end
+
+function sound:getVisualizerSize()
+    local x = math.min(math.max(self.radius / 125, 0.125), 0.33)
+
+    return { x = x, y = x, z = x }
 end
 
 function sound:getProperties()
-    local properties = spawnable.getProperties(self)
+    local properties = visualized.getProperties(self)
     table.insert(properties, {
         id = self.node,
         name = self.dataType,
@@ -72,7 +88,7 @@ function sound:getProperties()
 end
 
 function sound:export()
-    local data = spawnable.export(self)
+    local data = visualized.export(self)
     data.type = "worldStaticSoundEmitterNode"
     data.data = {
         occlusionEnabled = 1,
