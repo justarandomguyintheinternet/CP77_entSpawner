@@ -1,6 +1,7 @@
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
 local editor = require("modules/utils/editor/editor")
+local input = require("modules/utils/input")
 
 ---@class baseUI
 baseUI = {
@@ -110,8 +111,8 @@ function baseUI.init()
 end
 
 function baseUI.draw(spawner)
+    input.resetContext()
     local screenWidth, screenHeight = GetDisplayResolution()
-
     local editorActive = editor.active
 
     if baseUI.loadTabSize and not editorActive then
@@ -137,6 +138,8 @@ function baseUI.draw(spawner)
     end
 
     if ImGui.Begin("Object Spawner 2.0", flags) then
+        input.updateContext("main")
+
         if not editorActive then
             baseUI.mainWindowPosition = { ImGui.GetWindowPos() }
         end
@@ -189,6 +192,7 @@ function baseUI.draw(spawner)
             end
 
             settings.windowStates[tab.id] = ImGui.Begin(tab.name, true, tabs[key].flags)
+            input.updateContext("main")
 
             local x, y = ImGui.GetWindowSize()
             if x ~= settings.tabSizes[tab.id][1] or y ~= settings.tabSizes[tab.id][2] then
@@ -206,6 +210,9 @@ function baseUI.draw(spawner)
             end
         end
     end
+
+    input.context.viewport.hovered = not input.context.main.hovered
+    input.context.viewport.focused = not input.context.main.focused
 end
 
 return baseUI

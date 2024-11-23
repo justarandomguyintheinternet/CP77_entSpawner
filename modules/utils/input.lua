@@ -1,15 +1,19 @@
 local input = {
     hotkeys = {},
     mouse = {},
-    windowHovered = false
+    context = {
+        main = { hovered = false, focused = false },
+        hierarchy = { hovered = false, focused = false },
+        viewport = { hovered = false, focused = false }
+    }
 }
 
 function input.registerImGuiHotkey(keys, callback, runCondition)
     table.insert(input.hotkeys, {keys = keys, active = false, callback = callback, runCondition = runCondition})
 end
 
-function input.registerMouseAction(mouseKey, callback)
-    table.insert(input.mouse, {mouseKey = mouseKey, active = false, callback = callback})
+function input.registerMouseAction(mouseKey, callback, runCondition)
+    table.insert(input.mouse, {mouseKey = mouseKey, active = false, callback = callback, runCondition = runCondition})
 end
 
 function input.update()
@@ -25,7 +29,7 @@ function input.update()
         end
 
         if pressed and not hotkey.active then
-            if input.windowHovered or (hotkey.runCondition and hotkey.runCondition()) then
+            if (hotkey.runCondition and hotkey.runCondition()) or hotkey.runCondition == nil then
                 hotkey.callback()
             end
             hotkey.active = true
@@ -35,19 +39,26 @@ function input.update()
     for _, mouse in ipairs(input.mouse) do
         if ImGui.IsMouseDown(mouse.mouseKey) then
             if not mouse.active then
-                mouse.callback()
+                if (mouse.runCondition and mouse.runCondition()) or mouse.runCondition == nil then
+                    mouse.callback()
+                end
                 mouse.active = true
             end
         else
             mouse.active = false
         end
     end
-
-    input.windowHovered = false
 end
 
-function input.updateWindowState()
-    input.windowHovered = ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows) or ImGui.IsWindowFocused(ImGuiHoveredFlags.ChildWindows) or input.windowHovered
+function input.resetContext()
+    for key, _ in pairs(input.context) do
+        input.context[key] = { hovered = false, focused = false }
+    end
+end
+
+function input.updateContext(key)
+    input.context[key].hovered = ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows)
+    input.context[key].focused = ImGui.IsWindowFocused(ImGuiHoveredFlags.ChildWindows)
 end
 
 return input

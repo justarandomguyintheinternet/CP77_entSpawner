@@ -23,17 +23,18 @@ function editor.init(spawner)
 
     editor.camera = require("modules/utils/editor/camera")
 
-    input.registerMouseAction(ImGuiMouseButton.Right, editor.calculateTarget)
-    input.registerImGuiHotkey({ ImGuiKey.Tab }, editor.centerCamera, function ()
-        return editor.spawnedUI.selectedPaths[1] and editor.active
+    input.registerMouseAction(ImGuiMouseButton.Left, editor.setTarget, function ()
+        return editor.active and input.context.viewport.hovered
     end)
-    --TODO CONTEXT; depth menu
+    input.registerImGuiHotkey({ ImGuiKey.Tab }, editor.centerCamera, function ()
+        return editor.active and (input.context.viewport.focused or input.context.hierarchy.focused)
+    end)
+
+    --TODO: depth menu
 end
 
 function editor.centerCamera()
-    if #editor.spawnedUI.selectedPaths == 0 then
-        return
-    end
+    if not editor.spawnedUI.selectedPaths[1] and editor.active then return end
 
     local singleTarget = editor.spawnedUI.selectedPaths[1].ref.spawnable
     local pos = Vector4.new(singleTarget:getCenter())
@@ -67,15 +68,32 @@ function editor.removeHighlight(onlySelected)
     end
 end
 
-function editor.calculateTarget()
+function editor.setTarget()
     local x, y = ImGui.GetMousePos()
     local width, height = GetDisplayResolution()
     local _, ray = editor.camera.screenToWorld((x / width * 2) - 1, - ((y / height * 2) - 1))
+
+    local hit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation())
+    if not hit then return end
+
+    editor.removeHighlight(true)
+    editor.spawnedUI.unselectAll()
+    editor.spawnedUI.scrollToSelected = true
+    hit.element:expandAllParents()
+    hit.element:setSelected(true)
+    hit.element.spawnable:getEntity():QueueEvent(entRenderHighlightEvent.new({
+        seeThroughWalls = true,
+        outlineIndex = 1,
+        opacity = 1.0
+    }))
+end
+
+function editor.getRaySceneIntersection(ray, origin)
     local hits = {}
 
     for _, element in pairs(editor.spawnedUI.paths) do
         if element.ref.visible and utils.isA(element.ref, "spawnableElement") then
-            local hit = element.ref.spawnable:calculateIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), ray)
+            local hit = element.ref.spawnable:calculateIntersection(origin, ray)
 
             if hit.hit then
                 hit.element = element.ref
@@ -94,7 +112,7 @@ function editor.calculateTarget()
     end)
 
     for _, hit in pairs(hits) do
-        print("Hit: ", hit.position, hit.collisionType, hit.distance)
+        print("Hit: ", hit.position, hit.collisionType, hit.distance, hit.element.spawnable.name)
     end
 
     -- If there is a hit inside the primary hit, use that one instead (To prefer things inside the bbox of the primary hit, can often be the case)
@@ -107,16 +125,7 @@ function editor.calculateTarget()
 
     print("Best hit: ", hits[bestHitIdx].position, hits[bestHitIdx].collisionType, hits[bestHitIdx].distance, hits[bestHitIdx].size)
 
-    editor.removeHighlight(true)
-    editor.spawnedUI.unselectAll()
-    editor.spawnedUI.scrollToSelected = true
-    hits[bestHitIdx].element:expandAllParents()
-    hits[bestHitIdx].element:setSelected(true)
-    hits[bestHitIdx].element.spawnable:getEntity():QueueEvent(entRenderHighlightEvent.new({
-        seeThroughWalls = true,
-        outlineIndex = 1,
-        opacity = 1.0
-    }))
+    return hits[bestHitIdx]
 end
 
 function editor.onDraw()

@@ -15,6 +15,7 @@ local input = require("modules/utils/input")
 ---@field selectedPaths {path : string, ref : element}[]
 ---@field filteredPaths {path : string, ref : element}[]
 ---@field scrollToSelected boolean
+---@field openContextMenu {state : boolean, path : string}
 ---@field clipboard table Serialized elements
 ---@field elementCount number
 ---@field depth number
@@ -34,6 +35,10 @@ spawnedUI = {
     selectedPaths = {},
     filteredPaths = {},
     scrollToSelected = false,
+    openContextMenu = {
+        state = false,
+        path = ""
+    },
 
     clipboard = {},
 
@@ -134,6 +139,10 @@ function spawnedUI.findCommonParent(elements)
     return spawnedUI.getElementByPath(commonPath)
 end
 
+local function hotkeyRunCondition()
+    return input.context.hierarchy.hovered or input.context.hierarchy.focused or (editor.active and (input.context.viewport.hovered or input.context.viewport.focused))
+end
+
 function spawnedUI.registerHotkeys()
     input.registerImGuiHotkey({ ImGuiKey.Z, ImGuiKey.LeftCtrl }, function()
         history.undo()
@@ -144,6 +153,13 @@ function spawnedUI.registerHotkeys()
     input.registerImGuiHotkey({ ImGuiKey.A, ImGuiKey.LeftCtrl }, function()
         for _, entry in pairs(spawnedUI.paths) do
             entry.ref:setSelected(true)
+        end
+    end)
+    input.registerImGuiHotkey({ ImGuiKey.S, ImGuiKey.LeftCtrl }, function()
+        for _, entry in pairs(spawnedUI.paths) do
+            if utils.isA(entry.ref, "positionableGroup") and entry.ref.parent ~= nil and entry.ref.parent:isRoot(true) then
+                entry.ref:save()
+            end
         end
     end)
     input.registerImGuiHotkey({ ImGuiKey.C, ImGuiKey.LeftCtrl }, function()
@@ -183,14 +199,16 @@ function spawnedUI.registerHotkeys()
 
         spawnedUI.moveToNewGroup(true)
     end)
+
+    -- Inputs that might get pressed while using properties panel, so use hotkeyRunCondition
     input.registerImGuiHotkey({ ImGuiKey.Backspace }, function()
         if #spawnedUI.selectedPaths == 0 then return end
         spawnedUI.moveToRoot(true)
-    end)
+    end, hotkeyRunCondition)
     input.registerImGuiHotkey({ ImGuiKey.Escape }, function()
         if #spawnedUI.selectedPaths == 0 then return end
         spawnedUI.unselectAll()
-    end)
+    end, hotkeyRunCondition)
     input.registerImGuiHotkey({ ImGuiKey.H }, function()
         if #spawnedUI.selectedPaths == 0 then return end
 
@@ -212,6 +230,17 @@ function spawnedUI.registerHotkeys()
                 end
             end
         })
+    end, hotkeyRunCondition)
+
+    -- Open context menu for selected from editor mode
+    input.registerMouseAction(ImGuiMouseButton.Right, function()
+        if #spawnedUI.selectedPaths == 0 then return end
+
+        spawnedUI.openContextMenu.state = true
+        spawnedUI.openContextMenu.path = spawnedUI.selectedPaths[1].path
+    end,
+    function ()
+        return editor.active and input.context.viewport.hovered
     end)
 end
 
@@ -464,8 +493,11 @@ end
 
 ---@protected
 ---@param element element
-function spawnedUI.drawContextMenu(element)
-    if ImGui.BeginPopupContextItem("##contextMenu" .. spawnedUI.elementCount, ImGuiPopupFlags.MouseButtonRight) then
+function spawnedUI.drawContextMenu(element, path)
+    local x, y = ImGui.GetMousePos()
+    ImGui.SetNextWindowPos(x + 10 * style.viewSize, y + 10 * style.viewSize, ImGuiCond.Appearing)
+
+    if ImGui.BeginPopupContextItem("##contextMenu" .. path, ImGuiPopupFlags.MouseButtonRight) then
         local isMulti = #spawnedUI.selectedPaths > 1 and element.selected
 
         style.mutedText(isMulti and #spawnedUI.selectedPaths .. " elements" or element.name)
@@ -503,6 +535,12 @@ function spawnedUI.drawContextMenu(element)
         end
 
         ImGui.EndPopup()
+    end
+
+    if spawnedUI.openContextMenu.state and spawnedUI.openContextMenu.path == path then
+        spawnedUI.openContextMenu.state = false
+
+        ImGui.OpenPopup("##contextMenu" .. spawnedUI.openContextMenu.path)
     end
 end
 
@@ -638,7 +676,9 @@ function spawnedUI.drawElement(element, dummy)
     end
 
     spawnedUI.handleDrag(element)
-    spawnedUI.drawContextMenu(element)
+
+    local elementPath = element:getPath()
+    spawnedUI.drawContextMenu(element, elementPath)
 
     style.popStyleColor(isGettingDragged, 3)
     ImGui.PopStyleVar()
@@ -694,7 +734,7 @@ function spawnedUI.drawElement(element, dummy)
     if spawnedUI.filter ~= "" then
         ImGui.SameLine()
         ImGui.SetCursorPosX(spawnedUI.filteredWidestName + 25 * style.viewSize + 5 * style.viewSize)
-        style.mutedText("[" .. element:getPath() .. "]")
+        style.mutedText("[" .. elementPath .. "]")
     end
 
     ImGui.SameLine()
@@ -721,7 +761,7 @@ function spawnedUI.drawHierarchy()
     local nRows = math.floor((ySpace - settings.editorBottomSize) / (ImGui.GetFrameHeight() + spawnedUI.cellPadding * 2 - style.viewSize * 2))
 
     ImGui.BeginChild("##hierarchy", 0, ySpace - settings.editorBottomSize, false, ImGuiWindowFlags.NoMove)
-    input.updateWindowState()
+    input.updateContext("hierarchy")
 
     -- Start the table
     ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, 7.5 * style.viewSize, spawnedUI.cellPadding)
