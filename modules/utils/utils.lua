@@ -364,4 +364,12 @@ function miscUtils.deepcompare(t1,t2,ignore_mt)
     return true
 end
 
+function miscUtils.sendOutlineEvent(entity, color)
+    entity:QueueEvent(entRenderHighlightEvent.new({
+        seeThroughWalls = true,
+        outlineIndex = color,
+        opacity = 1
+    }))
+end
+
 return miscUtils

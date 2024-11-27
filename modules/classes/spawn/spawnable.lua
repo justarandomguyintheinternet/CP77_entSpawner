@@ -80,6 +80,14 @@ end
 function spawnable:onAttached(entity)
     self.spawned = true
     self.spawning = false
+
+    for _, callback in ipairs(self.spawnedAndCachedCallback) do
+        callback(entity)
+    end
+end
+
+function spawnable:registerSpawnedAndAttachedCallback(callback)
+    table.insert(self.spawnedAndCachedCallback, callback)
 end
 
 ---Spawns the spawnable if not spawned already, must register a callback for entityAssemble which calls onAssemble

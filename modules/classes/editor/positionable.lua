@@ -2,6 +2,7 @@ local utils = require("modules/utils/utils")
 local settings = require("modules/utils/settings")
 local history = require("modules/utils/history")
 local style = require("modules/ui/style")
+local editor = require("modules/utils/editor/editor")
 
 local element = require("modules/classes/editor/element")
 
@@ -58,7 +59,7 @@ function positionable:drawTransform()
 	self:drawScale(scale)
 
 	if not self.controlsHovered and self.visualizerDirection ~= "all" then
-		if not settings.gizmoOnSelected then
+		if not settings.gizmoOnSelected and not editor.active then
 			self:setVisualizerState(false) -- Set vis state first, as loading the mesh app (vis direction) can screw with it
 		end
 		self:setVisualizerDirection("all")
@@ -81,7 +82,7 @@ function positionable:getProperties()
 end
 
 function positionable:setSelected(state)
-	if state ~= self.selected and not self.hovered and settings.gizmoOnSelected then
+	if state ~= self.selected and not self.hovered and (settings.gizmoOnSelected or editor.active) then
 		self:setVisualizerState(state)
 	end
 
@@ -89,7 +90,7 @@ function positionable:setSelected(state)
 end
 
 function positionable:setHovered(state)
-	if (not self.selected or not settings.gizmoOnSelected) and state ~= self.hovered then
+	if (not self.selected or (not settings.gizmoOnSelected and not editor.active)) and state ~= self.hovered then
 		self:setVisualizerState(state)
 		self:setVisualizerDirection("all")
 	end
@@ -98,7 +99,7 @@ function positionable:setHovered(state)
 end
 
 function positionable:setVisualizerDirection(direction)
-	if not settings.gizmoOnSelected then
+	if not settings.gizmoOnSelected and not editor.active then
 		if direction ~= "all" and not self.hovered and not self.visualizerState then
 			self:setVisualizerState(true)
 		end

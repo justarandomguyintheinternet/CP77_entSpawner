@@ -25,6 +25,8 @@ local config = require("modules/utils/config")
 ---@field public editorBottomSize integer
 ---@field public gizmoActive boolean
 ---@field public gizmoOnSelected boolean
+---@field public outlineSelected boolean
+---@field public outlineColor integer
 ---@field tabSizes table
 local settingsData = {
     spawnPos = 1,
@@ -50,7 +52,9 @@ local settingsData = {
     windowStates = {},
     editorBottomSize = 200,
     gizmoActive = true,
-    gizmoOnSelected = false,
+    gizmoOnSelected = true,
+    outlineSelected = true,
+    outlineColor = 0,
 
     tabSizes = {}
 }

@@ -1,7 +1,7 @@
 local utils = require("modules/utils/utils")
 local visualizer = require("modules/utils/visualizer")
-local Cron = require("modules/utils/cron")
 local settings = require("modules/utils/settings")
+local editor = require("modules/utils/editor/editor")
 
 local positionable = require("modules/classes/editor/positionable")
 
@@ -45,10 +45,15 @@ function spawnableElement:load(data, silent)
 
 	self:setVisible(self.visible, true)
 
-	-- TODO; Do this on spawnable spawn
-	if not settings.gizmoOnSelected then return end
-	Cron.After(0.1, function ()
-		self:setVisualizerState(self.selected)
+	self.spawnable:registerSpawnedAndAttachedCallback(function (entity)
+		-- TODO: Check for only selected
+		-- Force update of outline effect
+		local original = self.selected
+		self.selected = false
+		self:setSelected(original, entity)
+		if not settings.gizmoOnSelected and not editor.active then return end
+
+		self:setVisualizerState(self.selected, entity)
 		self:setVisualizerDirection("all")
 	end)
 end
@@ -69,6 +74,21 @@ function spawnableElement:getGroupedProperties()
 	end
 
 	return properties
+end
+
+function spawnableElement:setSelected(state, entity)
+	local update = self.selected ~= state
+
+	positionable.setSelected(self, state)
+
+	if not update or (not settings.outlineSelected and not editor.active) then return end
+	if not self.spawnable:isSpawned() then return end
+
+	if state then
+		utils.sendOutlineEvent(self.spawnable:getEntity() or entity, settings.outlineColor + 1)
+	else
+		utils.sendOutlineEvent(self.spawnable:getEntity() or entity, 0)
+	end
 end
 
 function spawnableElement:setVisible(state, fromRecursive)
@@ -95,11 +115,11 @@ function spawnableElement:setHiddenByParent(state)
 	end
 end
 
-function spawnableElement:setVisualizerState(state)
+function spawnableElement:setVisualizerState(state, entity)
 	positionable.setVisualizerState(self, state)
 
 	if not self.spawnable:isSpawned() then return end
-	visualizer.showArrows(self.spawnable:getEntity(), self.visualizerState)
+	visualizer.showArrows(self.spawnable:getEntity() or entity, self.visualizerState)
 end
 
 function spawnableElement:setVisualizerDirection(direction)

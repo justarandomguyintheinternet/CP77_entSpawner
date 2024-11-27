@@ -2,6 +2,7 @@ local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
 
 local colliderColors = { "Red", "Green", "Blue" }
+local outlineColors = { "Green", "Red", "Blue", "Orange", "Yellow", "Light Blue", "White", "Black" }
 
 settingsUI = {}
 
@@ -54,12 +55,23 @@ function settingsUI.draw()
     if changed then settings.save() end
     style.tooltip("When holding shift, the step size will be multiplied by this value")
 
+    style.sectionHeaderEnd()
+    style.sectionHeaderStart("VISUALIZERS")
+
     settings.gizmoActive, changed = ImGui.Checkbox("Show arrows", settings.gizmoActive)
     if changed then settings.save() end
+    style.tooltip("Globally enable or disable the arrows")
 
     settings.gizmoOnSelected, changed = ImGui.Checkbox("Show arrows when element is selected", settings.gizmoOnSelected)
     if changed then settings.save() end
-    style.tooltip("Always show the arrows when an element is selected.\nDefault is to only show it when hovering the element or its transform controls.")
+    style.tooltip("Always show the arrows when an element is selected.\nDefault is to only show it when hovering the element or its transform controls.\nEdit mode ignores this setting, and always shows the arrows on the selected element.")
+
+    settings.outlineSelected, changed = ImGui.Checkbox("Outline selected", settings.outlineSelected)
+    if changed then settings.save() end
+    style.tooltip("Outline the selected element(s) with a color.\nEdit mode ignores this setting, and always shows the outline on the selected element(s).")
+
+    settings.outlineColor, changed = ImGui.Combo("Outline color", settings.outlineColor, outlineColors, #outlineColors)
+    if changed then settings.save() end
 
     style.sectionHeaderEnd()
     style.sectionHeaderStart("COLLIDERS")

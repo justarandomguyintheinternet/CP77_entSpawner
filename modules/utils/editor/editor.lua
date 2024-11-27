@@ -1,6 +1,7 @@
 local utils = require("modules/utils/utils")
 local input = require("modules/utils/input")
 local intersection = require("modules/utils/editor/intersection")
+local settings = require("modules/utils/settings")
 
 ---@class editor
 ---@field active boolean
@@ -60,11 +61,7 @@ function editor.removeHighlight(onlySelected)
 
     for _, selected in pairs(paths) do
         if utils.isA(selected.ref, "spawnableElement") and selected.ref.spawnable:isSpawned() then
-            selected.ref.spawnable:getEntity():QueueEvent(entRenderHighlightEvent.new({
-                seeThroughWalls = true,
-                outlineIndex = 0,
-                opacity = 1
-            }))
+            utils.sendOutlineEvent(selected.ref.spawnable:getEntity(), 0)
         end
     end
 end
@@ -72,11 +69,7 @@ end
 function editor.addHighlightToSelected()
     for _, selected in pairs(editor.spawnedUI.selectedPaths) do
         if utils.isA(selected.ref, "spawnableElement") and selected.ref.spawnable:isSpawned() then
-            selected.ref.spawnable:getEntity():QueueEvent(entRenderHighlightEvent.new({
-                seeThroughWalls = true,
-                outlineIndex = 1,
-                opacity = 1
-            }))
+            utils.sendOutlineEvent(selected.ref.spawnable:getEntity(), settings.outlineColor + 1)
         end
     end
 end
@@ -89,13 +82,19 @@ function editor.setTarget()
     local hit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation())
     if not hit then return end
 
-    editor.removeHighlight(true)
-    editor.spawnedUI.unselectAll()
-    hit.element:expandAllParents()
-    editor.spawnedUI.scrollToSelected = true
-    hit.element:setSelected(true)
-    editor.spawnedUI.cachePaths()
-    editor.addHighlightToSelected()
+    if not editor.spawnedUI.multiSelectActive() then
+        editor.spawnedUI.unselectAll()
+    end
+
+    if hit.element.selected then
+        hit.element:setSelected(false)
+    else
+        hit.element:expandAllParents()
+        editor.spawnedUI.scrollToSelected = true
+        hit.element:setSelected(true)
+        editor.spawnedUI.cachePaths()
+        editor.addHighlightToSelected()
+    end
 end
 
 function editor.getRaySceneIntersection(ray, origin)

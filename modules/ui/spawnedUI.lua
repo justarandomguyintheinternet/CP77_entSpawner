@@ -87,6 +87,15 @@ function spawnedUI.getElementByPath(path)
     end
 end
 
+---@param element element
+---@return boolean
+function spawnedUI.isOnlySelected(element)
+    if #spawnedUI.selectedPaths == 1 and spawnedUI.selectedPaths[1].ref == element then
+        return true
+    end
+    return false
+end
+
 ---Adds an element to the root
 ---@param element element
 function spawnedUI.addRootElement(element)
@@ -244,7 +253,6 @@ function spawnedUI.registerHotkeys()
     end)
 end
 
----@protected
 function spawnedUI.multiSelectActive()
     return ImGui.IsKeyDown(ImGuiKey.LeftCtrl)
 end
