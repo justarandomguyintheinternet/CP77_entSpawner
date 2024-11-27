@@ -73,16 +73,6 @@ function camera.toggle(state)
     GetPlayer():DisableCameraBobbing(camera.active)
 end
 
-function camera.suspend(state)
-    if camera.active and not state and not camera.suspendState then
-        camera.suspendState = true
-        camera.toggle(false)
-    elseif not camera.active and state and camera.suspendState then
-        camera.suspendState = false
-        camera.toggle(true)
-    end
-end
-
 function camera.update()
     if camera.transitionTween then
         local done = camera.transitionTween:update(camera.deltaTime)

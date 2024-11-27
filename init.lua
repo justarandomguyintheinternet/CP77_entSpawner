@@ -111,7 +111,7 @@ function spawner:new()
 
     registerForEvent("onDraw", function()
         style.initialize()
-        self.editor.camera.suspend(self.runtimeData.cetOpen)
+        self.editor.suspend(self.runtimeData.cetOpen)
 
         if self.runtimeData.cetOpen then
             drag.draw()

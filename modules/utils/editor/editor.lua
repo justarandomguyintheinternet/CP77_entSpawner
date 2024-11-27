@@ -13,7 +13,8 @@ local editor = {
     camera = nil,
     baseUI = nil,
     spawnedUI = nil,
-    spawnUI = nil
+    spawnUI = nil,
+    suspendState = false
 }
 
 function editor.init(spawner)
@@ -68,6 +69,18 @@ function editor.removeHighlight(onlySelected)
     end
 end
 
+function editor.addHighlightToSelected()
+    for _, selected in pairs(editor.spawnedUI.selectedPaths) do
+        if utils.isA(selected.ref, "spawnableElement") and selected.ref.spawnable:isSpawned() then
+            selected.ref.spawnable:getEntity():QueueEvent(entRenderHighlightEvent.new({
+                seeThroughWalls = true,
+                outlineIndex = 1,
+                opacity = 1
+            }))
+        end
+    end
+end
+
 function editor.setTarget()
     local x, y = ImGui.GetMousePos()
     local width, height = GetDisplayResolution()
@@ -78,14 +91,11 @@ function editor.setTarget()
 
     editor.removeHighlight(true)
     editor.spawnedUI.unselectAll()
-    editor.spawnedUI.scrollToSelected = true
     hit.element:expandAllParents()
+    editor.spawnedUI.scrollToSelected = true
     hit.element:setSelected(true)
-    hit.element.spawnable:getEntity():QueueEvent(entRenderHighlightEvent.new({
-        seeThroughWalls = true,
-        outlineIndex = 1,
-        opacity = 1.0
-    }))
+    editor.spawnedUI.cachePaths()
+    editor.addHighlightToSelected()
 end
 
 function editor.getRaySceneIntersection(ray, origin)
@@ -132,6 +142,16 @@ function editor.onDraw()
     editor.camera.update()
 end
 
+function editor.suspend(state)
+    if editor.active and not state and not editor.suspendState then
+        editor.suspendState = true
+        editor.toggle(false)
+    elseif not editor.active and state and editor.suspendState then
+        editor.suspendState = false
+        editor.toggle(true)
+    end
+end
+
 function editor.toggle(state)
     editor.active = state
     editor.camera.toggle(state)
@@ -139,6 +159,9 @@ function editor.toggle(state)
     if not state then
         editor.baseUI.loadTabSize = true
         editor.baseUI.restoreWindowPosition = true
+        editor.removeHighlight(false)
+    else
+        editor.addHighlightToSelected()
     end
 end
 
