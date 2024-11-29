@@ -2,6 +2,7 @@ local utils = require("modules/utils/utils")
 local input = require("modules/utils/input")
 local intersection = require("modules/utils/editor/intersection")
 local settings = require("modules/utils/settings")
+local visualizer = require("modules/utils/visualizer")
 
 ---@class editor
 ---@field active boolean
@@ -15,8 +16,15 @@ local editor = {
     baseUI = nil,
     spawnedUI = nil,
     spawnUI = nil,
-    suspendState = false
+    suspendState = false,
+    hoveredArrow = "none",
+    draggingAxis = "none",
+    grab = false
 }
+
+function onViewport()
+    return editor.active and input.context.viewport.focused
+end
 
 function editor.init(spawner)
     editor.baseUI = spawner.baseUI
@@ -25,12 +33,46 @@ function editor.init(spawner)
 
     editor.camera = require("modules/utils/editor/camera")
 
+    input.registerMouseAction(ImGuiMouseButton.Right, function() end, onViewport) -- Cancle
     input.registerMouseAction(ImGuiMouseButton.Left, editor.setTarget, function ()
         return editor.active and input.context.viewport.hovered
     end)
     input.registerImGuiHotkey({ ImGuiKey.Tab }, editor.centerCamera, function ()
         return editor.active and (input.context.viewport.focused or input.context.hierarchy.focused)
     end)
+
+    input.registerImGuiHotkey({ ImGuiKey.G }, function ()
+        if editor.draggingAxis ~= "none" then return end
+
+        editor.grab = true
+    end, onViewport)
+    input.registerImGuiHotkey({ ImGuiKey.X }, function ()
+        if not editor.grab then return end
+
+        if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
+            editor.draggingAxis = "yz"
+        else
+            editor.draggingAxis = "x"
+        end
+    end, onViewport)
+    input.registerImGuiHotkey({ ImGuiKey.Y }, function ()
+        if not editor.grab then return end
+
+        if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
+            editor.draggingAxis = "xz"
+        else
+            editor.draggingAxis = "y"
+        end
+    end, onViewport)
+    input.registerImGuiHotkey({ ImGuiKey.Z }, function ()
+        if not editor.grab then return end
+
+        if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
+            editor.draggingAxis = "xy"
+        else
+            editor.draggingAxis = "z"
+        end
+    end, onViewport)
 
     --TODO: depth menu
 end
@@ -74,11 +116,16 @@ function editor.addHighlightToSelected()
     end
 end
 
-function editor.setTarget()
+function editor.getScreenToWorldRay()
     local x, y = ImGui.GetMousePos()
     local width, height = GetDisplayResolution()
     local _, ray = editor.camera.screenToWorld((x / width * 2) - 1, - ((y / height * 2) - 1))
 
+    return ray
+end
+
+function editor.setTarget()
+    local ray = editor.getScreenToWorldRay()
     local hit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation())
     if not hit then return end
 
@@ -137,8 +184,81 @@ function editor.getRaySceneIntersection(ray, origin)
     return hits[bestHitIdx]
 end
 
+function editor.checkArrow()
+    editor.hoveredArrow = "none"
+
+    if #editor.spawnedUI.selectedPaths ~= 1 or editor.draggingAxis ~= "none" then return end
+
+    local selected = editor.spawnedUI.selectedPaths[1].ref.spawnable
+    if not selected:isSpawned() then return end
+
+    local ray = editor.getScreenToWorldRay()
+    local arrowWidth = 0.05
+
+    local xHit = intersection.getBoxIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), ray, selected.position, selected.rotation, {
+        min = { x = 0, y = -arrowWidth, z = -arrowWidth },
+        max = { x = selected:getArrowSize().x * 2, y = arrowWidth, z = arrowWidth }
+    })
+
+    local yHit = intersection.getBoxIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), ray, selected.position, selected.rotation, {
+        min = { x = -arrowWidth, y = 0, z = -arrowWidth },
+        max = { x = arrowWidth, y = selected:getArrowSize().y * 2, z = arrowWidth }
+    })
+
+    local zHit = intersection.getBoxIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), ray, selected.position, selected.rotation, {
+        min = { x = -arrowWidth, y = -arrowWidth, z = 0 },
+        max = { x = arrowWidth, y = arrowWidth, z = selected:getArrowSize().z * 2 }
+    })
+
+    if zHit.hit then
+        visualizer.highlightArrow(selected:getEntity(), "blue")
+        editor.hoveredArrow = "z"
+    elseif xHit.hit then
+        visualizer.highlightArrow(selected:getEntity(), "red")
+        editor.hoveredArrow = "x"
+    elseif yHit.hit then
+        visualizer.highlightArrow(selected:getEntity(), "green")
+        editor.hoveredArrow = "y"
+    else
+        visualizer.highlightArrow(selected:getEntity(), "none")
+    end
+end
+
+function editor.updateDrag()
+    print(editor.draggingAxis, editor.hoveredArrow, editor.grab)
+
+    if ImGui.IsMouseDragging(0, 0) then
+        if editor.hoveredArrow ~= "none" then
+            editor.draggingAxis = editor.hoveredArrow
+        end
+    elseif not editor.grab then
+        editor.draggingAxis = "none"
+    end
+
+    if editor.draggingAxis == "none" then return end
+
+    local dx, dy = ImGui.GetMouseDragDelta(0, 0)
+    ImGui.ResetMouseDragDelta()
+
+    local selected = editor.spawnedUI.selectedPaths[1].ref.spawnable
+    local plane = selected.rotation:GetUp()
+
+    local result = intersection.getPlaneIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), editor.getScreenToWorldRay(), selected.position, plane)
+    print(result.position, result.distance, result.hit)
+
+    if result.hit then
+        local diff = utils.subVector(result.position, selected.position)
+        editor.spawnedUI.selectedPaths[1].ref:setPosition(diff)
+    end
+end
+
 function editor.onDraw()
     editor.camera.update()
+
+    if editor.active and input.context.viewport.hovered then
+        editor.checkArrow()
+        editor.updateDrag()
+    end
 end
 
 function editor.suspend(state)

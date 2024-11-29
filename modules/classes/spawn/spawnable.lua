@@ -64,7 +64,7 @@ function spawnable:new()
     o.streamingMultiplier = 1
 
     o.isHovered = false
-    o.arrowDirection = "all"
+    o.arrowDirection = "none"
     o.rotationRelative = false
 
     o.object = object

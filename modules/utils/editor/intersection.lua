@@ -1,5 +1,5 @@
 local utils = require("modules/utils/utils")
-local epsilon = 0.00001
+local EPSILON = 0.00001
 
 local intersection = {}
 
@@ -90,7 +90,7 @@ function intersection.getBoxIntersection(rayOrigin, ray, boxOrigin, boxRotation,
         local e = axisDirection:Dot(delta) -- Distance of ray origin to box origin along the box's x/y/z axis
         local f = ray:Dot(axisDirection) -- Scale t value based on rotation of the box axis relative to ray, since shallower angle would mean bigger t
 
-        if math.abs(f) > epsilon then
+        if math.abs(f) > EPSILON then
             local t1 = (e + box.min[axisName]) / f
             local t2 = (e + box.max[axisName]) / f
 
@@ -136,6 +136,18 @@ function intersection.getSphereIntersection(rayOrigin, ray, sphereOrigin, sphere
 
         return { hit = true, position = utils.addVector(rayOrigin, utils.multVector(ray:Normalize(), t)), distance = t }
     end
+end
+
+function intersection.getPlaneIntersection(rayOrigin, ray, planeOrigin, planeNormal)
+    local angle = planeNormal:Dot(ray)
+
+    if (math.abs(angle) > EPSILON) then
+        local originToPlane = utils.subVector(planeOrigin, rayOrigin)
+        local t = originToPlane:Dot(planeNormal) / angle
+        return { hit = true, position = utils.addVector(rayOrigin, utils.multVector(ray:Normalize(), t)), distance = t }
+    end
+
+    return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0 }
 end
 
 return intersection

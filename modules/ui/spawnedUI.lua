@@ -249,7 +249,7 @@ function spawnedUI.registerHotkeys()
         spawnedUI.openContextMenu.path = spawnedUI.selectedPaths[1].path
     end,
     function ()
-        return editor.active and input.context.viewport.hovered
+        return editor.active and (input.context.viewport.hovered or input.context.hierarchy.hovered)
     end)
 end
 
@@ -676,7 +676,9 @@ function spawnedUI.drawElement(element, dummy)
 
     if not spawnedUI.multiSelectActive() and not spawnedUI.rangeSelectActive() and previous ~= element.selected and not spawnedUI.draggingSelected then
         for _, entry in pairs(spawnedUI.selectedPaths) do
-            entry.ref:setSelected(false)
+            if entry.ref ~= element then
+                entry.ref:setSelected(false)
+            end
         end
         if previous == true and #spawnedUI.selectedPaths > 1 then element:setSelected(true) end
     elseif spawnedUI.draggingSelected and previous ~= element.selected then -- Disregard any changes due to dragging

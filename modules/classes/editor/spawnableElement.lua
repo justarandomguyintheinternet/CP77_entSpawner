@@ -48,13 +48,14 @@ function spawnableElement:load(data, silent)
 	self.spawnable:registerSpawnedAndAttachedCallback(function (entity)
 		-- TODO: Check for only selected
 		-- Force update of outline effect
+		if settings.gizmoOnSelected or editor.active then
+			self:setVisualizerState(self.selected, entity)
+			self:setVisualizerDirection("none")
+		end
+
 		local original = self.selected
 		self.selected = false
 		self:setSelected(original, entity)
-		if not settings.gizmoOnSelected and not editor.active then return end
-
-		self:setVisualizerState(self.selected, entity)
-		self:setVisualizerDirection("all")
 	end)
 end
 
@@ -126,7 +127,7 @@ function spawnableElement:setVisualizerDirection(direction)
 	positionable.setVisualizerDirection(self, direction)
 
 	if not self.spawnable:isSpawned() then return end
-	local color = ""
+	local color = "none"
 	if direction == "x" or direction == "relX" or direction == "pitch" or direction == "scaleX" then color = "red" end
 	if direction == "y" or direction == "relY" or direction == "roll" or direction == "scaleY" then color = "green" end
 	if direction == "z" or direction == "relZ" or direction == "yaw" or direction == "scaleZ" then color = "blue" end

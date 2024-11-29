@@ -57,8 +57,8 @@ function input.resetContext()
 end
 
 function input.updateContext(key)
-    input.context[key].hovered = ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows)
-    input.context[key].focused = ImGui.IsWindowFocused(ImGuiHoveredFlags.ChildWindows)
+    input.context[key].hovered = ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows) or input.context[key].hovered
+    input.context[key].focused = ImGui.IsWindowFocused(ImGuiHoveredFlags.ChildWindows) or input.context[key].focused
 end
 
 return input
