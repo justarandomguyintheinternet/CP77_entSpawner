@@ -19,7 +19,8 @@ local editor = {
     suspendState = false,
     hoveredArrow = "none",
     draggingAxis = "none",
-    grab = false
+    grab = false,
+    originalPos = Vector4.new(0, 0, 0, 0)
 }
 
 function onViewport()
@@ -45,6 +46,13 @@ function editor.init(spawner)
         if editor.draggingAxis ~= "none" then return end
 
         editor.grab = true
+
+        if #editor.spawnedUI.selectedPaths == 1 then
+            local selected = editor.spawnedUI.selectedPaths[1].ref.spawnable
+            if selected:isSpawned() then
+                editor.originalPos = Vector4.new(selected.position)
+            end
+        end
     end, onViewport)
     input.registerImGuiHotkey({ ImGuiKey.X }, function ()
         if not editor.grab then return end
@@ -121,7 +129,7 @@ function editor.getScreenToWorldRay()
     local width, height = GetDisplayResolution()
     local _, ray = editor.camera.screenToWorld((x / width * 2) - 1, - ((y / height * 2) - 1))
 
-    return ray
+    return ray:Normalize()
 end
 
 function editor.setTarget()
@@ -248,7 +256,12 @@ function editor.updateDrag()
 
     if result.hit then
         local diff = utils.subVector(result.position, selected.position)
-        editor.spawnedUI.selectedPaths[1].ref:setPosition(diff)
+        print(diff, "diffB")
+        local rot = Quaternion.MulInverse(EulerAngles.new(0, 0, 0):ToQuat(), selected.rotation:ToQuat())
+
+        diff = rot:Transform(diff)
+        print(diff.x, diff.y, diff.z)
+        editor.spawnedUI.selectedPaths[1].ref:setPosition(Vector4.new(diff.x, 0, 0))
     end
 end
 
