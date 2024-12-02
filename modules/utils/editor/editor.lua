@@ -13,10 +13,12 @@ local history = require("modules/utils/history")
 ---@field spawnUI spawnUI?
 ---@field suspendState boolean
 ---@field hoveredArrow string
----@field draggingAxis string
+---@field currentAxis string
 ---@field dragOriginalDiff number?
 ---@field grab boolean
----@field originalPos Vector4
+---@field rotate boolean
+---@field originalPos Vector4?
+---@field originalRotation EulerAngles?
 local editor = {
     active = false,
     camera = nil,
@@ -25,14 +27,46 @@ local editor = {
     spawnUI = nil,
     suspendState = false,
     hoveredArrow = "none",
-    draggingAxis = "none",
+    currentAxis = "none",
     dragOriginalDiff = nil,
     grab = false,
-    originalPos = Vector4.new(0, 0, 0, 0)
+    rotate = false,
+    originalPos = nil,
+    originalRotation = nil
 }
 
 function onViewport()
     return editor.active and input.context.viewport.focused
+end
+
+function editor.getSelected()
+    if #editor.spawnedUI.selectedPaths == 0 then return end
+
+    if #editor.spawnedUI.selectedPaths == 1 then
+        return editor.spawnedUI.selectedPaths[1].ref
+    else
+        return editor.spawnedUI.multiSelectGroup
+    end
+end
+
+function editor.updateArrowColor()
+    local selected = editor.getSelected()
+
+    if not selected or not utils.isA(selected, "spawnableElement") then return end
+
+    visualizer.highlightArrow(selected.spawnable:getEntity(), editor.currentAxis)
+end
+
+function editor.updateGrabbedAxis()
+    if not editor.grab then return end
+
+    if editor.currentAxis ~= "none" then
+        local element = editor.getSelected()
+        if not element then return end
+
+        element:setPosition(editor.originalPos)
+        editor.dragOriginalDiff = nil
+    end
 end
 
 function editor.init(spawner)
@@ -44,62 +78,84 @@ function editor.init(spawner)
 
     input.registerMouseAction(ImGuiMouseButton.Right, function()
         editor.grab = false
-        editor.draggingAxis = "none"
-        local element = editor.spawnedUI.selectedPaths[1]
-        if not element then return end
 
-        element.ref.spawnable.position = editor.originalPos
-        element.ref.spawnable:update()
-    end, onViewport) -- Cancle
+        local element = editor.getSelected()
+        if not element or editor.currentAxis == "none" then return end
+
+        editor.currentAxis = "none"
+        element:setPosition(editor.originalPos)
+    end, onViewport)
+
     input.registerMouseAction(ImGuiMouseButton.Left, function ()
-        editor.setTarget()
+        if not editor.grab and editor.hoveredArrow == "none" then
+            editor.setTarget()
+        end
         editor.grab = false
     end,
     function ()
         return editor.active and input.context.viewport.hovered
     end)
+
     input.registerImGuiHotkey({ ImGuiKey.Tab }, editor.centerCamera, function ()
         return editor.active and (input.context.viewport.focused or input.context.hierarchy.focused)
     end)
 
     input.registerImGuiHotkey({ ImGuiKey.G }, function ()
-        if editor.draggingAxis ~= "none" then return end
+        if editor.currentAxis ~= "none" then return end
 
-        editor.grab = true
+        local selected = editor.getSelected()
 
-        if #editor.spawnedUI.selectedPaths == 1 then
-            local selected = editor.spawnedUI.selectedPaths[1].ref.spawnable
-            if selected:isSpawned() then
-                editor.originalPos = Vector4.new(selected.position)
-            end
+        if selected and utils.isA(selected, "positionable") then
+            editor.grab = true
+            editor.originalPos = Vector4.new(selected:getPosition())
         end
     end, onViewport)
+
+    input.registerImGuiHotkey({ ImGuiKey.R }, function ()
+        if editor.currentAxis ~= "none" then return end
+
+        local selected = editor.getSelected()
+
+        if selected and utils.isA(selected, "positionable") then
+            editor.rotate = true
+            editor.originalRotation = EulerAngles.new(selected:getRotation())
+        end
+    end, onViewport)
+
     input.registerImGuiHotkey({ ImGuiKey.X }, function ()
-        if not editor.grab then return end
+        if not (editor.grab or editor.rotate) then return end
 
-        if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
-            editor.draggingAxis = "yz"
+        if ImGui.IsKeyDown(ImGuiKey.LeftShift) and not editor.rotate then
+            editor.currentAxis = "yz"
         else
-            editor.draggingAxis = "x"
+            editor.currentAxis = "x"
         end
+        editor.updateArrowColor()
+        editor.updateGrabbedAxis()
     end, onViewport)
+
     input.registerImGuiHotkey({ ImGuiKey.Y }, function ()
-        if not editor.grab then return end
+        if not (editor.grab or editor.rotate) then return end
 
-        if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
-            editor.draggingAxis = "xz"
+        if ImGui.IsKeyDown(ImGuiKey.LeftShift) and not editor.rotate then
+            editor.currentAxis = "xz"
         else
-            editor.draggingAxis = "y"
+            editor.currentAxis = "y"
         end
+        editor.updateArrowColor()
+        editor.updateGrabbedAxis()
     end, onViewport)
-    input.registerImGuiHotkey({ ImGuiKey.Z }, function ()
-        if not editor.grab then return end
 
-        if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
-            editor.draggingAxis = "xy"
+    input.registerImGuiHotkey({ ImGuiKey.Z }, function ()
+        if not (editor.grab or editor.rotate) then return end
+
+        if ImGui.IsKeyDown(ImGuiKey.LeftShift) and not editor.rotate then
+            editor.currentAxis = "xy"
         else
-            editor.draggingAxis = "z"
+            editor.currentAxis = "z"
         end
+        editor.updateArrowColor()
+        editor.updateGrabbedAxis()
     end, onViewport)
 
     --TODO: depth menu
@@ -215,7 +271,7 @@ end
 function editor.checkArrow()
     editor.hoveredArrow = "none"
 
-    if #editor.spawnedUI.selectedPaths ~= 1 or editor.draggingAxis ~= "none" then return end
+    if #editor.spawnedUI.selectedPaths ~= 1 or editor.currentAxis ~= "none" then return end
 
     local selected = editor.spawnedUI.selectedPaths[1].ref.spawnable
     if not selected:isSpawned() then return end
@@ -239,65 +295,83 @@ function editor.checkArrow()
     })
 
     if zHit.hit then
-        visualizer.highlightArrow(selected:getEntity(), "blue")
         editor.hoveredArrow = "z"
     elseif xHit.hit then
-        visualizer.highlightArrow(selected:getEntity(), "red")
         editor.hoveredArrow = "x"
     elseif yHit.hit then
-        visualizer.highlightArrow(selected:getEntity(), "green")
         editor.hoveredArrow = "y"
     else
         visualizer.highlightArrow(selected:getEntity(), "none")
     end
+
+    if editor.hoveredArrow ~= "none" then
+        visualizer.highlightArrow(selected:getEntity(), editor.hoveredArrow)
+    end
 end
 
-function editor.updateDrag()
-    print(editor.draggingAxis, editor.hoveredArrow, editor.grab)
+-- TODO:
+    -- Rotation
+    -- Scale
+    -- Fix spawned new not selected
+    -- Fix hotkeys working when on other main tab / not hierarchy
 
+function editor.updateDrag()
     if ImGui.IsMouseDragging(0, 0) then
         if editor.hoveredArrow ~= "none" then
-            editor.draggingAxis = editor.hoveredArrow
+            editor.currentAxis = editor.hoveredArrow
         end
     elseif not editor.grab then
-        if editor.draggingAxis ~= "none" then
-            local element = editor.spawnedUI.selectedPaths[1].ref
-            local new = Vector4.new(element.spawnable.position)
-            element.spawnable.position = editor.originalPos
+        if editor.currentAxis ~= "none" then
+            local element = editor.getSelected()
+            local new = Vector4.new(element:getPosition())
+            element:setPosition(editor.originalPos)
             history.addAction(history.getElementChange(element))
-            element.spawnable.position = new
+            element:setPosition(new)
         end
 
-        editor.draggingAxis = "none"
+        editor.currentAxis = "none"
         editor.dragOriginalDiff = nil
     end
 
-    if editor.draggingAxis == "none" then return end
+    if editor.currentAxis == "none" then return end
 
-    local selected = editor.spawnedUI.selectedPaths[1].ref.spawnable
+    ---@type positionable
+    local selected = editor.spawnedUI.selectedPaths[1].ref
+    local rotation = selected:getRotation()
+    local position = selected:getPosition()
 
-    local axis
-    local axisMult = { x = 0, y = 0, z = 0 }
-    if editor.draggingAxis == "x" then
-        axis = selected.rotation:GetRight()
-        axisMult.x = 1
-    elseif editor.draggingAxis == "y" then
-        axis = selected.rotation:GetForward()
-        axisMult.y = 1
-    elseif editor.draggingAxis == "z" then
-        axis = selected.rotation:GetUp()
-        axisMult.z = 1
+    local axis = {
+        x = { mult = 0, dir = rotation:GetRight() },
+        y = { mult = 0, dir = rotation:GetForward() },
+        z = { mult = 0, dir = rotation:GetUp() },
+    }
+
+    if editor.currentAxis:find("x") then
+        axis.x.mult = 1
+    end
+    if editor.currentAxis:find("y") then
+        axis.y.mult = 1
+    end
+    if editor.currentAxis:find("z") then
+        axis.z.mult = 1
     end
 
-    local t, _ = intersection.getTClosestToRay(selected.position, axis, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), editor.getScreenToWorldRay())
-    local diff = selected.rotation:ToQuat():Transform(Vector4.new(t * axisMult.x, t * axisMult.y, t * axisMult.z, 0))
+    local offset = Vector4.new(0, 0, 0, 0)
+    for key, data in pairs(axis) do
+        if data.mult ~= 0 then
+            local t, _ = intersection.getTClosestToRay(position, data.dir, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), editor.getScreenToWorldRay())
+            offset[key] = t
+        end
+    end
+
+    local diff = rotation:ToQuat():Transform(offset)
 
     if not editor.dragOriginalDiff then
         editor.dragOriginalDiff = diff
-        editor.originalPos = Vector4.new(selected.position)
+        editor.originalPos = Vector4.new(position)
     end
 
-    editor.spawnedUI.selectedPaths[1].ref:setPositionDelta(Vector4.new(diff.x - editor.dragOriginalDiff.x, diff.y - editor.dragOriginalDiff.y, diff.z - editor.dragOriginalDiff.z))
+    selected:setPositionDelta(Vector4.new(diff.x - editor.dragOriginalDiff.x, diff.y - editor.dragOriginalDiff.y, diff.z - editor.dragOriginalDiff.z))
 end
 
 function editor.onDraw()
@@ -327,6 +401,9 @@ function editor.toggle(state)
         editor.baseUI.loadTabSize = true
         editor.baseUI.restoreWindowPosition = true
         editor.removeHighlight(false)
+        editor.currentAxis = "none"
+        editor.hoveredArrow = "none"
+        editor.grab = false
     else
         editor.addHighlightToSelected()
     end

@@ -30,13 +30,13 @@ function intersection.getResourcePathScalingFactor(path, initalScale)
 
     local newScale = Vector4.new(1, 1, 1, 0)
     if initalScale.x > 0.1 then
-        newScale.x = 0.9
+        newScale.x = 0.95
     end
     if initalScale.y > 0.1 then
-        newScale.y = 0.9
+        newScale.y = 0.95
     end
     if initalScale.z > 0.1 then
-        newScale.z = 0.9
+        newScale.z = 0.95
     end
 
     return newScale

@@ -270,6 +270,7 @@ end
 function positionable:setPositionDelta(delta)
 end
 
+---@return Vector4
 function positionable:getPosition()
 	return Vector4.new(0, 0, 0, 0)
 end
@@ -277,6 +278,7 @@ end
 function positionable:setRotation(delta)
 end
 
+---@return EulerAngles
 function positionable:getRotation()
 	return EulerAngles.new(0, 0, 0)
 end
