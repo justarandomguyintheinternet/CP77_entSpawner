@@ -243,7 +243,7 @@ function spawnedUI.registerHotkeys()
 
     -- Open context menu for selected from editor mode
     input.registerMouseAction(ImGuiMouseButton.Right, function()
-        if #spawnedUI.selectedPaths == 0 then return end
+        if #spawnedUI.selectedPaths == 0 or editor.grab then return end
 
         spawnedUI.openContextMenu.state = true
         spawnedUI.openContextMenu.path = spawnedUI.selectedPaths[1].path

@@ -150,4 +150,22 @@ function intersection.getPlaneIntersection(rayOrigin, ray, planeOrigin, planeNor
     return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0 }
 end
 
+--https://underdisc.net/blog/6_gizmos/index.html
+function intersection.getTClosestToRay(aRayOrigin, aRayDirection, bRayOrigin, bRayDirection)
+    local originDirection = utils.subVector(aRayOrigin, bRayOrigin)
+    local ab = aRayDirection:Dot(bRayDirection)
+    local aOrigin = aRayDirection:Dot(originDirection)
+    local bOrigin = bRayDirection:Dot(originDirection)
+    local denom = 1.0 - ab * ab
+
+    if math.abs(denom) < EPSILON then
+        return 0, 0
+    end
+
+    local ta = (-aOrigin + ab * bOrigin) / denom
+    local tb = ab * ta + bOrigin
+
+    return ta, tb
+end
+
 return intersection

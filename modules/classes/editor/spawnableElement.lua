@@ -157,7 +157,12 @@ function spawnableElement:getDirection(direction)
 	end
 end
 
-function spawnableElement:setPosition(delta)
+function spawnableElement:setPosition(position)
+	self.spawnable.position = position
+	self.spawnable:update()
+end
+
+function spawnableElement:setPositionDelta(delta)
 	self.spawnable.position = utils.addVector(self.spawnable.position, delta)
 	self.spawnable:update()
 end

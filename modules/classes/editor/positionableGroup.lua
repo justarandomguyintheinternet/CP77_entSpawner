@@ -69,11 +69,11 @@ function positionableGroup:getPosition()
 	return Vector4.new(center.x / nLeafs, center.y / nLeafs, center.z / nLeafs, 0)
 end
 
-function positionableGroup:setPosition(delta)
+function positionableGroup:setPositionDelta(delta)
 	local leafs = self:getPositionableLeafs()
 
 	for _, entry in pairs(leafs) do
-		entry:setPosition(delta)
+		entry:setPositionDelta(delta)
 	end
 end
 
@@ -99,7 +99,7 @@ function positionableGroup:setRotation(delta)
 	for _, entry in pairs(leafs) do
 		local relativePosition = utils.subVector(entry:getPosition(), pos)
 		relativePosition = utils.subVector(Vector4.RotateAxis(relativePosition, Vector4.new(0, 0, 1, 0), Deg2Rad(delta.yaw)), relativePosition)
-		entry:setPosition(relativePosition)
+		entry:setPositionDelta(relativePosition)
 		entry:setRotation(delta)
 	end
 end

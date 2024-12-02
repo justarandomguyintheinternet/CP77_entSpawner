@@ -165,20 +165,20 @@ function positionable:drawProp(prop, name, axis)
 	end
     if changed or finished then
 		if axis == "x" then
-			self:setPosition(Vector4.new(newValue - prop, 0, 0, 0))
+			self:setPositionDelta(Vector4.new(newValue - prop, 0, 0, 0))
 		elseif axis == "y" then
-			self:setPosition(Vector4.new(0, newValue - prop, 0, 0))
+			self:setPositionDelta(Vector4.new(0, newValue - prop, 0, 0))
 		elseif axis == "z" then
-			self:setPosition(Vector4.new(0, 0, newValue - prop, 0))
+			self:setPositionDelta(Vector4.new(0, 0, newValue - prop, 0))
 		elseif axis == "relX" then
 			local v = self:getDirection("right")
-			self:setPosition(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
+			self:setPositionDelta(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
 		elseif axis == "relY" then
 			local v = self:getDirection("forward")
-			self:setPosition(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
+			self:setPositionDelta(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
 		elseif axis == "relZ" then
 			local v = self:getDirection("up")
-			self:setPosition(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
+			self:setPositionDelta(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
 		elseif axis == "roll" then
 			self:setRotation(EulerAngles.new(newValue - prop, 0, 0))
 		elseif axis == "pitch" then
@@ -210,7 +210,7 @@ function positionable:drawPosition(position)
     if ImGui.Button(IconGlyphs.AccountArrowLeftOutline) then
 		history.addAction(history.getElementChange(self))
 		local pos = Game.GetPlayer():GetWorldPosition()
-        self:setPosition(Vector4.new(pos.x - position.x, pos.y - position.y, pos.z - position.z, 0))
+        self:setPositionDelta(Vector4.new(pos.x - position.x, pos.y - position.y, pos.z - position.z, 0))
     end
     style.pushButtonNoBG(false)
 	if ImGui.IsItemHovered() then style.setCursorRelative(5, 5) end
@@ -264,7 +264,10 @@ function positionable:drawScale(scale)
 	ImGui.PopItemWidth()
 end
 
-function positionable:setPosition(delta)
+function positionable:setPosition(position)
+end
+
+function positionable:setPositionDelta(delta)
 end
 
 function positionable:getPosition()

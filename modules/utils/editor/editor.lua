@@ -3,6 +3,7 @@ local input = require("modules/utils/input")
 local intersection = require("modules/utils/editor/intersection")
 local settings = require("modules/utils/settings")
 local visualizer = require("modules/utils/visualizer")
+local history = require("modules/utils/history")
 
 ---@class editor
 ---@field active boolean
@@ -10,6 +11,12 @@ local visualizer = require("modules/utils/visualizer")
 ---@field baseUI baseUI?
 ---@field spawnedUI spawnedUI?
 ---@field spawnUI spawnUI?
+---@field suspendState boolean
+---@field hoveredArrow string
+---@field draggingAxis string
+---@field dragOriginalDiff number?
+---@field grab boolean
+---@field originalPos Vector4
 local editor = {
     active = false,
     camera = nil,
@@ -19,6 +26,7 @@ local editor = {
     suspendState = false,
     hoveredArrow = "none",
     draggingAxis = "none",
+    dragOriginalDiff = nil,
     grab = false,
     originalPos = Vector4.new(0, 0, 0, 0)
 }
@@ -34,8 +42,20 @@ function editor.init(spawner)
 
     editor.camera = require("modules/utils/editor/camera")
 
-    input.registerMouseAction(ImGuiMouseButton.Right, function() end, onViewport) -- Cancle
-    input.registerMouseAction(ImGuiMouseButton.Left, editor.setTarget, function ()
+    input.registerMouseAction(ImGuiMouseButton.Right, function()
+        editor.grab = false
+        editor.draggingAxis = "none"
+        local element = editor.spawnedUI.selectedPaths[1]
+        if not element then return end
+
+        element.ref.spawnable.position = editor.originalPos
+        element.ref.spawnable:update()
+    end, onViewport) -- Cancle
+    input.registerMouseAction(ImGuiMouseButton.Left, function ()
+        editor.setTarget()
+        editor.grab = false
+    end,
+    function ()
         return editor.active and input.context.viewport.hovered
     end)
     input.registerImGuiHotkey({ ImGuiKey.Tab }, editor.centerCamera, function ()
@@ -240,29 +260,44 @@ function editor.updateDrag()
             editor.draggingAxis = editor.hoveredArrow
         end
     elseif not editor.grab then
+        if editor.draggingAxis ~= "none" then
+            local element = editor.spawnedUI.selectedPaths[1].ref
+            local new = Vector4.new(element.spawnable.position)
+            element.spawnable.position = editor.originalPos
+            history.addAction(history.getElementChange(element))
+            element.spawnable.position = new
+        end
+
         editor.draggingAxis = "none"
+        editor.dragOriginalDiff = nil
     end
 
     if editor.draggingAxis == "none" then return end
 
-    local dx, dy = ImGui.GetMouseDragDelta(0, 0)
-    ImGui.ResetMouseDragDelta()
-
     local selected = editor.spawnedUI.selectedPaths[1].ref.spawnable
-    local plane = selected.rotation:GetUp()
 
-    local result = intersection.getPlaneIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), editor.getScreenToWorldRay(), selected.position, plane)
-    print(result.position, result.distance, result.hit)
-
-    if result.hit then
-        local diff = utils.subVector(result.position, selected.position)
-        print(diff, "diffB")
-        local rot = Quaternion.MulInverse(EulerAngles.new(0, 0, 0):ToQuat(), selected.rotation:ToQuat())
-
-        diff = rot:Transform(diff)
-        print(diff.x, diff.y, diff.z)
-        editor.spawnedUI.selectedPaths[1].ref:setPosition(Vector4.new(diff.x, 0, 0))
+    local axis
+    local axisMult = { x = 0, y = 0, z = 0 }
+    if editor.draggingAxis == "x" then
+        axis = selected.rotation:GetRight()
+        axisMult.x = 1
+    elseif editor.draggingAxis == "y" then
+        axis = selected.rotation:GetForward()
+        axisMult.y = 1
+    elseif editor.draggingAxis == "z" then
+        axis = selected.rotation:GetUp()
+        axisMult.z = 1
     end
+
+    local t, _ = intersection.getTClosestToRay(selected.position, axis, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), editor.getScreenToWorldRay())
+    local diff = selected.rotation:ToQuat():Transform(Vector4.new(t * axisMult.x, t * axisMult.y, t * axisMult.z, 0))
+
+    if not editor.dragOriginalDiff then
+        editor.dragOriginalDiff = diff
+        editor.originalPos = Vector4.new(selected.position)
+    end
+
+    editor.spawnedUI.selectedPaths[1].ref:setPositionDelta(Vector4.new(diff.x - editor.dragOriginalDiff.x, diff.y - editor.dragOriginalDiff.y, diff.z - editor.dragOriginalDiff.z))
 end
 
 function editor.onDraw()
