@@ -12,6 +12,8 @@ local area = "base\\amm_props\\entity\\ambient_area_light"
 local point = "base\\amm_props\\entity\\ambient_point_light"
 local spot = "base\\amm_props\\entity\\ambient_spot_light"
 
+local componentNames = { "Light0275", "Light7460", "Light5050", "Light1783", "Light5638", "amm_light", "Light5520", "Light7161", "Light0034", "Light2702", "Light1460", "Light6337", "Light2103", "Light6270", "Light5424", "Light7002", "L_Main", "Light6234", "LT_Point", "LT_Spot", "Light6765", "Light4716", "Light_Main8854", "Light_Main", "Light", "Light_Glow", "head_light_left_01", "head_light_right_01", "Mesh4713", "Light_DistantLight" }
+
 ---@param spawnUI spawnUI
 ---@param AMM table
 function amm.generateProps(spawnUI, AMM, spawner)
@@ -159,8 +161,9 @@ local function setInstanceDataMesh(entity, propData, spawnable)
 end
 
 local function setInstanceDataLight(entity, lightData, spawnable)
-    for _, component in pairs(entity:GetComponents()) do
-        if component:IsA("gameLightComponent") then
+    for _, name in pairs(componentNames) do
+        local component = entity:FindComponentByName(name)
+        if component then
             local angles = loadstring("return " .. lightData.angles, "")()
             local color = loadstring("return " .. lightData.color, "")()
 
@@ -179,6 +182,7 @@ local function setInstanceDataLight(entity, lightData, spawnable)
             }
 
             spawnable.instanceDataChanges[tostring(CRUIDToHash(component.id)):gsub("ULL", "")] = change
+            break -- idek wth AMM is doing, only sets properties for first component
         end
     end
 end
