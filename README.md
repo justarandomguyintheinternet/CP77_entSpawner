@@ -4,48 +4,24 @@
 
 ## Overview
 
-The **Object Spawner** is a dev tool that simplifies the process of spawning in-game objects, meshes, or entities for your modding projects. With this tool, you can set up objects, save groups, and convert them into standalone AXL mods. This guide will walk you through the installation process, adding custom entities or meshes, spawning them, and converting them into AXL mods.
+- Object Spawner is a dev tool that simplifies the process of spawning in-game objects (Entities), meshes, lights, collisions and more, for your modding projects. With this tool, you can set up objects, save groups, and convert them into standalone AXL mods. This guide will walk you through the installation process, adding custom entities or meshes, spawning them, and converting them into AXL mods
+- By default Object Spawner is capable of spawning any entity, mesh, decal, effect and sound which is already part of the game
+- Object Spawner tries to stay as close as possible to the way the engine handles the game world, thus each type of object (Mesh, entity, light, etc.) directly corresponds to a type of `worldNode`
 
 ---
 
 ## Installation
 
-1. Download and install the provided ZIP file. Extract the contents into a directory of your choice.
-
----
-
-## Adding Custom Entities/Meshes
-
-Depending on the type of object you want to spawn (entity or mesh), follow these steps:
-
-### For Entities:
-
-1. Navigate to the following directory:  
-   `entSpawner\\data\\spawnables\\entity\\templates`
-
-2. You can either:
-   - Add the path to your custom entity in the existing file in this folder.
-   - Or, create a new `.txt` file with your custom entity paths and save it in this folder.
-
-### For Meshes:
-
-1. Navigate to the following directory:  
-   `entSpawner\\data\\spawnables\\mesh\\all`
-
-2. Similar to the entity process, you can:
-   - Add the path to your custom mesh in the existing file in this folder.
-   - Or, create a new `.txt` file with your custom mesh paths and save it in this folder.
+1. Download and install the provided ZIP file. Extract the contents into the base game directory.
 
 ---
 
 ## Spawning Objects
 
-Once your custom entities or meshes are added:
-
 1. **Open the object spawner tool**.
-2. **Select the appropriate category** (entity or mesh).
-3. **Spawn the object** using the interface.
-   - If desired, you can even spawn it as a **rotating mesh**.
+2. **Select the appropriate category** (Such as entity, mesh, collision, deco).
+3. **Select the specific type of object** E.g. for the `Mesh` category you can select between normal mesh, rotating mesh, cloth mesh and dynamic mesh
+4. **Spawn the object** using the interface.
 
 ---
 
@@ -53,6 +29,7 @@ Once your custom entities or meshes are added:
 
 1. **Group your objects** in the spawner.
 2. **Save the group to a file**. This will prepare the objects for export into an AXL mod.
+- Hint: Each saved group will later correspond to one individual streamingsector
 
 ---
 
@@ -64,16 +41,43 @@ Once your custom entities or meshes are added:
 
 ### Steps to Convert:
 
+#### 1. Exporting from Object Spawner
 1. In Game Open **Object Spawner 2.0**.
-2. Go to the **"Saved" tab** in the Object Spawner and find your saved group.
-3. **Click "Add to Export"** to mark the group for export.
+2. Go to the **"Saved" tab** in the Object Spawner and find your saved group(s).
+3. **Click "Add to Export"** to mark the group(s) for export.
 4. Switch to the **"Export" tab** and configure the export settings:
    - Set the **sector range** and other relevant parameters for your mod.
+   - The **sector range** should be at least as big as the smallest individual streaming range of an object (Better to go big)
 5. **Click Export**.
-6. Open **Wkit**
-7. **Update your WKit scripts** using the WKit "Scripts" UI.
-8. Put exported json into raw folder in your **Wkit project**. Open **Log** tab select **import_object_spawner** script and hit run. ![](https://snipboard.io/rcTWtf.jpg)
-9. **Profit!**
+
+#### 2. Importing in WKit
+1. Open **Wkit**
+2. **Update your WKit scripts** using the WKit "Scripts" UI.
+3. Put exported json into raw folder in your **Wkit project**.
+4. Go to `Tools -> Script Manager`
+5. Double click `import_object_spawner` (Yes to Create local copy)
+6. Replace `new_project_exported.json` with the name of your exported file placed in raw
+7. Click `Run` in the script
+8. **Profit!**
+
+---
+
+## Adding Custom Entities/Meshes
+
+- Generally, you can make any type of custom resource (Like material files for decals, or particle files) available by creating a `.txt` file in the corresponding `entSpawner\\data\\spawnables\\...` folder
+- In the following the exact steps for meshes and entities will be explained
+
+### For Entities:
+
+1. Navigate to the following directory:  
+   `entSpawner\\data\\spawnables\\entity\\templates`
+2. Create a new `.txt` file with your custom entity paths and save it in this folder.
+
+### For Meshes:
+
+1. Navigate to the following directory:  
+   `entSpawner\\data\\spawnables\\mesh\\all`
+2. Create a new `.txt` file with your custom mesh paths and save it in this folder.
 
 ---
 
