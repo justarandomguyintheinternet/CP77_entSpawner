@@ -180,11 +180,11 @@ function positionable:drawProp(prop, name, axis)
 			local v = self:getDirection("up")
 			self:setPositionDelta(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
 		elseif axis == "roll" then
-			self:setRotation(EulerAngles.new(newValue - prop, 0, 0))
+			self:setRotationDelta(EulerAngles.new(newValue - prop, 0, 0))
 		elseif axis == "pitch" then
-			self:setRotation(EulerAngles.new(0, newValue - prop, 0))
+			self:setRotationDelta(EulerAngles.new(0, newValue - prop, 0))
 		elseif axis == "yaw" then
-			self:setRotation(EulerAngles.new(0, 0, newValue - prop))
+			self:setRotationDelta(EulerAngles.new(0, 0, newValue - prop))
 		elseif axis == "scaleX" then
 			self:setScale({ x = newValue - prop, y = 0, z = 0 }, finished)
 		elseif axis == "scaleY" then
@@ -275,7 +275,10 @@ function positionable:getPosition()
 	return Vector4.new(0, 0, 0, 0)
 end
 
-function positionable:setRotation(delta)
+function positionable:setRotation(rotation)
+end
+
+function positionable:setRotationDelta(delta)
 end
 
 ---@return EulerAngles

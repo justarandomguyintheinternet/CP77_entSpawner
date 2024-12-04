@@ -167,7 +167,12 @@ function spawnableElement:setPositionDelta(delta)
 	self.spawnable:update()
 end
 
-function spawnableElement:setRotation(delta)
+function spawnableElement:setRotation(rotation)
+	self.spawnable.rotation = rotation
+	self.spawnable:update()
+end
+
+function spawnableElement:setRotationDelta(delta)
 	if delta.roll == 0 and delta.pitch == 0 and delta.yaw == 0 then return end
 
 	if self.rotationRelative then

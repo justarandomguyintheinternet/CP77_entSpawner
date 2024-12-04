@@ -90,7 +90,7 @@ end
 
 -- TODO: Track rotation of group independently, use that for rotation axis for objects (In global space, convert group axis to local space (unit vector - (group axis - object axis)))
 
-function positionableGroup:setRotation(delta)
+function positionableGroup:setRotationDelta(delta)
 	if delta.roll ~= 0 or delta.pitch ~= 0 or delta.yaw == 0 then return end
 
 	local pos = self:getPosition()
@@ -100,7 +100,7 @@ function positionableGroup:setRotation(delta)
 		local relativePosition = utils.subVector(entry:getPosition(), pos)
 		relativePosition = utils.subVector(Vector4.RotateAxis(relativePosition, Vector4.new(0, 0, 1, 0), Deg2Rad(delta.yaw)), relativePosition)
 		entry:setPositionDelta(relativePosition)
-		entry:setRotation(delta)
+		entry:setRotationDelta(delta)
 	end
 end
 

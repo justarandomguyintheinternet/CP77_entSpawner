@@ -148,8 +148,12 @@ function spawnedUI.findCommonParent(elements)
     return spawnedUI.getElementByPath(commonPath)
 end
 
-local function hotkeyRunCondition()
+local function hotkeyRunConditionProperties()
     return input.context.hierarchy.hovered or input.context.hierarchy.focused or (editor.active and (input.context.viewport.hovered or input.context.viewport.focused))
+end
+
+local function hotkeyRunConditionGlobal()
+    return input.context.hierarchy.hovered or input.context.viewport.hovered
 end
 
 function spawnedUI.registerHotkeys()
@@ -163,7 +167,7 @@ function spawnedUI.registerHotkeys()
         for _, entry in pairs(spawnedUI.paths) do
             entry.ref:setSelected(true)
         end
-    end)
+    end, hotkeyRunConditionGlobal)
     input.registerImGuiHotkey({ ImGuiKey.S, ImGuiKey.LeftCtrl }, function()
         for _, entry in pairs(spawnedUI.paths) do
             if utils.isA(entry.ref, "positionableGroup") and entry.ref.parent ~= nil and entry.ref.parent:isRoot(true) then
@@ -209,15 +213,15 @@ function spawnedUI.registerHotkeys()
         spawnedUI.moveToNewGroup(true)
     end)
 
-    -- Inputs that might get pressed while using properties panel, so use hotkeyRunCondition
+    -- Inputs that might get pressed while using properties panel, so use hotkeyRunConditionProperties
     input.registerImGuiHotkey({ ImGuiKey.Backspace }, function()
         if #spawnedUI.selectedPaths == 0 then return end
         spawnedUI.moveToRoot(true)
-    end, hotkeyRunCondition)
+    end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.Escape }, function()
         if #spawnedUI.selectedPaths == 0 then return end
         spawnedUI.unselectAll()
-    end, hotkeyRunCondition)
+    end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.H }, function()
         if #spawnedUI.selectedPaths == 0 then return end
 
@@ -239,11 +243,11 @@ function spawnedUI.registerHotkeys()
                 end
             end
         })
-    end, hotkeyRunCondition)
+    end, hotkeyRunConditionProperties)
 
     -- Open context menu for selected from editor mode
     input.registerMouseAction(ImGuiMouseButton.Right, function()
-        if #spawnedUI.selectedPaths == 0 or editor.grab then return end
+        if #spawnedUI.selectedPaths == 0 or editor.grab or editor.rotate then return end
 
         spawnedUI.openContextMenu.state = true
         spawnedUI.openContextMenu.path = spawnedUI.selectedPaths[1].path

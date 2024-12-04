@@ -14,10 +14,10 @@ local history = require("modules/utils/history")
 ---@field suspendState boolean
 ---@field hoveredArrow string
 ---@field currentAxis string
----@field dragOriginalDiff number?
+---@field originalDiff table?
 ---@field grab boolean
 ---@field rotate boolean
----@field originalPos Vector4?
+---@field originalPosition Vector4?
 ---@field originalRotation EulerAngles?
 local editor = {
     active = false,
@@ -28,10 +28,10 @@ local editor = {
     suspendState = false,
     hoveredArrow = "none",
     currentAxis = "none",
-    dragOriginalDiff = nil,
+    originalDiff = {pos = nil, rot = nil},
     grab = false,
     rotate = false,
-    originalPos = nil,
+    originalPosition = nil,
     originalRotation = nil
 }
 
@@ -57,15 +57,31 @@ function editor.updateArrowColor()
     visualizer.highlightArrow(selected.spawnable:getEntity(), editor.currentAxis)
 end
 
-function editor.updateGrabbedAxis()
-    if not editor.grab then return end
+function editor.updateCurrentAxis()
+    if not editor.grab and not editor.rotate then return end
 
     if editor.currentAxis ~= "none" then
         local element = editor.getSelected()
         if not element then return end
 
-        element:setPosition(editor.originalPos)
-        editor.dragOriginalDiff = nil
+        element:setPosition(editor.originalPosition)
+        element:setRotation(editor.originalRotation)
+
+        editor.originalDiff.pos = nil
+        editor.originalDiff.rot = nil
+    end
+end
+
+function editor.toggleTransform(transformationType)
+    if editor.currentAxis ~= "none" then return end
+
+    local selected = editor.getSelected()
+
+    if selected and utils.isA(selected, "positionable") then
+        editor.grab = transformationType == "translate" and true or false
+        editor.rotate = transformationType == "rotate" and true or false
+        editor.originalPosition = Vector4.new(selected:getPosition())
+        editor.originalRotation = EulerAngles.new(selected:getRotation())
     end
 end
 
@@ -83,7 +99,8 @@ function editor.init(spawner)
         if not element or editor.currentAxis == "none" then return end
 
         editor.currentAxis = "none"
-        element:setPosition(editor.originalPos)
+        element:setPosition(editor.originalPosition)
+        element:setRotation(editor.originalRotation)
     end, onViewport)
 
     input.registerMouseAction(ImGuiMouseButton.Left, function ()
@@ -91,6 +108,7 @@ function editor.init(spawner)
             editor.setTarget()
         end
         editor.grab = false
+        editor.rotate = false
     end,
     function ()
         return editor.active and input.context.viewport.hovered
@@ -101,25 +119,12 @@ function editor.init(spawner)
     end)
 
     input.registerImGuiHotkey({ ImGuiKey.G }, function ()
-        if editor.currentAxis ~= "none" then return end
-
-        local selected = editor.getSelected()
-
-        if selected and utils.isA(selected, "positionable") then
-            editor.grab = true
-            editor.originalPos = Vector4.new(selected:getPosition())
-        end
+        editor.toggleTransform("translate")
+        print(editor.originalRotation)
     end, onViewport)
 
     input.registerImGuiHotkey({ ImGuiKey.R }, function ()
-        if editor.currentAxis ~= "none" then return end
-
-        local selected = editor.getSelected()
-
-        if selected and utils.isA(selected, "positionable") then
-            editor.rotate = true
-            editor.originalRotation = EulerAngles.new(selected:getRotation())
-        end
+        editor.toggleTransform("rotate")
     end, onViewport)
 
     input.registerImGuiHotkey({ ImGuiKey.X }, function ()
@@ -131,7 +136,7 @@ function editor.init(spawner)
             editor.currentAxis = "x"
         end
         editor.updateArrowColor()
-        editor.updateGrabbedAxis()
+        editor.updateCurrentAxis()
     end, onViewport)
 
     input.registerImGuiHotkey({ ImGuiKey.Y }, function ()
@@ -143,7 +148,7 @@ function editor.init(spawner)
             editor.currentAxis = "y"
         end
         editor.updateArrowColor()
-        editor.updateGrabbedAxis()
+        editor.updateCurrentAxis()
     end, onViewport)
 
     input.registerImGuiHotkey({ ImGuiKey.Z }, function ()
@@ -155,7 +160,7 @@ function editor.init(spawner)
             editor.currentAxis = "z"
         end
         editor.updateArrowColor()
-        editor.updateGrabbedAxis()
+        editor.updateCurrentAxis()
     end, onViewport)
 
     --TODO: depth menu
@@ -172,7 +177,7 @@ function editor.centerCamera()
     end
 
     local size = singleTarget:getSize()
-    local distance = math.min(5, math.max(size.x, size.y, size.z, 1) * 1.35)
+    local distance = math.min(5, math.max(size.x, size.y, size.z, 1) * 2)
     if #editor.spawnedUI.selectedPaths > 1 then
         pos = Vector4.new(spawnedUI.multiSelectGroup:getPosition())
         distance = editor.camera.distance
@@ -274,7 +279,7 @@ function editor.checkArrow()
     if #editor.spawnedUI.selectedPaths ~= 1 or editor.currentAxis ~= "none" then return end
 
     local selected = editor.spawnedUI.selectedPaths[1].ref.spawnable
-    if not selected:isSpawned() then return end
+    if not selected or not selected:isSpawned() then return end
 
     local ray = editor.getScreenToWorldRay()
     local arrowWidth = 0.05
@@ -312,25 +317,28 @@ end
 -- TODO:
     -- Rotation
     -- Scale
-    -- Fix spawned new not selected
-    -- Fix hotkeys working when on other main tab / not hierarchy
 
 function editor.updateDrag()
     if ImGui.IsMouseDragging(0, 0) then
         if editor.hoveredArrow ~= "none" then
             editor.currentAxis = editor.hoveredArrow
         end
-    elseif not editor.grab then
+    elseif not editor.grab and not editor.rotate then
         if editor.currentAxis ~= "none" then
+            -- Record change into history
             local element = editor.getSelected()
-            local new = Vector4.new(element:getPosition())
-            element:setPosition(editor.originalPos)
+            local newPosition = Vector4.new(element:getPosition())
+            local newRotation = EulerAngles.new(element:getRotation())
+            element:setPosition(editor.originalPosition)
+            element:setRotation(editor.originalRotation)
             history.addAction(history.getElementChange(element))
-            element:setPosition(new)
+            element:setPosition(newPosition)
+            element:setRotation(newRotation)
         end
 
         editor.currentAxis = "none"
-        editor.dragOriginalDiff = nil
+        editor.originalDiff.pos = nil
+        editor.originalDiff.rot = nil
     end
 
     if editor.currentAxis == "none" then return end
@@ -366,12 +374,36 @@ function editor.updateDrag()
 
     local diff = rotation:ToQuat():Transform(offset)
 
-    if not editor.dragOriginalDiff then
-        editor.dragOriginalDiff = diff
-        editor.originalPos = Vector4.new(position)
+    if not editor.originalDiff.pos then
+        editor.originalDiff.pos = diff
+        editor.originalPosition = Vector4.new(position)
+        editor.originalRotation = EulerAngles.new(rotation)
     end
 
-    selected:setPositionDelta(Vector4.new(diff.x - editor.dragOriginalDiff.x, diff.y - editor.dragOriginalDiff.y, diff.z - editor.dragOriginalDiff.z))
+    if editor.grab or ImGui.IsMouseDragging(0, 0) then
+        selected:setPositionDelta(Vector4.new(diff.x - editor.originalDiff.pos.x, diff.y - editor.originalDiff.pos.y, diff.z - editor.originalDiff.pos.z))
+    elseif editor.rotate then
+        local cam = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
+        local normal = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation():GetForward()
+        normal.x = -normal.x
+        normal.y = -normal.y
+        normal.z = -normal.z
+
+        local hit = intersection.getPlaneIntersection(cam, editor.getScreenToWorldRay(), position, normal)
+        local dir = utils.subVector(hit.position, position):Normalize()
+
+        local diff = Quaternion.MulInverse(EulerAngles.new(0, 0, 0):ToQuat(), GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation():ToQuat())
+        dir = diff:Transform(dir)
+        local angle = math.atan2(dir.z, dir.x) * 180/math.pi
+
+        if not editor.originalDiff.rot then
+            editor.originalDiff.rot = angle
+        end
+
+        local original = EulerAngles.new(editor.originalRotation)
+        original.yaw = original.yaw + angle - editor.originalDiff.rot
+        selected:setRotation(original)
+    end
 end
 
 function editor.onDraw()
