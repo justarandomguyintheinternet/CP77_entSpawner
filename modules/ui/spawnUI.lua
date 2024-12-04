@@ -31,7 +31,8 @@ local types = {
         ["Water Patch"] = require("modules/classes/spawn/visual/waterPatch")
     },
     ["Meta"] = {
-        ["Occluder"] = require("modules/classes/spawn/meta/occluder")
+        ["Occluder"] = require("modules/classes/spawn/meta/occluder"),
+        ["Reflection Probe"] = require("modules/classes/spawn/meta/reflectionProbe")
     }
 }
 
