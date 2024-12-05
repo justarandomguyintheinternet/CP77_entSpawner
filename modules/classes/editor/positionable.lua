@@ -286,7 +286,7 @@ function positionable:getRotation()
 	return EulerAngles.new(0, 0, 0)
 end
 
-function positionable:setScale(scale)
+function positionable:setScale(scale, finished)
 
 end
 

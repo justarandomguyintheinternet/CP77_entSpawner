@@ -17,13 +17,15 @@ function exportUI.init(spawner)
         if file.name:match("^.+(%..+)$") == ".json" then
             local data = config.loadFile("data/exportTemplates/" .. file.name)
 
-            for key, group in pairs(data.groups) do
-                if not config.fileExists("data/objects/" .. group.name .. ".json") then
-                    data.groups[key] = nil
+            if data.groups then
+                for key, group in pairs(data.groups) do
+                    if not config.fileExists("data/objects/" .. group.name .. ".json") then
+                        data.groups[key] = nil
+                    end
                 end
-            end
 
-            exportUI.templates[data.projectName] = data
+                exportUI.templates[data.projectName] = data
+            end
         end
     end
 

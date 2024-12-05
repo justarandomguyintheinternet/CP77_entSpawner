@@ -198,7 +198,7 @@ function spawnableElement:getRotation()
 end
 
 function spawnableElement:getScale()
-	if self.spawnable.scale then return self.spawnable.scale end
+	if self.spawnable.scale then return Vector4.new(self.spawnable.scale.x, self.spawnable.scale.y, self.spawnable.scale.z, 0) end
 
 	return Vector4.new(1, 1, 1, 0)
 end
@@ -210,6 +210,16 @@ function spawnableElement:setScaleDelta(delta, finished)
 	if self.scaleLocked and delta.x ~= 0 then self.spawnable.scale.y = self.spawnable.scale.x  self.spawnable.scale.z = self.spawnable.scale.x end
 	if self.scaleLocked and delta.y ~= 0 then self.spawnable.scale.x = self.spawnable.scale.y  self.spawnable.scale.z = self.spawnable.scale.y end
 	if self.scaleLocked and delta.z ~= 0 then self.spawnable.scale.y = self.spawnable.scale.z  self.spawnable.scale.x = self.spawnable.scale.z end
+
+	self.spawnable:updateScale(finished)
+end
+
+function spawnableElement:setScale(scale, finished)
+	if not self.hasScale then return end
+
+	self.spawnable.scale.x = scale.x
+	self.spawnable.scale.y = scale.y
+	self.spawnable.scale.z = scale.z
 
 	self.spawnable:updateScale(finished)
 end

@@ -63,7 +63,7 @@ function reflection:onAssemble(entity)
     component.streamingDistance = self.streamingDistance
     entity:AddComponent(component)
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
     visualizer.toggleAll(entity, self.previewed)
 end
 
@@ -99,7 +99,7 @@ function reflection:updateScale(finished)
     local entity = self:getEntity()
     if not entity then return end
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
     visualizer.updateScale(entity, self.scale, "box")
 end
 
@@ -107,12 +107,6 @@ function reflection:getSize()
     return self.scale
 end
 
-function reflection:getVisualizerSize()
-    local size = self:getSize()
-
-    local max = math.min(math.max(size.x, size.y, size.z, 1.5) * 0.5, 3)
-    return { x = max, y = max, z = max }
-end
 
 function reflection:draw()
     spawnable.draw(self)

@@ -67,7 +67,7 @@ function editor.init(spawner)
         editor.currentAxis = "none"
         element:setPosition(editor.originalPosition)
         element:setRotation(editor.originalRotation)
-        element:setScale(editor.originalScale)
+        element:setScale(editor.originalScale, true)
 
         editor.originalDiff.pos = nil
         editor.originalDiff.rot = nil
@@ -144,17 +144,13 @@ function editor.init(spawner)
         editor.updateCurrentAxis()
     end, viewportHovered)
 
-    --TODO: depth menu
+    --TODO: depth menu, moving groups
 end
 
 function editor.getSelected()
-    if #editor.spawnedUI.selectedPaths == 0 then return end
+    if #editor.spawnedUI.selectedPaths ~= 1 then return end
 
-    if #editor.spawnedUI.selectedPaths == 1 then
-        return editor.spawnedUI.selectedPaths[1].ref
-    else
-        return editor.spawnedUI.multiSelectGroup
-    end
+    return editor.spawnedUI.selectedPaths[1].ref
 end
 
 function editor.centerCamera()
@@ -281,9 +277,12 @@ function editor.updateCurrentAxis()
 
         element:setPosition(editor.originalPosition)
         element:setRotation(editor.originalRotation)
+        element:setScale(editor.originalScale, true)
 
+        -- Might remove this, makes things snap to cursor instantly (might be good, might be bad)
         editor.originalDiff.pos = nil
         editor.originalDiff.rot = nil
+        editor.originalDiff.scale = nil
     end
 end
 
@@ -313,14 +312,19 @@ function editor.recordChange()
     local element = editor.getSelected()
     local newPosition = Vector4.new(element:getPosition())
     local newRotation = EulerAngles.new(element:getRotation())
+    local newScale = Vector4.new(element:getScale())
+
     element:setPosition(editor.originalPosition)
     element:setRotation(editor.originalRotation)
+    element:setScale(editor.originalScale, false)
     history.addAction(history.getElementChange(element))
     element:setPosition(newPosition)
     element:setRotation(newRotation)
+    element:setScale(newScale, true)
 
     editor.originalDiff.pos = nil
     editor.originalDiff.rot = nil
+    editor.originalDiff.scale = nil
 end
 
 function editor.checkArrow()
@@ -367,9 +371,6 @@ function editor.checkArrow()
     visualizer.highlightArrow(selected:getEntity(), editor.hoveredArrow)
 end
 
--- TODO:
-    -- Scale
-
 function editor.getScreenRelativeToPoint(position)
     local cam = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
     local normal = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation():GetForward()
@@ -402,7 +403,13 @@ function editor.updateDrag()
     if editor.currentAxis == "none" then return end
 
     ---@type positionable
-    local selected = editor.spawnedUI.selectedPaths[1].ref
+    local selected = editor.getSelected()
+
+    if not selected then
+        editor.currentAxis = "none"
+        return
+    end
+
     local rotation = selected:getRotation()
     local position = selected:getPosition()
     local scale = selected:getScale()
@@ -423,27 +430,31 @@ function editor.updateDrag()
         axis.z.mult = 1
     end
 
-    if not editor.originalPosition then
+    if editor.currentAxis == "all" and editor.scale then
+        axis.x.mult = 1
+        axis.y.mult = 1
+        axis.z.mult = 1
+    end
+
+    local offset = Vector4.new(0, 0, 0, 0)
+    for key, data in pairs(axis) do
+        if data.mult ~= 0 then
+            local t, _ = intersection.getTClosestToRay(position, data.dir, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), editor.getScreenToWorldRay())
+            offset[key] = t
+        end
+    end
+
+    local diff = rotation:ToQuat():Transform(offset)
+
+    if not editor.originalDiff.pos then
+        editor.originalDiff.pos = diff
+
         editor.originalPosition = Vector4.new(position)
         editor.originalRotation = EulerAngles.new(rotation)
-        editor.originalScale = { x = scale.x, y = scale.y, z = scale.z }
+        editor.originalScale = Vector4.new(scale)
     end
 
     if editor.grab or dragging then
-        local offset = Vector4.new(0, 0, 0, 0)
-        for key, data in pairs(axis) do
-            if data.mult ~= 0 then
-                local t, _ = intersection.getTClosestToRay(position, data.dir, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), editor.getScreenToWorldRay())
-                offset[key] = t
-            end
-        end
-
-        local diff = rotation:ToQuat():Transform(offset)
-
-        if not editor.originalDiff.pos then
-            editor.originalDiff.pos = diff
-        end
-
         selected:setPositionDelta(Vector4.new(diff.x - editor.originalDiff.pos.x, diff.y - editor.originalDiff.pos.y, diff.z - editor.originalDiff.pos.z))
     elseif editor.rotate then
         local dir = editor.getScreenRelativeToPoint(position):Normalize()
@@ -460,9 +471,18 @@ function editor.updateDrag()
 
         selected:setRotation(original)
     elseif editor.scale then
+        local distance = Vector4.Length(editor.getScreenRelativeToPoint(position))
 
+        if not editor.originalDiff.scale then
+            editor.originalDiff.scale = distance
+        end
 
-        print("scale", Vector4.Length(editor.getScreenRelativeToPoint(position)))
+        local original = Vector4.new(editor.originalScale)
+        original.x = original.x + (distance - editor.originalDiff.scale) * axis.x.mult
+        original.y = original.y + (distance - editor.originalDiff.scale) * axis.y.mult
+        original.z = original.z + (distance - editor.originalDiff.scale) * axis.z.mult
+
+        selected:setScale(original, false)
     end
 end
 
