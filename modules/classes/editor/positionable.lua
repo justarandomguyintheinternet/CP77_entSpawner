@@ -186,11 +186,11 @@ function positionable:drawProp(prop, name, axis)
 		elseif axis == "yaw" then
 			self:setRotationDelta(EulerAngles.new(0, 0, newValue - prop))
 		elseif axis == "scaleX" then
-			self:setScale({ x = newValue - prop, y = 0, z = 0 }, finished)
+			self:setScaleDelta({ x = newValue - prop, y = 0, z = 0 }, finished)
 		elseif axis == "scaleY" then
-			self:setScale({ x = 0, y = newValue - prop, z = 0 }, finished)
+			self:setScaleDelta({ x = 0, y = newValue - prop, z = 0 }, finished)
 		elseif axis == "scaleZ" then
-			self:setScale({ x = 0, y = 0, z = newValue - prop }, finished)
+			self:setScaleDelta({ x = 0, y = 0, z = newValue - prop }, finished)
 		end
     end
 end
@@ -286,7 +286,11 @@ function positionable:getRotation()
 	return EulerAngles.new(0, 0, 0)
 end
 
-function positionable:setScale(delta, finished)
+function positionable:setScale(scale)
+
+end
+
+function positionable:setScaleDelta(delta, finished)
 
 end
 

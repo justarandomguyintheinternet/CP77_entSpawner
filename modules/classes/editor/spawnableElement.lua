@@ -2,6 +2,7 @@ local utils = require("modules/utils/utils")
 local visualizer = require("modules/utils/visualizer")
 local settings = require("modules/utils/settings")
 local editor = require("modules/utils/editor/editor")
+local Cron = require("modules/utils/Cron")
 
 local positionable = require("modules/classes/editor/positionable")
 
@@ -48,14 +49,17 @@ function spawnableElement:load(data, silent)
 	self.spawnable:registerSpawnedAndAttachedCallback(function (entity)
 		-- TODO: Check for only selected
 		-- Force update of outline effect
-		if settings.gizmoOnSelected or editor.active then
-			self:setVisualizerState(self.selected, entity)
-			self:setVisualizerDirection("none")
-		end
 
-		local original = self.selected
-		self.selected = false
-		self:setSelected(original, entity)
+		Cron.After(1, function ()
+			if settings.gizmoOnSelected or editor.active then
+				self:setVisualizerState(self.selected, entity)
+				self:setVisualizerDirection("none")
+			end
+
+			local original = self.selected
+			self.selected = false
+			self:setSelected(original, entity)
+		end)
 	end)
 end
 
@@ -194,9 +198,11 @@ end
 
 function spawnableElement:getScale()
 	if self.spawnable.scale then return self.spawnable.scale end
+
+	return Vector4.new(1, 1, 1, 0)
 end
 
-function spawnableElement:setScale(delta, finished)
+function spawnableElement:setScaleDelta(delta, finished)
 	self.spawnable.scale.x = self.spawnable.scale.x + delta.x
 	self.spawnable.scale.y = self.spawnable.scale.y + delta.y
 	self.spawnable.scale.z = self.spawnable.scale.z + delta.z

@@ -247,7 +247,7 @@ function spawnedUI.registerHotkeys()
 
     -- Open context menu for selected from editor mode
     input.registerMouseAction(ImGuiMouseButton.Right, function()
-        if #spawnedUI.selectedPaths == 0 or editor.grab or editor.rotate then return end
+        if #spawnedUI.selectedPaths == 0 or editor.grab or editor.rotate or editor.scale then return end
 
         spawnedUI.openContextMenu.state = true
         spawnedUI.openContextMenu.path = spawnedUI.selectedPaths[1].path
@@ -769,6 +769,9 @@ function spawnedUI.drawHierarchy()
     spawnedUI.cellPadding = 3 * style.viewSize
 
     local _, ySpace = ImGui.GetContentRegionAvail()
+
+    if ySpace < 0 then return end
+
     if ySpace - settings.editorBottomSize < 75 * style.viewSize then
         settings.editorBottomSize = ySpace - 75 * style.viewSize
     end
