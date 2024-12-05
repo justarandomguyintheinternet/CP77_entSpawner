@@ -50,15 +50,16 @@ function spawnableElement:load(data, silent)
 		-- TODO: Check for only selected
 		-- Force update of outline effect
 
-		Cron.After(1, function ()
+		-- Delay is needed as entities need some time (?). Its fine for other types tho...
+		Cron.After(0.05, function ()
 			if settings.gizmoOnSelected or editor.active then
-				self:setVisualizerState(self.selected, entity)
+				self:setVisualizerState(self.selected)
 				self:setVisualizerDirection("none")
 			end
 
 			local original = self.selected
 			self.selected = false
-			self:setSelected(original, entity)
+			self:setSelected(original)
 		end)
 	end)
 end
@@ -81,7 +82,7 @@ function spawnableElement:getGroupedProperties()
 	return properties
 end
 
-function spawnableElement:setSelected(state, entity)
+function spawnableElement:setSelected(state)
 	local update = self.selected ~= state
 
 	positionable.setSelected(self, state)
@@ -90,9 +91,9 @@ function spawnableElement:setSelected(state, entity)
 	if not self.spawnable:isSpawned() then return end
 
 	if state then
-		utils.sendOutlineEvent(self.spawnable:getEntity() or entity, settings.outlineColor + 1)
+		self.spawnable:setOutline(settings.outlineColor + 1)
 	else
-		utils.sendOutlineEvent(self.spawnable:getEntity() or entity, 0)
+		self.spawnable:setOutline(0)
 	end
 end
 
@@ -120,11 +121,11 @@ function spawnableElement:setHiddenByParent(state)
 	end
 end
 
-function spawnableElement:setVisualizerState(state, entity)
+function spawnableElement:setVisualizerState(state)
 	positionable.setVisualizerState(self, state)
 
 	if not self.spawnable:isSpawned() then return end
-	visualizer.showArrows(self.spawnable:getEntity() or entity, self.visualizerState)
+	visualizer.showArrows(self.spawnable:getEntity(), self.visualizerState)
 end
 
 function spawnableElement:setVisualizerDirection(direction)

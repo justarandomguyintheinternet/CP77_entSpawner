@@ -16,6 +16,7 @@ local history = require("modules/utils/history")
 ---@field public position Vector4
 ---@field public rotation EulerAngles
 ---@field protected entityID entEntityID
+---@field protected entity entEntity?
 ---@field protected spawned boolean
 ---@field protected spawning boolean
 ---@field public primaryRange number
@@ -31,6 +32,7 @@ local history = require("modules/utils/history")
 ---@field public previewNote string
 ---@field public icon string
 ---@field private rotationRelative boolean
+---@field protected outline integer
 ---@field private spawnedAndCachedCallback function[]
 local spawnable = {}
 
@@ -53,6 +55,7 @@ function spawnable:new()
     o.position = Vector4.new(0, 0, 0, 0)
     o.rotation = EulerAngles.new(0, 0, 0)
     o.entityID = entEntityID.new({hash = 0})
+    o.entity = nil
     o.spawned = false
     o.spawning = false
     o.spawnedAndCachedCallback = {}
@@ -66,6 +69,7 @@ function spawnable:new()
     o.isHovered = false
     o.arrowDirection = "none"
     o.rotationRelative = false
+    o.outline = 0
 
     o.object = object
 
@@ -104,6 +108,7 @@ function spawnable:spawn()
     self.spawning = true
 
     builder.registerAssembleCallback(self.entityID, function (entity)
+        self.entity = entity
         self:onAssemble(entity)
     end)
 
@@ -123,6 +128,7 @@ function spawnable:despawn()
         Game.GetStaticEntitySystem():DespawnEntity(self.entityID)
     end
     self.spawned = false
+    self.entity = nil
 end
 
 function spawnable:respawn()
@@ -144,12 +150,19 @@ function spawnable:update()
     self:getEntity():SetWorldTransform(transform)
 end
 
+function spawnable:setOutline(color)
+    if not self:isSpawned() then return end
+
+    self.outline = color
+    utils.sendOutlineEvent(self:getEntity(), color)
+end
+
 ---Called when one of the control UI widgets is released
 function spawnable:onEdited(edited) end
 
 ---@return entEntity?
 function spawnable:getEntity()
-    return Game.GetStaticEntitySystem():GetEntity(self.entityID)
+    return Game.GetStaticEntitySystem():GetEntity(self.entityID) or self.entity
 end
 
 --- Generate valid name from given name / path

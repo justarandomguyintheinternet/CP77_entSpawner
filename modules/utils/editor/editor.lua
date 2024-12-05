@@ -68,6 +68,10 @@ function editor.init(spawner)
         element:setPosition(editor.originalPosition)
         element:setRotation(editor.originalRotation)
         element:setScale(editor.originalScale)
+
+        editor.originalDiff.pos = nil
+        editor.originalDiff.rot = nil
+        editor.originalDiff.scale = nil
     end, viewportFocused)
 
     input.registerMouseAction(ImGuiMouseButton.Left, function ()
@@ -178,16 +182,16 @@ function editor.removeHighlight(onlySelected)
     local paths = onlySelected and editor.spawnedUI.selectedPaths or editor.spawnedUI.paths
 
     for _, selected in pairs(paths) do
-        if utils.isA(selected.ref, "spawnableElement") and selected.ref.spawnable:isSpawned() then
-            utils.sendOutlineEvent(selected.ref.spawnable:getEntity(), 0)
+        if utils.isA(selected.ref, "spawnableElement") then
+            selected.ref.spawnable:setOutline(0)
         end
     end
 end
 
 function editor.addHighlightToSelected()
     for _, selected in pairs(editor.spawnedUI.selectedPaths) do
-        if utils.isA(selected.ref, "spawnableElement") and selected.ref.spawnable:isSpawned() then
-            utils.sendOutlineEvent(selected.ref.spawnable:getEntity(), settings.outlineColor + 1)
+        if utils.isA(selected.ref, "spawnableElement") then
+            selected.ref.spawnable:setOutline(settings.outlineColor + 1)
         end
     end
 end
@@ -419,25 +423,27 @@ function editor.updateDrag()
         axis.z.mult = 1
     end
 
-    -- Position
-    local offset = Vector4.new(0, 0, 0, 0)
-    for key, data in pairs(axis) do
-        if data.mult ~= 0 then
-            local t, _ = intersection.getTClosestToRay(position, data.dir, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), editor.getScreenToWorldRay())
-            offset[key] = t
-        end
-    end
-
-    local diff = rotation:ToQuat():Transform(offset)
-
-    if not editor.originalDiff.pos then
-        editor.originalDiff.pos = diff
+    if not editor.originalPosition then
         editor.originalPosition = Vector4.new(position)
         editor.originalRotation = EulerAngles.new(rotation)
         editor.originalScale = { x = scale.x, y = scale.y, z = scale.z }
     end
 
     if editor.grab or dragging then
+        local offset = Vector4.new(0, 0, 0, 0)
+        for key, data in pairs(axis) do
+            if data.mult ~= 0 then
+                local t, _ = intersection.getTClosestToRay(position, data.dir, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), editor.getScreenToWorldRay())
+                offset[key] = t
+            end
+        end
+
+        local diff = rotation:ToQuat():Transform(offset)
+
+        if not editor.originalDiff.pos then
+            editor.originalDiff.pos = diff
+        end
+
         selected:setPositionDelta(Vector4.new(diff.x - editor.originalDiff.pos.x, diff.y - editor.originalDiff.pos.y, diff.z - editor.originalDiff.pos.z))
     elseif editor.rotate then
         local dir = editor.getScreenRelativeToPoint(position):Normalize()
@@ -454,7 +460,9 @@ function editor.updateDrag()
 
         selected:setRotation(original)
     elseif editor.scale then
-        print("scale", Vector.Length(editor.getScreenRelativeToPoint(position)))
+
+
+        print("scale", Vector4.Length(editor.getScreenRelativeToPoint(position)))
     end
 end
 

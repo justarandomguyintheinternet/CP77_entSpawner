@@ -122,6 +122,7 @@ function mesh:updateScale()
     component:Toggle(true)
 
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
+    self:setOutline(self.outline)
 end
 
 function mesh:getSize()
@@ -192,6 +193,8 @@ function mesh:draw()
         if entity then
             entity:FindComponentByName("mesh").meshAppearance = CName.new(self.app)
             entity:FindComponentByName("mesh"):LoadAppearance()
+
+            self:setOutline(self.outline)
         end
     end
     style.popGreyedOut(#self.apps == 0)
