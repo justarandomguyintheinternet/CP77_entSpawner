@@ -207,7 +207,8 @@ end
 function entity:draw()
     spawnable.draw(self)
 
-    style.pushGreyedOut(#self.apps == 0 or not self:isSpawned())
+    local greyOut = #self.apps == 0 or not self:isSpawned()
+    style.pushGreyedOut(greyOut)
 
     local list = self.apps
 
@@ -228,7 +229,7 @@ function entity:draw()
             self:respawn()
         end
     end
-    style.popGreyedOut(#self.apps == 0 or not self:isSpawned())
+    style.popGreyedOut(greyOut)
 end
 
 function entity:getProperties()
