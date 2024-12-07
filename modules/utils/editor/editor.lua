@@ -303,6 +303,7 @@ function editor.toggleTransform(transformationType)
 
         editor.originalPosition = Vector4.new(selected:getPosition())
         editor.originalRotation = EulerAngles.new(selected:getRotation())
+        editor.originalScale = Vector4.new(selected:getScale())
         editor.currentAxis = "all"
         editor.updateArrowColor()
     end
