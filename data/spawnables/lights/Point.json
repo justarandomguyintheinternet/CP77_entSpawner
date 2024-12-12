@@ -1,0 +1,21 @@
+{
+    "name": "Point - Default",
+    "headerOpen": true,
+    "type": "object",
+    "spawnable": {
+        "innerAngle": 35,
+        "outerAngle": 90,
+        "lightType": 0,
+        "color": [
+            1,
+            0.99595707654953,
+            0.6502890586853
+        ],
+        "modulePath": "light/light",
+        "dataType": "Static Light",
+        "spawnData": "base\\spawner\\empty_entity.ent",
+        "radius": 25,
+        "ev": 1.5,
+        "intensity": 350
+    }
+}

@@ -164,7 +164,7 @@ function editor.centerCamera()
     end
 
     local size = singleTarget:getSize()
-    local distance = math.min(5, math.max(size.x, size.y, size.z, 1) * 2)
+    local distance = math.min(10, math.max(size.x, size.y, size.z, 1) * 2)
     if #editor.spawnedUI.selectedPaths > 1 then
         pos = Vector4.new(spawnedUI.multiSelectGroup:getPosition())
         distance = editor.camera.distance
@@ -268,7 +268,7 @@ function editor.updateArrowColor()
 end
 
 function editor.updateCurrentAxis()
-    if not editor.grab and not editor.rotate then return end
+    if not editor.grab and not editor.rotate and not editor.scale then return end
 
     if editor.currentAxis ~= "none" then
         local element = editor.getSelected()
@@ -276,7 +276,9 @@ function editor.updateCurrentAxis()
 
         element:setPosition(editor.originalPosition)
         element:setRotation(editor.originalRotation)
-        element:setScale(editor.originalScale, true)
+        if editor.scale then
+            element:setScale(editor.originalScale, false) -- Avoid updating unless necessary, to fix flickering with e.g. colliders
+        end
 
         -- Might remove this, makes things snap to cursor instantly (might be good, might be bad)
         editor.originalDiff.pos = nil
@@ -341,7 +343,7 @@ function editor.checkArrow()
     if not selected or not selected:isSpawned() then return end
 
     local ray = editor.getScreenToWorldRay()
-    local arrowWidth = 0.05
+    local arrowWidth = 0.04 * math.max(selected:getArrowSize().x, selected:getArrowSize().y, selected:getArrowSize().z)
 
     local xHit = intersection.getBoxIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), ray, selected.position, selected.rotation, {
         min = { x = 0, y = -arrowWidth, z = -arrowWidth },

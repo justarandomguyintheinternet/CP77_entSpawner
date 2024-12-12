@@ -106,6 +106,8 @@ function decal:updateScale()
 
     component:Toggle(false)
     component:Toggle(true)
+
+    self:setOutline(self.outline)
 end
 
 ---Respawn the decal to update parameters, if changed

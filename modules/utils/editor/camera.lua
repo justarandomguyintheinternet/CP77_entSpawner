@@ -74,6 +74,8 @@ function camera.toggle(state)
 end
 
 function camera.update()
+    if not GetPlayer() then return end
+
     if camera.transitionTween then
         local done = camera.transitionTween:update(camera.deltaTime)
 

@@ -109,6 +109,11 @@ function builder.getComponentOffset(entity, component)
     local localToWorld = component:GetLocalToWorld()
 
     local posDiff = utils.subVector(localToWorld:GetTranslation(), entity:GetWorldPosition())
+
+    if Vector4.Length(posDiff) > 250 then
+        posDiff = Vector4.new(0, 0, 0)
+    end
+
     local rotDiff = Quaternion.MulInverse(localToWorld:GetRotation():ToQuat(), entity:GetWorldOrientation())
 
     local offset = WorldTransform.new()

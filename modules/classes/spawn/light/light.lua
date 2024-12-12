@@ -1,10 +1,10 @@
-local spawnable = require("modules/classes/spawn/spawnable")
+local visualized = require("modules/classes/spawn/visualized")
 local builder = require("modules/utils/entityBuilder")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 
 ---Class for worldStaticLightNode
----@class light : spawnable
+---@class light : visualized
 ---@field public color {r: number, g: number, b: number}
 ---@field public intensity number
 ---@field public innerAngle number
@@ -29,10 +29,10 @@ local utils = require("modules/utils/utils")
 ---@field private shadowHeaderState boolean
 ---@field private miscHeaderState boolean
 ---@field private contactShadowsTypes table
-local light = setmetatable({}, { __index = spawnable })
+local light = setmetatable({}, { __index = visualized })
 
 function light:new()
-	local o = spawnable.new(self)
+	local o = visualized.new(self)
 
     o.boxColor = {255, 255, 0}
     o.spawnListType = "files"
@@ -68,13 +68,14 @@ function light:new()
 
     o.shadowHeaderState = false
     o.miscHeaderState = false
+    o.previewColor = "yellow"
 
     setmetatable(o, { __index = self })
    	return o
 end
 
 function light:onAssemble(entity)
-    spawnable.onAssemble(self, entity)
+    visualized.onAssemble(self, entity)
 
     local component = gameLightComponent.new()
     component.name = "light"
@@ -102,7 +103,7 @@ function light:onAssemble(entity)
 end
 
 function light:save()
-    local data = spawnable.save(self)
+    local data = visualized.save(self)
     data.color = { self.color[1], self.color[2], self.color[3] }
     data.intensity = self.intensity
     data.innerAngle = self.innerAngle
@@ -149,7 +150,7 @@ function light:updateFull(changed)
 end
 
 function light:draw()
-    spawnable.draw(self)
+    visualized.draw(self)
 
     ImGui.Text("Light Type")
     ImGui.SameLine()
@@ -248,6 +249,8 @@ function light:draw()
         self.autoHideDistance, _, finished = style.trackedDragFloat(self.object, "##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.1f Hide Dist.", 90)
         self:updateFull(finished)
 
+        self:drawPreviewCheckbox()
+
         ImGui.TreePop()
     end
 
@@ -255,7 +258,7 @@ function light:draw()
 end
 
 function light:getProperties()
-    local properties = spawnable.getProperties(self)
+    local properties = visualized.getProperties(self)
     table.insert(properties, {
         id = self.node,
         name = self.dataType,
@@ -267,8 +270,12 @@ function light:getProperties()
     return properties
 end
 
+function light:getVisualizerSize()
+    return { x = 0.05, y = 0.05, z = 0.05 }
+end
+
 function light:export()
-    local data = spawnable.export(self)
+    local data = visualized.export(self)
     data.type = "worldStaticLightNode"
     data.data = {
         autoHideDistance = self.autoHideDistance,
