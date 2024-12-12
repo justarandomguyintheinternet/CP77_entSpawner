@@ -31,7 +31,6 @@ function occluder:new()
 
     o.occluderTypes = utils.enumTable("visWorldOccluderType")
 
-    o.scaleLocked = false
     o.scale = { x = 1, y = 1, z = 1 }
     o.occluderType = 0
     o.occluderMesh = 1

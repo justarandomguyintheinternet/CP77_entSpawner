@@ -16,7 +16,6 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@field public scale {x: number, y: number, z: number}
 ---@field public bBox table {min: Vector4, max: Vector4}
 ---@field public colliderShape integer
----@field public scaleLocked boolean
 ---@field public hideGenerate boolean
 local mesh = setmetatable({}, { __index = spawnable })
 
@@ -37,7 +36,6 @@ function mesh:new()
     o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
 
     o.colliderShape = 0
-    o.scaleLocked = true
     o.hideGenerate = false
 
     o.uk10 = 1040
@@ -105,7 +103,6 @@ end
 function mesh:save()
     local data = spawnable.save(self)
     data.scale = { x = self.scale.x, y = self.scale.y, z = self.scale.z }
-    data.scaleLocked = self.scaleLocked
 
     return data
 end

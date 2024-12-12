@@ -9,7 +9,6 @@ local intersection = require("modules/utils/editor/intersection")
 ---@field private verticalFlip boolean
 ---@field private autoHideDistance number
 ---@field private scale {x: number, y: number, z: number}
----@field private scaleLocked boolean
 local decal = setmetatable({}, { __index = spawnable })
 
 function decal:new()
@@ -28,8 +27,6 @@ function decal:new()
     o.verticalFlip = false
     o.autoHideDistance = 150
     o.scale = { x = 1, y = 1, z = 1 }
-
-    o.scaleLocked = true
 
     setmetatable(o, { __index = self })
    	return o
@@ -67,7 +64,6 @@ function decal:save()
     data.verticalFlip = self.verticalFlip
     data.autoHideDistance = self.autoHideDistance
     data.scale = { x = self.scale.x, y = self.scale.y, z = self.scale.z }
-    data.scaleLocked = self.scaleLocked
 
     return data
 end

@@ -209,7 +209,6 @@ function editor.getRaySceneIntersection(ray, origin)
 
             if hit.hit then
                 hit.element = element.ref
-                -- TODO: Modify distance and hit position based on type (keep for physical and shape, make a bit worse for bbox)
                 table.insert(hits, hit)
             end
         end

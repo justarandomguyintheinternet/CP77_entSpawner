@@ -27,7 +27,6 @@ function reflection:new()
     o.description = "Places a reflection probe of variable size. Can be used to make indoors have appropriate base lighting."
     o.icon = IconGlyphs.HomeLightbulbOutline
 
-    o.scaleLocked = false
     o.scale = { x = 5, y = 5, z = 5 }
     o.edgeScale = { x = 1, y = 1, z = 1 }
     o.previewed = true
@@ -106,7 +105,6 @@ end
 function reflection:getSize()
     return self.scale
 end
-
 
 function reflection:draw()
     spawnable.draw(self)

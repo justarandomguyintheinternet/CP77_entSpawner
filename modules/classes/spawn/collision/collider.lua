@@ -16,9 +16,6 @@ local colors = { "red", "green", "blue" }
 ---@field private material integer
 ---@field private preset integer
 ---@field private shapeTypes table
----@field private extents {x : number, y : number, z : number}
----@field private height number
----@field private radius number
 ---@field public previewed boolean
 local collider = setmetatable({}, { __index = spawnable })
 
@@ -40,13 +37,25 @@ function collider:new()
 
     o.shapeTypes = { "Box", "Capsule", "Sphere" }
 
-    o.extents = { x = 1, y = 1, z = 1 }
-    o.height = 3
-    o.radius = 1
+    o.scale = { x = 1, y = 1, z = 1 }
     o.previewed = true
 
     setmetatable(o, { __index = self })
    	return o
+end
+
+function collider:loadSpawnData(data, position, rotation)
+    spawnable.loadSpawnData(self, data, position, rotation)
+
+    if data.radius then
+        if self.shape == 0 then
+            self.scale = data.extents
+        elseif self.shape == 1 then
+            self.scale = { x = data.radius, y = data.radius, z = data.height }
+        elseif self.shape == 2 then
+            self.scale = { x = data.radius, y = data.radius, z = data.radius }
+        end
+    end
 end
 
 function collider:onAssemble(entity)
@@ -59,17 +68,17 @@ function collider:onAssemble(entity)
 
     if self.shape == 0 then
         actor = physicsColliderBox.new()
-        actor.halfExtents = ToVector3(self.extents)
-        visualizer.addBox(entity, self.extents, color)
+        actor.halfExtents = ToVector3(self.scale)
+        visualizer.addBox(entity, self.scale, color)
     elseif self.shape == 1 then
         actor = physicsColliderCapsule.new()
-        actor.height = self.height
-        actor.radius = self.radius
-        visualizer.addCapsule(entity, self.radius, self.height, color)
+        actor.height = self.scale.z
+        actor.radius = self.scale.y
+        visualizer.addCapsule(entity, self.scale.y, self.scale.z, color)
     elseif self.shape == 2 then
         actor = physicsColliderSphere.new()
-        actor.radius = self.radius
-        visualizer.addSphere(entity, { x = self.radius, y = self.radius, z = self.radius }, color)
+        actor.radius = self.scale.x
+        visualizer.addSphere(entity, self.scale, color)
     end
 
     actor.material = materials[self.material + 1]
@@ -101,9 +110,6 @@ function collider:save()
     data.shape = self.shape
     data.material = self.material
     data.preset = self.preset
-    data.extents = { x = self.extents.x, y = self.extents.y, z = self.extents.z }
-    data.height = self.height
-    data.radius = self.radius
     data.previewed = self.previewed
     if data.previewed == nil then data.previewed = true end
 
@@ -119,22 +125,11 @@ function collider:getMaterialIndexByName(material)
 end
 
 function collider:getSize()
-    if self.shape == 0 then
-        return self.extents
-    elseif self.shape == 1 then
-        return { x = self.radius, y = self.radius, z = self.height }
-    elseif self.shape == 2 then
-        return { x = self.radius, y = self.radius, z = self.radius }
-    end
+    return self.scale
 end
 
 function collider:getArrowSize()
-    local max = math.max(self.extents.x, self.extents.y, self.extents.z)
-    if self.shape == 1 then
-        max = math.max(self.radius, self.height)
-    elseif self.shape == 2 then
-        max = self.radius
-    end
+    local max = math.max(self.scale.x, self.scale.y, self.scale.z)
 
     max = math.max(max, 1) * 0.5
 
@@ -148,6 +143,36 @@ function collider:updateFull(changed)
     if changed and self:isSpawned() then self:respawn() end
 end
 
+---@protected
+function collider:updateScale(finished)
+    if self.shape == 1 then
+        local width = math.max(self.scale.x, self.scale.y)
+        self.scale.x = width
+        self.scale.y = width
+    elseif self.shape == 2 then
+        local radius = math.max(self.scale.x, self.scale.y, self.scale.z)
+        self.scale = { x = radius, y = radius, z = radius }
+    end
+
+    if finished then
+        self:respawn()
+        return
+    end
+
+    local entity = self:getEntity()
+    if not entity then return end
+
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
+
+    if self.shape == 0 then
+        visualizer.updateScale(entity, self.scale, "box")
+    elseif self.shape == 1 then
+        visualizer.updateCapsuleScale(self:getEntity(), self.scale.y, self.scale.z)
+    elseif self.shape == 2 then
+        visualizer.updateScale(entity, self.scale, "sphere")
+    end
+end
+
 function collider:draw()
     spawnable.draw(self)
 
@@ -156,7 +181,9 @@ function collider:draw()
     ImGui.Text("Collision Shape")
     ImGui.SameLine()
     self.shape, changed = style.trackedCombo(self.object, "##type", self.shape, self.shapeTypes)
-    self:updateFull(changed)
+    if changed then
+        self:updateScale(true)
+    end
 
     ImGui.SameLine()
     self.previewed, changed = style.trackedCheckbox(self.object, "Preview shape", self.previewed)
@@ -174,46 +201,6 @@ function collider:draw()
     ImGui.SameLine()
     self.material, changed = style.trackedCombo(self.object, "##material", self.material, materials)
     self:updateFull(changed)
-
-    if self.shape == 0 then
-        self.extents.x, changed, finished = style.trackedDragFloat(self.object, "##extentsX", self.extents.x, 0.01, 0, 9999, "%.2f X Extents", 100)
-        if changed then
-            visualizer.updateScale(self:getEntity(), self.extents, "box")
-        end
-        self:updateFull(finished)
-        ImGui.SameLine()
-        self.extents.y, changed, finished = style.trackedDragFloat(self.object, "##extentsY", self.extents.y, 0.01, 0, 9999, "%.2f Y Extents", 100)
-        if changed then
-            visualizer.updateScale(self:getEntity(), self.extents, "box")
-        end
-        self:updateFull(finished)
-        ImGui.SameLine()
-        self.extents.z, changed, finished = style.trackedDragFloat(self.object, "##extentsZ", self.extents.z, 0.01, 0, 9999, "%.2f Z Extents", 100)
-        if changed then
-            visualizer.updateScale(self:getEntity(), self.extents, "box")
-        end
-        self:updateFull(finished)
-    elseif self.shape == 1 then
-        self.height, changed, finished = style.trackedDragFloat(self.object, "##height", self.height, 0.01, 0, 9999, "%.2f Height")
-        if changed then
-            visualizer.updateCapsuleScale(self:getEntity(), self.radius, self.height)
-        end
-        self:updateFull(finished)
-        ImGui.SameLine()
-    end
-    if self.shape == 1 or self.shape == 2 then
-        self.radius, changed, finished = style.trackedDragFloat(self.object, "##radius", self.radius, 0.01, 0, 9999, "%.2f Radius")
-        if changed then
-            if self.shape == 1 then
-                visualizer.updateCapsuleScale(self:getEntity(), self.radius, self.height)
-            else
-                visualizer.updateScale(self:getEntity(), { x = self.radius, y = self.radius, z = self.radius }, "sphere")
-            end
-        end
-        self:updateFull(finished)
-    end
-
-    ImGui.PopItemWidth()
 end
 
 function collider:getProperties()
@@ -280,19 +267,19 @@ function collider:export()
     local shapeType
     local size
 	if self.shape == 0 then
-		local max = math.max(self.extents.x, self.extents.y, self.extents.z)
+		local max = math.max(self.scale.x, self.scale.y, self.scale.z)
 		extents = Vector4.new(max, max, max)
         shapeType = "Box"
-        size = self.extents
+        size = self.scale
 	elseif self.shape == 1 then
-		local max = math.max(self.radius, self.height)
+		local max = math.max(self.scale.y, self.scale.z)
 		extents = Vector4.new(max, max, max)
         shapeType = "Capsule"
-        size = Vector4.new(self.radius, self.height, 0, 0)
+        size = Vector4.new(self.scale.y, self.scale.z, 0, 0)
 	elseif self.shape == 2 then
-		extents = Vector4.new(self.radius, self.radius, self.radius)
+		extents = Vector4.new(self.scale.x, self.scale.x, self.scale.x)
         shapeType = "Sphere"
-        size = Vector4.new(self.radius, 0, 0, 0)
+        size = Vector4.new(self.scale.x, 0, 0, 0)
 	end
 
     local rotation = self.rotation:ToQuat()

@@ -47,9 +47,6 @@ function spawnableElement:load(data, silent)
 	self:setVisible(self.visible, true)
 
 	self.spawnable:registerSpawnedAndAttachedCallback(function (entity)
-		-- TODO: Check for only selected
-		-- Force update of outline effect
-
 		-- Delay is needed as entities need some time (?). Its fine for other types tho...
 		Cron.After(0.05, function ()
 			if settings.gizmoOnSelected or editor.active then
