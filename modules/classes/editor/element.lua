@@ -293,6 +293,7 @@ end
 function element:drawName()
 	if not self.newName then self.newName = self.name end
 
+	ImGui.SetNextItemAllowOverlap()
 	self.newName, changed = ImGui.InputTextWithHint('##newname', 'New Name...', self.newName, 100)
 	if ImGui.IsItemDeactivated() then
 		self.editName = false
