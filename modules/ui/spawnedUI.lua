@@ -687,7 +687,6 @@ function spawnedUI.drawElement(element, dummy)
     else
         ImGui.SetNextItemAllowOverlap()
         ImGui.Text(element.name)
-        print(element.hovered, ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
     end
 
     if element.hovered and ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) then
