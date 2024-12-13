@@ -104,4 +104,12 @@ function positionableGroup:setRotationDelta(delta)
 	end
 end
 
+function positionableGroup:dropToSurface()
+	local leafs = self:getPositionableLeafs()
+
+	for _, entry in pairs(leafs) do
+		entry:dropToSurface()
+	end
+end
+
 return positionableGroup

@@ -37,7 +37,10 @@ function builder.hook()
                     if not event then return end
                     if type(event.GetEntity) ~= "function" then return end
 
-                    local entity = event:GetEntity()
+                    local entity
+                    pcall(function ()
+                        entity = event:GetEntity()
+                    end)
 
                     if not entity then return end
 

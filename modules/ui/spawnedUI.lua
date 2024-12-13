@@ -545,6 +545,11 @@ function spawnedUI.drawContextMenu(element, path)
         if ImGui.MenuItem("Move to new group", "CTRL-G") then
             spawnedUI.moveToNewGroup(isMulti, element)
         end
+        if utils.isA(element, "positionable") then
+            if ImGui.MenuItem("Drop to surface", "CTRL-E") then
+                element:dropToSurface()
+            end
+        end
 
         ImGui.EndPopup()
     end

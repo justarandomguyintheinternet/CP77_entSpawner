@@ -3,6 +3,7 @@ local visualizer = require("modules/utils/visualizer")
 local settings = require("modules/utils/settings")
 local editor = require("modules/utils/editor/editor")
 local Cron = require("modules/utils/Cron")
+local intersection = require("modules/utils/editor/intersection")
 
 local positionable = require("modules/classes/editor/positionable")
 
@@ -219,6 +220,26 @@ function spawnableElement:setScale(scale, finished)
 	self.spawnable.scale.z = scale.z
 
 	self.spawnable:updateScale(finished)
+end
+
+function spawnableElement:dropToSurface()
+	local size = self.spawnable:getSize()
+	local bBox = {
+		["min"] = Vector4.new(-size.x / 2, -size.y / 2, -size.z / 2, 0),
+		["max"] = Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0)
+	}
+
+	local origin = intersection.getBoxIntersection(utils.subVector(self.spawnable.position, Vector4.new(0, 0, 999, 0)), Vector4.new(0, 0, 1, 0), self.spawnable.position, self.spawnable.rotation, bBox)
+	if not origin.hit then return end
+
+	origin.position.z = origin.position.z + 0.05
+	local hit = editor.getRaySceneIntersection(Vector4.new(0, 0, -1, 0), origin.position, self.spawnable)
+
+	print(hit.hit, hit.result.position, hit.normal)
+
+	if hit.hit then
+		self:setPosition(utils.addVector(hit.result.position, Vector4.new(0, 0, - self.spawnable.bBox.min.z, 0)))
+	end
 end
 
 function spawnableElement:onEdited()

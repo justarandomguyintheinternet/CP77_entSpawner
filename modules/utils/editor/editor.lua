@@ -22,6 +22,7 @@ local history = require("modules/utils/history")
 ---@field originalPosition Vector4?
 ---@field originalRotation EulerAngles?
 ---@field originalScale Vector4?
+---@field interface gamestateMachineGameScriptInterface?
 local editor = {
     active = false,
     camera = nil,
@@ -38,7 +39,8 @@ local editor = {
     scale = false,
     originalPosition = nil,
     originalRotation = nil,
-    originalScale = nil
+    originalScale = nil,
+    interface = nil
 }
 
 function viewportFocused()
@@ -144,6 +146,9 @@ function editor.init(spawner)
         editor.updateCurrentAxis()
     end, viewportHovered)
 
+    Observe("LocomotionEventsTransition", "OnUpdate", function(_, _, _, interface)
+        editor.interface = interface
+    end)
     --TODO: depth menu, moving groups
 end
 
@@ -200,22 +205,35 @@ function editor.getScreenToWorldRay()
     return ray:Normalize()
 end
 
-function editor.getRaySceneIntersection(ray, origin)
+function editor.getRaySceneIntersection(ray, origin, originSpawnable)
     local hits = {}
 
     for _, element in pairs(editor.spawnedUI.paths) do
         if element.ref.visible and utils.isA(element.ref, "spawnableElement") then
             local hit = element.ref.spawnable:calculateIntersection(origin, ray)
 
-            if hit.hit then
+            if hit.hit and (not originSpawnable or (originSpawnable and element.ref.spawnable ~= originSpawnable)) then
                 hit.element = element.ref
                 table.insert(hits, hit)
             end
         end
     end
 
+    local raycast = editor.interface:RaycastWithASingleGroup(origin, utils.addVector(origin, utils.multVector(ray, 9999)), "PlayerBlocker")
+
     if #hits == 0 then
-        return
+        if raycast:IsValid() then
+            return {
+                result = {
+                    position = Vector4.Vector3To4(raycast.position),
+                    objectRotation = Vector4.Vector3To4(raycast.normal)
+                },
+                isNode = false,
+                hit = true
+            }
+        end
+
+        return { hit = false}
     end
 
     table.sort(hits, function (a, b)
@@ -234,15 +252,36 @@ function editor.getRaySceneIntersection(ray, origin)
     end
     bestHitIdx = math.min(bestHitIdx, #hits)
 
+    if raycast:IsValid() then
+        local distance = Vector4.Vector3To4(raycast.position):Distance(origin)
+
+        if distance + 0.1 < hits[bestHitIdx].distance or distance < 0.1 then
+            return {
+                result = {
+                    position = Vector4.Vector3To4(raycast.position),
+                    objectRotation = Vector4.Vector3To4(raycast.normal)
+                },
+                isNode = false,
+                hit = true
+            }
+        end
+    end
+
     print("Best hit: ", hits[bestHitIdx].position, hits[bestHitIdx].collisionType, hits[bestHitIdx].distance, hits[bestHitIdx].size)
 
-    return hits[bestHitIdx]
+    return {
+        result = hits[bestHitIdx],
+        isNode = true,
+        hit = true
+    }
 end
 
 function editor.setTarget()
     local ray = editor.getScreenToWorldRay()
     local hit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation())
-    if not hit then return end
+    if not hit.hit or not hit.isNode then return end
+
+    hit = hit.result
 
     if not editor.spawnedUI.multiSelectActive() then
         editor.spawnedUI.unselectAll()

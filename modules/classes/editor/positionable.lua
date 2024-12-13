@@ -310,6 +310,10 @@ function positionable:getDirection(direction)
 	end
 end
 
+function positionable:dropToSurface()
+
+end
+
 function positionable:serialize()
 	local data = element.serialize(self)
 
