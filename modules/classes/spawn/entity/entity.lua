@@ -7,7 +7,6 @@ local visualizer = require("modules/utils/visualizer")
 local red = require("modules/utils/redConverter")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
-local entityBuilder = require("modules/utils/entityBuilder")
 
 ---Class for base entity handling
 ---@class entity : spawnable
@@ -200,7 +199,8 @@ function entity:calculateIntersection(origin, ray)
         distance = hit.distance,
         bBox = self.bBox,
         objectOrigin = self.position,
-        objectRotation = self.rotation
+        objectRotation = self.rotation,
+        normal = hit.normal
     }
 end
 

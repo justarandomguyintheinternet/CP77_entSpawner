@@ -162,7 +162,8 @@ function collider:calculateIntersection(origin, ray)
         distance = result.distance,
         bBox = scaledBBox,
         objectOrigin = self.position,
-        objectRotation = self.rotation
+        objectRotation = self.rotation,
+        normal = result.normal
     }
 end
 

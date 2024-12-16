@@ -86,7 +86,8 @@ function visualized:calculateIntersection(origin, ray)
         distance = result.distance,
         bBox = bbox,
         objectOrigin = self.position,
-        objectRotation = self.rotation
+        objectRotation = self.rotation,
+        normal = result.normal
     }
 end
 

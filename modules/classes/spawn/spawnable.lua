@@ -293,7 +293,8 @@ function spawnable:calculateIntersection(origin, ray)
         distance = 0,
         bBox = { min = { x = -size.x / 2, y = -size.y / 2, z = -size.z / 2 }, max = { x = size.x / 2, y = size.y / 2, z = size.z / 2 } },
         objectOrigin = self.position,
-        objectRotation = self.rotation
+        objectRotation = self.rotation,
+        normal = Vector4.new(0, 0, 0, 0)
     }
 end
 

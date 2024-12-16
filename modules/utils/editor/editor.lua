@@ -226,7 +226,7 @@ function editor.getRaySceneIntersection(ray, origin, originSpawnable)
             return {
                 result = {
                     position = Vector4.Vector3To4(raycast.position),
-                    objectRotation = Vector4.Vector3To4(raycast.normal)
+                    normal = Vector4.Vector3To4(raycast.normal)
                 },
                 isNode = false,
                 hit = true
@@ -259,7 +259,7 @@ function editor.getRaySceneIntersection(ray, origin, originSpawnable)
             return {
                 result = {
                     position = Vector4.Vector3To4(raycast.position),
-                    objectRotation = Vector4.Vector3To4(raycast.normal)
+                    normal = Vector4.Vector3To4(raycast.normal)
                 },
                 isNode = false,
                 hit = true

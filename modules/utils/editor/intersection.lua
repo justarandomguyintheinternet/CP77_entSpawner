@@ -71,6 +71,34 @@ function intersection.pointInsideBox(point, boxOrigin, boxRotation, box)
     return true
 end
 
+function intersection.getBoxIntersectionNormals(boxOrigin, boxRotation, box, hitPosition)
+    local matrix = Matrix.BuiltRTS(boxRotation, boxOrigin, Vector4.new(1, 1, 1, 0))
+
+    local delta = utils.subVector(hitPosition, boxOrigin)
+
+    local axis = {
+        ["x"] = matrix:GetAxisX(),
+        ["y"] = matrix:GetAxisY(),
+        ["z"] = matrix:GetAxisZ()
+    }
+
+    local normals = {}
+
+    for axisName, axisDirection in pairs(axis) do
+        local e = axisDirection:Dot(delta) -- Distance of ray origin to box origin along the box's x/y/z axis
+
+        if e < box.min[axisName] + EPSILON * 10 then -- For some reason needs higher epsilon, especially for y-axis
+            table.insert(normals, utils.multVector(axisDirection, -1))
+        end
+
+        if e > box.max[axisName] - EPSILON * 10 then
+            table.insert(normals, axisDirection)
+        end
+    end
+
+    return normals
+end
+
 --https://github.com/opengl-tutorials/ogl/blob/master/misc05_picking/misc05_picking_custom.cpp
 function intersection.getBoxIntersection(rayOrigin, ray, boxOrigin, boxRotation, box)
     local matrix = Matrix.BuiltRTS(boxRotation, boxOrigin, Vector4.new(1, 1, 1, 0))
@@ -107,14 +135,17 @@ function intersection.getBoxIntersection(rayOrigin, ray, boxOrigin, boxRotation,
             end
 
             if tMin > tMax then
-                return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0 }
+                return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0, normal = Vector4.new(0, 0, 0, 0) }
             end
         elseif -e + box.min[axisName] > 0 or -e + box.max[axisName] < 0 then
-            return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0 }
+            return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0, normal = Vector4.new(0, 0, 0, 0) }
         end
     end
 
-    return { hit = true, position = utils.addVector(rayOrigin, utils.multVector(ray:Normalize(), tMin)), distance = tMin }
+    local position = utils.addVector(rayOrigin, utils.multVector(ray:Normalize(), tMin))
+    local normal = intersection.getBoxIntersectionNormals(boxOrigin, boxRotation, box, position)[1] or Vector4.new(0, 0, 0, 0)
+
+    return { hit = true, position = position, normal = normal, distance = tMin }
 end
 
 function intersection.getSphereIntersection(rayOrigin, ray, sphereOrigin, sphereRadius)
@@ -126,15 +157,16 @@ function intersection.getSphereIntersection(rayOrigin, ray, sphereOrigin, sphere
     local discriminant = b * b - 4 * a * c
 
     if discriminant < 0 then
-        return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0 }
+        return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0, normal = Vector4.new(0, 0, 0, 0) }
     else
         local t = - (-b - math.sqrt(discriminant)) / (2 * a)
 
         if t < 0 then
-            return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0 }
+            return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0, normal = Vector4.new(0, 0, 0, 0) }
         end
 
-        return { hit = true, position = utils.addVector(rayOrigin, utils.multVector(ray:Normalize(), t)), distance = t }
+        local position = utils.addVector(rayOrigin, utils.multVector(ray:Normalize(), t))
+        return { hit = true, position = position, distance = t, normal = utils.subVector(position, sphereOrigin):Normalize() }
     end
 end
 

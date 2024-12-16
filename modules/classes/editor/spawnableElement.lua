@@ -235,11 +235,17 @@ function spawnableElement:dropToSurface()
 	origin.position.z = origin.position.z + 0.05
 	local hit = editor.getRaySceneIntersection(Vector4.new(0, 0, -1, 0), origin.position, self.spawnable)
 
-	print(hit.hit, hit.result.position, hit.normal)
+	local target = utils.multVector(hit.result.normal, -1)
+	local current = origin.normal
 
-	if hit.hit then
-		self:setPosition(utils.addVector(hit.result.position, Vector4.new(0, 0, - self.spawnable.bBox.min.z, 0)))
-	end
+	local quatDiff = Quaternion.MulInverse(Quaternion.BuildFromDirectionVector(), Quaternion.BuildFromDirectionVector(origin.normal))
+	local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.spawnable.rotation:ToQuat(), quatDiff)
+
+	self:setRotation(newRotation:ToEulerAngles())
+
+	-- if hit.hit then
+	-- 	self:setPosition(utils.addVector(hit.result.position, Vector4.new(0, 0, - self.spawnable.bBox.min.z, 0)))
+	-- end
 end
 
 function spawnableElement:onEdited()
