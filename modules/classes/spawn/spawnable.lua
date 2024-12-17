@@ -273,6 +273,14 @@ function spawnable:getSize()
     return { x = 1, y = 1, z = 1 }
 end
 
+function spawnable:getBBox()
+    local size = self:getSize()
+    return {
+        min = { x = -size.x / 2, y = -size.y / 2, z = -size.z / 2 },
+        max = { x = size.x / 2, y = size.y / 2, z = size.z / 2 }
+    }
+end
+
 function spawnable:getArrowSize()
     local size = self:getSize()
     local max = math.min(math.max(size.x, size.y, size.z, 0.75) * 0.4, 1)

@@ -72,6 +72,13 @@ function decal:getSize()
     return self.scale
 end
 
+function decal:getBBox()
+    return {
+        min = { x = -math.abs(self.scale.x) / 2, y = -math.abs(self.scale.y) / 2, z = -0.05 },
+        max = { x = math.abs(self.scale.x) / 2, y = math.abs(self.scale.y) / 2, z = 0.05 }
+    }
+end
+
 function decal:calculateIntersection(origin, ray)
     if not self:getEntity() then
         return { hit = false }

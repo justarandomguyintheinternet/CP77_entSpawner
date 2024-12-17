@@ -152,6 +152,10 @@ function entity:getSize()
     return { x = self.bBox.max.x - self.bBox.min.x, y = self.bBox.max.y - self.bBox.min.y, z = self.bBox.max.z - self.bBox.min.z }
 end
 
+function entity:getBBox()
+    return self.bBox
+end
+
 function entity:getCenter()
     local size = self:getSize()
     local offset = Vector4.new(

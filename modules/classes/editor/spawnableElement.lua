@@ -223,29 +223,38 @@ function spawnableElement:setScale(scale, finished)
 end
 
 function spawnableElement:dropToSurface()
-	local size = self.spawnable:getSize()
-	local bBox = {
-		["min"] = Vector4.new(-size.x / 2, -size.y / 2, -size.z / 2, 0),
-		["max"] = Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0)
-	}
+	local bBox = self.spawnable:getBBox()
 
 	local origin = intersection.getBoxIntersection(utils.subVector(self.spawnable.position, Vector4.new(0, 0, 999, 0)), Vector4.new(0, 0, 1, 0), self.spawnable.position, self.spawnable.rotation, bBox)
 	if not origin.hit then return end
 
-	origin.position.z = origin.position.z + 0.05
+	origin.position.z = origin.position.z - 0.025
 	local hit = editor.getRaySceneIntersection(Vector4.new(0, 0, -1, 0), origin.position, self.spawnable)
+
+	if not hit.hit then return end
 
 	local target = utils.multVector(hit.result.normal, -1)
 	local current = origin.normal
 
-	local quatDiff = Quaternion.MulInverse(Quaternion.BuildFromDirectionVector(), Quaternion.BuildFromDirectionVector(origin.normal))
-	local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.spawnable.rotation:ToQuat(), quatDiff)
+	local axis = current:Cross(target)
+	local angle = Vector4.GetAngleBetween(current, target)
+	local diff = Quaternion.SetAxisAngle(self.spawnable.rotation:ToQuat():TransformInverse(axis):Normalize(), math.rad(angle))
 
+	print(axis, angle, diff:ToEulerAngles())
+
+	local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.spawnable.rotation:ToQuat(), diff)
 	self:setRotation(newRotation:ToEulerAngles())
 
-	-- if hit.hit then
-	-- 	self:setPosition(utils.addVector(hit.result.position, Vector4.new(0, 0, - self.spawnable.bBox.min.z, 0)))
-	-- end
+	-- TODO: Do final position based on bbox + what normal we used, otherwise no hit for certain rotation + object origin combinations
+	-- Fix some rotations being weird (Flathead in jungle preset)
+	-- Fix bboxes of things being adjusted and not true
+
+	if hit.hit then
+		local newOrigin = intersection.getBoxIntersection(utils.subVector(self.spawnable.position, Vector4.new(0, 0, 999, 0)), Vector4.new(0, 0, 1, 0), self.spawnable.position, self.spawnable.rotation, bBox)
+		if not newOrigin.hit then return end
+
+		self:setPosition(utils.addVector(hit.result.position, Vector4.new(0, 0, self.spawnable.position.z - newOrigin.position.z, 0)))
+	end
 end
 
 function spawnableElement:onEdited()
