@@ -66,7 +66,8 @@ spawnUI = {
     sizeX = 0,
     spawnedUI = nil,
     spawner = nil,
-    filteredList = {}
+    filteredList = {},
+    openPopup = false
 }
 
 ---Loads the spawn data (Either list of e.g. paths, or exported object files) for each data variant
@@ -351,6 +352,61 @@ function spawnUI.sort()
                 return a.name < b.name
             end
         end)
+    end
+end
+
+function spawnUI.drawPopup()
+    local x, y = ImGui.GetMousePos()
+    ImGui.SetNextWindowPos(x + 10 * style.viewSize, y + 10 * style.viewSize, ImGuiCond.Appearing)
+
+    if ImGui.BeginPopupContextItem("##spawnNew") then
+        ImGui.Text("Spawn position:")
+        ImGui.SameLine()
+
+        ImGui.SetNextItemWidth(100 * style.viewSize)
+        settings.spawnPos, _ = ImGui.Combo("##spawnPos", settings.spawnPos, { "At selected", "Always in front of player" }, 2)
+
+        ImGui.Separator()
+
+        if ImGui.BeginMenu('Search all') then
+            ImGui.EndMenu()
+        end
+
+        for kk, v in pairs(types) do
+            if ImGui.BeginMenu(kk) then
+                for k, variant in pairs(v) do
+                    if ImGui.BeginMenu(k) then
+                        spawnUI.filter, _ = ImGui.InputTextWithHint('##Filter', 'Search by name... (Supports pattern matching)', spawnUI.filter, 100)
+
+                        if spawnUI.filter ~= "" then
+                            if ImGui.BeginChild("##list", 500, 750) then
+                                for _, entry in pairs(spawnData[kk][k].data) do
+                                    if (entry.name:lower():match(spawnUI.filter:lower())) ~= nil then
+                                        if ImGui.Button(entry.name) then
+                                            ImGui.SetClipboardText(entry.name)
+                                            local class = spawnData[kk][k].class
+                                            spawnUI.spawnNew(entry, class)
+                                        end
+                                    end
+                                end
+                                ImGui.EndChild()
+                            end
+                        end
+
+                        ImGui.EndMenu()
+                    end
+                end
+                ImGui.EndMenu()
+            end
+        end
+
+        ImGui.EndPopup()
+    end
+
+    if spawnUI.openPopup then
+        spawnUI.openPopup = false
+
+        ImGui.OpenPopup("##spawnNew")
     end
 end
 

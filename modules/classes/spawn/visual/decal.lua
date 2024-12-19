@@ -69,7 +69,7 @@ function decal:save()
 end
 
 function decal:getSize()
-    return self.scale
+    return { x = self.scale.x, y = self.scale.y, z = 0.025 }
 end
 
 function decal:getBBox()

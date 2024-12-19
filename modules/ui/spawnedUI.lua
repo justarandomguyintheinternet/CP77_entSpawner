@@ -245,6 +245,18 @@ function spawnedUI.registerHotkeys()
         })
     end, hotkeyRunConditionProperties)
 
+    input.registerImGuiHotkey({ ImGuiKey.E, ImGuiKey.LeftCtrl }, function ()
+        if #spawnedUI.selectedPaths == 0 then return end
+
+        local isMulti = #spawnedUI.selectedPaths > 1
+
+        if isMulti then
+            spawnedUI.multiSelectGroup:dropToSurface(true)
+        else
+            spawnedUI.selectedPaths[1].ref:dropToSurface(false)
+        end
+    end)
+
     -- Open context menu for selected from editor mode
     input.registerMouseAction(ImGuiMouseButton.Right, function()
         if #spawnedUI.selectedPaths == 0 or editor.grab or editor.rotate or editor.scale then return end
@@ -547,7 +559,11 @@ function spawnedUI.drawContextMenu(element, path)
         end
         if utils.isA(element, "positionable") then
             if ImGui.MenuItem("Drop to surface", "CTRL-E") then
-                element:dropToSurface()
+                if isMulti then
+                    spawnedUI.multiSelectGroup:dropToSurface(true)
+                else
+                    element:dropToSurface(false)
+                end
             end
         end
 

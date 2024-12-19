@@ -1,5 +1,6 @@
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
+local history = require("modules/utils/history")
 
 local positionable = require("modules/classes/editor/positionable")
 
@@ -104,12 +105,26 @@ function positionableGroup:setRotationDelta(delta)
 	end
 end
 
-function positionableGroup:dropToSurface()
+function positionableGroup:dropToSurface(grouped)
 	local leafs = self:getPositionableLeafs()
+	table.sort(leafs, function (a, b)
+		return a:getPosition().z < b:getPosition().z
+	end)
+
+	local task = require("modules/utils/tasks"):new()
+	task.tasksTodo = #leafs
+	task.taskDelay = 0.03
 
 	for _, entry in pairs(leafs) do
-		entry:dropToSurface()
+		task:addTask(function ()
+			entry:dropToSurface(true)
+			task:taskCompleted()
+		end)
 	end
+
+	history.addAction(history.getElementChange(self))
+
+	task:run(true)
 end
 
 return positionableGroup

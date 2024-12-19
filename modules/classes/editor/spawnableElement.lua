@@ -4,6 +4,7 @@ local settings = require("modules/utils/settings")
 local editor = require("modules/utils/editor/editor")
 local Cron = require("modules/utils/Cron")
 local intersection = require("modules/utils/editor/intersection")
+local history = require("modules/utils/history")
 
 local positionable = require("modules/classes/editor/positionable")
 
@@ -222,10 +223,15 @@ function spawnableElement:setScale(scale, finished)
 	self.spawnable:updateScale(finished)
 end
 
-function spawnableElement:dropToSurface()
-	local bBox = self.spawnable:getBBox()
+function spawnableElement:dropToSurface(grouped)
+	local size = self.spawnable:getSize()
+	local bBox = {
+		min = Vector4.new(-size.x / 2, -size.y / 2, -size.z / 2, 0),
+		max = Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0)
+	}
 
-	local origin = intersection.getBoxIntersection(utils.subVector(self.spawnable.position, Vector4.new(0, 0, 999, 0)), Vector4.new(0, 0, 1, 0), self.spawnable.position, self.spawnable.rotation, bBox)
+	local origin = intersection.getBoxIntersection(utils.subVector(self.spawnable:getCenter(), Vector4.new(0, 0, 999, 0)), Vector4.new(0, 0, 1, 0), self.spawnable:getCenter(), self.spawnable.rotation, bBox)
+
 	if not origin.hit then return end
 
 	origin.position.z = origin.position.z - 0.025
@@ -240,20 +246,20 @@ function spawnableElement:dropToSurface()
 	local angle = Vector4.GetAngleBetween(current, target)
 	local diff = Quaternion.SetAxisAngle(self.spawnable.rotation:ToQuat():TransformInverse(axis):Normalize(), math.rad(angle))
 
-	print(axis, angle, diff:ToEulerAngles())
+	if not grouped then
+		history.addAction(history.getElementChange(self))
+	end
 
 	local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.spawnable.rotation:ToQuat(), diff)
 	self:setRotation(newRotation:ToEulerAngles())
 
-	-- TODO: Do final position based on bbox + what normal we used, otherwise no hit for certain rotation + object origin combinations
-	-- Fix some rotations being weird (Flathead in jungle preset)
 	-- Fix bboxes of things being adjusted and not true
 
-	if hit.hit then
-		local newOrigin = intersection.getBoxIntersection(utils.subVector(self.spawnable.position, Vector4.new(0, 0, 999, 0)), Vector4.new(0, 0, 1, 0), self.spawnable.position, self.spawnable.rotation, bBox)
-		if not newOrigin.hit then return end
+	local offset = utils.multVecXVec(newRotation:Transform(origin.normal), Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0))
+	local newCenter = utils.addVector(hit.result.position, utils.multVector(hit.result.normal, offset:Length()))
 
-		self:setPosition(utils.addVector(hit.result.position, Vector4.new(0, 0, self.spawnable.position.z - newOrigin.position.z, 0)))
+	if hit.hit then
+		self:setPosition(utils.addVector(newCenter, utils.subVector(self.spawnable.position, self.spawnable:getCenter())))
 	end
 end
 

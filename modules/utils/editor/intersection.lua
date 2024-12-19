@@ -42,13 +42,39 @@ function intersection.getResourcePathScalingFactor(path, initalScale)
     return newScale
 end
 
+local function clampBBox(bBox)
+    bBox = utils.deepcopy(bBox)
+
+    local scale = Vector4.new(bBox.max.x - bBox.min.x, bBox.max.y - bBox.min.y, bBox.max.z - bBox.min.z, 0)
+
+    local axis = { "x", "y", "z" }
+
+    for _, axisName in pairs(axis) do
+        if math.abs(scale[axisName]) < 0.01 then
+            bBox.min[axisName] = bBox.min[axisName] - 0.005
+            bBox.max[axisName] = bBox.max[axisName] + 0.005
+        end
+    end
+
+    return bBox
+end
+
 function intersection.BBoxInsideBBox(outerOrigin, outerRotation, outerBox, innerOrigin, innerRotation, innerBox)
+    innerBox = clampBBox(innerBox)
+    outerBox = clampBBox(outerBox)
+
     local min = utils.addVector(innerOrigin, innerRotation:ToQuat():Transform(ToVector4(innerBox.min)))
     local max = utils.addVector(innerOrigin, innerRotation:ToQuat():Transform(ToVector4(innerBox.max)))
 
     return intersection.pointInsideBox(min, outerOrigin, outerRotation, outerBox) and intersection.pointInsideBox(max, outerOrigin, outerRotation, outerBox)
 end
 
+---Checks if a given point is inside an OBB
+---@param point Vector4
+---@param boxOrigin Vector4
+---@param boxRotation EulerAngle
+---@param box table -- Is expected to be clamped
+---@return boolean
 function intersection.pointInsideBox(point, boxOrigin, boxRotation, box)
     local matrix = Matrix.BuiltRTS(boxRotation, boxOrigin, Vector4.new(1, 1, 1, 0))
 
@@ -71,6 +97,11 @@ function intersection.pointInsideBox(point, boxOrigin, boxRotation, box)
     return true
 end
 
+---@param boxOrigin Vector4
+---@param boxRotation EulerAngle
+---@param box table -- Is expected to be clamped
+---@param hitPosition Vector4
+---@return table
 function intersection.getBoxIntersectionNormals(boxOrigin, boxRotation, box, hitPosition)
     local matrix = Matrix.BuiltRTS(boxRotation, boxOrigin, Vector4.new(1, 1, 1, 0))
 
@@ -101,6 +132,8 @@ end
 
 --https://github.com/opengl-tutorials/ogl/blob/master/misc05_picking/misc05_picking_custom.cpp
 function intersection.getBoxIntersection(rayOrigin, ray, boxOrigin, boxRotation, box)
+    box = clampBBox(box)
+
     local matrix = Matrix.BuiltRTS(boxRotation, boxOrigin, Vector4.new(1, 1, 1, 0))
 
     local tMin = 0
@@ -137,7 +170,7 @@ function intersection.getBoxIntersection(rayOrigin, ray, boxOrigin, boxRotation,
             if tMin > tMax then
                 return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0, normal = Vector4.new(0, 0, 0, 0) }
             end
-        elseif -e + box.min[axisName] > 0 or -e + box.max[axisName] < 0 then
+        elseif -e + box.min[axisName] > 0 or -e + box.max[axisName] < 0 then  -- TODO: Fix eddgecase of ray being parallel to box axis, not working if bbox is offcenter (E.g. 0,0,0;1,1,1)
             return { hit = false, position = Vector4.new(0, 0, 0, 0), distance = 0, normal = Vector4.new(0, 0, 0, 0) }
         end
     end

@@ -211,6 +211,8 @@ function baseUI.draw(spawner)
         end
     end
 
+    baseUI.spawnUI.drawPopup()
+
     input.context.viewport.hovered = not input.context.main.hovered
     input.context.viewport.focused = not input.context.main.focused
 end
