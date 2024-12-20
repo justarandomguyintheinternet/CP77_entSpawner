@@ -975,6 +975,58 @@ function spawnedUI.drawTop()
     if ImGui.IsItemHovered() then style.setCursorRelative(10, 10) end
     style.tooltip(tostring(#history.actions - history.index) .. " actions left")
 
+    ImGui.SameLine()
+
+    style.mutedText(IconGlyphs.InformationOutline)
+    if ImGui.IsItemHovered() then
+        -- TODO: Avoid this from going offscreen
+        -- TODO: Split into more categories
+        local x, y = ImGui.GetMousePos()
+        ImGui.SetNextWindowPos(x + 10 * style.viewSize, y + 10 * style.viewSize, ImGuiCond.Always)
+
+        if ImGui.Begin("##popup", ImGuiWindowFlags.NoResize + ImGuiWindowFlags.NoMove + ImGuiWindowFlags.NoTitleBar + ImGuiWindowFlags.AlwaysAutoResize) then
+            style.mutedText("GENERAL")
+            ImGui.Separator()
+            ImGui.Spacing()
+
+            ImGui.MenuItem("Open context menu on selected", "RMB")
+            ImGui.MenuItem("Multiselect", "Hold CTRL")
+            ImGui.MenuItem("Range select", "Hold SHIFT")
+            ImGui.MenuItem("Copy selected", "CTRL-C")
+            ImGui.MenuItem("Paste selected", "CTRL-V")
+            ImGui.MenuItem("Duplicate selected", "CTRL-D")
+            ImGui.MenuItem("Cut selected", "CTRL-X")
+            ImGui.MenuItem("Delete selected", "DEL")
+            ImGui.MenuItem("Undo", "CTRL-Z")
+            ImGui.MenuItem("Redo", "CTRL-Y")
+            ImGui.MenuItem("Toggle selected visibility", "H")
+            ImGui.MenuItem("Move selected to root", "BACKSPACE")
+            ImGui.MenuItem("Move selected to new group", "CTRL-G")
+            ImGui.MenuItem("Select all", "CTRL-A")
+            ImGui.MenuItem("Unselect all", "ESC")
+            ImGui.MenuItem("Save all", "CTRL-S")
+            ImGui.MenuItem("Drop selected to floor", "CTRL-E")
+
+            style.mutedText("3D-EDITOR")
+            ImGui.Separator()
+            ImGui.Spacing()
+
+            ImGui.MenuItem("Rotate camera", "Hold MMB")
+            ImGui.MenuItem("Move camera", "SHIFT + Hold MMB")
+            ImGui.MenuItem("Zoom", "CTRL + Hold MMB")
+            ImGui.MenuItem("Center camera on selected", "TAB")
+            ImGui.MenuItem("Select", "LMB")
+            ImGui.MenuItem("Open context menu", "RMB")
+            ImGui.MenuItem("Move selected on axis", "G -> X/Y/Z")
+            ImGui.MenuItem("Move selected, locked on axis", "G -> SHIFT + X/Y/Z")
+            ImGui.MenuItem("Rotate selected", "R -> X/Y/Z")
+            ImGui.MenuItem("Scale selected on axis", "S -> X/Y/Z")
+            ImGui.MenuItem("Scale selected, locked on axis", "S -> SHIFT + X/Y/Z")
+
+            ImGui.End()
+        end
+    end
+
     style.pushButtonNoBG(false)
 
     spawnedUI.drawEditorSettings()

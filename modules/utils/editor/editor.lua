@@ -165,17 +165,25 @@ end
 function editor.centerCamera()
     if not editor.spawnedUI.selectedPaths[1] and editor.active then return end
 
-    local singleTarget = editor.spawnedUI.selectedPaths[1].ref.spawnable
-    local pos = Vector4.new(singleTarget:getCenter())
+    local singleTarget = editor.spawnedUI.selectedPaths[1].ref
 
-    if utils.distanceVector(pos, singleTarget.position) > 25 then
-        pos = Vector4.new(singleTarget.position)
+    local pos = Vector4.new(singleTarget:getPosition())
+    if utils.isA(singleTarget, "spawnableElement") then
+        pos = Vector4.new(singleTarget.spawnable:getCenter())
     end
 
-    local size = singleTarget:getSize()
-    local distance = math.min(10, math.max(size.x, size.y, size.z, 1) * 2)
+    if utils.distanceVector(pos, singleTarget:getPosition()) > 25 then
+        pos = Vector4.new(singleTarget:getPosition())
+    end
+
+    local distance
     if #editor.spawnedUI.selectedPaths > 1 then
         pos = Vector4.new(spawnedUI.multiSelectGroup:getPosition())
+        distance = editor.camera.distance
+    elseif utils.isA(singleTarget, "spawnableElement") then -- Single spawnableElement
+        local size = singleTarget.spawnable:getSize()
+        distance = math.min(10, math.max(size.x, size.y, size.z, 1) * 2)
+    else -- Single positionableGroup
         distance = editor.camera.distance
     end
 
