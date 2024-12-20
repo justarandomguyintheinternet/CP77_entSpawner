@@ -238,7 +238,8 @@ function exportUI.addGroup(name)
     local g = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
     g:load(blob, true)
 
-    data.center = g:getPosition()
+    local center = g:getPosition()
+    data.center = utils.fromVector(center)
 end
 
 function exportUI.exportGroup(group)
