@@ -127,7 +127,7 @@ function collider:getMaterialIndexByName(material)
 end
 
 function collider:getSize()
-    return self.scale
+    return { x = self.scale.x * 2, y = self.scale.y * 2, z = self.scale.z * 2 }
 end
 
 function collider:getArrowSize()

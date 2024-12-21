@@ -235,7 +235,7 @@ function spawnableElement:dropToSurface(grouped)
 	if not origin.hit then return end
 
 	origin.position.z = origin.position.z - 0.025
-	local hit = editor.getRaySceneIntersection(Vector4.new(0, 0, -1, 0), origin.position, self.spawnable)
+	local hit = editor.getRaySceneIntersection(Vector4.new(0, 0, -1, 0), origin.position, self.spawnable, true)
 
 	if not hit.hit then return end
 

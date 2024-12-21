@@ -23,6 +23,8 @@ local input = require("modules/utils/input")
 ---@field dividerDragging boolean
 ---@field filteredWidestName number
 ---@field draggingSelected boolean
+---@field draggingThreshold number
+---@field infoWindowSize table
 spawnedUI = {
     root = require("modules/classes/editor/element"):new(spawnedUI),
     multiSelectGroup = require("modules/classes/editor/positionableGroup"):new(spawnedUI),
@@ -48,7 +50,8 @@ spawnedUI = {
     dividerDragging = false,
     filteredWidestName = 0,
     draggingSelected = false,
-    draggingThreshold = 0.6
+    draggingThreshold = 0.6,
+    infoWindowSize = { x = 0, y = 0 }
 }
 
 ---Populates paths, containerPaths, selectedPaths and filteredPaths, must be updated each frame
@@ -979,32 +982,36 @@ function spawnedUI.drawTop()
 
     style.mutedText(IconGlyphs.InformationOutline)
     if ImGui.IsItemHovered() then
-        -- TODO: Avoid this from going offscreen
-        -- TODO: Split into more categories
         local x, y = ImGui.GetMousePos()
-        ImGui.SetNextWindowPos(x + 10 * style.viewSize, y + 10 * style.viewSize, ImGuiCond.Always)
+        local width, _ = GetDisplayResolution()
+        ImGui.SetNextWindowPos(math.min(x + 10 * style.viewSize, width - spawnedUI.infoWindowSize.x), y + 10 * style.viewSize, ImGuiCond.Always)
 
         if ImGui.Begin("##popup", ImGuiWindowFlags.NoResize + ImGuiWindowFlags.NoMove + ImGuiWindowFlags.NoTitleBar + ImGuiWindowFlags.AlwaysAutoResize) then
             style.mutedText("GENERAL")
             ImGui.Separator()
             ImGui.Spacing()
 
+            ImGui.MenuItem("Undo", "CTRL-Z")
+            ImGui.MenuItem("Redo", "CTRL-Y")
+            ImGui.MenuItem("Select all", "CTRL-A")
+            ImGui.MenuItem("Unselect all", "ESC")
+            ImGui.MenuItem("Save all", "CTRL-S")
+
+            style.mutedText("SCENE HIERARCHY")
+            ImGui.Separator()
+            ImGui.Spacing()
+
             ImGui.MenuItem("Open context menu on selected", "RMB")
-            ImGui.MenuItem("Multiselect", "Hold CTRL")
-            ImGui.MenuItem("Range select", "Hold SHIFT")
             ImGui.MenuItem("Copy selected", "CTRL-C")
             ImGui.MenuItem("Paste selected", "CTRL-V")
             ImGui.MenuItem("Duplicate selected", "CTRL-D")
             ImGui.MenuItem("Cut selected", "CTRL-X")
             ImGui.MenuItem("Delete selected", "DEL")
-            ImGui.MenuItem("Undo", "CTRL-Z")
-            ImGui.MenuItem("Redo", "CTRL-Y")
             ImGui.MenuItem("Toggle selected visibility", "H")
+            ImGui.MenuItem("Multiselect", "Hold CTRL")
+            ImGui.MenuItem("Range select", "Hold SHIFT")
             ImGui.MenuItem("Move selected to root", "BACKSPACE")
             ImGui.MenuItem("Move selected to new group", "CTRL-G")
-            ImGui.MenuItem("Select all", "CTRL-A")
-            ImGui.MenuItem("Unselect all", "ESC")
-            ImGui.MenuItem("Save all", "CTRL-S")
             ImGui.MenuItem("Drop selected to floor", "CTRL-E")
 
             style.mutedText("3D-EDITOR")
@@ -1022,9 +1029,13 @@ function spawnedUI.drawTop()
             ImGui.MenuItem("Rotate selected", "R -> X/Y/Z")
             ImGui.MenuItem("Scale selected on axis", "S -> X/Y/Z")
             ImGui.MenuItem("Scale selected, locked on axis", "S -> SHIFT + X/Y/Z")
+            ImGui.MenuItem("Open depth select menu", "SHIFT-D")
 
             ImGui.End()
         end
+
+        local x, y = ImGui.GetWindowSize()
+        spawnedUI.infoWindowSize = { x = x, y = y }
     end
 
     style.pushButtonNoBG(false)

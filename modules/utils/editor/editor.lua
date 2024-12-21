@@ -4,6 +4,7 @@ local intersection = require("modules/utils/editor/intersection")
 local settings = require("modules/utils/settings")
 local visualizer = require("modules/utils/visualizer")
 local history = require("modules/utils/history")
+local style = require("modules/ui/style")
 
 ---@class editor
 ---@field active boolean
@@ -23,6 +24,8 @@ local history = require("modules/utils/history")
 ---@field originalRotation EulerAngles?
 ---@field originalScale Vector4?
 ---@field interface gamestateMachineGameScriptInterface?
+---@field depthSelectElements table
+---@field depthSelectOpen boolean
 local editor = {
     active = false,
     camera = nil,
@@ -40,7 +43,10 @@ local editor = {
     originalPosition = nil,
     originalRotation = nil,
     originalScale = nil,
-    interface = nil
+    interface = nil,
+    depthSelectElements = {},
+    depthSelectOpen = false,
+    depthElementsMaxWidth = 0
 }
 
 function viewportFocused()
@@ -74,7 +80,7 @@ function editor.init(spawner)
         editor.originalDiff.pos = nil
         editor.originalDiff.rot = nil
         editor.originalDiff.scale = nil
-    end, viewportFocused)
+    end, viewportHovered)
 
     input.registerMouseAction(ImGuiMouseButton.Left, function ()
         if not editor.grab and not editor.rotate and not editor.scale and editor.hoveredArrow == "none" then
@@ -99,7 +105,7 @@ function editor.init(spawner)
     end)
 
     input.registerImGuiHotkey({ ImGuiKey.G }, function ()
-        editor.toggleTransform("translate")
+        editor.toggleTransform("translate") -- TODO: CTRL-G somehow can enable this for groups
     end, viewportHovered)
 
     input.registerImGuiHotkey({ ImGuiKey.R }, function ()
@@ -144,6 +150,30 @@ function editor.init(spawner)
         end
         editor.updateArrowColor()
         editor.updateCurrentAxis()
+    end, viewportHovered)
+
+    input.registerImGuiHotkey({ ImGuiKey.LeftShift, ImGuiKey.D }, function ()
+        local ray = editor.getScreenToWorldRay()
+        local hit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), false)
+
+        if #hit.allHits == 0 then
+            editor.depthSelectOpen = false
+            return
+        end
+
+        editor.depthSelectOpen = true
+        editor.depthSelectElements = hit.allHits
+        table.sort(editor.depthSelectElements, function (a, b)
+            return a.distance < b.distance
+        end)
+
+        local max = 0
+        for _, hit in pairs(editor.depthSelectElements) do
+            local x, _ = ImGui.CalcTextSize(string.format("[%.2f m]", hit.distance))
+            max = math.max(max, x)
+        end
+
+        editor.depthElementsMaxWidth = max
     end, viewportHovered)
 
     -- input.registerImGuiHotkey({ ImGuiKey.A, ImGuiKey.LeftShift }, function ()
@@ -217,7 +247,7 @@ function editor.getScreenToWorldRay()
     return ray:Normalize()
 end
 
-function editor.getRaySceneIntersection(ray, origin, originSpawnable)
+function editor.getRaySceneIntersection(ray, origin, originSpawnable, usePhysical)
     local hits = {}
 
     for _, element in pairs(editor.spawnedUI.paths) do
@@ -241,11 +271,12 @@ function editor.getRaySceneIntersection(ray, origin, originSpawnable)
                     normal = Vector4.Vector3To4(raycast.normal)
                 },
                 isNode = false,
-                hit = true
+                hit = true,
+                allHits = hits
             }
         end
 
-        return { hit = false}
+        return { hit = false, isNode = false, allHits = hits }
     end
 
     table.sort(hits, function (a, b)
@@ -264,7 +295,7 @@ function editor.getRaySceneIntersection(ray, origin, originSpawnable)
     end
     bestHitIdx = math.min(bestHitIdx, #hits)
 
-    if raycast:IsValid() then
+    if raycast:IsValid() and usePhysical then
         local distance = Vector4.Vector3To4(raycast.position):Distance(origin)
 
         if distance + 0.1 < hits[bestHitIdx].distance or distance < 0.1 then
@@ -274,7 +305,8 @@ function editor.getRaySceneIntersection(ray, origin, originSpawnable)
                     normal = Vector4.Vector3To4(raycast.normal)
                 },
                 isNode = false,
-                hit = true
+                hit = true,
+                allHits = hits
             }
         end
     end
@@ -284,14 +316,15 @@ function editor.getRaySceneIntersection(ray, origin, originSpawnable)
     return {
         result = hits[bestHitIdx],
         isNode = true,
-        hit = true
+        hit = true,
+        allHits = hits
     }
 end
 
 function editor.setTarget()
     local ray = editor.getScreenToWorldRay()
-    local hit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation())
-    if not hit.hit or not hit.isNode then return end
+    local hit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), false)
+    if not hit.hit or (not hit.isNode and #hit.allHits == 0) then return end -- or not hit.isNode | for now allow selecing through physical objects
 
     hit = hit.result
 
@@ -539,12 +572,41 @@ function editor.updateDrag()
     end
 end
 
+function editor.drawDepthSelect()
+    if not editor.active or not editor.depthSelectOpen then return end
+
+    local x, y = ImGui.GetMousePos()
+    ImGui.SetNextWindowPos(x + 10 * style.viewSize, y + 10 * style.viewSize, ImGuiCond.Appearing)
+
+    ImGui.PushStyleColor(ImGuiCol.TitleBgActive, 0, 0, 0, 1)
+    editor.depthSelectOpen = ImGui.Begin("Depth Selection", true, ImGuiWindowFlags.NoResize + ImGuiWindowFlags.AlwaysAutoResize + ImGuiWindowFlags.NoCollapse)
+    editor.depthSelectOpen = editor.depthSelectOpen and ImGui.IsWindowFocused(ImGuiHoveredFlags.ChildWindows)
+    ImGui.PopStyleColor()
+
+    if editor.depthSelectOpen then
+        for _, hit in pairs(editor.depthSelectElements) do
+            style.mutedText(string.format("[%.2f m]", hit.distance))
+
+            ImGui.SameLine(editor.depthElementsMaxWidth + 10 * style.viewSize)
+
+            if ImGui.Selectable(hit.element.name, false) then
+                editor.spawnedUI.unselectAll()
+                hit.element:setSelected(true)
+                editor.depthSelectOpen = false
+            end
+        end
+
+        ImGui.End()
+    end
+end
+
 function editor.onDraw()
     editor.camera.update()
 
     if editor.active and input.context.viewport.hovered then
         editor.checkArrow()
         editor.updateDrag()
+        editor.drawDepthSelect()
     end
 end
 
