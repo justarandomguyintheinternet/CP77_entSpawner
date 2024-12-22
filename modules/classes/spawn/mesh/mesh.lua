@@ -187,6 +187,10 @@ function mesh:draw()
         list = {"No apps"}
     end
 
+    style.mutedText("Appearance")
+    ImGui.SameLine()
+    local x = ImGui.GetCursorPosX()
+
     local index, changed = style.trackedCombo(self.object, "##app", self.appIndex, list, 110)
     style.tooltip("Select the mesh appearance")
     if changed and #self.apps > 0 then
@@ -208,12 +212,15 @@ function mesh:draw()
         return
     end
 
+    style.mutedText("Collider")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(x)
     ImGui.SetNextItemWidth(110 * style.viewSize)
     self.colliderShape, changed = ImGui.Combo("##colliderShape", self.colliderShape, colliderShapes, #colliderShapes)
 
     ImGui.SameLine()
 
-    if ImGui.Button("Generate Collider") then
+    if ImGui.Button("Generate") then
         self:generateCollider()
     end
 end

@@ -9,24 +9,21 @@ settingsUI = {}
 function settingsUI.draw()
     style.sectionHeaderStart("SPAWNING")
 
-    ImGui.Text("Spawn new objects: ")
-    ImGui.SameLine()
-    if ImGui.RadioButton("At selected", settings.spawnPos == 1) then
-        settings.spawnPos = 1
-        settings.save()
-    end
-    style.tooltip("Spawn the new object at the position of the selected object(s), if none are selected, it will spawn in front of the player")
-    ImGui.SameLine()
-
-    if ImGui.RadioButton("Always in front of player", settings.spawnPos == 2) then
-        settings.spawnPos = 2
-        settings.save()
-    end
-    style.tooltip("Spawn position is relative to the players position and rotation, at the specified distance")
-
-    settings.spawnDist, changed = ImGui.InputFloat("Spawn distance to player", settings.spawnDist, -9999, 9999, "%.1f")
+    ImGui.PushItemWidth(120 * style.viewSize)
+    local pos, changed = ImGui.Combo("##spawnPos", settings.spawnPos - 1, { "At selected", "Screen center" }, 2)
+    settings.spawnPos = pos + 1
     if changed then settings.save() end
-    style.tooltip("Distance from the player to spawn the object at, used for the fallback for \"At selected\", and always used for \"Always in front of player\"")
+    if settings.spawnPos == 1 then
+        style.tooltip("Spawn the new object at the position of the selected object(s), if none are selected, it will spawn in front of the player")
+    else
+        style.tooltip("Spawn position is relative to the camera position and orientation.")
+    end
+    ImGui.SameLine()
+    ImGui.Text("Spawn new objects")
+
+    settings.spawnDist, changed = ImGui.InputFloat("Spawn distance from camera", settings.spawnDist, -9999, 9999, "%.1f")
+    if changed then settings.save() end
+    style.tooltip("Distance from the camera to spawn the object at, used for the fallback for \"At selected\", and always used for \"Screen center\"")
 
     style.sectionHeaderEnd()
     style.sectionHeaderStart("EDITING")
@@ -91,6 +88,7 @@ function settingsUI.draw()
     settings.despawnOnReload, changed = ImGui.Checkbox("Despawn everything on \"Reload all mods\"", settings.despawnOnReload)
     if changed then settings.save() end
 
+    ImGui.PopItemWidth()
     style.sectionHeaderEnd(true)
 end
 

@@ -223,19 +223,20 @@ function spawnableElement:setScale(scale, finished)
 	self.spawnable:updateScale(finished)
 end
 
-function spawnableElement:dropToSurface(grouped)
+function spawnableElement:dropToSurface(grouped, direction)
 	local size = self.spawnable:getSize()
 	local bBox = {
 		min = Vector4.new(-size.x / 2, -size.y / 2, -size.z / 2, 0),
 		max = Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0)
 	}
 
-	local origin = intersection.getBoxIntersection(utils.subVector(self.spawnable:getCenter(), Vector4.new(0, 0, 999, 0)), Vector4.new(0, 0, 1, 0), self.spawnable:getCenter(), self.spawnable.rotation, bBox)
+	local toOrigin = utils.multVector(direction, -999)
+	local origin = intersection.getBoxIntersection(utils.subVector(self.spawnable:getCenter(), toOrigin), utils.multVector(direction, -1), self.spawnable:getCenter(), self.spawnable.rotation, bBox)
 
 	if not origin.hit then return end
 
-	origin.position.z = origin.position.z - 0.025
-	local hit = editor.getRaySceneIntersection(Vector4.new(0, 0, -1, 0), origin.position, self.spawnable, true)
+	origin.position = utils.addVector(origin.position, utils.multVector(direction, 0.025))
+	local hit = editor.getRaySceneIntersection(direction, origin.position, self.spawnable, true)
 
 	if not hit.hit then return end
 

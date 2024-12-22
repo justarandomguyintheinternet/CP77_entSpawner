@@ -4,6 +4,7 @@ local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
 local amm = require("modules/utils/ammUtils")
 local history = require("modules/utils/history")
+local editor = require("modules/utils/editor/editor")
 
 local types = {
     ["Entity"] = {
@@ -148,6 +149,20 @@ function spawnUI.refresh()
     end
 end
 
+function spawnUI.drawSpawnPosition()
+    ImGui.Text("Spawn position")
+    ImGui.SameLine()
+    ImGui.PushItemWidth(100 * style.viewSize)
+    local pos, changed = ImGui.Combo("##spawnPos", settings.spawnPos - 1, { "At selected", "Screen center" }, 2)
+    settings.spawnPos = pos + 1
+    if changed then settings.save() end
+    if settings.spawnPos == 1 then
+        style.tooltip("Spawn the new object at the position of the selected object(s), if none are selected, it will spawn in front of the player")
+    else
+        style.tooltip("Spawn position is relative to the camera position and orientation.")
+    end
+end
+
 function spawnUI.draw()
     ImGui.SetNextItemWidth(300 * style.viewSize)
     spawnUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search by name... (Supports pattern matching)', spawnUI.filter, 100)
@@ -180,13 +195,19 @@ function spawnUI.draw()
     tooltip("Automatically place any newly spawned object into the selected group")
 	ImGui.PopItemWidth()
 
+    ImGui.Text("Strip paths")
+    ImGui.SameLine()
     if spawnUI.getActiveSpawnList().isPaths then
-        settings.spawnUIOnlyNames, changed = ImGui.Checkbox("Strip paths", settings.spawnUIOnlyNames)
+        settings.spawnUIOnlyNames, changed = ImGui.Checkbox("##strip", settings.spawnUIOnlyNames)
         if changed then
             spawnUI.refresh()
         end
         style.tooltip("Only show the name of the file, without the full path")
     end
+
+    ImGui.SameLine()
+
+    spawnUI.drawSpawnPosition()
 
     style.spacedSeparator()
 
@@ -237,9 +258,7 @@ function spawnUI.draw()
         style.popGreyedOut(not AMM)
     end
 
-    ImGui.Spacing()
-    ImGui.Separator()
-    ImGui.Spacing()
+    style.spacedSeparator()
 
     ImGui.BeginChild("list")
 
@@ -308,11 +327,14 @@ function spawnUI.spawnNew(entry, class)
     end
 
     local new = require("modules/classes/editor/spawnableElement"):new(spawnUI.spawnedUI)
-    local rot = GetPlayer():GetWorldOrientation():ToEulerAngles()
-    rot.yaw = rot.yaw + 180
+    local rot = EulerAngles.new(0, 0, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation().yaw + 180)
     local pos = GetPlayer():GetWorldPosition()
+    local forward = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetAxisY()
 
-    local forward = GetPlayer():GetWorldForward()
+    if editor.active then
+        pos = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
+        pos.z = pos.z + forward.z * settings.spawnDist
+    end
     pos.x = pos.x + forward.x * settings.spawnDist
     pos.y = pos.y + forward.y * settings.spawnDist
 
@@ -350,12 +372,7 @@ function spawnUI.drawPopup()
     ImGui.SetNextWindowPos(x + 10 * style.viewSize, y + 10 * style.viewSize, ImGuiCond.Appearing)
 
     if ImGui.BeginPopupContextItem("##spawnNew") then
-        ImGui.Text("Spawn position:")
-        ImGui.SameLine()
-
-        ImGui.SetNextItemWidth(100 * style.viewSize)
-        settings.spawnPos, _ = ImGui.Combo("##spawnPos", settings.spawnPos, { "At selected", "Always in front of player" }, 2)
-
+        spawnUI.drawSpawnPosition()
         ImGui.Separator()
 
         if ImGui.BeginMenu('Search all') then

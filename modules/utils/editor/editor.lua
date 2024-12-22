@@ -195,9 +195,9 @@ function editor.init(spawner)
         editor.depthElementsMaxWidth = max
     end, viewportHovered)
 
-    -- input.registerImGuiHotkey({ ImGuiKey.A, ImGuiKey.LeftShift }, function ()
-    --     editor.baseUI.spawnUI.openPopup = true
-    -- end, viewportHovered)
+    input.registerImGuiHotkey({ ImGuiKey.A, ImGuiKey.LeftShift }, function ()
+        editor.baseUI.spawnUI.openPopup = true
+    end, viewportHovered)
 
     Observe("LocomotionEventsTransition", "OnUpdate", function(_, _, _, interface)
         editor.interface = interface

@@ -105,7 +105,7 @@ function positionableGroup:setRotationDelta(delta)
 	end
 end
 
-function positionableGroup:dropToSurface(grouped)
+function positionableGroup:dropToSurface(grouped, direction)
 	local leafs = self:getPositionableLeafs()
 	table.sort(leafs, function (a, b)
 		return a:getPosition().z < b:getPosition().z
@@ -117,7 +117,7 @@ function positionableGroup:dropToSurface(grouped)
 
 	for _, entry in pairs(leafs) do
 		task:addTask(function ()
-			entry:dropToSurface(true)
+			entry:dropToSurface(true, direction)
 			task:taskCompleted()
 		end)
 	end

@@ -254,9 +254,9 @@ function spawnedUI.registerHotkeys()
         local isMulti = #spawnedUI.selectedPaths > 1
 
         if isMulti then
-            spawnedUI.multiSelectGroup:dropToSurface(true)
+            spawnedUI.multiSelectGroup:dropToSurface(true, Vector4.new(0, 0, -1, 0))
         else
-            spawnedUI.selectedPaths[1].ref:dropToSurface(false)
+            spawnedUI.selectedPaths[1].ref:dropToSurface(false, Vector4.new(0, 0, -1, 0))
         end
     end)
 
@@ -561,11 +561,11 @@ function spawnedUI.drawContextMenu(element, path)
             spawnedUI.moveToNewGroup(isMulti, element)
         end
         if utils.isA(element, "positionable") then
-            if ImGui.MenuItem("Drop to surface", "CTRL-E") then
+            if ImGui.MenuItem("Drop to floor", "CTRL-E") then
                 if isMulti then
-                    spawnedUI.multiSelectGroup:dropToSurface(true)
+                    spawnedUI.multiSelectGroup:dropToSurface(true, Vector4.new(0, 0, -1, 0))
                 else
-                    element:dropToSurface(false)
+                    element:dropToSurface(false, Vector4.new(0, 0, -1, 0))
                 end
             end
         end
@@ -1024,14 +1024,14 @@ function spawnedUI.drawTop()
             ImGui.MenuItem("Move camera", "SHIFT + Hold MMB")
             ImGui.MenuItem("Zoom", "CTRL + Hold MMB")
             ImGui.MenuItem("Center camera on selected", "TAB")
-            ImGui.MenuItem("Select", "LMB")
-            ImGui.MenuItem("Open context menu", "RMB")
+            ImGui.MenuItem("Open depth select menu", "SHIFT-D")
+            ImGui.MenuItem("Select / Confirm", "LMB")
+            ImGui.MenuItem("Open context menu / Cancle", "RMB")
             ImGui.MenuItem("Move selected on axis", "G -> X/Y/Z")
             ImGui.MenuItem("Move selected, locked on axis", "G -> SHIFT + X/Y/Z")
             ImGui.MenuItem("Rotate selected", "R -> X/Y/Z  -> (Numeric)")
             ImGui.MenuItem("Scale selected on axis", "S -> X/Y/Z -> (Numeric)")
             ImGui.MenuItem("Scale selected, locked on axis", "S -> SHIFT + X/Y/Z  -> (Numeric)")
-            ImGui.MenuItem("Open depth select menu", "SHIFT-D")
 
             ImGui.End()
         end

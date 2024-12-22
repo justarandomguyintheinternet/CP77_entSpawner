@@ -30,7 +30,7 @@ local config = require("modules/utils/config")
 ---@field tabSizes table
 local settingsData = {
     spawnPos = 1,
-    spawnDist = 3,
+    spawnDist = 1,
     spawnNewSortAlphabetical = false,
     posSteps = 0.002,
     precisionMultiplier = 0.2,

@@ -210,6 +210,16 @@ function positionable:drawPosition(position)
     if ImGui.Button(IconGlyphs.AccountArrowLeftOutline) then
 		history.addAction(history.getElementChange(self))
 		local pos = Game.GetPlayer():GetWorldPosition()
+
+		if editor.active then
+			local forward = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetAxisY()
+			pos = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
+
+			pos.z = pos.z + forward.z * settings.spawnDist
+			pos.x = pos.x + forward.x * settings.spawnDist
+			pos.y = pos.y + forward.y * settings.spawnDist
+		end
+
         self:setPositionDelta(Vector4.new(pos.x - position.x, pos.y - position.y, pos.z - position.z, 0))
     end
     style.pushButtonNoBG(false)
@@ -310,7 +320,7 @@ function positionable:getDirection(direction)
 	end
 end
 
-function positionable:dropToSurface(grouped)
+function positionable:dropToSurface(grouped, direction)
 
 end
 

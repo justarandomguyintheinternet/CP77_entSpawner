@@ -36,6 +36,10 @@ function camera.toggle(state)
     camera.active = state
 
     if camera.active then
+        if Vector4.Distance(GetPlayer():GetWorldPosition(), camera.cameraTransform.position) > 50 then
+            camera.cameraTransform.position = GetPlayer():GetWorldPosition()
+        end
+
         Game.GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(- camera.xOffset, - camera.distance, 0, 0))
         setSceneTier(4)
 
