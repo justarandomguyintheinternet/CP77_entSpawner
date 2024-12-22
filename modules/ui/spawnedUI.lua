@@ -222,7 +222,7 @@ function spawnedUI.registerHotkeys()
         spawnedUI.moveToRoot(true)
     end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.Escape }, function()
-        if #spawnedUI.selectedPaths == 0 then return end
+        if #spawnedUI.selectedPaths == 0 or editor.grab or editor.rotate or editor.scale then return end -- Escape is also used for cancling editing
         spawnedUI.unselectAll()
     end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.H }, function()
@@ -899,13 +899,15 @@ function spawnedUI.drawTop()
 
     if spawnedUI.filter ~= '' then
         ImGui.SameLine()
-        if ImGui.Button('X') then
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.Close) then
             spawnedUI.filter = ''
             if #spawnedUI.selectedPaths == 1 then
                 spawnedUI.selectedPaths[1].ref:expandAllParents()
                 spawnedUI.scrollToSelected = true
             end
         end
+        style.pushButtonNoBG(false)
     end
 
     ImGui.PushItemWidth(200 * style.viewSize)
@@ -984,7 +986,7 @@ function spawnedUI.drawTop()
     if ImGui.IsItemHovered() then
         local x, y = ImGui.GetMousePos()
         local width, _ = GetDisplayResolution()
-        ImGui.SetNextWindowPos(math.min(x + 10 * style.viewSize, width - spawnedUI.infoWindowSize.x), y + 10 * style.viewSize, ImGuiCond.Always)
+        ImGui.SetNextWindowPos(math.min(x + 10 * style.viewSize, width - spawnedUI.infoWindowSize.x - 30 * style.viewSize), y + 10 * style.viewSize, ImGuiCond.Always)
 
         if ImGui.Begin("##popup", ImGuiWindowFlags.NoResize + ImGuiWindowFlags.NoMove + ImGuiWindowFlags.NoTitleBar + ImGuiWindowFlags.AlwaysAutoResize) then
             style.mutedText("GENERAL")
@@ -1026,9 +1028,9 @@ function spawnedUI.drawTop()
             ImGui.MenuItem("Open context menu", "RMB")
             ImGui.MenuItem("Move selected on axis", "G -> X/Y/Z")
             ImGui.MenuItem("Move selected, locked on axis", "G -> SHIFT + X/Y/Z")
-            ImGui.MenuItem("Rotate selected", "R -> X/Y/Z")
-            ImGui.MenuItem("Scale selected on axis", "S -> X/Y/Z")
-            ImGui.MenuItem("Scale selected, locked on axis", "S -> SHIFT + X/Y/Z")
+            ImGui.MenuItem("Rotate selected", "R -> X/Y/Z  -> (Numeric)")
+            ImGui.MenuItem("Scale selected on axis", "S -> X/Y/Z -> (Numeric)")
+            ImGui.MenuItem("Scale selected, locked on axis", "S -> SHIFT + X/Y/Z  -> (Numeric)")
             ImGui.MenuItem("Open depth select menu", "SHIFT-D")
 
             ImGui.End()

@@ -44,6 +44,8 @@ function config.loadFiles(path)
         end
     end
 
+    table.sort(files, function(a, b) return a.name < b.name end)
+
     return files
 end
 
@@ -60,6 +62,8 @@ function config.loadLists(path)
             data:close()
         end
     end
+
+    table.sort(paths, function(a, b) return a.name < b.name end)
 
     return paths
 end

@@ -137,10 +137,15 @@ function spawnUI.updateFilter()
     end
 end
 
----Refresh the sorting and the filtering
+---Refresh the filtering and sorting
 function spawnUI.refresh()
     spawnUI.updateFilter()
-    spawnUI.sort()
+
+    if settings.spawnUIOnlyNames then
+        table.sort(spawnUI.filteredList, function(a, b) return utils.getFileName(a.name) < utils.getFileName(b.name) end)
+    else
+        table.sort(spawnUI.filteredList, function(a, b) return a.name < b.name end)
+    end
 end
 
 function spawnUI.draw()
@@ -152,10 +157,13 @@ function spawnUI.draw()
 
     if spawnUI.filter ~= '' then
         ImGui.SameLine()
-        if ImGui.Button('X') then
+
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.Close) then
             spawnUI.filter = ''
             spawnUI.updateFilter()
         end
+        style.pushButtonNoBG(false)
     end
 
     local groups = { "Root" }
@@ -172,14 +180,7 @@ function spawnUI.draw()
     tooltip("Automatically place any newly spawned object into the selected group")
 	ImGui.PopItemWidth()
 
-    settings.spawnNewSortAlphabetical, changed = ImGui.Checkbox("Sort alphabetically", settings.spawnNewSortAlphabetical)
-    if changed then
-        settings.save()
-        spawnUI.sort()
-    end
-
     if spawnUI.getActiveSpawnList().isPaths then
-        ImGui.SameLine()
         settings.spawnUIOnlyNames, changed = ImGui.Checkbox("Strip paths", settings.spawnUIOnlyNames)
         if changed then
             spawnUI.refresh()
@@ -189,7 +190,7 @@ function spawnUI.draw()
 
     style.spacedSeparator()
 
-    ImGui.PushItemWidth(150 * style.viewSize)
+    ImGui.PushItemWidth(120 * style.viewSize)
 	spawnUI.selectedType, changed = ImGui.Combo("Object type", spawnUI.selectedType, typeNames, #typeNames)
     if changed then
         settings.selectedType = typeNames[spawnUI.selectedType + 1]
@@ -240,8 +241,6 @@ function spawnUI.draw()
     ImGui.Separator()
     ImGui.Spacing()
 
-    local _, wHeight = GetDisplayResolution()
-
     ImGui.BeginChild("list")
 
     spawnUI.sizeX = 800
@@ -288,6 +287,9 @@ function spawnUI.draw()
                 ImGui.SetClipboardText(entry.name)
                 local class = spawnUI.getActiveSpawnList().class
                 entry.lastSpawned = spawnUI.spawnNew(entry, class)
+            end
+            if settings.spawnUIOnlyNames then
+                style.tooltip(entry.name)
             end
 
             if isSpawned then ImGui.PopStyleColor(2) end
@@ -341,18 +343,6 @@ function spawnUI.spawnNew(entry, class)
     history.addAction(history.getInsert({ new }))
 
     return new
-end
-
-function spawnUI.sort()
-    if settings.spawnNewSortAlphabetical then
-        table.sort(spawnUI.getActiveSpawnList().data, function(a, b)
-            if spawnUI.getActiveSpawnList().isPaths and settings.spawnUIOnlyNames then
-                return utils.getFileName(a.name) < utils.getFileName(b.name)
-            else
-                return a.name < b.name
-            end
-        end)
-    end
 end
 
 function spawnUI.drawPopup()

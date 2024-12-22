@@ -94,11 +94,14 @@ function savedUI.draw(spawner)
 
     if savedUI.filter ~= '' then
         ImGui.SameLine()
-        if ImGui.Button('X') then
+
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.Close) then
             savedUI.filter = ''
             settings.savedUIFilter = savedUI.filter
             settings.save()
         end
+        style.pushButtonNoBG(false)
     end
 
     style.spacedSeparator()

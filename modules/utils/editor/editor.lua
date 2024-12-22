@@ -57,6 +57,41 @@ function viewportHovered()
     return editor.active and input.context.viewport.hovered
 end
 
+function editor.cancleEditingTransform()
+    editor.grab = false
+    editor.rotate = false
+    editor.scale = false
+
+    local element = editor.getSelected()
+    if not element or editor.currentAxis == "none" then return end
+
+    editor.currentAxis = "none"
+    element:setPosition(editor.originalPosition)
+    element:setRotation(editor.originalRotation)
+    element:setScale(editor.originalScale, true)
+
+    editor.originalDiff.pos = nil
+    editor.originalDiff.rot = nil
+    editor.originalDiff.scale = nil
+    input.trackNumeric(false)
+end
+
+function editor.confirmEditingTransform()
+    if not editor.grab and not editor.rotate and not editor.scale and editor.hoveredArrow == "none" then
+        editor.setTarget()
+    end
+
+    if editor.grab or editor.rotate or editor.scale then
+        editor.recordChange()
+    end
+
+    editor.grab = false
+    editor.rotate = false
+    editor.scale = false
+    editor.currentAxis = "none"
+    input.trackNumeric(false)
+end
+
 function editor.init(spawner)
     editor.baseUI = spawner.baseUI
     editor.spawnedUI = spawner.baseUI.spawnedUI
@@ -65,36 +100,20 @@ function editor.init(spawner)
     editor.camera = require("modules/utils/editor/camera")
 
     input.registerMouseAction(ImGuiMouseButton.Right, function()
-        editor.grab = false
-        editor.rotate = false
-        editor.scale = false
-
-        local element = editor.getSelected()
-        if not element or editor.currentAxis == "none" then return end
-
-        editor.currentAxis = "none"
-        element:setPosition(editor.originalPosition)
-        element:setRotation(editor.originalRotation)
-        element:setScale(editor.originalScale, true)
-
-        editor.originalDiff.pos = nil
-        editor.originalDiff.rot = nil
-        editor.originalDiff.scale = nil
+        editor.cancleEditingTransform()
     end, viewportHovered)
-
     input.registerMouseAction(ImGuiMouseButton.Left, function ()
-        if not editor.grab and not editor.rotate and not editor.scale and editor.hoveredArrow == "none" then
-            editor.setTarget()
-        end
+        editor.confirmEditingTransform()
+    end,
+    function ()
+        return editor.active and input.context.viewport.hovered
+    end)
 
-        if editor.grab or editor.rotate or editor.scale then
-            editor.recordChange()
-        end
-
-        editor.grab = false
-        editor.rotate = false
-        editor.scale = false
-        editor.currentAxis = "none"
+    input.registerImGuiHotkey({ ImGuiKey.Escape }, function()
+        editor.cancleEditingTransform()
+    end, viewportHovered)
+    input.registerImGuiHotkey({ ImGuiKey.Enter }, function ()
+        editor.confirmEditingTransform()
     end,
     function ()
         return editor.active and input.context.viewport.hovered
@@ -183,11 +202,13 @@ function editor.init(spawner)
     Observe("LocomotionEventsTransition", "OnUpdate", function(_, _, _, interface)
         editor.interface = interface
     end)
-    --TODO: depth menu, moving groups
 end
 
 function editor.getSelected()
+    editor.spawnedUI.cachePaths()
+
     if #editor.spawnedUI.selectedPaths ~= 1 then return end
+    if not utils.isA(editor.spawnedUI.selectedPaths[1].ref, "spawnableElement") then return end
 
     return editor.spawnedUI.selectedPaths[1].ref
 end
@@ -391,6 +412,7 @@ function editor.toggleTransform(transformationType)
         editor.originalScale = Vector4.new(selected:getScale())
         editor.currentAxis = "all"
         editor.updateArrowColor()
+        input.trackNumeric(true)
     end
 end
 
@@ -551,9 +573,9 @@ function editor.updateDrag()
         end
 
         local original = EulerAngles.new(editor.originalRotation)
-        original.pitch = original.pitch + (angle - editor.originalDiff.rot) * axis.x.mult
-        original.roll = original.roll + (angle - editor.originalDiff.rot) * axis.y.mult
-        original.yaw = original.yaw + (angle - editor.originalDiff.rot) * axis.z.mult
+        original.pitch = original.pitch + (angle - editor.originalDiff.rot + input.getNumeric(0)) * axis.x.mult
+        original.roll = original.roll + (angle - editor.originalDiff.rot + input.getNumeric(0)) * axis.y.mult
+        original.yaw = original.yaw + (angle - editor.originalDiff.rot + input.getNumeric(0)) * axis.z.mult
 
         selected:setRotation(original)
     elseif editor.scale then
@@ -564,9 +586,9 @@ function editor.updateDrag()
         end
 
         local original = Vector4.new(editor.originalScale)
-        original.x = original.x + (distance - editor.originalDiff.scale) * axis.x.mult
-        original.y = original.y + (distance - editor.originalDiff.scale) * axis.y.mult
-        original.z = original.z + (distance - editor.originalDiff.scale) * axis.z.mult
+        original.x = (original.x * (axis.x.mult == 1 and input.getNumeric(1) or 1)) + (distance - editor.originalDiff.scale) * axis.x.mult
+        original.y = (original.y * (axis.y.mult == 1 and input.getNumeric(1) or 1)) + (distance - editor.originalDiff.scale) * axis.y.mult
+        original.z = (original.z * (axis.z.mult == 1 and input.getNumeric(1) or 1)) + (distance - editor.originalDiff.scale) * axis.z.mult
 
         selected:setScale(original, false)
     end
