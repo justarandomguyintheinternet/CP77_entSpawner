@@ -57,10 +57,11 @@ end
 ---@field spawnedUI? spawnedUI
 ---@field spawner? spawner
 ---@field filteredList table
+---@field openPopup boolean
+---@field popupFilter string
 spawnUI = {
-    spawnPosition = nil,
-    spawnAtPlayer = true,
     filter = "",
+    popupFilter = "",
     selectedGroup = 0,
     selectedType = 0,
     selectedVariant = 0,
@@ -370,6 +371,12 @@ end
 function spawnUI.drawPopup()
     local x, y = ImGui.GetMousePos()
     ImGui.SetNextWindowPos(x + 10 * style.viewSize, y + 10 * style.viewSize, ImGuiCond.Appearing)
+    local screenWidth, screenHeight = GetDisplayResolution()
+
+    -- TODO: Independent search, search reset option
+    -- Window auto y, max y
+    -- Window auto x, max x
+    -- Spawn under cursor
 
     if ImGui.BeginPopupContextItem("##spawnNew") then
         spawnUI.drawSpawnPosition()
@@ -379,22 +386,49 @@ function spawnUI.drawPopup()
             ImGui.EndMenu()
         end
 
-        for kk, v in pairs(types) do
-            if ImGui.BeginMenu(kk) then
-                for k, variant in pairs(v) do
-                    if ImGui.BeginMenu(k) then
-                        spawnUI.filter, _ = ImGui.InputTextWithHint('##Filter', 'Search by name... (Supports pattern matching)', spawnUI.filter, 100)
+        for typeName, typeData in pairs(types) do
+            if ImGui.BeginMenu(typeName) then
+                for variantName, _ in pairs(typeData) do
+                    if ImGui.BeginMenu(variantName) then
+                        spawnUI.popupFilter, _ = ImGui.InputTextWithHint('##Filter', 'Search...', spawnUI.popupFilter, 75)
+                        local xSpace, _ = ImGui.GetItemRectSize()
+                        if spawnUI.popupFilter ~= '' then
+                            ImGui.SameLine()
 
-                        if spawnUI.filter ~= "" then
-                            if ImGui.BeginChild("##list", 500, 750) then
-                                for _, entry in pairs(spawnData[kk][k].data) do
-                                    if (entry.name:lower():match(spawnUI.filter:lower())) ~= nil then
-                                        if ImGui.Button(entry.name) then
-                                            ImGui.SetClipboardText(entry.name)
-                                            local class = spawnData[kk][k].class
-                                            spawnUI.spawnNew(entry, class)
-                                        end
+                            style.pushButtonNoBG(true)
+                            if ImGui.Button(IconGlyphs.Close) then
+                                spawnUI.popupFilter = ''
+                                spawnUI.updateFilter()
+                            end
+                            style.pushButtonNoBG(false)
+                            local x, _ = ImGui.GetItemRectSize()
+                            xSpace = xSpace + x + ImGui.GetStyle().ItemSpacing.x
+                        end
+
+                        if spawnUI.popupFilter ~= "" or #spawnData[typeName][variantName].data < 25 then
+                            local x = 0
+                            local data = {}
+                            for _, entry in pairs(spawnData[typeName][variantName].data) do
+                                if (entry.name:lower():match(spawnUI.popupFilter:lower())) ~= nil then
+                                    table.insert(data, entry)
+                                    x = math.max(x, ImGui.CalcTextSize(entry.name) + ImGui.GetStyle().WindowPadding.x)
+                                end
+                            end
+
+                            local y = #data * ImGui.GetFrameHeightWithSpacing()
+
+                            if ImGui.BeginChild("##list", math.max(math.min(x, xSpace), 1), math.max(math.min(y, screenHeight / 2), 1)) then
+                                for _, entry in pairs(data) do
+                                    ImGui.PushID(entry.name)
+
+                                    if ImGui.Button(entry.name) then
+                                        ImGui.SetClipboardText(entry.name)
+                                        local class = spawnData[typeName][variantName].class
+                                        spawnUI.spawnNew(entry, class)
+                                        ImGui.CloseCurrentPopup()
                                     end
+
+                                    ImGui.PopID()
                                 end
                                 ImGui.EndChild()
                             end
@@ -412,6 +446,7 @@ function spawnUI.drawPopup()
 
     if spawnUI.openPopup then
         spawnUI.openPopup = false
+        spawnUI.popupFilter = ""
 
         ImGui.OpenPopup("##spawnNew")
     end

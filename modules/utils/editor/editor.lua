@@ -305,9 +305,8 @@ function editor.getRaySceneIntersection(ray, origin, excludeSpawnable, usePhysic
     end)
 
     -- If there is a hit inside the primary hit, use that one instead (To prefer things inside the bbox of the primary hit, can often be the case)
-    -- TODO: Maybe scale bbox of next best hit a bit down
     local bestHitIdx = 1
-    while bestHitIdx + 1 <= #hits and intersection.BBoxInsideBBox(hits[bestHitIdx].objectOrigin, hits[bestHitIdx].objectRotation, hits[bestHitIdx].bBox, hits[bestHitIdx + 1].objectOrigin, hits[bestHitIdx + 1].objectRotation, hits[bestHitIdx + 1].bBox) do
+    while bestHitIdx + 1 <= #hits and intersection.BBoxInsideBBox(hits[bestHitIdx].objectOrigin, hits[bestHitIdx].objectRotation, hits[bestHitIdx].bBox, hits[bestHitIdx + 1].objectOrigin, hits[bestHitIdx + 1].objectRotation, intersection.scaleBBox(hits[bestHitIdx + 1].bBox, Vector4.new(0.85, 0.85, 0.85))) do
         bestHitIdx = bestHitIdx + 1
     end
     bestHitIdx = math.min(bestHitIdx, #hits)

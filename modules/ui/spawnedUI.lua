@@ -879,19 +879,6 @@ function spawnedUI.drawDivider()
 end
 
 ---@protected
-function spawnedUI.drawEditorSettings()
-    if not editor.active then return end
-
-    if ImGui.TreeNodeEx("Edit Mode Settings") then
-        if ImGui.Button("Reset Camera") then
-            editor.camera.transition(editor.camera.cameraTransform.position, editor.camera.playerTransform.position, 3, math.max(0.5, (1 / 175) * utils.distanceVector(editor.camera.cameraTransform.position, editor.camera.playerTransform.position)))
-        end
-
-        ImGui.TreePop()
-    end
-end
-
----@protected
 function spawnedUI.drawTop()
     ImGui.PushItemWidth(200 * style.viewSize)
     spawnedUI.filter = ImGui.InputTextWithHint('##Filter', 'Search for element...', spawnedUI.filter, 100)
@@ -1041,8 +1028,6 @@ function spawnedUI.drawTop()
     end
 
     style.pushButtonNoBG(false)
-
-    spawnedUI.drawEditorSettings()
 end
 
 function spawnedUI.drawProperties()

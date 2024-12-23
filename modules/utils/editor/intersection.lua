@@ -21,6 +21,21 @@ function intersection.unscaleBBox(path, initialScale, bbox)
     }
 end
 
+function intersection.scaleBBox(bbox, scale)
+    return {
+        min = {
+            x = bbox.min.x * scale.x,
+            y = bbox.min.y * scale.y,
+            z = bbox.min.z * scale.z
+        },
+        max = {
+            x = bbox.max.x * scale.x,
+            y = bbox.max.y * scale.y,
+            z = bbox.max.z * scale.z
+        }
+    }
+end
+
 ---Return a factor to be scaled with the objects BBox, hardcoded for special cases like AMM miniatures (Wrong mesh bbox) and foliage (Usually too big)
 ---@param path string
 ---@param initalScale Vector4
