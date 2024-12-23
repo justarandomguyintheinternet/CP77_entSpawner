@@ -158,6 +158,7 @@ function collider:calculateIntersection(origin, ray)
     return {
         hit = result.hit,
         position = result.position,
+        unscaledHit = result.position,
         collisionType = "bbox",
         distance = result.distance,
         bBox = scaledBBox,

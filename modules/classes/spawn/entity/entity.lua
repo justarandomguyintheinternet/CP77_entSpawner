@@ -180,6 +180,7 @@ function entity:calculateIntersection(origin, ray)
     end
 
     local hit = nil
+    local unscaledHit = nil
 
     for _, mesh in pairs(self.meshes) do
         local meshPosition = utils.addVector(mesh.position, self.position)
@@ -190,6 +191,8 @@ function entity:calculateIntersection(origin, ray)
         if result.hit then
             if not hit or result.distance < hit.distance then
                 hit = result
+
+                unscaledHit = intersection.getBoxIntersection(origin, ray, meshPosition, meshRotation:ToEulerAngles(), intersection.unscaleBBox(mesh.path, mesh.originalScale, mesh.bbox))
             end
         end
     end
@@ -199,6 +202,7 @@ function entity:calculateIntersection(origin, ray)
     return {
         hit = hit.hit,
         position = hit.position,
+        unscaledHit = unscaledHit and unscaledHit.position or hit.position,
         collisionType = "bbox",
         distance = hit.distance,
         bBox = self.bBox,

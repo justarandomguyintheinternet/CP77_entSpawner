@@ -164,9 +164,15 @@ function mesh:calculateIntersection(origin, ray)
     }
     local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, scaledBBox)
 
+    local unscaledHit
+    if result.hit then
+        unscaledHit = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, intersection.unscaleBBox(self.spawnData, self:getSize(), scaledBBox))
+    end
+
     return {
         hit = result.hit,
         position = result.position,
+        unscaledHit = unscaledHit and unscaledHit.position or result.position,
         collisionType = "bbox",
         distance = result.distance,
         bBox = scaledBBox,

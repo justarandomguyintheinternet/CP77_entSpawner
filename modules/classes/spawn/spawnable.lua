@@ -297,6 +297,7 @@ function spawnable:calculateIntersection(origin, ray)
     return {
         hit = false,
         position = Vector4.new(0, 0, 0, 0),
+        unscaledHit = nil, -- Hit result of intersection test with unmodified bbox, for more accurate drop to surface
         collisionType = "bbox",
         distance = 0,
         bBox = { min = { x = -size.x / 2, y = -size.y / 2, z = -size.z / 2 }, max = { x = size.x / 2, y = size.y / 2, z = size.z / 2 } },

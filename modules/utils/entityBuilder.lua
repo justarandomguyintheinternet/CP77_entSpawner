@@ -183,9 +183,9 @@ function builder.getEntityBBox(entity, callback)
                     end)
                 end)
                 .found(function ()
-                    local scale = Vector4.Vector3To4(component.visualScale or Vector3.new(1, 1, 1))
-                    local scalingFactor = intersection.getResourcePathScalingFactor(path, scale)
-                    scale = utils.multVecXVec(scale, scalingFactor)
+                    local originalScale = Vector4.Vector3To4(component.visualScale or Vector3.new(1, 1, 1))
+                    local scalingFactor = intersection.getResourcePathScalingFactor(path, originalScale)
+                    local scale = utils.multVecXVec(originalScale, scalingFactor)
 
                     local min = utils.multVecXVec(ToVector4(cache.getValue(path .. "_bBox_min")), scale)
                     local max = utils.multVecXVec(ToVector4(cache.getValue(path .. "_bBox_max")), scale)
@@ -206,7 +206,8 @@ function builder.getEntityBBox(entity, callback)
                             min = min,
                             max = max
                         },
-                        path = path
+                        path = path,
+                        originalScale = originalScale
                     })
 
                     utils.log("[entityBuilder] FOUND: BBOX for mesh " .. path)

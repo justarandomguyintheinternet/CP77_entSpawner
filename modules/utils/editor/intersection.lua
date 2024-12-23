@@ -3,29 +3,43 @@ local EPSILON = 0.00001
 
 local intersection = {}
 
---Very rough frustum check
-local function isObjectInFrustum(cameraForward, cameraPosition, objectPosition, objectSize, maxFov)
-    local angle = cameraForward:Dot(utils.subVector(objectPosition, cameraPosition))
-    --angle must be less than maxFov scaled by object size
+function intersection.unscaleBBox(path, initialScale, bbox)
+    local scale, unscale = intersection.getResourcePathScalingFactor(path, initialScale)
+    if not unscale then return bbox end
+
+    return {
+        min = {
+            x = bbox.min.x / scale.x,
+            y = bbox.min.y / scale.y,
+            z = bbox.min.z / scale.z
+        },
+        max = {
+            x = bbox.max.x / scale.x,
+            y = bbox.max.y / scale.y,
+            z = bbox.max.z / scale.z
+        }
+    }
 end
 
 ---Return a factor to be scaled with the objects BBox, hardcoded for special cases like AMM miniatures (Wrong mesh bbox) and foliage (Usually too big)
----@param path any
+---@param path string
+---@param initalScale Vector4
+---@return Vector4, boolean -- Vector4 is the scaling factor, boolean is if the object should be unscaled when doing drop to surface checks
 function intersection.getResourcePathScalingFactor(path, initalScale)
     if string.match(path, "base\\environment\\vegetation\\palms\\") or string.match(path, "yucca") then
-        return Vector4.new(0.175, 0.175, 0.7, 0)
+        return Vector4.new(0.175, 0.175, 0.7, 0), false
     end
 
     if string.match(path, "base\\environment\\vegetation\\") or string.match(path, "[^s]tree") then
-        return Vector4.new(0.35, 0.35, 0.7, 0)
+        return Vector4.new(0.35, 0.35, 0.7, 0), false
     end
 
     if path == "base\\amm_props\\mesh\\props\\shuttle.mesh" or path == "base\\amm_props\\mesh\\props\\shuttle_platform.mesh" then
-        return Vector4.new(21 / 20000, 26 / 20000, 165 / 80000, 0)
+        return Vector4.new(21 / 20000, 26 / 20000, 165 / 80000, 0), false
     end
 
     if string.match(path, "\\fx\\") then
-        return Vector4.new(0, 0, 0, 0)
+        return Vector4.new(0, 0, 0, 0), false
     end
 
     local newScale = Vector4.new(1, 1, 1, 0)
@@ -39,7 +53,7 @@ function intersection.getResourcePathScalingFactor(path, initalScale)
         newScale.z = 0.95
     end
 
-    return newScale
+    return newScale, true
 end
 
 local function clampBBox(bBox)

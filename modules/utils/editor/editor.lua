@@ -268,14 +268,14 @@ function editor.getScreenToWorldRay()
     return ray:Normalize()
 end
 
-function editor.getRaySceneIntersection(ray, origin, originSpawnable, usePhysical)
+function editor.getRaySceneIntersection(ray, origin, excludeSpawnable, usePhysical)
     local hits = {}
 
     for _, element in pairs(editor.spawnedUI.paths) do
         if element.ref.visible and utils.isA(element.ref, "spawnableElement") then
             local hit = element.ref.spawnable:calculateIntersection(origin, ray)
 
-            if hit.hit and (not originSpawnable or (originSpawnable and element.ref.spawnable ~= originSpawnable)) then
+            if hit.hit and (not excludeSpawnable or (excludeSpawnable and element.ref.spawnable ~= excludeSpawnable)) then
                 hit.element = element.ref
                 table.insert(hits, hit)
             end
@@ -304,10 +304,6 @@ function editor.getRaySceneIntersection(ray, origin, originSpawnable, usePhysica
         return a.distance < b.distance
     end)
 
-    for _, hit in pairs(hits) do
-        print("Hit: ", hit.position, hit.collisionType, hit.distance, hit.element.spawnable.name)
-    end
-
     -- If there is a hit inside the primary hit, use that one instead (To prefer things inside the bbox of the primary hit, can often be the case)
     -- TODO: Maybe scale bbox of next best hit a bit down
     local bestHitIdx = 1
@@ -331,8 +327,6 @@ function editor.getRaySceneIntersection(ray, origin, originSpawnable, usePhysica
             }
         end
     end
-
-    print("Best hit: ", hits[bestHitIdx].position, hits[bestHitIdx].collisionType, hits[bestHitIdx].distance, hits[bestHitIdx].size)
 
     return {
         result = hits[bestHitIdx],

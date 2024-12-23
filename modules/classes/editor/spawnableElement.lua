@@ -254,10 +254,8 @@ function spawnableElement:dropToSurface(grouped, direction)
 	local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.spawnable.rotation:ToQuat(), diff)
 	self:setRotation(newRotation:ToEulerAngles())
 
-	-- Fix bboxes of things being adjusted and not true
-
 	local offset = utils.multVecXVec(newRotation:Transform(origin.normal), Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0))
-	local newCenter = utils.addVector(hit.result.position, utils.multVector(hit.result.normal, offset:Length()))
+	local newCenter = utils.addVector(hit.result.unscaledHit or hit.result.position, utils.multVector(hit.result.normal, offset:Length())) -- phyiscal hits dont have unscaledHit
 
 	if hit.hit then
 		self:setPosition(utils.addVector(newCenter, utils.subVector(self.spawnable.position, self.spawnable:getCenter())))

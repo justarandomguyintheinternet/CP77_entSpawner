@@ -82,6 +82,7 @@ function visualized:calculateIntersection(origin, ray)
     return {
         hit = result.hit,
         position = result.position,
+        unscaledHit = result.position,
         collisionType = "shape",
         distance = result.distance,
         bBox = bbox,
