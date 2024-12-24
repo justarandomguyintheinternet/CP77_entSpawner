@@ -3,6 +3,7 @@ local builder = require("modules/utils/entityBuilder")
 local visualizer = require("modules/utils/visualizer")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
+local intersection = require("modules/utils/editor/intersection")
 
 ---Base class for any object / node that can be spawned
 ---@class spawnable
@@ -292,18 +293,24 @@ function spawnable:getCenter()
 end
 
 function spawnable:calculateIntersection(origin, ray)
-    local size = self:getSize()
+    local bbox = self:getBBox()
+
+    if not self:getEntity() then
+        return { hit = false }
+    end
+
+    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, bbox)
 
     return {
-        hit = false,
-        position = Vector4.new(0, 0, 0, 0),
-        unscaledHit = nil, -- Hit result of intersection test with unmodified bbox, for more accurate drop to surface
+        hit = result.hit,
+        position = result.position,
+        unscaledHit = result.position, -- Hit result of intersection test with unmodified bbox, for more accurate drop to surface
         collisionType = "bbox",
-        distance = 0,
-        bBox = { min = { x = -size.x / 2, y = -size.y / 2, z = -size.z / 2 }, max = { x = size.x / 2, y = size.y / 2, z = size.z / 2 } },
+        distance = result.distance,
+        bBox = bbox,
         objectOrigin = self.position,
         objectRotation = self.rotation,
-        normal = Vector4.new(0, 0, 0, 0)
+        normal = result.normal
     }
 end
 

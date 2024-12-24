@@ -17,6 +17,7 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@field public bBox table {min: Vector4, max: Vector4}
 ---@field public colliderShape integer
 ---@field public hideGenerate boolean
+---@field private bBoxLoaded boolean
 local mesh = setmetatable({}, { __index = spawnable })
 
 function mesh:new()
@@ -34,6 +35,7 @@ function mesh:new()
     o.appIndex = 0
     o.scale = { x = 1, y = 1, z = 1 }
     o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
+    o.bBoxLoaded = false
 
     o.colliderShape = 0
     o.hideGenerate = false
@@ -71,10 +73,12 @@ function mesh:loadSpawnData(data, position, rotation)
             cache.addValue(self.spawnData .. "_apps", self.apps)
             cache.addValue(self.spawnData .. "_bBox_max", utils.fromVector(self.bBox.max))
             cache.addValue(self.spawnData .. "_bBox_min", utils.fromVector(self.bBox.min))
+            self.bBoxLoaded = true
         end)
     else
         self.bBox.max = ToVector4(self.bBox.max)
         self.bBox.min = ToVector4(self.bBox.min)
+        self.bBoxLoaded = true
     end
 
     self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)

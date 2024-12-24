@@ -50,7 +50,7 @@ function occluder:onAssemble(entity)
     if self.occluderMesh == 2 or self.occluderMesh == 3 then
         scale = { x = scale.x, y = 0.01, z = scale.z }
     end
-    visualizer.addBox(entity, scale, "green")
+    visualizer.addBox(entity, { x = scale.x / 2, y = scale.y / 2, z = scale.z / 2 }, "green") -- Scale is extents, not size
 
     local component = entStaticOccluderMeshComponent.new()
     component.name = "occluder"
@@ -95,7 +95,7 @@ function occluder:updateScale(finished)
     end
 
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
-    visualizer.updateScale(entity, scale, "box")
+    visualizer.updateScale(entity, { x = scale.x / 2, y = scale.y / 2, z = scale.z / 2 }, "box")
 end
 
 function occluder:getSize()

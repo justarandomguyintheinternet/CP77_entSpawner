@@ -14,6 +14,7 @@ local history = require("modules/utils/history")
 ---@field public appIndex integer
 ---@field private bBoxCallback function
 ---@field public bBox table {min: Vector4, max: Vector4}
+---@field public bBoxLoaded boolean
 ---@field public meshes table
 ---@field public instanceDataChanges table Changes to the default data, regardless of app (Matched by ID)
 ---@field public defaultComponentData table Default data for each component, regardless of whether it was changed. Keeps up to date with app changes
@@ -32,6 +33,7 @@ function entity:new()
     o.appIndex = 0
     o.bBoxCallback = nil
     o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
+    o.bBoxLoaded = false
     o.meshes = {}
 
     o.instanceDataChanges = {}
@@ -124,6 +126,7 @@ function entity:onAttached(entity)
         if self.bBoxCallback then
             self.bBoxCallback(entity)
         end
+        self.bBoxLoaded = true
     end)
 end
 

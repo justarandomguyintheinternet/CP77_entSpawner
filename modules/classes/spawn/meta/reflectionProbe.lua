@@ -49,12 +49,12 @@ end
 function reflection:onAssemble(entity)
     spawnable.onAssemble(self, entity)
 
-    visualizer.addBox(entity, self.scale, "seashell")
+    visualizer.addBox(entity, { x = self.scale.x / 2, y = self.scale.y / 2, z = self.scale.z / 2 }, "seashell")
 
     local component = entEnvProbeComponent.new()
     component.name = "probe"
     component.probeDataRef = ResRef.FromString(self.spawnData)
-    component.size = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
+    component.size = Vector3.new(self.scale.x, self.scale.y, self.scale.z) -- Size is extents, not size
     component.edgeScale = Vector3.new(self.edgeScale.x, self.edgeScale.y, self.edgeScale.z)
     component.ambientMode = Enum.new("envUtilsReflectionProbeAmbientContributionMode", self.ambientMode)
     component.neighborMode = Enum.new("envUtilsNeighborMode", self.neighborMode)
@@ -99,7 +99,7 @@ function reflection:updateScale(finished)
     if not entity then return end
 
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
-    visualizer.updateScale(entity, self.scale, "box")
+    visualizer.updateScale(entity, { x = self.scale.x / 2, y = self.scale.y / 2, z = self.scale.z / 2 }, "box")
 end
 
 function reflection:getSize()

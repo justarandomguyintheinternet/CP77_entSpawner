@@ -120,8 +120,14 @@ function baseUI.draw(spawner)
         baseUI.loadTabSize = false
     end
     if editorActive then
-        ImGui.SetNextWindowSizeConstraints(250, screenHeight, screenWidth / 2, screenHeight)
+        ImGui.SetNextWindowSizeConstraints(screenWidth / 8, screenHeight, screenWidth / 2, screenHeight)
         ImGui.SetNextWindowPos(screenWidth, 0, ImGuiCond.Always, 1, 0)
+        if baseUI.loadTabSize then
+            if settings.editorWidth == 0 then
+                settings.editorWidth = settings.tabSizes.spawned[1]
+            end
+            ImGui.SetNextWindowSize(settings.editorWidth, screenHeight)
+        end
         baseUI.loadTabSize = false
     end
     if baseUI.restoreWindowPosition then
@@ -147,6 +153,10 @@ function baseUI.draw(spawner)
         local x, y = ImGui.GetWindowSize()
         if not editorActive and (x ~= settings.tabSizes[tabs[baseUI.activeTab].id][1] or y ~= settings.tabSizes[tabs[baseUI.activeTab].id][2]) then
             settings.tabSizes[tabs[baseUI.activeTab].id] = { math.min(x, 5000), math.min(y, 3500) }
+            settings.save()
+        end
+        if editorActive and x ~= settings.editorWidth then
+            settings.editorWidth = x
             settings.save()
         end
 
