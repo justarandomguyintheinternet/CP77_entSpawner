@@ -4,6 +4,8 @@ local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
 local amm = require("modules/utils/ammUtils")
 local history = require("modules/utils/history")
+local editor = require("modules/utils/editor/editor")
+local Cron = require("modules/utils/Cron")
 
 local types = {
     ["Entity"] = {
@@ -56,17 +58,31 @@ end
 ---@field spawnedUI? spawnedUI
 ---@field spawner? spawner
 ---@field filteredList table
+---@field openPopup boolean
+---@field popupFilter string
+---@field currentPopupVariant string
+---@field popupSpawnHit table?
+---@field popupData table
+---@field spawnNewBBoxCron? number
+---@field dragging boolean
+---@field dragData table?
 spawnUI = {
-    spawnPosition = nil,
-    spawnAtPlayer = true,
     filter = "",
+    popupFilter = "",
     selectedGroup = 0,
     selectedType = 0,
     selectedVariant = 0,
     sizeX = 0,
     spawnedUI = nil,
     spawner = nil,
-    filteredList = {}
+    filteredList = {},
+    openPopup = false,
+    currentPopupVariant = "",
+    popupData = {},
+    popupSpawnHit = nil,
+    spawnNewBBoxCron = nil,
+    dragging = false,
+    dragData = nil
 }
 
 ---Loads the spawn data (Either list of e.g. paths, or exported object files) for each data variant
@@ -136,13 +152,50 @@ function spawnUI.updateFilter()
     end
 end
 
----Refresh the sorting and the filtering
+---Refresh the filtering and sorting
 function spawnUI.refresh()
     spawnUI.updateFilter()
-    spawnUI.sort()
+
+    if settings.spawnUIOnlyNames then
+        table.sort(spawnUI.filteredList, function(a, b) return utils.getFileName(a.name) < utils.getFileName(b.name) end)
+    else
+        table.sort(spawnUI.filteredList, function(a, b) return a.name < b.name end)
+    end
+end
+
+function spawnUI.drawSpawnPosition()
+    ImGui.Text("Spawn position")
+    ImGui.SameLine()
+    local x = ImGui.GetCursorPosX()
+    ImGui.PushItemWidth(100 * style.viewSize)
+    local pos, changed = ImGui.Combo("##spawnPos", settings.spawnPos - 1, { "At selected", "Screen center" }, 2)
+    settings.spawnPos = pos + 1
+    if changed then settings.save() end
+    if settings.spawnPos == 1 then
+        style.tooltip("Spawn the new object at the position of the selected object(s), if none are selected, it will spawn in front of the player")
+    else
+        style.tooltip("Spawn position is relative to the camera position and orientation.")
+    end
+
+    return x
+end
+
+function spawnUI.drawDragWindow()
+    if not spawnUI.dragging then return end
+
+    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand)
+
+    local x, y = ImGui.GetMousePos()
+    ImGui.SetNextWindowPos(x + 10 * style.viewSize, y + 10 * style.viewSize, ImGuiCond.Always)
+    if ImGui.Begin("##drag", ImGuiWindowFlags.NoResize + ImGuiWindowFlags.NoMove + ImGuiWindowFlags.NoTitleBar + ImGuiWindowFlags.NoBackground + ImGuiWindowFlags.AlwaysAutoResize) then
+        ImGui.Text(spawnUI.dragData.name)
+        ImGui.End()
+    end
 end
 
 function spawnUI.draw()
+    spawnUI.drawDragWindow()
+
     ImGui.SetNextItemWidth(300 * style.viewSize)
     spawnUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search by name... (Supports pattern matching)', spawnUI.filter, 100)
     if changed then
@@ -151,10 +204,13 @@ function spawnUI.draw()
 
     if spawnUI.filter ~= '' then
         ImGui.SameLine()
-        if ImGui.Button('X') then
+
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.Close) then
             spawnUI.filter = ''
             spawnUI.updateFilter()
         end
+        style.pushButtonNoBG(false)
     end
 
     local groups = { "Root" }
@@ -171,24 +227,28 @@ function spawnUI.draw()
     tooltip("Automatically place any newly spawned object into the selected group")
 	ImGui.PopItemWidth()
 
-    settings.spawnNewSortAlphabetical, changed = ImGui.Checkbox("Sort alphabetically", settings.spawnNewSortAlphabetical)
-    if changed then
-        settings.save()
-        spawnUI.sort()
-    end
-
+    ImGui.Text("Strip paths")
+    ImGui.SameLine()
     if spawnUI.getActiveSpawnList().isPaths then
-        ImGui.SameLine()
-        settings.spawnUIOnlyNames, changed = ImGui.Checkbox("Strip paths", settings.spawnUIOnlyNames)
+        settings.spawnUIOnlyNames, changed = ImGui.Checkbox("##strip", settings.spawnUIOnlyNames)
         if changed then
             spawnUI.refresh()
         end
         style.tooltip("Only show the name of the file, without the full path")
     end
 
+    ImGui.SameLine()
+
+    spawnUI.drawSpawnPosition()
+
+    ImGui.SameLine()
+
+    style.mutedText(IconGlyphs.InformationOutline)
+    style.tooltip("To spawn an object under the cursour, either:\n - Use the Shift-A menu while in editor mode\n - Drag and drop an object from the list to the desired position on the screen.")
+
     style.spacedSeparator()
 
-    ImGui.PushItemWidth(150 * style.viewSize)
+    ImGui.PushItemWidth(120 * style.viewSize)
 	spawnUI.selectedType, changed = ImGui.Combo("Object type", spawnUI.selectedType, typeNames, #typeNames)
     if changed then
         settings.selectedType = typeNames[spawnUI.selectedType + 1]
@@ -235,11 +295,7 @@ function spawnUI.draw()
         style.popGreyedOut(not AMM)
     end
 
-    ImGui.Spacing()
-    ImGui.Separator()
-    ImGui.Spacing()
-
-    local _, wHeight = GetDisplayResolution()
+    style.spacedSeparator()
 
     ImGui.BeginChild("list")
 
@@ -283,10 +339,27 @@ function spawnUI.draw()
                 buttonText = utils.getFileName(entry.name)
             end
 
-            if ImGui.Button(buttonText) then
+            if ImGui.Button(buttonText) and not ImGui.IsMouseDragging(0, 0.6) then
                 ImGui.SetClipboardText(entry.name)
                 local class = spawnUI.getActiveSpawnList().class
                 entry.lastSpawned = spawnUI.spawnNew(entry, class)
+            elseif ImGui.IsMouseDragging(0, 0.6) and not spawnUI.dragging and ImGui.IsItemHovered() then
+                spawnUI.dragging = true
+                spawnUI.dragData = entry
+            elseif not ImGui.IsMouseDragging(0, 0.6) and spawnUI.dragging and not ImGui.IsItemHovered() then
+                ImGui.SetClipboardText(spawnUI.dragData.name)
+                local ray = editor.getScreenToWorldRay()
+                spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+
+                local class = spawnUI.getActiveSpawnList().class
+                spawnUI.dragData.lastSpawned = spawnUI.spawnNew(spawnUI.dragData, class)
+
+                spawnUI.dragging = false
+                spawnUI.dragData = nil
+                spawnUI.popupSpawnHit = nil
+            end
+            if settings.spawnUIOnlyNames then
+                style.tooltip(entry.name)
             end
 
             if isSpawned then ImGui.PopStyleColor(2) end
@@ -305,11 +378,14 @@ function spawnUI.spawnNew(entry, class)
     end
 
     local new = require("modules/classes/editor/spawnableElement"):new(spawnUI.spawnedUI)
-    local rot = GetPlayer():GetWorldOrientation():ToEulerAngles()
-    rot.yaw = rot.yaw + 180
+    local rot = EulerAngles.new(0, 0, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation().yaw + 180)
     local pos = GetPlayer():GetWorldPosition()
+    local forward = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetAxisY()
 
-    local forward = GetPlayer():GetWorldForward()
+    if editor.active then
+        pos = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
+        pos.z = pos.z + forward.z * settings.spawnDist
+    end
     pos.x = pos.x + forward.x * settings.spawnDist
     pos.y = pos.y + forward.y * settings.spawnDist
 
@@ -320,6 +396,21 @@ function spawnUI.spawnNew(entry, class)
         elseif #spawnUI.spawnedUI.selectedPaths > 1 then
             pos = spawnUI.spawnedUI.multiSelectGroup:getPosition()
             rot = spawnUI.spawnedUI.multiSelectGroup:getDirection("forward"):ToRotation()
+        end
+    end
+
+    local snap = spawnUI.popupSpawnHit and spawnUI.popupSpawnHit.hit
+    if snap then
+        pos = spawnUI.popupSpawnHit.result.position
+        local target = spawnUI.popupSpawnHit.result.normal
+        local current = Vector4.new(0, 0, 1, 0)
+        local axis = current:Cross(target)
+        local angle = Vector4.GetAngleBetween(current, target)
+
+        if math.abs(angle) < 0.1 then
+            rot = EulerAngles.new(0, 0, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation().yaw + 180)
+        else
+            rot = Quaternion.SetAxisAngle(axis:Normalize(), math.rad(angle)):ToEulerAngles()
         end
     end
 
@@ -334,23 +425,178 @@ function spawnUI.spawnNew(entry, class)
         spawnable = data
     })
 
+    if new.spawnable.bBoxLoaded == nil and snap then -- Bbox is immediately available
+        local adjustedPos = utils.addVector(spawnUI.popupSpawnHit.result.position, utils.multVector(spawnUI.popupSpawnHit.result.normal, math.abs(new.spawnable:getBBox().min.z)))
+        Cron.After(0.1, function ()
+            new:setPosition(adjustedPos)
+        end)
+    end
+
     new:setParent(parent)
     new.selected = true
     spawnUI.spawnedUI.unselectAll()
-    history.addAction(history.getInsert({ new }))
+
+    if snap and new.spawnable.bBoxLoaded ~= nil then
+        local position = spawnUI.popupSpawnHit.result.position
+        local normal = spawnUI.popupSpawnHit.result.normal
+
+        spawnUI.spawnNewBBoxCron = Cron.Every(0.05, function ()
+            if new.spawnable.bBoxLoaded and new.spawnable:getEntity() then
+                Cron.After(0.1, function ()
+                    local adjustedPos = utils.addVector(position, utils.multVector(normal, math.abs(new.spawnable:getBBox().min.z)))
+                    new:setPosition(adjustedPos)
+                    history.addAction(history.getInsert({ new }))
+                end)
+
+                Cron.Halt(spawnUI.spawnNewBBoxCron)
+            end
+        end)
+    else
+        history.addAction(history.getInsert({ new }))
+    end
 
     return new
 end
 
-function spawnUI.sort()
-    if settings.spawnNewSortAlphabetical then
-        table.sort(spawnUI.getActiveSpawnList().data, function(a, b)
-            if spawnUI.getActiveSpawnList().isPaths and settings.spawnUIOnlyNames then
-                return utils.getFileName(a.name) < utils.getFileName(b.name)
-            else
-                return a.name < b.name
+function spawnUI.loadPopupData(typeName, variantName)
+    local data = {}
+
+    for _, entry in pairs(spawnData[typeName][variantName].data) do
+        if (entry.name:lower():match(spawnUI.popupFilter:lower())) ~= nil then
+            table.insert(data, entry)
+        end
+    end
+
+    spawnUI.popupData = data
+end
+
+function spawnUI.drawPopupVariant(typeName, variantName)
+    local _, screenHeight = GetDisplayResolution()
+
+    if spawnUI.currentPopupVariant ~= variantName then
+        ImGui.SetKeyboardFocusHere()
+        spawnUI.loadPopupData(typeName, variantName)
+        spawnUI.currentPopupVariant = variantName
+    end
+    spawnUI.popupFilter, changed = ImGui.InputTextWithHint('##Filter', 'Search...', spawnUI.popupFilter, 75)
+    local xSpace, _ = ImGui.GetItemRectSize()
+    if changed then
+        spawnUI.loadPopupData(typeName, variantName)
+    end
+
+    if spawnUI.popupFilter ~= '' then
+        ImGui.SameLine()
+
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.Close) then
+            spawnUI.popupFilter = ''
+            spawnUI.updateFilter()
+        end
+        style.pushButtonNoBG(false)
+        local x, _ = ImGui.GetItemRectSize()
+        xSpace = xSpace + x + ImGui.GetStyle().ItemSpacing.x
+    end
+
+    if spawnUI.popupFilter ~= "" or #spawnData[typeName][variantName].data < 100 then
+        local y = #spawnUI.popupData * ImGui.GetFrameHeightWithSpacing()
+
+        if ImGui.BeginChild("##list", xSpace, math.max(math.min(y, screenHeight / 2), 1)) then
+
+            local clipper = ImGuiListClipper.new()
+            clipper:Begin(#spawnUI.popupData, -1)
+
+            while (clipper:Step()) do
+                for i = clipper.DisplayStart + 1, clipper.DisplayEnd, 1 do
+                    ImGui.PushID(spawnUI.popupData[i].name)
+
+                    local clippedName = spawnUI.popupData[i].name
+
+                    if settings.spawnUIOnlyNames then
+                        clippedName = utils.getFileName(spawnUI.popupData[i].name)
+                    end
+
+                    local name = clippedName
+                    while ImGui.CalcTextSize(name) > xSpace - ImGui.GetStyle().ItemSpacing.x * 3 do
+                        clippedName = clippedName:sub(2, #clippedName)
+                        name = "..." .. clippedName:sub(2, #clippedName)
+                    end
+
+                    if ImGui.Button(name) then
+                        ImGui.SetClipboardText(spawnUI.popupData[i].name)
+                        local class = spawnData[typeName][variantName].class
+                        spawnUI.spawnNew(spawnUI.popupData[i], class)
+                        ImGui.CloseCurrentPopup()
+                    end
+
+                    ImGui.PopID()
+                end
             end
-        end)
+            ImGui.EndChild()
+        end
+    end
+end
+
+function spawnUI.drawPopup()
+    local x, y = ImGui.GetMousePos()
+    ImGui.SetNextWindowPos(x + 10 * style.viewSize, y - 4 * ImGui.GetFrameHeight(), ImGuiCond.Appearing)
+
+    if ImGui.BeginPopupContextItem("##spawnNew") then
+        local x, _ = ImGui.CalcTextSize("Reset search") + ImGui.GetStyle().ItemSpacing.x
+
+        if not settings.spawnAtCursor then
+           x = spawnUI.drawSpawnPosition()
+        end
+        ImGui.Text("At cursor")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(x)
+        settings.spawnAtCursor, changed = ImGui.Checkbox("##cursor", settings.spawnAtCursor)
+        if changed then settings.save() end
+        style.tooltip("Spawn the object under the cursor.")
+
+        ImGui.Text("Strip paths")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(x)
+        settings.spawnUIOnlyNames, changed = ImGui.Checkbox("##strip", settings.spawnUIOnlyNames)
+        if changed then settings.save() end
+        style.tooltip("Only show the name of the file, without the full path")
+
+        ImGui.Text("Reset search")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(x)
+        settings.resetSpawnPopupSearch, changed = ImGui.Checkbox("##reset", settings.resetSpawnPopupSearch)
+        if changed then settings.save() end
+        style.tooltip("Resets the search when spawning something or closing the popup")
+
+        ImGui.Separator()
+
+        for typeName, typeData in pairs(types) do
+            if ImGui.BeginMenu(typeName) then
+                for variantName, _ in pairs(typeData) do
+                    if ImGui.BeginMenu(variantName) then
+                        spawnUI.drawPopupVariant(typeName, variantName)
+                        ImGui.EndMenu()
+                    end
+                end
+                ImGui.EndMenu()
+            end
+        end
+
+        ImGui.EndPopup()
+    else
+        spawnUI.popupSpawnHit = nil
+    end
+
+    if spawnUI.openPopup then
+        spawnUI.openPopup = false
+        spawnUI.currentPopupVariant = ""
+        if settings.resetSpawnPopupSearch then
+            spawnUI.popupFilter = ""
+        end
+
+        local ray = editor.getScreenToWorldRay()
+        spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+
+        ImGui.OpenPopup("##spawnNew")
     end
 end
 

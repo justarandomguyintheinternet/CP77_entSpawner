@@ -25,10 +25,15 @@ local config = require("modules/utils/config")
 ---@field public editorBottomSize integer
 ---@field public gizmoActive boolean
 ---@field public gizmoOnSelected boolean
+---@field public outlineSelected boolean
+---@field public outlineColor integer
+---@field public editorWidth integer
+---@field public resetSpawnPopupSearch boolean
+---@field public spawnAtCursor boolean
 ---@field tabSizes table
 local settingsData = {
     spawnPos = 1,
-    spawnDist = 3,
+    spawnDist = 1,
     spawnNewSortAlphabetical = false,
     posSteps = 0.002,
     precisionMultiplier = 0.2,
@@ -50,7 +55,12 @@ local settingsData = {
     windowStates = {},
     editorBottomSize = 200,
     gizmoActive = true,
-    gizmoOnSelected = false,
+    gizmoOnSelected = true,
+    outlineSelected = true,
+    outlineColor = 0,
+    editorWidth = 0,
+    resetSpawnPopupSearch = true,
+    spawnAtCursor = true,
 
     tabSizes = {}
 }

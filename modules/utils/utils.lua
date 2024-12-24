@@ -251,6 +251,10 @@ function miscUtils.getVector4BBox(vectors)
         end
     end
 
+    if #vectors == 0 then
+        return Vector4.new(0, 0, 0, 0), Vector4.new(0, 0, 0, 0)
+    end
+
     return Vector4.new(minX, minY, minZ, 0), Vector4.new(maxX, maxY, maxZ, 0)
 end
 
@@ -358,6 +362,14 @@ function miscUtils.deepcompare(t1,t2,ignore_mt)
         if v1 == nil or not miscUtils.deepcompare(v1,v2) then return false end
     end
     return true
+end
+
+function miscUtils.sendOutlineEvent(entity, color)
+    entity:QueueEvent(entRenderHighlightEvent.new({
+        seeThroughWalls = true,
+        outlineIndex = color,
+        opacity = 1
+    }))
 end
 
 return miscUtils

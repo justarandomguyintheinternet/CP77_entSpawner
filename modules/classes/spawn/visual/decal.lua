@@ -1,5 +1,6 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local style = require("modules/ui/style")
+local intersection = require("modules/utils/editor/intersection")
 
 ---Class for worldStaticDecalNode
 ---@class decal : spawnable
@@ -8,7 +9,6 @@ local style = require("modules/ui/style")
 ---@field private verticalFlip boolean
 ---@field private autoHideDistance number
 ---@field private scale {x: number, y: number, z: number}
----@field private scaleLocked boolean
 local decal = setmetatable({}, { __index = spawnable })
 
 function decal:new()
@@ -27,8 +27,6 @@ function decal:new()
     o.verticalFlip = false
     o.autoHideDistance = 150
     o.scale = { x = 1, y = 1, z = 1 }
-
-    o.scaleLocked = true
 
     setmetatable(o, { __index = self })
    	return o
@@ -66,18 +64,46 @@ function decal:save()
     data.verticalFlip = self.verticalFlip
     data.autoHideDistance = self.autoHideDistance
     data.scale = { x = self.scale.x, y = self.scale.y, z = self.scale.z }
-    data.scaleLocked = self.scaleLocked
 
     return data
 end
 
-function decal:getVisualizerSize()
-    local max = math.min(math.max(self.scale.x, self.scale.y, self.scale.z, 1) * 0.5, 3.5)
-    return { x = max, y = max, z = max }
+function decal:getSize()
+    return { x = self.scale.x, y = self.scale.y, z = 0.025 }
 end
 
-function decal:getSize()
-    return self.scale
+function decal:getBBox()
+    return {
+        min = { x = -math.abs(self.scale.x) / 2, y = -math.abs(self.scale.y) / 2, z = -0.05 },
+        max = { x = math.abs(self.scale.x) / 2, y = math.abs(self.scale.y) / 2, z = 0.05 }
+    }
+end
+
+function decal:calculateIntersection(origin, ray)
+    if not self:getEntity() then
+        return { hit = false }
+    end
+
+    local scaleFactor = 0.8
+
+    local scaledBBox = {
+        min = {  x = -math.abs(self.scale.x) * scaleFactor / 2, y = -math.abs(self.scale.y) * scaleFactor / 2, z = -math.abs(self.scale.y) * 0.05 / 2 },
+        max = {  x = math.abs(self.scale.x) * scaleFactor / 2, y = math.abs(self.scale.y) * scaleFactor / 2, z = math.abs(self.scale.y) * 0.05 / 2 }
+    }
+
+    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, scaledBBox)
+
+    return {
+        hit = result.hit,
+        position = result.position,
+        unscaledHit = result.position,
+        collisionType = "bbox",
+        distance = result.distance,
+        bBox = scaledBBox,
+        objectOrigin = self.position,
+        objectRotation = self.rotation,
+        normal = result.normal
+    }
 end
 
 function decal:updateScale()
@@ -89,6 +115,8 @@ function decal:updateScale()
 
     component:Toggle(false)
     component:Toggle(true)
+
+    self:setOutline(self.outline)
 end
 
 ---Respawn the decal to update parameters, if changed

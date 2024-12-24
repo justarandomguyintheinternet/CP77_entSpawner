@@ -3,6 +3,7 @@ local builder = require("modules/utils/entityBuilder")
 local visualizer = require("modules/utils/visualizer")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
+local intersection = require("modules/utils/editor/intersection")
 
 ---Base class for any object / node that can be spawned
 ---@class spawnable
@@ -16,7 +17,9 @@ local history = require("modules/utils/history")
 ---@field public position Vector4
 ---@field public rotation EulerAngles
 ---@field protected entityID entEntityID
+---@field protected entity entEntity?
 ---@field protected spawned boolean
+---@field protected spawning boolean
 ---@field public primaryRange number
 ---@field public secondaryRange number
 ---@field public uk10 integer
@@ -30,6 +33,8 @@ local history = require("modules/utils/history")
 ---@field public previewNote string
 ---@field public icon string
 ---@field private rotationRelative boolean
+---@field protected outline integer
+---@field private spawnedAndCachedCallback function[]
 local spawnable = {}
 
 function spawnable:new()
@@ -51,7 +56,10 @@ function spawnable:new()
     o.position = Vector4.new(0, 0, 0, 0)
     o.rotation = EulerAngles.new(0, 0, 0)
     o.entityID = entEntityID.new({hash = 0})
+    o.entity = nil
     o.spawned = false
+    o.spawning = false
+    o.spawnedAndCachedCallback = {}
 
     o.primaryRange = 120
     o.secondaryRange = 100
@@ -60,8 +68,9 @@ function spawnable:new()
     o.streamingMultiplier = 1
 
     o.isHovered = false
-    o.arrowDirection = "all"
+    o.arrowDirection = "none"
     o.rotationRelative = false
+    o.outline = 0
 
     o.object = object
 
@@ -70,12 +79,25 @@ function spawnable:new()
 end
 
 function spawnable:onAssemble(entity)
-    visualizer.attachArrows(entity, self:getVisualizerSize(), self.isHovered, self.arrowDirection)
+    visualizer.attachArrows(entity, self:getArrowSize(), self.isHovered, self.arrowDirection)
+end
+
+function spawnable:onAttached(entity)
+    self.spawned = true
+    self.spawning = false
+
+    for _, callback in ipairs(self.spawnedAndCachedCallback) do
+        callback(entity)
+    end
+end
+
+function spawnable:registerSpawnedAndAttachedCallback(callback)
+    table.insert(self.spawnedAndCachedCallback, callback)
 end
 
 ---Spawns the spawnable if not spawned already, must register a callback for entityAssemble which calls onAssemble
 function spawnable:spawn()
-    if self:isSpawned() then return end
+    if self:isSpawned() or self.spawning then return end
 
     local spec = StaticEntitySpec.new()
     spec.templatePath = self.spawnData
@@ -84,12 +106,16 @@ function spawnable:spawn()
     spec.attached = true
     spec.appearanceName = self.app
     self.entityID = Game.GetStaticEntitySystem():SpawnEntity(spec)
+    self.spawning = true
 
     builder.registerAssembleCallback(self.entityID, function (entity)
+        self.entity = entity
         self:onAssemble(entity)
     end)
 
-    self.spawned = true
+    builder.registerAttachCallback(self.entityID, function (entity)
+        self:onAttached(entity)
+    end)
 end
 
 ---@return boolean
@@ -103,6 +129,7 @@ function spawnable:despawn()
         Game.GetStaticEntitySystem():DespawnEntity(self.entityID)
     end
     self.spawned = false
+    self.entity = nil
 end
 
 function spawnable:respawn()
@@ -124,12 +151,19 @@ function spawnable:update()
     self:getEntity():SetWorldTransform(transform)
 end
 
+function spawnable:setOutline(color)
+    if not self:isSpawned() then return end
+
+    self.outline = color
+    utils.sendOutlineEvent(self:getEntity(), color)
+end
+
 ---Called when one of the control UI widgets is released
 function spawnable:onEdited(edited) end
 
 ---@return entEntity?
 function spawnable:getEntity()
-    return Game.GetStaticEntitySystem():GetEntity(self.entityID)
+    return Game.GetStaticEntitySystem():GetEntity(self.entityID) or self.entity
 end
 
 --- Generate valid name from given name / path
@@ -234,12 +268,50 @@ function spawnable:getGroupedProperties()
     return properties
 end
 
+---Gets the actual physical size of the spawnable, usually BBOX
+---@return table {x, y, z}
 function spawnable:getSize()
     return { x = 1, y = 1, z = 1 }
 end
 
-function spawnable:getVisualizerSize()
-    return { x = 1, y = 1, z = 1 }
+function spawnable:getBBox()
+    local size = self:getSize()
+    return {
+        min = { x = -size.x / 2, y = -size.y / 2, z = -size.z / 2 },
+        max = { x = size.x / 2, y = size.y / 2, z = size.z / 2 }
+    }
+end
+
+function spawnable:getArrowSize()
+    local size = self:getSize()
+    local max = math.min(math.max(size.x, size.y, size.z, 0.75) * 0.4, 1)
+    return { x = max, y = max, z = max }
+end
+
+function spawnable:getCenter()
+    return self.position
+end
+
+function spawnable:calculateIntersection(origin, ray)
+    local bbox = self:getBBox()
+
+    if not self:getEntity() then
+        return { hit = false }
+    end
+
+    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, bbox)
+
+    return {
+        hit = result.hit,
+        position = result.position,
+        unscaledHit = result.position, -- Hit result of intersection test with unmodified bbox, for more accurate drop to surface
+        collisionType = "bbox",
+        distance = result.distance,
+        bBox = bbox,
+        objectOrigin = self.position,
+        objectRotation = self.rotation,
+        normal = result.normal
+    }
 end
 
 ---Calculates the streaming distance values for the spawnable based on getSize()

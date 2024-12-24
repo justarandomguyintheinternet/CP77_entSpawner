@@ -9,6 +9,8 @@ local previewComponentNames = {
 }
 
 local function addMesh(entity, name, mesh, scale, app, enabled)
+    if app == "green" then app = "lime" end
+
     local parent = nil
     for _, component in pairs(entity:GetComponents()) do
         if component:IsA("entIPlacedComponent") then
@@ -52,9 +54,9 @@ end
 
 ---Creates and attached a sphere mesh, with the component name "sphere"
 ---@param entity entEntity
----@param radius number
+---@param scale { x : number, y : number, z : number }
 ---@param color? string
-function visualizer.addSphere(entity, radius, color)
+function visualizer.addSphere(entity, scale, color)
     if not entity then return end
 
     if not color then
@@ -62,7 +64,7 @@ function visualizer.addSphere(entity, radius, color)
         color = colors[math.random(1, 3)]
     end
 
-    addMesh(entity, "sphere", "base\\spawner\\sphere.mesh", { x = radius, y = radius, z = radius }, color, true)
+    addMesh(entity, "sphere", "base\\spawner\\sphere.mesh", scale, color, true)
 end
 
 function visualizer.addCapsule(entity, radius, height, color)

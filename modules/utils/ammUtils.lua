@@ -140,7 +140,8 @@ end
 
 local function setInstanceDataMesh(entity, propData, spawnable)
     for _, component in pairs(entity:GetComponents()) do
-        if entityBuilder.shouldUseMesh(component) and component:IsA("entMeshComponent") then
+        local use = entityBuilder.shouldUseMesh(component)
+        if use.use and component:IsA("entMeshComponent") then
             local change = {}
             if propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0 then
                 change = {chunkMask = "0"}
@@ -235,6 +236,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
                                 o:setParent(lightCustom)
                             end
 
+                            spawnable:loadInstanceData(entity, true)
                             print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. utils.tableLength(spawnable.instanceDataChanges) .. " light components.")
                         end
                         if isScaled then
@@ -244,6 +246,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
                             o.name = o.spawnable:generateName(propData.name)
                             o:setParent(scaledProps)
 
+                            o.spawnable:loadInstanceData(entity, true)
                             print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. utils.tableLength(spawnable.instanceDataChanges) .. " mesh components.")
                         end
 

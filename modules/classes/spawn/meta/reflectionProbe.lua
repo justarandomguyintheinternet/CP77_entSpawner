@@ -27,7 +27,6 @@ function reflection:new()
     o.description = "Places a reflection probe of variable size. Can be used to make indoors have appropriate base lighting."
     o.icon = IconGlyphs.HomeLightbulbOutline
 
-    o.scaleLocked = false
     o.scale = { x = 5, y = 5, z = 5 }
     o.edgeScale = { x = 1, y = 1, z = 1 }
     o.previewed = true
@@ -50,12 +49,12 @@ end
 function reflection:onAssemble(entity)
     spawnable.onAssemble(self, entity)
 
-    visualizer.addBox(entity, self.scale, "seashell")
+    visualizer.addBox(entity, { x = self.scale.x / 2, y = self.scale.y / 2, z = self.scale.z / 2 }, "seashell")
 
     local component = entEnvProbeComponent.new()
     component.name = "probe"
     component.probeDataRef = ResRef.FromString(self.spawnData)
-    component.size = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
+    component.size = Vector3.new(self.scale.x, self.scale.y, self.scale.z) -- Size is extents, not size
     component.edgeScale = Vector3.new(self.edgeScale.x, self.edgeScale.y, self.edgeScale.z)
     component.ambientMode = Enum.new("envUtilsReflectionProbeAmbientContributionMode", self.ambientMode)
     component.neighborMode = Enum.new("envUtilsNeighborMode", self.neighborMode)
@@ -63,7 +62,7 @@ function reflection:onAssemble(entity)
     component.streamingDistance = self.streamingDistance
     entity:AddComponent(component)
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
     visualizer.toggleAll(entity, self.previewed)
 end
 
@@ -99,19 +98,12 @@ function reflection:updateScale(finished)
     local entity = self:getEntity()
     if not entity then return end
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
-    visualizer.updateScale(entity, self.scale, "box")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
+    visualizer.updateScale(entity, { x = self.scale.x / 2, y = self.scale.y / 2, z = self.scale.z / 2 }, "box")
 end
 
 function reflection:getSize()
     return self.scale
-end
-
-function reflection:getVisualizerSize()
-    local size = self:getSize()
-
-    local max = math.min(math.max(size.x, size.y, size.z, 1.5) * 0.5, 3)
-    return { x = max, y = max, z = max }
 end
 
 function reflection:draw()

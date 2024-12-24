@@ -1,6 +1,6 @@
 {
     "spawnable": {
-        "shape": 0,
+        "shape": 1,
         "scale": {
             "y": 1,
             "z": 1,
@@ -11,7 +11,7 @@
         "modulePath": "collision/collider",
         "dataType": "Collision Shape"
     },
-    "name": "Box - Default",
+    "name": "Capsule - Default",
     "type": "object",
     "headerOpen": true
 }

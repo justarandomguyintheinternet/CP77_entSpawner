@@ -1,4 +1,4 @@
-local style = require("modules/ui/style")
+local intersection = require("modules/utils/editor/intersection")
 local spawnable = require("modules/classes/spawn/spawnable")
 local builder = require("modules/utils/entityBuilder")
 local utils = require("modules/utils/utils")
@@ -14,6 +14,8 @@ local history = require("modules/utils/history")
 ---@field public appIndex integer
 ---@field private bBoxCallback function
 ---@field public bBox table {min: Vector4, max: Vector4}
+---@field public bBoxLoaded boolean
+---@field public meshes table
 ---@field public instanceDataChanges table Changes to the default data, regardless of app (Matched by ID)
 ---@field public defaultComponentData table Default data for each component, regardless of whether it was changed. Keeps up to date with app changes
 local entity = setmetatable({}, { __index = spawnable })
@@ -31,6 +33,8 @@ function entity:new()
     o.appIndex = 0
     o.bBoxCallback = nil
     o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
+    o.bBoxLoaded = false
+    o.meshes = {}
 
     o.instanceDataChanges = {}
     o.defaultComponentData = {}
@@ -70,12 +74,16 @@ local function CRUIDToString(id)
     return tostring(CRUIDToHash(id)):gsub("ULL", "")
 end
 
-function entity:loadInstanceData(entity)
+function entity:loadInstanceData(entity, forceLoadDefault)
     self.defaultComponentData = {}
+
+    -- Only generate upon change
+    if not forceLoadDefault and utils.tableLength(self.instanceDataChanges) == 0 then
+        return
+    end
 
     -- Gotta go through all components, even such with identicaly IDs, due to AMM props using the same ID for all components
     local components = entity:GetComponents()
-    -- components["0"] = entity
 
     for _, component in pairs(components) do
         local ignore = false
@@ -102,34 +110,23 @@ end
 function entity:onAssemble(entity)
     spawnable.onAssemble(self, entity)
 
-    self:loadInstanceData(entity)
+    self:loadInstanceData(entity, false)
+end
 
-    cache.tryGet(self.spawnData .. "_bBox", self.spawnData .. "_meshes")
-    .notFound(function (task)
-        builder.getEntityBBox(entity, function (data)
-            local meshes = {}
-            for _, mesh in pairs(data.meshes) do
-                table.insert(meshes, { app = mesh.app, path = mesh.path, pos = utils.fromVector(mesh.pos), rot = utils.fromEuler(mesh.rot), name = mesh.name, scaled = mesh.hasScale })
-            end
+function entity:onAttached(entity)
+    spawnable.onAttached(self, entity)
 
-            cache.addValue(self.spawnData .. "_bBox", { min = utils.fromVector(data.bBox.min), max = utils.fromVector(data.bBox.max) })
-            cache.addValue(self.spawnData .. "_meshes", meshes)
-            print("[Entity] Loaded and cached BBOX for entity " .. self.spawnData .. " with " .. #meshes .. " meshes.")
+    builder.getEntityBBox(entity, function (data)
+        utils.log("[Entity] Loaded initial BBOX for entity " .. self.spawnData .. " with " .. #data.meshes .. " meshes.")
+        self.bBox = data.bBox
+        self.meshes = data.meshes
 
-            task:taskCompleted()
-        end)
-    end)
-    .found(function ()
-        utils.log("[Entity] BBOX for entity " .. self.spawnData .. " found.")
-        local box = cache.getValue(self.spawnData .. "_bBox")
-        self.bBox.min = ToVector4(box.min)
-        self.bBox.max = ToVector4(box.max)
-
-        visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+        visualizer.updateScale(entity, self:getArrowSize(), "arrows")
 
         if self.bBoxCallback then
             self.bBoxCallback(entity)
         end
+        self.bBoxLoaded = true
     end)
 end
 
@@ -146,25 +143,83 @@ function entity:save()
     return data
 end
 
+---Gets called once the entity is spawned and the BBox is cached. Gets passed the entity as param
+---@param callback any
 function entity:onBBoxLoaded(callback)
     self.bBoxCallback = callback
 end
 
+---@param entity entity?
+---@return table
 function entity:getSize()
     return { x = self.bBox.max.x - self.bBox.min.x, y = self.bBox.max.y - self.bBox.min.y, z = self.bBox.max.z - self.bBox.min.z }
 end
 
-function entity:getVisualizerSize()
-    local size = self:getSize()
+function entity:getBBox()
+    return self.bBox
+end
 
-    local max = math.min(math.max(size.x, size.y, size.z, 1) * 0.5, 3.5)
-    return { x = max, y = max, z = max }
+function entity:getCenter()
+    local size = self:getSize()
+    local offset = Vector4.new(
+        self.bBox.min.x + size.x / 2,
+        self.bBox.min.y + size.y / 2,
+        self.bBox.min.z + size.z / 2,
+        0
+    )
+    offset = self.rotation:ToQuat():Transform(offset)
+
+    return Vector4.new(
+        self.position.x + offset.x,
+        self.position.y + offset.y,
+        self.position.z + offset.z,
+        0
+    )
+end
+
+function entity:calculateIntersection(origin, ray)
+    if not self:getEntity() then
+        return { hit = false }
+    end
+
+    local hit = nil
+    local unscaledHit = nil
+
+    for _, mesh in pairs(self.meshes) do
+        local meshPosition = utils.addVector(mesh.position, self.position)
+        local meshRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.rotation:ToQuat(), mesh.rotation)
+
+        local result = intersection.getBoxIntersection(origin, ray, meshPosition, meshRotation:ToEulerAngles(), mesh.bbox)
+
+        if result.hit then
+            if not hit or result.distance < hit.distance then
+                hit = result
+
+                unscaledHit = intersection.getBoxIntersection(origin, ray, meshPosition, meshRotation:ToEulerAngles(), intersection.unscaleBBox(mesh.path, mesh.originalScale, mesh.bbox))
+            end
+        end
+    end
+
+    if not hit then return { hit = false } end
+
+    return {
+        hit = hit.hit,
+        position = hit.position,
+        unscaledHit = unscaledHit and unscaledHit.position or hit.position,
+        collisionType = "bbox",
+        distance = hit.distance,
+        bBox = self.bBox,
+        objectOrigin = self.position,
+        objectRotation = self.rotation,
+        normal = hit.normal
+    }
 end
 
 function entity:draw()
     spawnable.draw(self)
 
-    style.pushGreyedOut(#self.apps == 0 or not self:isSpawned())
+    local greyOut = #self.apps == 0 or not self:isSpawned()
+    style.pushGreyedOut(greyOut)
 
     local list = self.apps
 
@@ -185,7 +240,7 @@ function entity:draw()
             self:respawn()
         end
     end
-    style.popGreyedOut(#self.apps == 0 or not self:isSpawned())
+    style.popGreyedOut(greyOut)
 end
 
 function entity:getProperties()
@@ -645,6 +700,17 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
 end
 
 function entity:drawInstanceData()
+    if utils.tableLength(self.defaultComponentData) == 0 then
+        local entity = self:getEntity()
+
+        if entity then
+            self:loadInstanceData(entity, true)
+        else
+            ImGui.Text("Entity not spawned")
+            return
+        end
+    end
+
     for key, component in pairs(self.defaultComponentData) do
         local name = component["$type"]
         if component.name then

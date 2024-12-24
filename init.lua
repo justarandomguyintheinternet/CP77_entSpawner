@@ -18,7 +18,6 @@ local settings = require("modules/utils/settings")
 local builder = require("modules/utils/entityBuilder")
 local Cron = require("modules/utils/Cron")
 local cache = require("modules/utils/cache")
-local drag = require("modules/utils/dragHelper")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 local input = require("modules/utils/input")
@@ -46,6 +45,7 @@ spawner = {
     end,
 
     baseUI = require("modules/ui/baseUI"),
+    editor = require("modules/utils/editor/editor"),
     GameUI = require("modules/utils/GameUI")
 }
 
@@ -77,6 +77,8 @@ function spawner:new()
         self.baseUI.exportUI.init(self)
         history.spawnedUI = self.baseUI.spawnedUI
 
+        self.editor.init(self)
+
         Observe('RadialWheelController', 'OnIsInMenuChanged', function(_, isInMenu)
             self.runtimeData.inMenu = isInMenu
         end)
@@ -96,6 +98,8 @@ function spawner:new()
         if self.runtimeData.inGame and not self.runtimeData.inMenu then
             Cron.Update(dt)
         end
+
+        self.editor.camera.deltaTime = dt
     end)
 
     registerForEvent("onShutdown", function ()
@@ -106,9 +110,10 @@ function spawner:new()
 
     registerForEvent("onDraw", function()
         style.initialize()
+        self.editor.suspend(self.runtimeData.cetOpen)
 
         if self.runtimeData.cetOpen then
-            drag.draw()
+            self.editor.onDraw()
             self.baseUI.draw(self)
             input.update()
         end

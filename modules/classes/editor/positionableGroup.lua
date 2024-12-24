@@ -1,5 +1,6 @@
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
+local history = require("modules/utils/history")
 
 local positionable = require("modules/classes/editor/positionable")
 
@@ -69,11 +70,11 @@ function positionableGroup:getPosition()
 	return Vector4.new(center.x / nLeafs, center.y / nLeafs, center.z / nLeafs, 0)
 end
 
-function positionableGroup:setPosition(delta)
+function positionableGroup:setPositionDelta(delta)
 	local leafs = self:getPositionableLeafs()
 
 	for _, entry in pairs(leafs) do
-		entry:setPosition(delta)
+		entry:setPositionDelta(delta)
 	end
 end
 
@@ -90,7 +91,7 @@ end
 
 -- TODO: Track rotation of group independently, use that for rotation axis for objects (In global space, convert group axis to local space (unit vector - (group axis - object axis)))
 
-function positionableGroup:setRotation(delta)
+function positionableGroup:setRotationDelta(delta)
 	if delta.roll ~= 0 or delta.pitch ~= 0 or delta.yaw == 0 then return end
 
 	local pos = self:getPosition()
@@ -99,9 +100,31 @@ function positionableGroup:setRotation(delta)
 	for _, entry in pairs(leafs) do
 		local relativePosition = utils.subVector(entry:getPosition(), pos)
 		relativePosition = utils.subVector(Vector4.RotateAxis(relativePosition, Vector4.new(0, 0, 1, 0), Deg2Rad(delta.yaw)), relativePosition)
-		entry:setPosition(relativePosition)
-		entry:setRotation(delta)
+		entry:setPositionDelta(relativePosition)
+		entry:setRotationDelta(delta)
 	end
+end
+
+function positionableGroup:dropToSurface(grouped, direction)
+	local leafs = self:getPositionableLeafs()
+	table.sort(leafs, function (a, b)
+		return a:getPosition().z < b:getPosition().z
+	end)
+
+	local task = require("modules/utils/tasks"):new()
+	task.tasksTodo = #leafs
+	task.taskDelay = 0.03
+
+	for _, entry in pairs(leafs) do
+		task:addTask(function ()
+			entry:dropToSurface(true, direction)
+			task:taskCompleted()
+		end)
+	end
+
+	history.addAction(history.getElementChange(self))
+
+	task:run(true)
 end
 
 return positionableGroup

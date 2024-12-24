@@ -5,6 +5,7 @@ local utils = require("modules/utils/utils")
 local cache = require("modules/utils/cache")
 local visualizer = require("modules/utils/visualizer")
 local history = require("modules/utils/history")
+local intersection = require("modules/utils/editor/intersection")
 
 local colliderShapes = { "Box", "Capsule", "Sphere" }
 
@@ -15,8 +16,8 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@field public scale {x: number, y: number, z: number}
 ---@field public bBox table {min: Vector4, max: Vector4}
 ---@field public colliderShape integer
----@field public scaleLocked boolean
 ---@field public hideGenerate boolean
+---@field private bBoxLoaded boolean
 local mesh = setmetatable({}, { __index = spawnable })
 
 function mesh:new()
@@ -34,9 +35,9 @@ function mesh:new()
     o.appIndex = 0
     o.scale = { x = 1, y = 1, z = 1 }
     o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
+    o.bBoxLoaded = false
 
     o.colliderShape = 0
-    o.scaleLocked = true
     o.hideGenerate = false
 
     o.uk10 = 1040
@@ -66,16 +67,18 @@ function mesh:loadSpawnData(data, position, rotation)
 
             self.bBox.min = resource.boundingBox.Min
             self.bBox.max = resource.boundingBox.Max
-            visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+            visualizer.updateScale(entity, self:getArrowSize(), "arrows")
 
             -- Save to cache
             cache.addValue(self.spawnData .. "_apps", self.apps)
             cache.addValue(self.spawnData .. "_bBox_max", utils.fromVector(self.bBox.max))
             cache.addValue(self.spawnData .. "_bBox_min", utils.fromVector(self.bBox.min))
+            self.bBoxLoaded = true
         end)
     else
         self.bBox.max = ToVector4(self.bBox.max)
         self.bBox.min = ToVector4(self.bBox.min)
+        self.bBoxLoaded = true
     end
 
     self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
@@ -90,7 +93,7 @@ function mesh:onAssemble(entity)
     component.meshAppearance = self.app
     entity:AddComponent(component)
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
 end
 
 function mesh:spawn()
@@ -104,7 +107,6 @@ end
 function mesh:save()
     local data = spawnable.save(self)
     data.scale = { x = self.scale.x, y = self.scale.y, z = self.scale.z }
-    data.scaleLocked = self.scaleLocked
 
     return data
 end
@@ -120,18 +122,68 @@ function mesh:updateScale()
     component:Toggle(false)
     component:Toggle(true)
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
+    self:setOutline(self.outline)
 end
 
 function mesh:getSize()
     return { x = (self.bBox.max.x - self.bBox.min.x) * math.abs(self.scale.x), y = (self.bBox.max.y - self.bBox.min.y) * math.abs(self.scale.y), z = (self.bBox.max.z - self.bBox.min.z) * math.abs(self.scale.z) }
 end
 
-function mesh:getVisualizerSize()
-    local size = self:getSize()
+function mesh:getBBox()
+    return {
+        min = {  x = self.bBox.min.x * math.abs(self.scale.x), y = self.bBox.min.y * math.abs(self.scale.y), z = self.bBox.min.z * math.abs(self.scale.z) },
+        max = {  x = self.bBox.max.x * math.abs(self.scale.x), y = self.bBox.max.y * math.abs(self.scale.y), z = self.bBox.max.z * math.abs(self.scale.z) }
+    }
+end
 
-    local max = math.min(math.max(size.x, size.y, size.z, 1.5) * 0.5, 3)
-    return { x = max, y = max, z = max }
+function mesh:getCenter()
+    local size = self:getSize()
+    local offset = Vector4.new(
+        (self.bBox.min.x * self.scale.x) + size.x / 2,
+        (self.bBox.min.y * self.scale.y) + size.y / 2,
+        (self.bBox.min.z * self.scale.z) + size.z / 2,
+        0
+    )
+    offset = self.rotation:ToQuat():Transform(offset)
+
+    return Vector4.new(
+        self.position.x + offset.x,
+        self.position.y + offset.y,
+        self.position.z + offset.z,
+        0
+    )
+end
+
+function mesh:calculateIntersection(origin, ray)
+    if not self:getEntity() then
+        return { hit = false }
+    end
+
+    local scaleFactor = intersection.getResourcePathScalingFactor(self.spawnData, self:getSize())
+
+    local scaledBBox = {
+        min = {  x = self.bBox.min.x * math.abs(self.scale.x) * scaleFactor.x, y = self.bBox.min.y * math.abs(self.scale.y) * scaleFactor.y, z = self.bBox.min.z * math.abs(self.scale.z) * scaleFactor.z },
+        max = {  x = self.bBox.max.x * math.abs(self.scale.x) * scaleFactor.x, y = self.bBox.max.y * math.abs(self.scale.y) * scaleFactor.y, z = self.bBox.max.z * math.abs(self.scale.z) * scaleFactor.z }
+    }
+    local result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, scaledBBox)
+
+    local unscaledHit
+    if result.hit then
+        unscaledHit = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, intersection.unscaleBBox(self.spawnData, self:getSize(), scaledBBox))
+    end
+
+    return {
+        hit = result.hit,
+        position = result.position,
+        unscaledHit = unscaledHit and unscaledHit.position or result.position,
+        collisionType = "bbox",
+        distance = result.distance,
+        bBox = scaledBBox,
+        objectOrigin = self.position,
+        objectRotation = self.rotation,
+        normal = result.normal
+    }
 end
 
 function mesh:draw()
@@ -145,6 +197,10 @@ function mesh:draw()
         list = {"No apps"}
     end
 
+    style.mutedText("Appearance")
+    ImGui.SameLine()
+    local x = ImGui.GetCursorPosX()
+
     local index, changed = style.trackedCombo(self.object, "##app", self.appIndex, list, 110)
     style.tooltip("Select the mesh appearance")
     if changed and #self.apps > 0 then
@@ -156,6 +212,8 @@ function mesh:draw()
         if entity then
             entity:FindComponentByName("mesh").meshAppearance = CName.new(self.app)
             entity:FindComponentByName("mesh"):LoadAppearance()
+
+            self:setOutline(self.outline)
         end
     end
     style.popGreyedOut(#self.apps == 0)
@@ -164,12 +222,15 @@ function mesh:draw()
         return
     end
 
+    style.mutedText("Collider")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(x)
     ImGui.SetNextItemWidth(110 * style.viewSize)
     self.colliderShape, changed = ImGui.Combo("##colliderShape", self.colliderShape, colliderShapes, #colliderShapes)
 
     ImGui.SameLine()
 
-    if ImGui.Button("Generate Collider") then
+    if ImGui.Button("Generate") then
         self:generateCollider()
     end
 end
@@ -231,10 +292,11 @@ function mesh:generateCollider()
     collider:loadSpawnData(data, pos, rotation)
 
     local colliderElement = require("modules/classes/editor/spawnableElement"):new(self.object.sUI)
-    collider.object = colliderElement
-    colliderElement.name = self.object.name .. "_collider"
-    colliderElement.spawnable = collider
-    colliderElement.icon = collider.icon
+    colliderElement:load({
+        name = self.object.name .. "_collider",
+        spawnable = collider:save(),
+        modulePath = "modules/classes/editor/spawnableElement"
+    })
     colliderElement:setParent(group)
     local insertCollider = history.getInsert({ colliderElement })
 

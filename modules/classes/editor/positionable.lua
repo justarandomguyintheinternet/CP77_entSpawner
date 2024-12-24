@@ -2,6 +2,7 @@ local utils = require("modules/utils/utils")
 local settings = require("modules/utils/settings")
 local history = require("modules/utils/history")
 local style = require("modules/ui/style")
+local editor = require("modules/utils/editor/editor")
 
 local element = require("modules/classes/editor/element")
 
@@ -27,7 +28,7 @@ function positionable:new(sUI)
 	o.scaleLocked = true
 
 	o.visualizerState = false
-	o.visualizerDirection = "all"
+	o.visualizerDirection = "none"
 	o.controlsHovered = false
 
 	o.class = utils.combine(o.class, { "positionable" })
@@ -57,11 +58,11 @@ function positionable:drawTransform()
 	self:drawRotation(rotation)
 	self:drawScale(scale)
 
-	if not self.controlsHovered and self.visualizerDirection ~= "all" then
-		if not settings.gizmoOnSelected then
+	if not self.controlsHovered and self.visualizerDirection ~= "none" then
+		if not settings.gizmoOnSelected and not editor.active then
 			self:setVisualizerState(false) -- Set vis state first, as loading the mesh app (vis direction) can screw with it
 		end
-		self:setVisualizerDirection("all")
+		self:setVisualizerDirection("none")
 	end
 end
 
@@ -81,25 +82,48 @@ function positionable:getProperties()
 end
 
 function positionable:setSelected(state)
-	if state ~= self.selected and not self.hovered and settings.gizmoOnSelected then
+	local updated = state ~= self.selected
+	if updated and not self.hovered and (settings.gizmoOnSelected or editor.active) then
 		self:setVisualizerState(state)
 	end
 
 	element.setSelected(self, state)
+
+	if updated then
+		self.sUI.cachePaths()
+
+		if state then
+			if #self.sUI.selectedPaths > 1 then
+				for _, entry in ipairs(self.sUI.selectedPaths) do
+					if entry and entry.ref ~= self then
+						entry.ref:setVisualizerState(false)
+					end
+				end
+
+				self:setVisualizerState(false)
+			end
+		elseif #self.sUI.selectedPaths == 1 then
+			for _, entry in ipairs(self.sUI.selectedPaths) do
+				if entry and entry.ref ~= self then
+					entry.ref:setVisualizerState(true)
+				end
+			end
+		end
+	end
 end
 
 function positionable:setHovered(state)
-	if (not self.selected or not settings.gizmoOnSelected) and state ~= self.hovered then
+	if (not self.selected or (not settings.gizmoOnSelected and not editor.active)) and state ~= self.hovered then
 		self:setVisualizerState(state)
-		self:setVisualizerDirection("all")
+		self:setVisualizerDirection("none")
 	end
 
 	element.setHovered(self, state)
 end
 
 function positionable:setVisualizerDirection(direction)
-	if not settings.gizmoOnSelected then
-		if direction ~= "all" and not self.hovered and not self.visualizerState then
+	if not settings.gizmoOnSelected and not editor.active then
+		if direction ~= "none" and not self.hovered and not self.visualizerState then
 			self:setVisualizerState(true)
 		end
 	end
@@ -141,32 +165,32 @@ function positionable:drawProp(prop, name, axis)
 	end
     if changed or finished then
 		if axis == "x" then
-			self:setPosition(Vector4.new(newValue - prop, 0, 0, 0))
+			self:setPositionDelta(Vector4.new(newValue - prop, 0, 0, 0))
 		elseif axis == "y" then
-			self:setPosition(Vector4.new(0, newValue - prop, 0, 0))
+			self:setPositionDelta(Vector4.new(0, newValue - prop, 0, 0))
 		elseif axis == "z" then
-			self:setPosition(Vector4.new(0, 0, newValue - prop, 0))
+			self:setPositionDelta(Vector4.new(0, 0, newValue - prop, 0))
 		elseif axis == "relX" then
 			local v = self:getDirection("right")
-			self:setPosition(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
+			self:setPositionDelta(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
 		elseif axis == "relY" then
 			local v = self:getDirection("forward")
-			self:setPosition(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
+			self:setPositionDelta(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
 		elseif axis == "relZ" then
 			local v = self:getDirection("up")
-			self:setPosition(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
+			self:setPositionDelta(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
 		elseif axis == "roll" then
-			self:setRotation(EulerAngles.new(newValue - prop, 0, 0))
+			self:setRotationDelta(EulerAngles.new(newValue - prop, 0, 0))
 		elseif axis == "pitch" then
-			self:setRotation(EulerAngles.new(0, newValue - prop, 0))
+			self:setRotationDelta(EulerAngles.new(0, newValue - prop, 0))
 		elseif axis == "yaw" then
-			self:setRotation(EulerAngles.new(0, 0, newValue - prop))
+			self:setRotationDelta(EulerAngles.new(0, 0, newValue - prop))
 		elseif axis == "scaleX" then
-			self:setScale({ x = newValue - prop, y = 0, z = 0 }, finished)
+			self:setScaleDelta({ x = newValue - prop, y = 0, z = 0 }, finished)
 		elseif axis == "scaleY" then
-			self:setScale({ x = 0, y = newValue - prop, z = 0 }, finished)
+			self:setScaleDelta({ x = 0, y = newValue - prop, z = 0 }, finished)
 		elseif axis == "scaleZ" then
-			self:setScale({ x = 0, y = 0, z = newValue - prop }, finished)
+			self:setScaleDelta({ x = 0, y = 0, z = newValue - prop }, finished)
 		end
     end
 end
@@ -186,7 +210,17 @@ function positionable:drawPosition(position)
     if ImGui.Button(IconGlyphs.AccountArrowLeftOutline) then
 		history.addAction(history.getElementChange(self))
 		local pos = Game.GetPlayer():GetWorldPosition()
-        self:setPosition(Vector4.new(pos.x - position.x, pos.y - position.y, pos.z - position.z, 0))
+
+		if editor.active then
+			local forward = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetAxisY()
+			pos = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
+
+			pos.z = pos.z + forward.z * settings.spawnDist
+			pos.x = pos.x + forward.x * settings.spawnDist
+			pos.y = pos.y + forward.y * settings.spawnDist
+		end
+
+        self:setPositionDelta(Vector4.new(pos.x - position.x, pos.y - position.y, pos.z - position.z, 0))
     end
     style.pushButtonNoBG(false)
 	if ImGui.IsItemHovered() then style.setCursorRelative(5, 5) end
@@ -240,21 +274,33 @@ function positionable:drawScale(scale)
 	ImGui.PopItemWidth()
 end
 
-function positionable:setPosition(delta)
+function positionable:setPosition(position)
 end
 
+function positionable:setPositionDelta(delta)
+end
+
+---@return Vector4
 function positionable:getPosition()
 	return Vector4.new(0, 0, 0, 0)
 end
 
-function positionable:setRotation(delta)
+function positionable:setRotation(rotation)
 end
 
+function positionable:setRotationDelta(delta)
+end
+
+---@return EulerAngles
 function positionable:getRotation()
 	return EulerAngles.new(0, 0, 0)
 end
 
-function positionable:setScale(delta, finished)
+function positionable:setScale(scale, finished)
+
+end
+
+function positionable:setScaleDelta(delta, finished)
 
 end
 
@@ -272,6 +318,10 @@ function positionable:getDirection(direction)
 	elseif direction == "up" then
 		return Vector4.new(0, 0, 1, 0)
 	end
+end
+
+function positionable:dropToSurface(grouped, direction)
+
 end
 
 function positionable:serialize()

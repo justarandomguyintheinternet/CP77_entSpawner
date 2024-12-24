@@ -4,6 +4,7 @@ local visualizer = require("modules/utils/visualizer")
 local settings = require("modules/utils/settings")
 local utils = require("modules/utils/utils")
 local history = require("modules/utils/history")
+local intersection = require("modules/utils/editor/intersection")
 
 local materials = { "meatbag.physmat","linoleum.physmat","trash.physmat","plastic.physmat","character_armor.physmat","furniture_upholstery.physmat","metal_transparent.physmat","tire_car.physmat","meat.physmat","metal_car_pipe_steam.physmat","character_flesh.physmat","brick.physmat","character_flesh_head.physmat","leaves.physmat","flesh.physmat","water.physmat","plastic_road.physmat","metal_hollow.physmat","cyberware_flesh.physmat","plaster.physmat","plexiglass.physmat","character_vr.physmat","vehicle_chassis.physmat","sand.physmat","glass_electronics.physmat","leaves_stealth.physmat","tarmac.physmat","metal_car.physmat","tiles.physmat","glass_car.physmat","grass.physmat","concrete.physmat","carpet_techpiercable.physmat","wood_hedge.physmat","stone.physmat","leaves_semitransparent.physmat","metal_catwalk.physmat","upholstery_car.physmat","cyberware_metal.physmat","paper.physmat","leather.physmat","metal_pipe_steam.physmat","metal_pipe_water.physmat","metal_semitransparent.physmat","neon.physmat","glass_dst.physmat","plastic_car.physmat","mud.physmat","dirt.physmat","metal_car_pipe_water.physmat","furniture_leather.physmat","asphalt.physmat","wood_bamboo_poles.physmat","glass_opaque.physmat","carpet.physmat","food.physmat","cyberware_metal_head.physmat","metal_road.physmat","wood_tree.physmat","wood_player_npc_semitransparent.physmat","wood.physmat","metal_car_ricochet.physmat","cardboard.physmat","wood_crown.physmat","metal_ricochet.physmat","plastic_electronics.physmat","glass_semitransparent.physmat","metal_painted.physmat","rubber.physmat","ceramic.physmat","glass_bulletproof.physmat","metal_car_electronics.physmat","trash_bag.physmat","character_cyberflesh.physmat","metal_heavypiercable.physmat","metal.physmat","plastic_car_electronics.physmat","oil_spill.physmat","fabrics.physmat","glass.physmat","metal_techpiercable.physmat","concrete_water_puddles.physmat","character_metal.physmat" }
 local presets = { "World Dynamic","Player Collision","Player Hitbox","NPC Collision","NPC Trace Obstacle","NPC Hitbox","Big NPC Collision","Player Blocker","Block Player and Vehicles","Vehicle Blocker","Block PhotoMode Camera","Ragdoll","Ragdoll Inner","RagdollVehicle","Terrain","Sight Blocker","Moving Kinematic","Interaction Object","Particle","Destructible","Debris","Debris Cluster","Foliage Debris","ItemDrop","Shooting","Moving Platform","Water","Window","Device transparent","Device solid visible","Vehicle Device","Environment transparent","Bullet logic","World Static","Simple Environment Collision","Complex Environment Collision","Foliage Trunk","Foliage Trunk Destructible","Foliage Low Trunk","Foliage Crown","Vehicle Part","Vehicle Proxy","Vehicle Part Query Only Exception","Vehicle Chassis","Chassis Bottom","Chassis Bottom Traffic","Vehicle Chassis Traffic","AV Chassis","Tank Chassis","Vehicle Chassis LOD3","Vehicle Chassis Traffic LOD3","Tank Chassis LOD3","Drone","Prop Interaction","Nameplate","Road Barrier Simple Collision","Road Barrier Complex Collision","Lootable Corpse","Spider Tank"}
@@ -16,9 +17,6 @@ local colors = { "red", "green", "blue" }
 ---@field private material integer
 ---@field private preset integer
 ---@field private shapeTypes table
----@field private extents {x : number, y : number, z : number}
----@field private height number
----@field private radius number
 ---@field public previewed boolean
 local collider = setmetatable({}, { __index = spawnable })
 
@@ -40,13 +38,25 @@ function collider:new()
 
     o.shapeTypes = { "Box", "Capsule", "Sphere" }
 
-    o.extents = { x = 1, y = 1, z = 1 }
-    o.height = 3
-    o.radius = 1
+    o.scale = { x = 1, y = 1, z = 1 }
     o.previewed = true
 
     setmetatable(o, { __index = self })
    	return o
+end
+
+function collider:loadSpawnData(data, position, rotation)
+    spawnable.loadSpawnData(self, data, position, rotation)
+
+    if data.radius then
+        if self.shape == 0 then
+            self.scale = data.extents
+        elseif self.shape == 1 then
+            self.scale = { x = data.radius, y = data.radius, z = data.height }
+        elseif self.shape == 2 then
+            self.scale = { x = data.radius, y = data.radius, z = data.radius }
+        end
+    end
 end
 
 function collider:onAssemble(entity)
@@ -59,17 +69,17 @@ function collider:onAssemble(entity)
 
     if self.shape == 0 then
         actor = physicsColliderBox.new()
-        actor.halfExtents = ToVector3(self.extents)
-        visualizer.addBox(entity, self.extents, color)
+        actor.halfExtents = ToVector3(self.scale)
+        visualizer.addBox(entity, self.scale, color)
     elseif self.shape == 1 then
         actor = physicsColliderCapsule.new()
-        actor.height = self.height
-        actor.radius = self.radius
-        visualizer.addCapsule(entity, self.radius, self.height, color)
+        actor.height = self.scale.z
+        actor.radius = self.scale.y
+        visualizer.addCapsule(entity, self.scale.y, self.scale.z, color)
     elseif self.shape == 2 then
         actor = physicsColliderSphere.new()
-        actor.radius = self.radius
-        visualizer.addSphere(entity, self.radius, color)
+        actor.radius = self.scale.x
+        visualizer.addSphere(entity, self.scale, color)
     end
 
     actor.material = materials[self.material + 1]
@@ -101,10 +111,8 @@ function collider:save()
     data.shape = self.shape
     data.material = self.material
     data.preset = self.preset
-    data.extents = { x = self.extents.x, y = self.extents.y, z = self.extents.z }
-    data.height = self.height
-    data.radius = self.radius
     data.previewed = self.previewed
+    data.scale = self.scale
     if data.previewed == nil then data.previewed = true end
 
     return data
@@ -119,26 +127,45 @@ function collider:getMaterialIndexByName(material)
 end
 
 function collider:getSize()
-    if self.shape == 0 then
-        return self.extents
-    elseif self.shape == 1 then
-        return { x = self.radius, y = self.radius, z = self.height }
-    elseif self.shape == 2 then
-        return { x = self.radius, y = self.radius, z = self.radius }
-    end
+    return { x = self.scale.x * 2, y = self.scale.y * 2, z = self.scale.z * 2 }
 end
 
-function collider:getVisualizerSize()
-    local max = math.max(self.extents.x, self.extents.y, self.extents.z)
-    if self.shape == 1 then
-        max = math.max(self.radius, self.height)
-    elseif self.shape == 2 then
-        max = self.radius
-    end
+function collider:getArrowSize()
+    local max = math.max(self.scale.x, self.scale.y, self.scale.z)
 
     max = math.max(max, 1) * 0.5
 
     return { x = max, y = max, z = max }
+end
+
+function collider:calculateIntersection(origin, ray)
+    if not self:getEntity() then
+        return { hit = false }
+    end
+
+    local scaledBBox = {
+        min = {  x = - self.scale.x, y = - self.scale.y, z = - self.scale.z },
+        max = {  x = self.scale.x, y = self.scale.y, z = self.scale.z }
+    }
+    local result
+
+    if self.shape == 2 then
+        result = intersection.getSphereIntersection(origin, ray, self.position, self.scale.x)
+    else
+        result = intersection.getBoxIntersection(origin, ray, self.position, self.rotation, scaledBBox)
+    end
+
+    return {
+        hit = result.hit,
+        position = result.position,
+        unscaledHit = result.position,
+        collisionType = "bbox",
+        distance = result.distance,
+        bBox = scaledBBox,
+        objectOrigin = self.position,
+        objectRotation = self.rotation,
+        normal = result.normal
+    }
 end
 
 ---Respawn the collider to update parameters, if changed
@@ -146,6 +173,36 @@ end
 ---@protected
 function collider:updateFull(changed)
     if changed and self:isSpawned() then self:respawn() end
+end
+
+---@protected
+function collider:updateScale(finished)
+    if self.shape == 1 then
+        local width = math.max(self.scale.x, self.scale.y)
+        self.scale.x = width
+        self.scale.y = width
+    elseif self.shape == 2 then
+        local radius = math.max(self.scale.x, self.scale.y, self.scale.z)
+        self.scale = { x = radius, y = radius, z = radius }
+    end
+
+    if finished then
+        self:respawn()
+        return
+    end
+
+    local entity = self:getEntity()
+    if not entity then return end
+
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
+
+    if self.shape == 0 then
+        visualizer.updateScale(entity, self.scale, "box")
+    elseif self.shape == 1 then
+        visualizer.updateCapsuleScale(self:getEntity(), self.scale.y, self.scale.z)
+    elseif self.shape == 2 then
+        visualizer.updateScale(entity, self.scale, "sphere")
+    end
 end
 
 function collider:draw()
@@ -156,7 +213,9 @@ function collider:draw()
     ImGui.Text("Collision Shape")
     ImGui.SameLine()
     self.shape, changed = style.trackedCombo(self.object, "##type", self.shape, self.shapeTypes)
-    self:updateFull(changed)
+    if changed then
+        self:updateScale(true)
+    end
 
     ImGui.SameLine()
     self.previewed, changed = style.trackedCheckbox(self.object, "Preview shape", self.previewed)
@@ -174,46 +233,6 @@ function collider:draw()
     ImGui.SameLine()
     self.material, changed = style.trackedCombo(self.object, "##material", self.material, materials)
     self:updateFull(changed)
-
-    if self.shape == 0 then
-        self.extents.x, changed, finished = style.trackedDragFloat(self.object, "##extentsX", self.extents.x, 0.01, 0, 9999, "%.2f X Extents", 100)
-        if changed then
-            visualizer.updateScale(self:getEntity(), self.extents, "box")
-        end
-        self:updateFull(finished)
-        ImGui.SameLine()
-        self.extents.y, changed, finished = style.trackedDragFloat(self.object, "##extentsY", self.extents.y, 0.01, 0, 9999, "%.2f Y Extents", 100)
-        if changed then
-            visualizer.updateScale(self:getEntity(), self.extents, "box")
-        end
-        self:updateFull(finished)
-        ImGui.SameLine()
-        self.extents.z, changed, finished = style.trackedDragFloat(self.object, "##extentsZ", self.extents.z, 0.01, 0, 9999, "%.2f Z Extents", 100)
-        if changed then
-            visualizer.updateScale(self:getEntity(), self.extents, "box")
-        end
-        self:updateFull(finished)
-    elseif self.shape == 1 then
-        self.height, changed, finished = style.trackedDragFloat(self.object, "##height", self.height, 0.01, 0, 9999, "%.2f Height")
-        if changed then
-            visualizer.updateCapsuleScale(self:getEntity(), self.radius, self.height)
-        end
-        self:updateFull(finished)
-        ImGui.SameLine()
-    end
-    if self.shape == 1 or self.shape == 2 then
-        self.radius, changed, finished = style.trackedDragFloat(self.object, "##radius", self.radius, 0.01, 0, 9999, "%.2f Radius")
-        if changed then
-            if self.shape == 1 then
-                visualizer.updateCapsuleScale(self:getEntity(), self.radius, self.height)
-            else
-                visualizer.updateScale(self:getEntity(), { x = self.radius, y = self.radius, z = self.radius }, "sphere")
-            end
-        end
-        self:updateFull(finished)
-    end
-
-    ImGui.PopItemWidth()
 end
 
 function collider:getProperties()
@@ -280,19 +299,19 @@ function collider:export()
     local shapeType
     local size
 	if self.shape == 0 then
-		local max = math.max(self.extents.x, self.extents.y, self.extents.z)
+		local max = math.max(self.scale.x, self.scale.y, self.scale.z)
 		extents = Vector4.new(max, max, max)
         shapeType = "Box"
-        size = self.extents
+        size = self.scale
 	elseif self.shape == 1 then
-		local max = math.max(self.radius, self.height)
+		local max = math.max(self.scale.y, self.scale.z)
 		extents = Vector4.new(max, max, max)
         shapeType = "Capsule"
-        size = Vector4.new(self.radius, self.height, 0, 0)
+        size = Vector4.new(self.scale.y, self.scale.z, 0, 0)
 	elseif self.shape == 2 then
-		extents = Vector4.new(self.radius, self.radius, self.radius)
+		extents = Vector4.new(self.scale.x, self.scale.x, self.scale.x)
         shapeType = "Sphere"
-        size = Vector4.new(self.radius, 0, 0, 0)
+        size = Vector4.new(self.scale.x, 0, 0, 0)
 	end
 
     local rotation = self.rotation:ToQuat()

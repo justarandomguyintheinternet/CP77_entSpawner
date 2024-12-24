@@ -1,5 +1,7 @@
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
+local editor = require("modules/utils/editor/editor")
+local input = require("modules/utils/input")
 
 ---@class baseUI
 baseUI = {
@@ -10,7 +12,9 @@ baseUI = {
     settingsUI = require("modules/ui/settingsUI"),
     activeTab = 1,
     loadTabSize = true,
-    loadWindowSize = nil
+    loadWindowSize = nil,
+    mainWindowPosition = { 0, 0 },
+    restoreWindowPosition = false
 }
 
 local menuButtonHovered = false
@@ -75,8 +79,8 @@ local function drawMenuButton()
     style.pushStyleColor(menuButtonHovered, ImGuiCol.Text, style.mutedColor)
     ImGui.SetItemAllowOverlap()
     ImGui.Text(IconGlyphs.DotsHorizontal)
-    menuButtonHovered = ImGui.IsItemHovered()
     style.popStyleColor(menuButtonHovered)
+    menuButtonHovered = ImGui.IsItemHovered()
 
     if ImGui.BeginPopupContextItem("##windowMenu", ImGuiPopupFlags.MouseButtonLeft) then
         style.styledText("Separated Tabs:", style.mutedColor, 0.85)
@@ -107,17 +111,56 @@ function baseUI.init()
 end
 
 function baseUI.draw(spawner)
-    if baseUI.loadTabSize then
+    input.resetContext()
+    local screenWidth, screenHeight = GetDisplayResolution()
+    local editorActive = editor.active
+
+    if baseUI.loadTabSize and not editorActive then
         ImGui.SetNextWindowSize(settings.tabSizes[tabs[baseUI.activeTab].id][1], settings.tabSizes[tabs[baseUI.activeTab].id][2])
         baseUI.loadTabSize = false
     end
+    if editorActive then
+        ImGui.SetNextWindowSizeConstraints(screenWidth / 8, screenHeight, screenWidth / 2, screenHeight)
+        ImGui.SetNextWindowPos(screenWidth, 0, ImGuiCond.Always, 1, 0)
+        if baseUI.loadTabSize then
+            if settings.editorWidth == 0 then
+                settings.editorWidth = settings.tabSizes.spawned[1]
+            end
+            ImGui.SetNextWindowSize(settings.editorWidth, screenHeight)
+        end
+        baseUI.loadTabSize = false
+    end
+    if baseUI.restoreWindowPosition then
+        ImGui.SetNextWindowPos(baseUI.mainWindowPosition[1], baseUI.mainWindowPosition[2], ImGuiCond.Always, 0, 0)
+        baseUI.restoreWindowPosition = false
+    end
 
-    if ImGui.Begin("Object Spawner 2.0", tabs[baseUI.activeTab].flags) then
+    style.pushStyleColor(editorActive, ImGuiCol.WindowBg, 0, 0, 0, 1)
+    style.pushStyleVar(editorActive, ImGuiStyleVar.WindowRounding, 0)
+
+    local flags = tabs[baseUI.activeTab].flags
+    if editorActive then
+        flags = flags + ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.NoTitleBar
+    end
+
+    if ImGui.Begin("Object Spawner 2.0", flags) then
+        input.updateContext("main")
+
+        if not editorActive then
+            baseUI.mainWindowPosition = { ImGui.GetWindowPos() }
+        end
+
         local x, y = ImGui.GetWindowSize()
-        if x ~= settings.tabSizes[tabs[baseUI.activeTab].id][1] or y ~= settings.tabSizes[tabs[baseUI.activeTab].id][2] then
-            settings.tabSizes[tabs[baseUI.activeTab].id] = { x, y }
+        if not editorActive and (x ~= settings.tabSizes[tabs[baseUI.activeTab].id][1] or y ~= settings.tabSizes[tabs[baseUI.activeTab].id][2]) then
+            settings.tabSizes[tabs[baseUI.activeTab].id] = { math.min(x, 5000), math.min(y, 3500) }
             settings.save()
         end
+        if editorActive and x ~= settings.editorWidth then
+            settings.editorWidth = x
+            settings.save()
+        end
+
+        editor.camera.updateXOffset(- (x / screenWidth))
 
         if ImGui.BeginTabBar("Tabbar", ImGuiTabItemFlags.NoTooltip) then
             for key, tab in ipairs(tabs) do
@@ -141,12 +184,15 @@ function baseUI.draw(spawner)
                 end
             end
             ImGui.EndTabBar()
-
-            drawMenuButton()
         end
+
+        drawMenuButton()
 
         ImGui.End()
     end
+
+    style.popStyleColor(editorActive)
+    style.popStyleVar(editorActive)
 
     for key, tab in pairs(tabs) do
         if settings.windowStates[tab.id] then
@@ -156,6 +202,7 @@ function baseUI.draw(spawner)
             end
 
             settings.windowStates[tab.id] = ImGui.Begin(tab.name, true, tabs[key].flags)
+            input.updateContext("main")
 
             local x, y = ImGui.GetWindowSize()
             if x ~= settings.tabSizes[tab.id][1] or y ~= settings.tabSizes[tab.id][2] then
@@ -173,6 +220,11 @@ function baseUI.draw(spawner)
             end
         end
     end
+
+    baseUI.spawnUI.drawPopup()
+
+    input.context.viewport.hovered = not input.context.main.hovered
+    input.context.viewport.focused = not input.context.main.focused
 end
 
 return baseUI

@@ -31,7 +31,6 @@ function occluder:new()
 
     o.occluderTypes = utils.enumTable("visWorldOccluderType")
 
-    o.scaleLocked = false
     o.scale = { x = 1, y = 1, z = 1 }
     o.occluderType = 0
     o.occluderMesh = 1
@@ -51,7 +50,7 @@ function occluder:onAssemble(entity)
     if self.occluderMesh == 2 or self.occluderMesh == 3 then
         scale = { x = scale.x, y = 0.01, z = scale.z }
     end
-    visualizer.addBox(entity, scale, "green")
+    visualizer.addBox(entity, { x = scale.x / 2, y = scale.y / 2, z = scale.z / 2 }, "green") -- Scale is extents, not size
 
     local component = entStaticOccluderMeshComponent.new()
     component.name = "occluder"
@@ -60,7 +59,7 @@ function occluder:onAssemble(entity)
     component.occluderType = Enum.new("visWorldOccluderType", self.occluderType)
     entity:AddComponent(component)
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
     visualizer.toggleAll(entity, self.previewed)
 end
 
@@ -95,19 +94,12 @@ function occluder:updateScale(finished)
         scale = { x = scale.x, y = 0.01, z = scale.z }
     end
 
-    visualizer.updateScale(entity, self:getVisualizerSize(), "arrows")
-    visualizer.updateScale(entity, scale, "box")
+    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
+    visualizer.updateScale(entity, { x = scale.x / 2, y = scale.y / 2, z = scale.z / 2 }, "box")
 end
 
 function occluder:getSize()
     return self.scale
-end
-
-function occluder:getVisualizerSize()
-    local size = self:getSize()
-
-    local max = math.min(math.max(size.x, size.y, size.z, 1.5) * 0.5, 3)
-    return { x = max, y = max, z = max }
 end
 
 function occluder:draw()

@@ -45,6 +45,20 @@ function style.pushStyleColor(state, style, ...)
     ImGui.PushStyleColor(style, ...)
 end
 
+function style.pushStyleVar(state, style, ...)
+    if not state then return end
+
+    ImGui.PushStyleVar(style, ...)
+end
+
+---@param state boolean
+---@param count number?
+function style.popStyleVar(state, count)
+    if not state then return end
+
+    ImGui.PopStyleVar(count or 1)
+end
+
 ---@param state boolean
 ---@param count number?
 function style.popStyleColor(state, count)

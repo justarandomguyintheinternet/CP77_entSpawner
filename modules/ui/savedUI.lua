@@ -94,11 +94,14 @@ function savedUI.draw(spawner)
 
     if savedUI.filter ~= '' then
         ImGui.SameLine()
-        if ImGui.Button('X') then
+
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.Close) then
             savedUI.filter = ''
             settings.savedUIFilter = savedUI.filter
             settings.save()
         end
+        style.pushButtonNoBG(false)
     end
 
     style.spacedSeparator()
@@ -107,7 +110,7 @@ function savedUI.draw(spawner)
         if ImGui.Button("Import AMM Presets") then
             savedUI.importAMMPresets()
         end
-        style.tooltip("Imports all presets from the AMMImport folder.\nImport might take a bit, depending on size.\nThe initial spawn might crash for now.")
+        style.tooltip("Imports all presets from the AMMImport folder.\nImport might take a bit, depending on size.\nThe initial spawn might crash for now.\nMight leave behind unwanted objects, so reloading a save is advised.")
     else
         ImGui.ProgressBar(amm.progress / amm.total, 200, 30, string.format("%.2f%%", (amm.progress / amm.total) * 100))
     end

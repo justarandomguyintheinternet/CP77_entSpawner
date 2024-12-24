@@ -17,17 +17,40 @@ function exportUI.init(spawner)
         if file.name:match("^.+(%..+)$") == ".json" then
             local data = config.loadFile("data/exportTemplates/" .. file.name)
 
-            for key, group in pairs(data.groups) do
-                if not config.fileExists("data/objects/" .. group.name .. ".json") then
-                    data.groups[key] = nil
+            if data.groups then
+                for key, group in pairs(data.groups) do
+                    if not config.fileExists("data/objects/" .. group.name .. ".json") then
+                        data.groups[key] = nil
+                    end
                 end
-            end
 
-            exportUI.templates[data.projectName] = data
+                exportUI.templates[data.projectName] = data
+            end
         end
     end
 
     exportUI.spawner = spawner
+end
+
+local function calculateExtents(center, objects)
+    local maxExtent = {x = 0, y = 0, z = 0}
+
+    for _, point in ipairs(objects) do
+        if utils.isA(point.ref, "spawnableElement") and Vector4.Distance(point.ref:getPosition(), Vector4.new(0, 0, 0, 0)) > 25 then
+            local pos = point.ref:getPosition()
+            local range = point.ref.spawnable.primaryRange
+
+            local dx = math.abs(pos.x - center.x) + range
+            local dy = math.abs(pos.y - center.y) + range
+            local dz = math.abs(pos.z - center.z) + range
+
+            maxExtent.x = math.max(maxExtent.x, dx)
+            maxExtent.y = math.max(maxExtent.y, dy)
+            maxExtent.z = math.max(maxExtent.z, dz)
+        end
+    end
+
+    return maxExtent
 end
 
 function exportUI.drawGroups()
@@ -67,6 +90,17 @@ function exportUI.drawGroups()
 
                 style.mutedText("Streaming Box Extents:")
                 style.tooltip("Change the size of the streaming box for the sector, extends the given amount on each axis in both directions")
+                ImGui.SameLine()
+                if ImGui.Button("Auto") then
+                    local blob = config.loadFile("data/objects/" .. group.name .. ".json")
+                    local g = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
+                    g:load(blob, true)
+
+                    local extents = calculateExtents(group.center, g:getPathsRecursive(false))
+                    group.streamingX = extents.x * 1.2
+                    group.streamingY = extents.y * 1.2
+                    group.streamingZ = extents.z * 1.2
+                end
                 ImGui.SameLine()
                 ImGui.PushItemWidth(90 * style.viewSize)
                 group.streamingX = ImGui.DragFloat("##x", group.streamingX, 0.25, 0, 9999, "%.1f X Size")
@@ -236,7 +270,8 @@ function exportUI.addGroup(name)
     local g = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
     g:load(blob, true)
 
-    data.center = g:getPosition()
+    local center = g:getPosition()
+    data.center = utils.fromVector(center)
 end
 
 function exportUI.exportGroup(group)
