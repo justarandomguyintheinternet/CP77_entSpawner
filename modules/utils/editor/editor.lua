@@ -26,6 +26,8 @@ local style = require("modules/ui/style")
 ---@field interface gamestateMachineGameScriptInterface?
 ---@field depthSelectElements table
 ---@field depthSelectOpen boolean
+---@field depthElementsMaxWidth number
+---@field boxSelectActive boolean
 local editor = {
     active = false,
     camera = nil,
@@ -46,7 +48,8 @@ local editor = {
     interface = nil,
     depthSelectElements = {},
     depthSelectOpen = false,
-    depthElementsMaxWidth = 0
+    depthElementsMaxWidth = 0,
+    boxSelectActive = false
 }
 
 function viewportFocused()
@@ -615,6 +618,16 @@ function editor.drawDepthSelect()
     end
 end
 
+function editor.handleBoxSelect()
+    if not editor.active then return end
+
+    if ImGui.IsMouseDragging(0, 0.6) and not editor.boxSelectActive and input.context.viewport.hovered then
+        editor.boxSelectActive = true
+    elseif not ImGui.IsMouseDragging(0, 0.6) and editor.boxSelectActive then
+        editor.boxSelectActive = false
+    end
+end
+
 function editor.onDraw()
     editor.camera.update()
 
@@ -622,6 +635,7 @@ function editor.onDraw()
         editor.checkArrow()
         editor.updateDrag()
         editor.drawDepthSelect()
+        editor.handleBoxSelect()
     end
 end
 
