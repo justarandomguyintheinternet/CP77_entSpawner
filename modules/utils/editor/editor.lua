@@ -26,6 +26,9 @@ local style = require("modules/ui/style")
 ---@field interface gamestateMachineGameScriptInterface?
 ---@field depthSelectElements table
 ---@field depthSelectOpen boolean
+---@field depthElementsMaxWidth number
+---@field boxSelectActive boolean
+---@field boxSelectStart table
 local editor = {
     active = false,
     camera = nil,
@@ -46,7 +49,9 @@ local editor = {
     interface = nil,
     depthSelectElements = {},
     depthSelectOpen = false,
-    depthElementsMaxWidth = 0
+    depthElementsMaxWidth = 0,
+    boxSelectActive = false,
+    boxSelectStart = { x = 0, y = 0 }
 }
 
 function viewportFocused()
@@ -260,8 +265,14 @@ function editor.addHighlightToSelected()
     end
 end
 
-function editor.getScreenToWorldRay()
-    local x, y = ImGui.GetMousePos()
+---Gets a ray pointing from the screen into the scene, using mouse position as default
+---@param x number?
+---@param y number?
+---@return Vector4
+function editor.getScreenToWorldRay(x, y)
+    if not x or not y then
+        x, y = ImGui.GetMousePos()
+    end
     local width, height = GetDisplayResolution()
     local _, ray = editor.camera.screenToWorld((x / width * 2) - 1, - ((y / height * 2) - 1))
 
@@ -615,6 +626,75 @@ function editor.drawDepthSelect()
     end
 end
 
+---@param entry spawnable
+local function calculateSpawnableCorners(entry)
+    local bBox = entry:getBBox()
+
+    local corners = {
+        Vector4.new(bBox.min.x, bBox.min.y, bBox.min.z, 1),
+        Vector4.new(bBox.min.x, bBox.min.y, bBox.max.z, 1),
+        Vector4.new(bBox.min.x, bBox.max.y, bBox.min.z, 1),
+        Vector4.new(bBox.min.x, bBox.max.y, bBox.max.z, 1),
+        Vector4.new(bBox.max.x, bBox.min.y, bBox.min.z, 1),
+        Vector4.new(bBox.max.x, bBox.min.y, bBox.max.z, 1),
+        Vector4.new(bBox.max.x, bBox.max.y, bBox.min.z, 1),
+        Vector4.new(bBox.max.x, bBox.max.y, bBox.max.z, 1)
+    }
+
+    for key, corner in pairs(corners) do
+        corners[key] = utils.addVector(entry.position, entry.rotation:ToQuat():Transform(corner))
+    end
+
+    return corners
+end
+
+function editor.handleBoxSelect()
+    if not editor.active then return end
+
+    local x, y = ImGui.GetMousePos()
+    if ImGui.IsKeyDown(ImGuiKey.LeftCtrl) and ImGui.IsMouseDragging(0, 0.6) and not editor.boxSelectActive and input.context.viewport.hovered then
+        editor.boxSelectActive = true
+        editor.boxSelectStart = { x = x, y = y }
+        editor.spawnedUI.unselectAll()
+    elseif not ImGui.IsMouseDragging(0, 0.6) and editor.boxSelectActive then
+        editor.boxSelectActive = false
+
+        local width, height = GetDisplayResolution()
+        local min = { x = math.min(editor.boxSelectStart.x, x), y = math.min(editor.boxSelectStart.y, y) }
+        local max = { x = math.max(editor.boxSelectStart.x, x), y = math.max(editor.boxSelectStart.y, y) }
+
+        for _, element in pairs(editor.spawnedUI.paths) do
+            if element.ref.visible and utils.isA(element.ref, "spawnableElement") then
+                local inside = true
+                for _, corner in pairs(calculateSpawnableCorners(element.ref.spawnable)) do
+                    local xCorner, yCorner = editor.camera.worldToScreen(corner)
+                    xCorner, yCorner = (xCorner + 1) * width / 2, (- yCorner + 1) * height / 2
+
+                    if xCorner < min.x or xCorner > max.x or yCorner < min.y or yCorner > max.y then
+                        inside = false
+                        break
+                    end
+                end
+
+                if inside then
+                    element.ref:setSelected(true)
+                end
+            end
+        end
+    end
+
+    if editor.boxSelectActive then
+        ImGui.SetNextWindowPos(math.min(editor.boxSelectStart.x, x), math.min(editor.boxSelectStart.y, y), ImGuiCond.Always)
+        ImGui.SetNextWindowSize(math.abs(x - editor.boxSelectStart.x), math.abs(y - editor.boxSelectStart.y))
+
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, 0, 0)
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, 0, 0, 0, 0.1)
+        editor.boxSelectActive = ImGui.Begin("##boxSelect", ImGuiWindowFlags.NoResize + ImGuiWindowFlags.NoMove + ImGuiWindowFlags.NoTitleBar + ImGuiWindowFlags.NoCollapse)
+        ImGui.PopStyleColor()
+        ImGui.PopStyleVar()
+    end
+end
+
 function editor.onDraw()
     editor.camera.update()
 
@@ -622,6 +702,7 @@ function editor.onDraw()
         editor.checkArrow()
         editor.updateDrag()
         editor.drawDepthSelect()
+        editor.handleBoxSelect()
     end
 end
 

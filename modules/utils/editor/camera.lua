@@ -149,4 +149,20 @@ function camera.screenToWorld(x, y)
     return vecRelative, vecGlobal
 end
 
+function camera.worldToScreen(position)
+    local cameraRotation = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation()
+    local pov = Game.GetPlayer():GetFPPCameraComponent():GetFOV()
+    local width, height = GetDisplayResolution()
+
+    local vecGlobal = utils.subVector(position, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()):Normalize()
+    local vecLocal = Vector4.RotateAxis(vecGlobal, Vector4.new(0, 0, 1, 0), math.rad(-cameraRotation.yaw))
+    vecLocal = Vector4.RotateAxis(vecLocal, Vector4.new(1, 0, 0, 0), math.rad(-cameraRotation.pitch))
+
+    local vertical = EulerAngles.new(0, pov / 2, 0):GetForward()
+    local x = vecLocal.x / (vertical.z * (width / height))
+    local y = vecLocal.z / vertical.z
+
+    return x, y
+end
+
 return camera

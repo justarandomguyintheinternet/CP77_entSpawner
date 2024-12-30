@@ -913,9 +913,13 @@ function spawnedUI.drawTop()
 
     local state = editor.active
     style.pushStyleColor(state, ImGuiCol.Text, 0xfffcdb03)
+    ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 1)
+    ImGui.PushStyleColor(ImGuiCol.Border, 1, 1, 0, 0.3)
     if ImGui.Button(IconGlyphs.Rotate3d) then
         editor.toggle(not editor.active)
     end
+    ImGui.PopStyleColor()
+    ImGui.PopStyleVar()
     style.popStyleColor(state)
     style.tooltip("Toggle 3D-Editor mode")
     ImGui.SameLine()
