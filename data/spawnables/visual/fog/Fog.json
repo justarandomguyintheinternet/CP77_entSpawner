@@ -1,0 +1,23 @@
+{
+    "spawnable": {
+        "scale": {
+            "y": 15,
+            "z": 15,
+            "x": 15
+        },
+        "color": [
+            1,
+            0,
+            0
+        ],
+        "absorption": 0.05,
+        "blendFalloff": 0,
+        "densityFactor": 2.5,
+        "densityFalloff": 0,
+        "modulePath": "visual/fog",
+        "dataType": "Fog Volume"
+    },
+    "name": "Fog - Default",
+    "type": "object",
+    "headerOpen": true
+}

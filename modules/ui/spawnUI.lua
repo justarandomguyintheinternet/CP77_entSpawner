@@ -30,7 +30,8 @@ local types = {
         ["Decals"] = require("modules/classes/spawn/visual/decal"),
         ["Effects"] = require("modules/classes/spawn/visual/effect"),
         ["Static Audio Emitter"] = require("modules/classes/spawn/visual/audio"),
-        ["Water Patch"] = require("modules/classes/spawn/visual/waterPatch")
+        ["Water Patch"] = require("modules/classes/spawn/visual/waterPatch"),
+        ["Fog Volume"] = require("modules/classes/spawn/visual/fog")
     },
     ["Meta"] = {
         ["Occluder"] = require("modules/classes/spawn/meta/occluder"),
@@ -227,17 +228,15 @@ function spawnUI.draw()
     tooltip("Automatically place any newly spawned object into the selected group")
 	ImGui.PopItemWidth()
 
-    ImGui.Text("Strip paths")
-    ImGui.SameLine()
     if spawnUI.getActiveSpawnList().isPaths then
+        ImGui.Text("Strip paths")
+        ImGui.SameLine()
         settings.spawnUIOnlyNames, changed = ImGui.Checkbox("##strip", settings.spawnUIOnlyNames)
         if changed then
             spawnUI.refresh()
         end
         style.tooltip("Only show the name of the file, without the full path")
     end
-
-    ImGui.SameLine()
 
     spawnUI.drawSpawnPosition()
 

@@ -785,6 +785,7 @@ function spawnedUI.drawElement(element, dummy)
 
     ImGui.PopStyleColor(2)
     ImGui.PopStyleVar(2)
+    style.popStyleColor(isGettingDragged)
 
     ImGui.PopID()
 

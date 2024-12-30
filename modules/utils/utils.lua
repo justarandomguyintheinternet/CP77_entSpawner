@@ -372,4 +372,15 @@ function miscUtils.sendOutlineEvent(entity, color)
     }))
 end
 
+function miscUtils.getTextMaxWidth(texts)
+    local max = 0
+
+    for _, text in ipairs(texts) do
+        local x, _ = ImGui.CalcTextSize(text)
+        max = math.max(max, x)
+    end
+
+    return max
+end
+
 return miscUtils
