@@ -1,3 +1,7 @@
+// Imports an entitySpawner json export
+// @author keanuwheeze
+// @version 0.94
+
 //////////////// Modify this //////////////////
 
 const inputFilePathInRawFolder = "new_project_exported.json"
@@ -67,12 +71,12 @@ const insertNode = (sector, node) => {
 	nodeData.Position.Y = node.position.y
 	nodeData.Position.Z = node.position.z
 	
-	// Default values
+	// Streaming values
 	nodeData.MaxStreamingDistance = node.secondaryRange
 	nodeData.UkFloat1 = node.primaryRange
 	nodeData.Uk10 = node.uk10
 	nodeData.Uk11 = node.uk11
-
+	
 	// Pivot
 	nodeData.Pivot.X = node.position.x
 	nodeData.Pivot.Y = node.position.y
@@ -98,11 +102,18 @@ const insertNode = (sector, node) => {
 	nodeData.Orientation.k = node.rotation.k
 	nodeData.Orientation.r = node.rotation.r
 	
-	// Hash for interactivity
-	nodeData.QuestPrefabRefHash.$value = wkit.HashString(JSON.stringify(nodeData), "fnv1a64").toString()
-	
-	// Debug name for wkit
-	worldNode.debugName.$value = node.name || ""
+	// NodeRef
+	if (node.nodeRef !== undefined && node.nodeRef !== "") {
+		nodeData.QuestPrefabRefHash.$storage = "string"
+		nodeData.QuestPrefabRefHash.$value = node.nodeRef
+		sector.Data.RootChunk.nodeRefs.push({
+			"$type": "NodeRef",
+			"$storage": "string",
+			"$value": node.nodeRef
+		})
+	} else {
+		nodeData.QuestPrefabRefHash.$value = wkit.HashString(JSON.stringify(nodeData), "fnv1a64").toString()
+	}
 
 	sector.Data.RootChunk.nodeData.Data.push(nodeData)
 	
@@ -110,6 +121,9 @@ const insertNode = (sector, node) => {
 	
 	sortInstanceData(node.data)
 	deepCopy(node.data, worldNode)
+
+	// Debug name for wkit
+	worldNode.debugName.$value = node.name || ""
 
 	sector.Data.RootChunk.nodes.push({HandleId : sector.Data.RootChunk.nodes.length.toString() , Data : worldNode})
 }
@@ -199,36 +213,44 @@ const reorderJSONByType = (data) => {
 }
 
 // Main import logic
-
-let data = JSON.parse(wkit.LoadRawJsonFromProject(inputFilePathInRawFolder, "json"))
-
-data = reorderJSONByType(data)
-
-if (data == null) {
-	Logger.Error(`File ${inputFilePathInRawFolder} does not exist / wrong format!`)
-} else {
-	let block = getNewBlock()
-	
-	data.sectors.forEach((entry) => {
-		addSectorToBlock(block, entry, data.name)
-		let sector = createSectorFromData(entry)
-		
-		entry.nodes.forEach((node) => {
-			insertNode(sector, node)
-		})
-		
-		wkit.SaveToProject(`${data.name}/sectors/${entry.name}.streamingsector`, wkit.JsonToCR2W(JSON.stringify(sector)))
-	})
-	
-	let xl = {
-		streaming : {
-			blocks : [
-				`${data.name}/all.streamingblock`
-			]
-		}
+export function RunEntitySpawnerImport(filePath = inputFilePathInRawFolder, calledFromExternal = false) {
+	if (!calledFromExternal && (!filePath || !wkit.FileExistsInRaw(filePath))) {
+		return;
 	}
-	wkit.SaveToResources(`${data.name}.xl`, wkit.JsonToYaml(JSON.stringify(xl)))
-	wkit.SaveToProject(`${data.name}/all.streamingblock`, wkit.JsonToCR2W(JSON.stringify(block)))
+	
+	Logger.Success(`Starting to import ${filePath}`);
+	let data = JSON.parse(wkit.LoadRawJsonFromProject(inputFilePathInRawFolder, "json"))
 
-	Logger.Success("Import finished.")
+	data = reorderJSONByType(data)
+
+	if (data == null) {
+		Logger.Error(`File ${inputFilePathInRawFolder} does not exist / wrong format!`)
+	} else {
+		let block = getNewBlock()
+
+		data.sectors.forEach((entry) => {
+			addSectorToBlock(block, entry, data.name)
+			let sector = createSectorFromData(entry)
+
+			entry.nodes.forEach((node) => {
+				insertNode(sector, node)
+			})
+
+			wkit.SaveToProject(`${data.name}/sectors/${entry.name}.streamingsector`, wkit.JsonToCR2W(JSON.stringify(sector)))
+		})
+
+		let xl = {
+			streaming: {
+				blocks: [
+					`${data.name}/all.streamingblock`
+				]
+			}
+		}
+		wkit.SaveToResources(`${data.name}.xl`, wkit.JsonToYaml(JSON.stringify(xl)))
+		wkit.SaveToProject(`${data.name}/all.streamingblock`, wkit.JsonToCR2W(JSON.stringify(block)))
+
+		Logger.Success("Import finished.")
+	}
 }
+
+RunEntitySpawnerImport();

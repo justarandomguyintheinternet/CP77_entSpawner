@@ -35,6 +35,7 @@ local intersection = require("modules/utils/editor/intersection")
 ---@field private rotationRelative boolean
 ---@field protected outline integer
 ---@field private spawnedAndCachedCallback function[]
+---@field protected nodeRef string
 local spawnable = {}
 
 function spawnable:new()
@@ -66,6 +67,7 @@ function spawnable:new()
     o.uk10 = 1024
     o.uk11 = 512
     o.streamingMultiplier = 1
+    o.nodeRef = ""
 
     o.isHovered = false
     o.arrowDirection = "none"
@@ -191,7 +193,8 @@ function spawnable:save()
         primaryRange = self.primaryRange,
         secondaryRange = self.secondaryRange,
         uk10 = self.uk10,
-        uk11 = self.uk11
+        uk11 = self.uk11,
+        nodeRef = self.nodeRef
     }
 end
 
@@ -205,6 +208,8 @@ function spawnable:getProperties()
         name = "World Node",
         defaultHeader = false,
         draw = function()
+            self.nodeRef, _, _ = style.trackedTextField(self.object, "Node Ref", self.nodeRef, "$/#foobar", 80)
+
             self.primaryRange, _, _ = style.trackedDragFloat(self.object, "Primary Range", self.primaryRange, 0.1, 0, 9999, "%.2f", 80)
             ImGui.SameLine()
             local distance = utils.distanceVector(self.position, GetPlayer():GetWorldPosition())
@@ -359,8 +364,9 @@ function spawnable:export(key, length)
         secondaryRange = self.secondaryRange,
         uk10 = self.uk10,
         uk11 = self.uk11,
+        nodeRef = self.nodeRef,
         type = "worldEntityNode",
-        name = self.object.name,
+        name = "[" .. self.dataType .. "] " .. self.object.name,
         data = {
             entityTemplate = {
                 DepotPath = {

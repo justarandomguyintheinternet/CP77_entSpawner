@@ -193,7 +193,11 @@ end
 ---@param data ISerializable
 ---@return table
 function red.redDataToJSON(data)
-    local root = Reflection.GetClassOf(ToVariant(data), true)
+    local root
+
+    pcall(function ()
+       root = Reflection.GetClassOf(ToVariant(data), true)
+    end)
 
     if not root then return nil end
 

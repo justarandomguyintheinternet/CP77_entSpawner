@@ -245,4 +245,21 @@ function style.trackedColor(element, name, color, width)
     return newValue, changed, finished
 end
 
+function style.trackedTextField(element, text, value, hint, width)
+    width = width or 80
+    ImGui.SetNextItemWidth(width * style.viewSize)
+    local newValue, changed = ImGui.InputTextWithHint(text, hint, value, 500)
+
+    local finished = ImGui.IsItemDeactivatedAfterEdit()
+	if finished then
+		dragBeingEdited = false
+	end
+	if changed and not dragBeingEdited then
+		history.addAction(history.getElementChange(element))
+		dragBeingEdited = true
+	end
+
+    return newValue, changed, finished
+end
+
 return style
