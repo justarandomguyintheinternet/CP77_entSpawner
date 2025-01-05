@@ -73,7 +73,7 @@ local function convertSimple(propValue, propClass)
         end
     elseif propClass == "NodeRef" then
         local hash = NodeRefToHash(propValue)
-        if propValue and tostring(hash) ~= "0ULL" then
+        if propValue then
             propData = {
                 ["$type"] = "NodeRef",
                 ["$storage"] = "Uint64",
@@ -270,7 +270,7 @@ local function importSimple(value, propType)
     elseif propType == "TweakDBID" then
         propData = TweakDBID.new(value["$value"])
     elseif propType == "NodeRef" then
-        propData = HashToNodeRef(loadstring("return " .. value .. "ULL", "")())
+        propData = HashToNodeRef(loadstring("return " .. value["$value"] .. "ULL", "")())
     end
 
     return propData
@@ -314,7 +314,7 @@ local function importArray(value, data, key, prop)
     for index, entry in pairs(value) do
         local innerType = prop:GetType():GetInnerType()
 
-        if entry.HandleId then
+        if type(entry) == "table" and entry.HandleId then
             entry = entry.Data
             innerType = innerType:GetInnerType()
         end
@@ -324,7 +324,13 @@ local function importArray(value, data, key, prop)
             entryInstance = data[key][index] or NewObject(entry["$type"])
         end
 
-        local entryData = red.importAny(innerType:GetMetaType(), entry["$type"], entry, nil, entryInstance, index)
+        local propType = type(entry) == "table" and entry["$type"] or nil
+
+        if not propType then
+            propType = innerType:GetName().value
+        end
+
+        local entryData = red.importAny(innerType:GetMetaType(), propType, entry, nil, entryInstance, index)
 
         table.insert(propData, entryData)
     end

@@ -91,6 +91,8 @@ function entity:loadInstanceData(entity, forceLoadDefault)
         if component:IsA("entMeshComponent") or component:IsA("entSkinnedMeshComponent") then
             ignore = ResRef.FromHash(component.mesh.hash):ToString():match("base\\spawner") or ResRef.FromHash(component.mesh.hash):ToString():match("base\\amm_props\\mesh\\invis_")
         end
+        ignore = ignore or CRUIDToString(component.id) == "0"
+
         if not ignore then
             if not component.name.value:match("amm_prop_slot") then
                 self.defaultComponentData[CRUIDToString(component.id)] = red.redDataToJSON(component)
@@ -395,7 +397,30 @@ function entity:getPropTypeInfo(componentID, path, key)
                 if not value[key] then
                     value = utils.getNestedValue(self.instanceDataChanges[componentID], parentPath)
                 end
-                return { typeName = value[key]["$type"], isEnum = false, propType = nil}
+
+                local typeName = type(value[key]) == "table" and value[key]["$type"] or nil
+                local isEnum = false
+
+                if not typeName then -- Is simple type
+                    local parentParent = utils.deepcopy(parentPath) -- Grab parent of array, to get type of array
+                    table.remove(parentParent, #parentParent)
+
+                    local fullPath = table.concat(path, "/")
+                    if not self.typeInfo[fullPath] then
+                        local parentData = utils.getNestedValue(self.instanceDataChanges[componentID] or self.defaultComponentData[componentID], parentParent)
+
+                        local parentType = parentData["$type"]
+                        local propType = Reflection.GetClass(parentType):GetProperty(parentPath[#parentPath]):GetType():GetInnerType()
+                        isEnum = propType:IsEnum()
+                        typeName = propType:GetName().value
+
+                        self.typeInfo[fullPath] = { typeName = typeName, isEnum = isEnum, propType = nil }
+                    else
+                        return self.typeInfo[fullPath]
+                    end
+                end
+
+                return { typeName = typeName, isEnum = isEnum, propType = nil}
             end
         end
     end
@@ -521,7 +546,16 @@ function entity:drawAddArrayEntry(prop, componentID, path, data)
             if isHandle then base = base:GetInnerType() end
 
             if base:GetMetaType() ~= ERTTIType.Class then
-                ImGui.Text("Type not yet supported")
+                if base:GetName().value == "Bool" then
+                    if ImGui.MenuItem("Bool") then
+                        local newPath = utils.deepcopy(path)
+                        table.insert(newPath, #data + 1)
+
+                        self:updatePropValue(componentID, newPath, 1)
+                    end
+                else
+                    ImGui.Text(string.format("%s not yet supported", base:GetName().value))
+                end
             else
                 for _, class in pairs(self:getDerivedClasses(base:GetName().value)) do
                     if ImGui.MenuItem(class) then
@@ -577,9 +611,31 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
         self:drawResetProp(componentID, path)
         style.popStyleColor(modified)
         return
-    elseif info.typeName == "TweakDBID" or info.typeName == "CName" or info.typeName == "NodeRef" then
+    elseif info.typeName == "TweakDBID" or info.typeName == "CName" then
         table.insert(path, "$value")
         self:drawStringProp(componentID, key, data["$value"], path, info.typeName, 150, max)
+        style.popStyleColor(modified)
+        return
+    elseif info.typeName == "NodeRef" then
+        table.insert(path, "$value")
+
+        ImGui.Text(tostring(key))
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
+        ImGui.SetNextItemWidth(150 * style.viewSize)
+        local value, _ = ImGui.InputText("##" .. componentID .. table.concat(path), data["$value"], 250)
+        style.tooltip(info.typeName .. " (Must be hash, not string)")
+        self:drawResetProp(componentID, path)
+        if ImGui.IsItemDeactivatedAfterEdit() then
+            if string.find(value, "%D") then
+                value, _ = value:gsub("#", "")
+                value, _ = tostring(FNV1a64(value)):gsub("ULL", "")
+            end
+
+            history.addAction(history.getElementChange(self.object))
+            self:updatePropValue(componentID, path, value)
+        end
+
         style.popStyleColor(modified)
         return
     elseif info.typeName == "LocalizationString" then
@@ -644,9 +700,9 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
 
         local info = self:getPropTypeInfo(componentID, path, key)
 
-        ImGui.Text(key)
+        ImGui.Text(tostring(key))
         ImGui.SameLine()
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(tostring(key)) + max)
 
         if info.typeName == "Bool" then
             local value, changed = ImGui.Checkbox("##" .. componentID .. table.concat(path), data == 1 and true or false)
