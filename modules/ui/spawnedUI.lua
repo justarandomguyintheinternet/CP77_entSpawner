@@ -162,10 +162,10 @@ end
 function spawnedUI.registerHotkeys()
     input.registerImGuiHotkey({ ImGuiKey.Z, ImGuiKey.LeftCtrl }, function()
         history.undo()
-    end)
+    end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.Y, ImGuiKey.LeftCtrl }, function()
         history.redo()
-    end)
+    end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.A, ImGuiKey.LeftCtrl }, function()
         for _, entry in pairs(spawnedUI.paths) do
             entry.ref:setSelected(true)
@@ -182,7 +182,7 @@ function spawnedUI.registerHotkeys()
         if #spawnedUI.selectedPaths == 0 then return end
 
         spawnedUI.clipboard = spawnedUI.copy(true)
-    end)
+    end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.V, ImGuiKey.LeftCtrl }, function()
         if #spawnedUI.clipboard == 0 then return end
 
@@ -192,18 +192,18 @@ function spawnedUI.registerHotkeys()
         end
 
         history.addAction(history.getInsert(spawnedUI.paste(spawnedUI.clipboard, target)))
-    end)
+    end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.X, ImGuiKey.LeftCtrl }, function ()
         if #spawnedUI.selectedPaths == 0 then return end
 
         spawnedUI.cut(true)
-    end)
+    end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.Delete }, function()
         history.addAction(history.getRemove(spawnedUI.getRoots(spawnedUI.selectedPaths)))
         for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
             entry.ref:remove()
         end
-    end)
+    end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.D, ImGuiKey.LeftCtrl }, function()
         if #spawnedUI.selectedPaths == 0 then return end
 
