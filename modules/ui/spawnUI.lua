@@ -345,13 +345,15 @@ function spawnUI.draw()
             elseif ImGui.IsMouseDragging(0, 0.6) and not spawnUI.dragging and ImGui.IsItemHovered() then
                 spawnUI.dragging = true
                 spawnUI.dragData = entry
-            elseif not ImGui.IsMouseDragging(0, 0.6) and spawnUI.dragging and not ImGui.IsItemHovered() then
-                ImGui.SetClipboardText(spawnUI.dragData.name)
-                local ray = editor.getScreenToWorldRay()
-                spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+            elseif not ImGui.IsMouseDragging(0, 0.6) and spawnUI.dragging then
+                if not ImGui.IsItemHovered() then
+                    ImGui.SetClipboardText(spawnUI.dragData.name)
+                    local ray = editor.getScreenToWorldRay()
+                    spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
 
-                local class = spawnUI.getActiveSpawnList().class
-                spawnUI.dragData.lastSpawned = spawnUI.spawnNew(spawnUI.dragData, class)
+                    local class = spawnUI.getActiveSpawnList().class
+                    spawnUI.dragData.lastSpawned = spawnUI.spawnNew(spawnUI.dragData, class)
+                end
 
                 spawnUI.dragging = false
                 spawnUI.dragData = nil
