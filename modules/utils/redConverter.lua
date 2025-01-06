@@ -14,7 +14,8 @@ local exportExludes = {
     "appearancePath",
     "meshResource",
     "worldTransform",
-    "appearanceName"
+    "appearanceName",
+    "blackboard"
 }
 
 local function convertCName(propValue)
@@ -32,7 +33,7 @@ local function convertFundamental(propValue, propClass)
     local propData = propValue
     if type(propValue) == "boolean" then
         propData = propValue and 1 or 0
-    elseif propClass == "Uint64" then
+    elseif propClass == "uint64" then
         propData = tostring(propValue):gsub("ULL", "")
     end
 
@@ -76,7 +77,7 @@ local function convertSimple(propValue, propClass)
         if propValue then
             propData = {
                 ["$type"] = "NodeRef",
-                ["$storage"] = "Uint64",
+                ["$storage"] = "uint64",
                 ["$value"] = tostring(hash):gsub("ULL", "")
             }
         else
@@ -246,7 +247,7 @@ local function importFundamental(value, propType)
 
     if propType == "Bool" then
         propData = value == 1
-    elseif propType == "Uint64" then
+    elseif propType == "uint64" then
         propData = loadstring("return " .. value .. "ULL", "")()
     else
         local succ = pcall(function()

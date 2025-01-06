@@ -34,7 +34,6 @@ local light = setmetatable({}, { __index = visualized })
 function light:new()
 	local o = visualized.new(self)
 
-    o.boxColor = {255, 255, 0}
     o.spawnListType = "files"
     o.dataType = "Static Light"
     o.spawnDataPath = "data/spawnables/lights/"

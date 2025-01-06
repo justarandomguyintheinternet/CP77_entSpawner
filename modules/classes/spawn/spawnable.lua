@@ -11,7 +11,6 @@ local intersection = require("modules/utils/editor/intersection")
 ---@field public spawnListType string
 ---@field public spawnListPath string
 ---@field public modulePath string
----@field public boxColor table
 ---@field public spawnData string
 ---@field public app string
 ---@field public position Vector4
@@ -45,7 +44,6 @@ function spawnable:new()
     o.spawnListType = "list"
     o.spawnListPath = "data/spawnables/entity/templates/"
     o.modulePath = "spawnable"
-    o.boxColor = {255, 0, 0}
     o.node = "worldEntityNode"
     o.description = ""
     o.previewNote = "---"

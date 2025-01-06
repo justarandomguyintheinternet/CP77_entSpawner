@@ -23,7 +23,6 @@ local collider = setmetatable({}, { __index = spawnable })
 function collider:new()
 	local o = spawnable.new(self)
 
-    o.boxColor = {255, 255, 0}
     o.spawnListType = "files"
     o.dataType = "Collision Shape"
     o.spawnDataPath = "data/spawnables/colliders/"

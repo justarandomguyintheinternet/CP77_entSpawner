@@ -19,6 +19,9 @@ function cache.load()
     end
 
     if not sanitizeSpawnData then return end
+    cache.generateDevicePSClassList()
+    cache.generateRecordsList()
+
     cache.removeDuplicates("data/spawnables/entity/templates/paths_ent.txt")
     cache.removeDuplicates("data/spawnables/mesh/all/paths_mesh.txt")
     cache.removeDuplicates("data/spawnables/mesh/physics/paths_filtered_mesh.txt")
@@ -87,6 +90,10 @@ function cache.generateStaticAudioList()
     end
 
     config.saveRawTable("data/spawnables/visual/sounds/sounds.txt", sounds)
+end
+
+function cache.generateDevicePSClassList()
+    config.saveFile("deviceComponentPSClasses.json", utils.getDerivedClasses("gameDeviceComponent"))
 end
 
 ---Tries to get the cached value for each key, if any of the keys is not cached, the notFound callback is called with a task object on which task:taskCompleted() must be called once the value has been put into the cache

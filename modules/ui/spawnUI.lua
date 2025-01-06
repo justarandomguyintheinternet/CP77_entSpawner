@@ -11,7 +11,8 @@ local types = {
     ["Entity"] = {
         ["Record"] = require("modules/classes/spawn/entity/entityRecord"),
         ["Template"] = require("modules/classes/spawn/entity/entityTemplate"),
-        ["Template (AMM)"] = require("modules/classes/spawn/entity/ammEntity")
+        ["Template (AMM)"] = require("modules/classes/spawn/entity/ammEntity"),
+        ["Device"] = require("modules/classes/spawn/entity/device")
     },
     ["Lights"] = {
         ["Light"] = require("modules/classes/spawn/light/light")

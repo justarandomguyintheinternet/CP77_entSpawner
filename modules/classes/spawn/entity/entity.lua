@@ -23,7 +23,6 @@ local entity = setmetatable({}, { __index = spawnable })
 function entity:new()
 	local o = spawnable.new(self)
 
-    o.boxColor = {255, 255, 0}
     o.spawnListType = "list"
     o.dataType = "Entity"
     o.modulePath = "entity/entity"
@@ -353,20 +352,6 @@ function entity:getSortedKeys(tbl)
     return keys, max
 end
 
-function entity:getDerivedClasses(base)
-    local classes = { base }
-
-    for _, derived in pairs(Reflection.GetDerivedClasses(base)) do
-        if derived:GetName().value ~= base then
-            for _, class in pairs(self:getDerivedClasses(derived:GetName().value)) do
-                table.insert(classes, class)
-            end
-        end
-    end
-
-    return classes
-end
-
 ---Hell (Attempt to get the type of the data at the specified path)
 ---@param componentID number
 ---@param path table
@@ -557,7 +542,7 @@ function entity:drawAddArrayEntry(prop, componentID, path, data)
                     ImGui.Text(string.format("%s not yet supported", base:GetName().value))
                 end
             else
-                for _, class in pairs(self:getDerivedClasses(base:GetName().value)) do
+                for _, class in pairs(utils.getDerivedClasses(base:GetName().value)) do
                     if ImGui.MenuItem(class) then
                         local newPath = utils.deepcopy(path)
                         table.insert(newPath, #data + 1)
@@ -717,7 +702,7 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
                 history.addAction(history.getElementChange(self.object))
                 self:updatePropValue(componentID, path, value)
             end
-        elseif info.typeName == "Uint64" or info.typeName == "CRUID" or info.typeName == "String" then
+        elseif info.typeName == "uint64" or info.typeName == "CRUID" or info.typeName == "String" then
             ImGui.SetNextItemWidth(100 * style.viewSize)
 
             local value, changed = ImGui.InputText("##" .. componentID .. table.concat(path), data, 250)

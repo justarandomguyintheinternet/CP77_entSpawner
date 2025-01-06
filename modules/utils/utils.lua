@@ -383,4 +383,18 @@ function miscUtils.getTextMaxWidth(texts)
     return max
 end
 
+function miscUtils.getDerivedClasses(base)
+    local classes = { base }
+
+    for _, derived in pairs(Reflection.GetDerivedClasses(base)) do
+        if derived:GetName().value ~= base then
+            for _, class in pairs(miscUtils.getDerivedClasses(derived:GetName().value)) do
+                table.insert(classes, class)
+            end
+        end
+    end
+
+    return classes
+end
+
 return miscUtils
