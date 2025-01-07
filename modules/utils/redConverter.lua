@@ -33,7 +33,7 @@ local function convertFundamental(propValue, propClass)
     local propData = propValue
     if type(propValue) == "boolean" then
         propData = propValue and 1 or 0
-    elseif propClass == "uint64" then
+    elseif propClass == "uint64" or propClass == "Uint64" then
         propData = tostring(propValue):gsub("ULL", "")
     end
 
@@ -174,7 +174,7 @@ function red.convertAny(metaType, propType, value, prop, data)
     elseif metaType == ERTTIType.Simple then -- LocalizationString, Buffers, CRUID
         propData = convertSimple(value, propType)
     elseif metaType == ERTTIType.Enum then
-        propData = tostring(value):match(":%s*(.+)%s")
+        propData = value.value
     elseif metaType == ERTTIType.Array or metaType == ERTTIType.StaticArray or metaType == ERTTIType.NativeArray or metaType == ERTTIType.FixedArray then
         propData = convertArray(value, prop)
     elseif metaType == ERTTIType.Handle or metaType == ERTTIType.WeakHandle then
@@ -247,7 +247,7 @@ local function importFundamental(value, propType)
 
     if propType == "Bool" then
         propData = value == 1
-    elseif propType == "uint64" then
+    elseif propType == "uint64" or propType == "Uint64" then
         propData = loadstring("return " .. value .. "ULL", "")()
     else
         local succ = pcall(function()

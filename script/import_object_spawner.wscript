@@ -1,6 +1,6 @@
 // Imports an entitySpawner json export
 // @author keanuwheeze
-// @version 0.94
+// @version 0.95
 
 //////////////// Modify this //////////////////
 
@@ -36,6 +36,31 @@ const getNewSector = () => {
 	let data = createNewFile("worldStreamingSector")
 	data.Data.RootChunk.nodeData.Type = "WolvenKit.RED4.Archive.Buffer.worldNodeDataBuffer, WolvenKit.RED4, Version=8.13.0.0, Culture=neutral, PublicKeyToken=null"
 	data.Data.RootChunk.nodeData.Data = []
+	return data
+}
+
+const getNewDeviceFile = () => {
+	let data = createNewFile("gameDeviceResource")
+	data.Data.RootChunk.data = { "Data": { "$type": "gameDeviceResourceData", "unk1" : [], "version": 2 } }
+
+	return data
+}
+
+const getNewPSFile = () => {
+	let data = createNewFile("gamePersistentStateDataResource")
+	data.Data.RootChunk.buffer = {
+		"BufferId": "0",
+		"Flags": 4063232,
+        "Type": "WolvenKit.RED4.Archive.Buffer.RedPackage, WolvenKit.RED4, Version=8.15.1.0, Culture=neutral, PublicKeyToken=null",
+        "Data": {
+          "Version": 4,
+          "Sections": 6,
+          "CruidIndex": 0,
+          "CruidDict": {},
+          "Chunks": []
+        }
+	}
+
 	return data
 }
 
@@ -239,11 +264,53 @@ export function RunEntitySpawnerImport(filePath = inputFilePathInRawFolder, call
 			wkit.SaveToProject(`${data.name}/sectors/${entry.name}.streamingsector`, wkit.JsonToCR2W(JSON.stringify(sector)))
 		})
 
+		let devices = getNewDeviceFile()
+
+		for (const [hash, device] of Object.entries(data.devices)) {
+			devices.Data.RootChunk.data.Data.unk1.push({
+				"$type": "gameDeviceResourceData_Cls1",
+				"children": device.children,
+				"className": {
+					"$type": "CName",
+					"$storage": "string",
+					"$value": device.className
+				},
+				"hash": device.hash,
+				"nodePosition": {
+					"$type": "Vector3",
+					"X": device.nodePosition.x,
+					"Y": device.nodePosition.y,
+					"Z": device.nodePosition.z
+				},
+				"parents": device.parents
+			})
+		}
+		wkit.SaveToProject(`${data.name}/custom_devices.devices`, wkit.JsonToCR2W(JSON.stringify(devices)))
+
+		let ps = getNewPSFile()
+		let index = 0
+		for (const [_, entry] of Object.entries(data.psEntries)) {
+			ps.Data.RootChunk.buffer.Data.Chunks.push(entry.instanceData)
+			ps.Data.RootChunk.buffer.Data.CruidDict[index.toString()] = entry.PSID
+			index++
+		}
+		wkit.SaveToProject(`${data.name}/custom_devices.psrep`, wkit.JsonToCR2W(JSON.stringify(ps)))
+
 		let xl = {
 			streaming: {
 				blocks: [
 					`${data.name}/all.streamingblock`
 				]
+			},
+			resource: {
+				patch : {
+					[`${data.name}/custom_devices.devices`] : [
+						"base\\worlds\\03_night_city\\_compiled\\default\\03_night_city.devices"
+					],
+					[`${data.name}/custom_devices.psrep`] : [
+						"base\\worlds\\03_night_city\\_compiled\\default\\03_night_city.psrep"
+					]
+				}
 			}
 		}
 		wkit.SaveToResources(`${data.name}.xl`, wkit.JsonToYaml(JSON.stringify(xl)))

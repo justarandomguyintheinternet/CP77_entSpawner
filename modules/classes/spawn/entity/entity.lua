@@ -108,24 +108,24 @@ function entity:loadInstanceData(entity, forceLoadDefault)
     end
 end
 
-function entity:onAssemble(entity)
-    spawnable.onAssemble(self, entity)
+function entity:onAssemble(entRef)
+    spawnable.onAssemble(self, entRef)
 
-    self:loadInstanceData(entity, false)
+    self:loadInstanceData(entRef, false)
 end
 
-function entity:onAttached(entity)
-    spawnable.onAttached(self, entity)
+function entity:onAttached(entRef)
+    spawnable.onAttached(self, entRef)
 
-    builder.getEntityBBox(entity, function (data)
+    builder.getEntityBBox(entRef, function (data)
         utils.log("[Entity] Loaded initial BBOX for entity " .. self.spawnData .. " with " .. #data.meshes .. " meshes.")
         self.bBox = data.bBox
         self.meshes = data.meshes
 
-        visualizer.updateScale(entity, self:getArrowSize(), "arrows")
+        visualizer.updateScale(entRef, self:getArrowSize(), "arrows")
 
         if self.bBoxCallback then
-            self.bBoxCallback(entity)
+            self.bBoxCallback(entRef)
         end
         self.bBoxLoaded = true
     end)

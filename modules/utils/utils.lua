@@ -271,8 +271,11 @@ end
 function miscUtils.enumTable(enumName)
     local enums = {}
 
-    for i = 0, tonumber(EnumGetMax(enumName)) do
-        table.insert(enums, EnumValueToString(enumName, i))
+    for i = -25, tonumber(EnumGetMax(enumName)) do
+        local name = EnumValueToString(enumName, i)
+        if name ~= "" then
+            table.insert(enums, name)
+        end
     end
 
     return enums
@@ -395,6 +398,13 @@ function miscUtils.getDerivedClasses(base)
     end
 
     return classes
+end
+
+function miscUtils.nodeRefStringToHashString(data)
+    local hash, _ = data:gsub("#", "")
+    hash, _ = tostring(FNV1a64(hash)):gsub("ULL", "")
+
+    return hash
 end
 
 return miscUtils

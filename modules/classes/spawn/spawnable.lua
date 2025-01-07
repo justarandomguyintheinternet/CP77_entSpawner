@@ -206,15 +206,15 @@ function spawnable:getProperties()
         name = "World Node",
         defaultHeader = false,
         draw = function()
-            self.nodeRef, _, _ = style.trackedTextField(self.object, "Node Ref", self.nodeRef, "$/#foobar", 80)
+            self.nodeRef, _, _ = style.trackedTextField(self.object, "Node Ref", self.nodeRef, "$/#foobar", 110)
 
-            self.primaryRange, _, _ = style.trackedDragFloat(self.object, "Primary Range", self.primaryRange, 0.1, 0, 9999, "%.2f", 80)
+            self.primaryRange, _, _ = style.trackedDragFloat(self.object, "Primary Range", self.primaryRange, 0.1, 0, 9999, "%.2f", 110)
             ImGui.SameLine()
             local distance = utils.distanceVector(self.position, GetPlayer():GetWorldPosition())
             style.styledText(IconGlyphs.AxisArrowInfo, distance > self.primaryRange and 0xFF0000FF or 0xFF00FF00)
             style.tooltip("Distance to player: " .. string.format("%.2f", distance))
 
-            self.secondaryRange, _, _ = style.trackedDragFloat(self.object, "Secondary Range", self.secondaryRange, 0.1, 0, 9999, "%.2f", 80)
+            self.secondaryRange, _, _ = style.trackedDragFloat(self.object, "Secondary Range", self.secondaryRange, 0.1, 0, 9999, "%.2f", 110)
             ImGui.SameLine()
             style.styledText(IconGlyphs.AxisArrowInfo, distance > self.secondaryRange and 0xFF0000FF or 0xFF00FF00)
             style.tooltip("Distance to player: " .. string.format("%.2f", distance))

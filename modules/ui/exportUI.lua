@@ -254,7 +254,7 @@ function exportUI.addGroup(name)
 
     local data = {
         name = name,
-        category = 0,
+        category = 1,
         level = 1,
         streamingX = 150,
         streamingY = 150,
@@ -295,29 +295,83 @@ function exportUI.exportGroup(group)
         nodes = {}
     }
 
+    local devices = {}
+    local psEntries = {}
     local objects = g:getPathsRecursive(false)
 
     for key, object in pairs(objects) do
         if utils.isA(object.ref, "spawnableElement") then
             table.insert(exported.nodes, object.ref.spawnable:export(key, #objects))
+
+            -- Handle device nodes
+            if object.ref.spawnable.node == "worldDeviceNode" then
+                local hash = utils.nodeRefStringToHashString(object.ref.spawnable.nodeRef)
+
+                local childHashes = {}
+                for _, child in pairs(object.ref.spawnable.deviceConnections) do
+                    table.insert(childHashes, utils.nodeRefStringToHashString(child.nodeRef))
+                end
+
+                devices[hash] = {
+                    hash = hash,
+                    className = object.ref.spawnable.deviceClassName,
+                    nodePosition = utils.fromVector(object.ref:getPosition()),
+                    parents = {},
+                    children = childHashes
+                }
+
+                if object.ref.spawnable.persistent then
+                    local PSID = PersistentID.ForComponent(entEntityID.new({ hash = loadstring("return " .. hash .. "ULL", "")() }), object.ref.spawnable.controllerComponent):ToHash()
+                    PSID = tostring(PSID):gsub("ULL", "")
+
+                    local psData = object.ref.spawnable:getPSData()
+
+                    if psData then
+                        psEntries[PSID] = {
+                            PSID = PSID,
+                            instanceData = psData
+                        }
+                    end
+                end
+            end
         end
     end
 
-    return exported
+    return exported, devices, psEntries
 end
 
 function exportUI.export()
     local project = {
         name = utils.createFileName(exportUI.projectName):lower():gsub(" ", "_"),
-        sectors = {}
+        sectors = {},
+        devices = {},
+        psEntries = {}
     }
 
     for _, group in pairs(exportUI.groups) do
-        local data = exportUI.exportGroup(group)
+        local data, devices, psEntries = exportUI.exportGroup(group)
         if data then
             table.insert(project.sectors, data)
+
+            for hash, device in pairs(devices) do
+                project.devices[hash] = device
+            end
+
+            for PSID, entry in pairs(psEntries) do
+                project.psEntries[PSID] = entry
+            end
         end
     end
+
+    for hash, device in pairs(project.devices) do
+        for _, childHash in pairs(device.children) do
+            if project.devices[childHash] then
+                table.insert(project.devices[childHash].parents, hash)
+            end
+        end
+    end
+
+    -- TODO: Verify each noderef is unique
 
     config.saveFile("export/" .. project.name .. "_exported.json", project)
 
