@@ -9,7 +9,8 @@ exportUI = {
     groups = {},
     templates = {},
     spawner = nil,
-    exportHovered = false
+    exportHovered = false,
+    foundDuplicates = nil
 }
 
 function exportUI.init(spawner)
@@ -197,6 +198,35 @@ function exportUI.drawTemplates()
 end
 
 function exportUI.draw()
+    if exportUI.foundDuplicates then
+        ImGui.OpenPopup("Duplicated NodeRefs")
+        if ImGui.BeginPopupModal("Duplicated NodeRefs", true, ImGuiWindowFlags.AlwaysAutoResize) then
+            ImGui.Text("Duplicated nodeRefs found, please fix them before exporting! (Export aborted)")
+
+            ImGui.Separator()
+
+            style.mutedText("NodeRef:")
+            ImGui.SameLine()
+            ImGui.Text(exportUI.foundDuplicates.nodeRef)
+
+            style.mutedText("Node 1: ")
+            ImGui.SameLine()
+            ImGui.Text(exportUI.foundDuplicates.name1)
+
+            style.mutedText("Node 2: ")
+            ImGui.SameLine()
+            ImGui.Text(exportUI.foundDuplicates.name2)
+
+            ImGui.Separator()
+
+            if ImGui.Button("OK") then
+                ImGui.CloseCurrentPopup()
+                exportUI.foundDuplicates = nil
+            end
+            ImGui.EndPopup()
+        end
+    end
+
     if not sectorCategory then
         sectorCategory = utils.enumTable("worldStreamingSectorCategory")
     end
@@ -348,6 +378,8 @@ function exportUI.export()
         psEntries = {}
     }
 
+    local nodeRefs = {}
+
     for _, group in pairs(exportUI.groups) do
         local data, devices, psEntries = exportUI.exportGroup(group)
         if data then
@@ -360,8 +392,25 @@ function exportUI.export()
             for PSID, entry in pairs(psEntries) do
                 project.psEntries[PSID] = entry
             end
+
+            for _, node in pairs(data.nodes) do
+                if not nodeRefs[node.nodeRef] then
+                    nodeRefs[node.nodeRef] = node.name
+                else
+                    exportUI.foundDuplicates = {
+                        nodeRef = node.nodeRef,
+                        name1 = nodeRefs[node.nodeRef],
+                        name2 = node.name
+                    }
+                    break
+                end
+            end
         end
+
+        if exportUI.foundDuplicates then break end
     end
+
+    if exportUI.foundDuplicates then return end
 
     for hash, device in pairs(project.devices) do
         for _, childHash in pairs(device.children) do
@@ -370,8 +419,6 @@ function exportUI.export()
             end
         end
     end
-
-    -- TODO: Verify each noderef is unique
 
     config.saveFile("export/" .. project.name .. "_exported.json", project)
 
