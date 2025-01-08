@@ -25,6 +25,7 @@ local input = require("modules/utils/input")
 ---@field draggingSelected boolean
 ---@field draggingThreshold number
 ---@field infoWindowSize table
+---@field nameBeingEdited boolean
 spawnedUI = {
     root = require("modules/classes/editor/element"):new(spawnedUI),
     multiSelectGroup = require("modules/classes/editor/positionableGroup"):new(spawnedUI),
@@ -41,6 +42,7 @@ spawnedUI = {
         state = false,
         path = ""
     },
+    nameBeingEdited = false,
 
     clipboard = {},
 
@@ -61,6 +63,7 @@ function spawnedUI.cachePaths()
     spawnedUI.selectedPaths = {}
     spawnedUI.filteredPaths = {}
     spawnedUI.filteredWidestName = 0
+    spawnedUI.nameBeingEdited = false
 
     for _, path in pairs(spawnedUI.root:getPathsRecursive(true)) do
         table.insert(spawnedUI.paths, path)
@@ -74,6 +77,9 @@ function spawnedUI.cachePaths()
         if spawnedUI.filter ~= "" and not path.ref.expandable and (path.ref.name:lower():match(spawnedUI.filter:lower())) ~= nil then
             table.insert(spawnedUI.filteredPaths, path)
             spawnedUI.filteredWidestName = math.max(spawnedUI.filteredWidestName, ImGui.CalcTextSize(path.ref.name))
+        end
+        if path.ref.editName then
+            spawnedUI.nameBeingEdited = true
         end
     end
 end
@@ -218,7 +224,7 @@ function spawnedUI.registerHotkeys()
 
     -- Inputs that might get pressed while using properties panel, so use hotkeyRunConditionProperties
     input.registerImGuiHotkey({ ImGuiKey.Backspace }, function()
-        if #spawnedUI.selectedPaths == 0 then return end
+        if #spawnedUI.selectedPaths == 0 or spawnedUI.nameBeingEdited then return end
         spawnedUI.moveToRoot(true)
     end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.Escape }, function()

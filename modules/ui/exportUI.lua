@@ -396,7 +396,7 @@ function exportUI.export()
             for _, node in pairs(data.nodes) do
                 if not nodeRefs[node.nodeRef] then
                     nodeRefs[node.nodeRef] = node.name
-                else
+                elseif node.nodeRef ~= "" then
                     exportUI.foundDuplicates = {
                         nodeRef = node.nodeRef,
                         name1 = nodeRefs[node.nodeRef],

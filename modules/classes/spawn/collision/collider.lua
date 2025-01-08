@@ -111,7 +111,7 @@ function collider:save()
     data.material = self.material
     data.preset = self.preset
     data.previewed = self.previewed
-    data.scale = self.scale
+    data.scale = { x = self.scale.x, y = self.scale.y, z = self.scale.z }
     if data.previewed == nil then data.previewed = true end
 
     return data

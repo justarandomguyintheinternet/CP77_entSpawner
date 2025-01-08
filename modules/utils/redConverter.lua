@@ -10,12 +10,19 @@ local red = {}
 
 --- EXPORT
 
+--TODO: TweakDBID strings
+
 local exportExludes = {
     "appearancePath",
     "meshResource",
     "worldTransform",
     "appearanceName",
     "blackboard"
+}
+
+-- If this handle is nil, generate a new instance for it
+local handleIncludes = {
+    "journalPath"
 }
 
 local function convertCName(propValue)
@@ -40,7 +47,7 @@ local function convertFundamental(propValue, propClass)
     return propData
 end
 
-local function convertSimple(propValue, propClass)
+local function convertSimple(propValue, propClass, prop)
     local propData = tostring(propValue)
 
     if propClass == "LocalizationString" then
@@ -83,8 +90,10 @@ local function convertSimple(propValue, propClass)
         else
             propData = nil
         end
+    elseif propClass == "String" then
+        propData = propValue
     else
-        utils.log("Unsupported simple type: ", propClass)
+        utils.log(string.format("[%s] Unsupported simple type: %s", prop:GetName().value, propClass))
     end
 
     return propData
@@ -103,7 +112,11 @@ local function convertArray(propValue, prop)
     return propData
 end
 
-local function convertHandle(propValue)
+local function convertHandle(propValue, prop, name)
+    if propValue == nil and utils.has_value(handleIncludes, name) then
+        propValue = FromVariant(prop:GetType():GetInnerType():MakeInstance())
+    end
+
     if propValue ~= nil then
         return {
             HandleId = "0",
@@ -172,19 +185,19 @@ function red.convertAny(metaType, propType, value, prop, data)
     elseif metaType == ERTTIType.Class then
         propData = red.redDataToJSON(value)
     elseif metaType == ERTTIType.Simple then -- LocalizationString, Buffers, CRUID
-        propData = convertSimple(value, propType)
+        propData = convertSimple(value, propType, prop)
     elseif metaType == ERTTIType.Enum then
         propData = value.value
     elseif metaType == ERTTIType.Array or metaType == ERTTIType.StaticArray or metaType == ERTTIType.NativeArray or metaType == ERTTIType.FixedArray then
         propData = convertArray(value, prop)
     elseif metaType == ERTTIType.Handle or metaType == ERTTIType.WeakHandle then
-        propData = convertHandle(value)
+        propData = convertHandle(value, prop, prop:GetName().value)
     elseif metaType == ERTTIType.ResourceReference then
         propData = convertResRef(data, prop:GetName().value)
     elseif metaType == ERTTIType.ResourceAsyncReference then
         propData = convertResRefAsync(value)
     else
-        utils.log("Unsupported type: ", metaType)
+        utils.log(string.format("[%s] Unsupported type: %s", prop:GetName().value, metaType))
     end
 
     return propData

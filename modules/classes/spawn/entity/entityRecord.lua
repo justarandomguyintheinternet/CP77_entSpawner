@@ -53,7 +53,7 @@ function record:save()
 end
 
 function record:spawn()
-    if self:isSpawned() then return end
+    if self:isSpawned() or self.spawning then return end
 
     local spec = DynamicEntitySpec.new()
     spec.recordID = self.spawnData
@@ -62,6 +62,7 @@ function record:spawn()
     spec.alwaysSpawned = true
     spec.appearanceName = self.app
     self.entityID = Game.GetDynamicEntitySystem():CreateEntity(spec)
+    self.spawning = true
 
     builder.registerAssembleCallback(self.entityID, function (entity)
         self:onAssemble(entity)
