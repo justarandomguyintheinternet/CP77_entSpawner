@@ -139,6 +139,51 @@ end
 function positionable:onEdited() end
 
 ---@protected
+function positionable:drawCopyPaste(name)
+	if ImGui.BeginPopupContextItem("##pasteProperty" .. name, ImGuiPopupFlags.MouseButtonRight) then
+        if ImGui.MenuItem("Copy position") then
+			local pos = self:getPosition()
+			utils.insertClipboardValue("position", { x = pos.x, y = pos.y, z = pos.z })
+        end
+		if ImGui.MenuItem("Copy rotation") then
+			local rot = self:getRotation()
+			utils.insertClipboardValue("rotation", { roll = rot.roll, pitch = rot.pitch, yaw = rot.yaw })
+        end
+		if ImGui.MenuItem("Copy position and rotation") then
+			local pos = self:getPosition()
+			local rot = self:getRotation()
+			utils.insertClipboardValue("position", { x = pos.x, y = pos.y, z = pos.z })
+			utils.insertClipboardValue("rotation", { roll = rot.roll, pitch = rot.pitch, yaw = rot.yaw })
+        end
+		ImGui.Separator()
+		if ImGui.MenuItem("Paste position") then
+			local pos = utils.getClipboardValue("position")
+			if pos then
+				history.addAction(history.getElementChange(self))
+				self:setPosition(Vector4.new(pos.x, pos.y, pos.z, 0))
+			end
+		end
+		if ImGui.MenuItem("Paste rotation") then
+			local rot = utils.getClipboardValue("rotation")
+			if rot then
+				history.addAction(history.getElementChange(self))
+				self:setRotation(EulerAngles.new(rot.roll, rot.pitch, rot.yaw))
+			end
+		end
+		if ImGui.MenuItem("Paste position and rotation") then
+			local pos = utils.getClipboardValue("position")
+			local rot = utils.getClipboardValue("rotation")
+			if pos and rot then
+				history.addAction(history.getElementChange(self))
+				self:setPosition(Vector4.new(pos.x, pos.y, pos.z, 0))
+				self:setRotation(EulerAngles.new(rot.roll, rot.pitch, rot.yaw))
+			end
+		end
+        ImGui.EndPopup()
+    end
+end
+
+---@protected
 function positionable:drawProp(prop, name, axis)
 	local steps = (axis == "roll" or axis == "pitch" or axis == "yaw") and settings.rotSteps or settings.posSteps
 	local formatText = "%.2f"
@@ -193,6 +238,8 @@ function positionable:drawProp(prop, name, axis)
 			self:setScaleDelta({ x = 0, y = 0, z = newValue - prop }, finished)
 		end
     end
+
+	self:drawCopyPaste(name)
 end
 
 ---@protected

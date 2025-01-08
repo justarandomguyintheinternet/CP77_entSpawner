@@ -1,4 +1,6 @@
-miscUtils = {}
+miscUtils = {
+    data = {}
+}
 
 ---@param origin table
 ---@return table
@@ -405,6 +407,14 @@ function miscUtils.nodeRefStringToHashString(data)
     hash, _ = tostring(FNV1a64(hash)):gsub("ULL", "")
 
     return hash
+end
+
+function miscUtils.insertClipboardValue(key, data)
+    miscUtils.data[key] = data
+end
+
+function miscUtils.getClipboardValue(key)
+    return miscUtils.data[key]
 end
 
 return miscUtils
