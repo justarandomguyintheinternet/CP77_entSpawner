@@ -187,6 +187,12 @@ const sortInstanceData = (data) => {
 	if (data["instanceData"]) {
 		const instanceDataSorted = []
 
+		for (const dataEntry of data["instanceData"]["Data"]["buffer"]["Data"]["Chunks"]) {
+			if (dataEntry["id"] == undefined) {
+				instanceDataSorted.push(dataEntry)
+			}
+		}
+
 		for (const dictKey in data["instanceData"]["Data"]["buffer"]["Data"]["CruidDict"]) {
 			for (const dataEntry of data["instanceData"]["Data"]["buffer"]["Data"]["Chunks"]) {
 				if (dataEntry["id"] === data["instanceData"]["Data"]["buffer"]["Data"]["CruidDict"][dictKey]) {

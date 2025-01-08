@@ -83,6 +83,7 @@ function entity:loadInstanceData(entity, forceLoadDefault)
 
     -- Gotta go through all components, even such with identicaly IDs, due to AMM props using the same ID for all components
     local components = entity:GetComponents()
+    self.defaultComponentData["0"] = red.redDataToJSON(entity)
 
     for _, component in pairs(components) do
         local ignore = false
@@ -296,9 +297,16 @@ function entity:export(index, length)
         local dict = {}
 
         local i = 0
-        for key, _ in pairs(self.instanceDataChanges) do
-            dict[tostring(i)] = key
+        if self.instanceDataChanges["0"] then -- Make sure "0" is always first
+            dict[tostring(i)] = "0"
             i = i + 1
+        end
+
+        for key, _ in pairs(self.instanceDataChanges) do
+            if key ~= "0" then
+                dict[tostring(i)] = key
+                i = i + 1
+            end
         end
 
         local combinedData = {}
@@ -322,7 +330,7 @@ function entity:export(index, length)
                     ["Data"] = {
                         ["Version"] = 4,
                         ["Sections"] = 6,
-                        ["CruidIndex"] = -1,
+                        ["CruidIndex"] = self.instanceDataChanges["0"] and 0 or -1,
                         ["CruidDict"] = dict,
                         ["Chunks"] = copyAndPrepareData(combinedData, { baseHandle + 1 })
                     }
@@ -453,10 +461,10 @@ function entity:drawStringProp(componentID, key, data, path, type, width, max)
     ImGui.SameLine()
     ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
     ImGui.SetNextItemWidth(width * style.viewSize)
-    local value, changed = ImGui.InputText("##" .. componentID .. table.concat(path), data, 250)
+    local value, _ = ImGui.InputText("##" .. componentID .. table.concat(path), data, 250)
     style.tooltip(type)
     self:drawResetProp(componentID, path)
-    if changed then
+    if ImGui.IsItemDeactivatedAfterEdit() then
         history.addAction(history.getElementChange(self.object))
         self:updatePropValue(componentID, path, value)
     end
@@ -598,7 +606,20 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
         return
     elseif info.typeName == "TweakDBID" or info.typeName == "CName" then
         table.insert(path, "$value")
-        self:drawStringProp(componentID, key, data["$value"], path, info.typeName, 150, max)
+
+        ImGui.Text(tostring(key))
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
+        ImGui.SetNextItemWidth(250 * style.viewSize)
+        local value, _ = ImGui.InputText("##" .. componentID .. table.concat(path), data["$value"], 250)
+        style.tooltip(info.typeName)
+        self:drawResetProp(componentID, path)
+        if ImGui.IsItemDeactivatedAfterEdit() then
+            data["$storage"] = "string"
+            history.addAction(history.getElementChange(self.object))
+            self:updatePropValue(componentID, path, value)
+        end
+
         style.popStyleColor(modified)
         return
     elseif info.typeName == "NodeRef" then
@@ -754,9 +775,9 @@ function entity:drawInstanceData()
 
     for key, component in pairs(self.defaultComponentData) do
         local name = component["$type"]
-        if component.name then
-            name = name .. " | " .. component.name["$value"]
-        end
+        local componentName = component.name
+        name = name .. " | " .. (componentName and componentName["$value"] or "Entity")
+
         style.pushStyleColor(not self.instanceDataChanges[key], ImGuiCol.Text, style.mutedColor)
 
         local expanded = false
