@@ -1,7 +1,12 @@
 local visualized = require("modules/classes/spawn/visualized")
+local style = require("modules/ui/style")
 
 ---Class for worldStaticMarkerNode
 ---@class staticMarker : visualized
+---@field private questMarker boolean
+---@field private previewMesh string
+---@field private intersectionMultiplier number
+---@field private previewed boolean
 local staticMarker = setmetatable({}, { __index = visualized })
 
 function staticMarker:new()
@@ -20,8 +25,17 @@ function staticMarker:new()
     o.previewMesh = "base\\environment\\ld_kit\\marker.mesh"
     o.intersectionMultiplier = 0.3 / 0.005
 
+    o.questMarker = false
+
     setmetatable(o, { __index = self })
    	return o
+end
+
+function staticMarker:save()
+    local data = visualized.save(self)
+    data.questMarker = self.questMarker
+
+    return data
 end
 
 function staticMarker:getVisualizerSize()
@@ -30,6 +44,10 @@ end
 
 function staticMarker:draw()
     self:drawPreviewCheckbox("Preview Marker")
+
+    style.mutedText("Quest Marker")
+    ImGui.SameLine()
+    self.questMarker, _ = style.trackedCheckbox(self.object, "##questMarker", self.questMarker)
 end
 
 function staticMarker:getProperties()
@@ -49,6 +67,16 @@ function staticMarker:export()
     local data = visualized.export(self)
     data.type = "worldStaticMarkerNode"
     data.data = {}
+
+    if self.questMarker then
+        data.data = {
+            ["data"] = {
+                ["Data"] = {
+                    ["$type"] = "worldQuestMarker"
+                }
+            }
+        }
+    end
 
     return data
 end
