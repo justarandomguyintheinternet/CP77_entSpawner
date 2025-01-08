@@ -1,5 +1,11 @@
 local visualized = require("modules/classes/spawn/visualized")
 local style = require("modules/ui/style")
+local utils = require("modules/utils/utils")
+
+local propertyNames = {
+    "Preview Marker",
+    "Quest Marker"
+}
 
 ---Class for worldStaticMarkerNode
 ---@class staticMarker : visualized
@@ -26,6 +32,7 @@ function staticMarker:new()
     o.intersectionMultiplier = 0.3 / 0.005
 
     o.questMarker = false
+    o.maxPropertyWidth = nil
 
     setmetatable(o, { __index = self })
    	return o
@@ -43,10 +50,21 @@ function staticMarker:getVisualizerSize()
 end
 
 function staticMarker:draw()
-    self:drawPreviewCheckbox("Preview Marker")
+    if not self.maxPropertyWidth then
+        self.maxPropertyWidth = utils.getTextMaxWidth(propertyNames) + 4 * ImGui.GetStyle().ItemSpacing.x
+    end
+
+    style.mutedText("Preview Marker")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.previewed, changed = style.trackedCheckbox(self.object, "##visualize", self.previewed)
+    if changed then
+        self:setPreview(self.previewed)
+    end
 
     style.mutedText("Quest Marker")
     ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
     self.questMarker, _ = style.trackedCheckbox(self.object, "##questMarker", self.questMarker)
 end
 
