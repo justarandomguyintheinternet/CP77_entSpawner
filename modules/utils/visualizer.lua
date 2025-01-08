@@ -5,7 +5,8 @@ local previewComponentNames = {
     "sphere",
     "capsule_body",
     "capsule_top",
-    "capsule_bottom"
+    "capsule_bottom",
+    "mesh"
 }
 
 local function addMesh(entity, name, mesh, scale, app, enabled)
@@ -35,6 +36,16 @@ local function addMesh(entity, name, mesh, scale, app, enabled)
     end
 
     entity:AddComponent(component)
+end
+
+---Creates and attached a mesh, with the component name "mesh"
+---@param entity entEntity
+---@param scale { x : number, y : number, z : number }
+---@param mesh string
+function visualizer.addMesh(entity, scale, mesh)
+    if not entity then return end
+
+    addMesh(entity, "mesh", mesh, scale, "default", true)
 end
 
 ---Creates and attached a box mesh, with the component name "box"

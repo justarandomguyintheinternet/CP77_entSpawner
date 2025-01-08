@@ -3,11 +3,13 @@ local visualizer = require("modules/utils/visualizer")
 local style = require("modules/ui/style")
 local intersection = require("modules/utils/editor/intersection")
 
----Class for any spawnable that has a "basic" visualizer
+---Class for any spawnable that has a "basic" visualizer. Assumes x component of the scale to be the size of the sphere used for intersection testing.
 ---@class visualized : spawnable
 ---@field public previewed boolean
 ---@field private previewShape string
 ---@field private previewColor string
+---@field private previewMesh string
+---@field private intersectionMultiplier number
 local visualized = setmetatable({}, { __index = spawnable })
 
 function visualized:new()
@@ -18,6 +20,8 @@ function visualized:new()
 
     o.previewed = false
     o.previewShape = "sphere"
+    o.previewMesh = ""
+    o.intersectionMultiplier = 1
     o.previewColor = "blue"
 
     setmetatable(o, { __index = self })
@@ -33,6 +37,8 @@ function visualized:onAssemble(entity)
         visualizer.addSphere(entity, visualizerSize, self.previewColor)
     elseif self.previewShape == "box" then
         visualizer.addBox(entity, visualizerSize, self.previewColor)
+    elseif self.previewShape == "mesh" then
+        visualizer.addMesh(entity, visualizerSize, self.previewMesh)
     end
 
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
@@ -65,19 +71,13 @@ function visualized:calculateIntersection(origin, ray)
         return { hit = false }
     end
 
-    local result
-    local bbox
-    if self.previewShape == "sphere" then
-        local radius = self:getVisualizerSize().x
+    local radius = self:getVisualizerSize().x * self.intersectionMultiplier
 
-        result = intersection.getSphereIntersection(origin, ray, self.position, radius)
-        bbox = {
-            min = { x = -radius, y = -radius, z = -radius },
-            max = { x = radius, y = radius, z = radius }
-        }
-    else
-        print("Box intersection not implemented")
-    end
+    local result = intersection.getSphereIntersection(origin, ray, self.position, radius)
+    local bbox = {
+        min = { x = -radius, y = -radius, z = -radius },
+        max = { x = radius, y = radius, z = radius }
+    }
 
     return {
         hit = result.hit,
