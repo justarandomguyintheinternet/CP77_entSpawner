@@ -1,6 +1,6 @@
 // Imports an entitySpawner json export
 // @author keanuwheeze
-// @version 0.95
+// @version 0.96
 
 //////////////// Modify this //////////////////
 
@@ -51,7 +51,7 @@ const getNewPSFile = () => {
 	data.Data.RootChunk.buffer = {
 		"BufferId": "0",
 		"Flags": 4063232,
-        "Type": "WolvenKit.RED4.Archive.Buffer.RedPackage, WolvenKit.RED4, Version=8.15.1.0, Culture=neutral, PublicKeyToken=null",
+        "Type": "WolvenKit.RED4.Archive.Buffer.RedPackage, WolvenKit.RED4, Version=8.13.0.0, Culture=neutral, PublicKeyToken=null",
         "Data": {
           "Version": 4,
           "Sections": 6,
@@ -270,37 +270,39 @@ export function RunEntitySpawnerImport(filePath = inputFilePathInRawFolder, call
 			wkit.SaveToProject(`${data.name}/sectors/${entry.name}.streamingsector`, wkit.JsonToCR2W(JSON.stringify(sector)))
 		})
 
-		let devices = getNewDeviceFile()
+		if (data.devices !== undefined && data.devices !== undefined) {
+			let devices = getNewDeviceFile()
 
-		for (const [hash, device] of Object.entries(data.devices)) {
-			devices.Data.RootChunk.data.Data.unk1.push({
-				"$type": "gameDeviceResourceData_Cls1",
-				"children": device.children,
-				"className": {
-					"$type": "CName",
-					"$storage": "string",
-					"$value": device.className
-				},
-				"hash": device.hash,
-				"nodePosition": {
-					"$type": "Vector3",
-					"X": device.nodePosition.x,
-					"Y": device.nodePosition.y,
-					"Z": device.nodePosition.z
-				},
-				"parents": device.parents
-			})
-		}
-		wkit.SaveToProject(`${data.name}/custom_devices.devices`, wkit.JsonToCR2W(JSON.stringify(devices)))
+			for (const [hash, device] of Object.entries(data.devices)) {
+				devices.Data.RootChunk.data.Data.unk1.push({
+					"$type": "gameDeviceResourceData_Cls1",
+					"children": device.children,
+					"className": {
+						"$type": "CName",
+						"$storage": "string",
+						"$value": device.className
+					},
+					"hash": device.hash,
+					"nodePosition": {
+						"$type": "Vector3",
+						"X": device.nodePosition.x,
+						"Y": device.nodePosition.y,
+						"Z": device.nodePosition.z
+					},
+					"parents": device.parents
+				})
+			}
+			wkit.SaveToProject(`${data.name}/custom_devices.devices`, wkit.JsonToCR2W(JSON.stringify(devices)))
 
-		let ps = getNewPSFile()
-		let index = 0
-		for (const [_, entry] of Object.entries(data.psEntries)) {
-			ps.Data.RootChunk.buffer.Data.Chunks.push(entry.instanceData)
-			ps.Data.RootChunk.buffer.Data.CruidDict[index.toString()] = entry.PSID
-			index++
+			let ps = getNewPSFile()
+			let index = 0
+			for (const [_, entry] of Object.entries(data.psEntries)) {
+				ps.Data.RootChunk.buffer.Data.Chunks.push(entry.instanceData)
+				ps.Data.RootChunk.buffer.Data.CruidDict[index.toString()] = entry.PSID
+				index++
+			}
+			wkit.SaveToProject(`${data.name}/custom_devices.psrep`, wkit.JsonToCR2W(JSON.stringify(ps)))
 		}
-		wkit.SaveToProject(`${data.name}/custom_devices.psrep`, wkit.JsonToCR2W(JSON.stringify(ps)))
 
 		let xl = {
 			streaming: {
