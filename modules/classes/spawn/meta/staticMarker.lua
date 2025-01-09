@@ -34,6 +34,10 @@ function staticMarker:new()
     o.questMarker = false
     o.maxPropertyWidth = nil
 
+    o.streamingMultiplier = 10
+    o.primaryRange = 350
+    o.secondaryRange = 300
+
     setmetatable(o, { __index = self })
    	return o
 end

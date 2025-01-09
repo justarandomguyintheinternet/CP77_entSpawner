@@ -10,6 +10,7 @@ local camera = {
     components = {},
     playerTransform = nil,
     cameraTransform = nil,
+    preTransitionCameraDistance = 0,
     translateSpeed = 4,
     rotateSpeed = 0.4,
     zoomSpeed = 2.75,
@@ -58,20 +59,27 @@ function camera.toggle(state)
 
         camera.update()
     else
-        GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0.0, 0, 0, 0))
-        setSceneTier(1)
-
-        for _, component in pairs(camera.components) do
-            GetPlayer():FindComponentByName(component):Toggle(true)
-        end
-
-        camera.components = {}
-        camera.transitionTween = nil
         camera.cameraTransform.position = GetPlayer():GetWorldPosition()
 
-        Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.playerTransform.position, camera.playerTransform.rotation)
-        GetPlayer():GetFPPCameraComponent().pitchMax = camera.playerTransform.rotation.pitch
-        GetPlayer():GetFPPCameraComponent().pitchMin = camera.playerTransform.rotation.pitch
+        local distance = Vector4.Distance(GetPlayer():GetWorldPosition(), camera.playerTransform.position)
+        if distance > 50 then
+            camera.transition(camera.cameraTransform.position, camera.playerTransform.position, camera.cameraTransform.rotation, camera.playerTransform.rotation, 0, distance / 50)
+            camera.preTransitionCameraDistance = camera.distance
+        else
+            GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0.0, 0, 0, 0))
+            setSceneTier(1)
+
+            for _, component in pairs(camera.components) do
+                GetPlayer():FindComponentByName(component):Toggle(true)
+            end
+
+            camera.components = {}
+            camera.transitionTween = nil
+
+            Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.playerTransform.position, camera.playerTransform.rotation)
+            GetPlayer():GetFPPCameraComponent().pitchMax = camera.playerTransform.rotation.pitch
+            GetPlayer():GetFPPCameraComponent().pitchMin = camera.playerTransform.rotation.pitch
+        end
     end
 
     GetPlayer():DisableCameraBobbing(camera.active)
@@ -85,12 +93,24 @@ function camera.update()
 
         if done then
             camera.transitionTween = nil
+
+            if not camera.active then
+                for _, component in pairs(camera.components) do
+                    GetPlayer():FindComponentByName(component):Toggle(true)
+                end
+                setSceneTier(1)
+
+                GetPlayer():GetFPPCameraComponent().pitchMax = camera.playerTransform.rotation.pitch
+                GetPlayer():GetFPPCameraComponent().pitchMin = camera.playerTransform.rotation.pitch
+
+                camera.distance = camera.preTransitionCameraDistance
+            end
         else
             camera.cameraTransform.position = Vector4.new(camera.transitionTween.subject.x, camera.transitionTween.subject.y, camera.transitionTween.subject.z, 0)
             camera.distance = camera.transitionTween.subject.distance
 
             GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0, - camera.distance, 0, 0))
-            Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.cameraTransform.position, camera.cameraTransform.rotation)
+            Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.cameraTransform.position, EulerAngles.new(0, 0, camera.transitionTween.subject.yaw))
             return
         end
     end
@@ -131,8 +151,11 @@ function camera.updateXOffset(adjustedCenterX)
     GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(- camera.xOffset, - camera.distance, 0, 0))
 end
 
-function camera.transition(from, to, toDistance, duration)
-    camera.transitionTween = tween.new(duration, { x = from.x, y = from.y, z = from.z, distance = camera.distance }, { x = to.x, y = to.y, z = to.z, distance = toDistance }, tween.easing.inOutQuad)
+function camera.transition(fromPos, toPos, fromRot, toRot, toDistance, duration)
+    camera.transitionTween = tween.new(duration,
+    { x = fromPos.x, y = fromPos.y, z = fromPos.z, yaw = fromRot.yaw, distance = camera.distance },
+    { x = toPos.x, y = toPos.y, z = toPos.z, yaw = toRot.yaw, distance = toDistance },
+    tween.easing.inOutQuad)
 end
 
 function camera.screenToWorld(x, y)

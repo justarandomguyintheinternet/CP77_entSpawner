@@ -29,6 +29,7 @@ local style = require("modules/ui/style")
 ---@field depthElementsMaxWidth number
 ---@field boxSelectActive boolean
 ---@field boxSelectStart table
+---@field freeflyWasActive boolean
 local editor = {
     active = false,
     camera = nil,
@@ -51,7 +52,9 @@ local editor = {
     depthSelectOpen = false,
     depthElementsMaxWidth = 0,
     boxSelectActive = false,
-    boxSelectStart = { x = 0, y = 0 }
+    boxSelectStart = { x = 0, y = 0 },
+
+    freeflyWasActive = false
 }
 
 function viewportFocused()
@@ -244,7 +247,7 @@ function editor.centerCamera()
     end
 
     pos.z = pos.z - 1.5
-    editor.camera.transition(editor.camera.cameraTransform.position, pos, distance, 0.5)
+    editor.camera.transition(editor.camera.cameraTransform.position, pos, editor.camera.cameraTransform.rotation, editor.camera.cameraTransform.rotation, distance, 0.5)
 end
 
 function editor.removeHighlight(onlySelected)
@@ -717,6 +720,20 @@ function editor.suspend(state)
 end
 
 function editor.toggle(state)
+    local freefly = GetMod("freefly")
+
+    if freefly then
+        if state and freefly.runtimeData.active then
+            freefly.runtimeData.active = false
+            freefly.logic.toggleFlight(freefly, freefly.runtimeData.active)
+            editor.freeflyWasActive = true
+        elseif not state and editor.freeflyWasActive then
+            freefly.runtimeData.active = true
+            freefly.logic.toggleFlight(freefly, freefly.runtimeData.active)
+            editor.freeflyWasActive = false
+        end
+    end
+
     editor.active = state
     editor.camera.toggle(state)
     editor.baseUI.loadTabSize = true

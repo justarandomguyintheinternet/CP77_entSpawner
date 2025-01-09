@@ -23,7 +23,7 @@ local intersection = require("modules/utils/editor/intersection")
 ---@field public secondaryRange number
 ---@field public uk10 integer
 ---@field public uk11 integer
----@field private streamingMultiplier number
+---@field protected streamingMultiplier number
 ---@field public isHovered boolean
 ---@field protected arrowDirection string all|red|green|blue
 ---@field public object element? The element that is using this spawnable
