@@ -35,6 +35,7 @@ local intersection = require("modules/utils/editor/intersection")
 ---@field protected outline integer
 ---@field private spawnedAndCachedCallback function[]
 ---@field protected nodeRef string
+---@field public noExport boolean
 local spawnable = {}
 
 function spawnable:new()
@@ -60,6 +61,7 @@ function spawnable:new()
     o.spawning = false
     o.spawnedAndCachedCallback = {}
 
+    o.noExport = false
     o.primaryRange = 120
     o.secondaryRange = 100
     o.uk10 = 1024

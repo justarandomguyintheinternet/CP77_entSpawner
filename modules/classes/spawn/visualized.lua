@@ -71,25 +71,28 @@ function visualized:calculateIntersection(origin, ray)
         return { hit = false }
     end
 
-    local radius = self:getVisualizerSize().x * self.intersectionMultiplier
+    if self.previewShape == "sphere" or self.previewShape == "mesh" then
+        local radius = self:getVisualizerSize().x * self.intersectionMultiplier
+        local result = intersection.getSphereIntersection(origin, ray, self.position, radius)
+        local bbox = {
+            min = { x = -radius, y = -radius, z = -radius },
+            max = { x = radius, y = radius, z = radius }
+        }
 
-    local result = intersection.getSphereIntersection(origin, ray, self.position, radius)
-    local bbox = {
-        min = { x = -radius, y = -radius, z = -radius },
-        max = { x = radius, y = radius, z = radius }
-    }
-
-    return {
-        hit = result.hit,
-        position = result.position,
-        unscaledHit = result.position,
-        collisionType = "shape",
-        distance = result.distance,
-        bBox = bbox,
-        objectOrigin = self.position,
-        objectRotation = self.rotation,
-        normal = result.normal
-    }
+        return {
+            hit = result.hit,
+            position = result.position,
+            unscaledHit = result.position,
+            collisionType = "shape",
+            distance = result.distance,
+            bBox = bbox,
+            objectOrigin = self.position,
+            objectRotation = self.rotation,
+            normal = result.normal
+        }
+    else
+        return spawnable.calculateIntersection(self, origin, ray)
+    end
 end
 
 function visualized:setPreview(state)
@@ -125,8 +128,7 @@ function visualized:getGroupedProperties()
 			if ImGui.Button("Off") then
 				for _, entry in ipairs(entries) do
                     if entry.spawnable.node == self.node then
-                        entry.spawnable.previewed = false
-                        visualizer.toggleAll(entry.spawnable:getEntity(), entry.spawnable.previewed)
+                        entry.spawnable:setPreview(false)
                     end
 				end
 			end
@@ -136,8 +138,7 @@ function visualized:getGroupedProperties()
             if ImGui.Button("On") then
 				for _, entry in ipairs(entries) do
                     if entry.spawnable.node == self.node then
-                        entry.spawnable.previewed = true
-                        visualizer.toggleAll(entry.spawnable:getEntity(), entry.spawnable.previewed)
+                        entry.spawnable:setPreview(true)
                     end
 				end
 			end

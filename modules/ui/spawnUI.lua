@@ -37,7 +37,8 @@ local types = {
     ["Meta"] = {
         ["Occluder"] = require("modules/classes/spawn/meta/occluder"),
         ["Reflection Probe"] = require("modules/classes/spawn/meta/reflectionProbe"),
-        ["Static Marker"] = require("modules/classes/spawn/meta/staticMarker")
+        ["Static Marker"] = require("modules/classes/spawn/meta/staticMarker"),
+        ["Outline Marker"] = require("modules/classes/spawn/meta/outlineMarker")
     }
 }
 

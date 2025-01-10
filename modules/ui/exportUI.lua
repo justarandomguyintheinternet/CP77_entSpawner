@@ -330,7 +330,7 @@ function exportUI.exportGroup(group)
     local objects = g:getPathsRecursive(false)
 
     for key, object in pairs(objects) do
-        if utils.isA(object.ref, "spawnableElement") then
+        if utils.isA(object.ref, "spawnableElement") and not object.ref.spawnable.noExport then
             table.insert(exported.nodes, object.ref.spawnable:export(key, #objects))
 
             -- Handle device nodes
