@@ -150,8 +150,12 @@ function spawnable:update()
     local transform = entity:GetWorldTransform()
     transform:SetPosition(self.position)
     transform:SetOrientationEuler(self.rotation)
-    self:getEntity():SetWorldTransform(transform)
+    entity:SetWorldTransform(transform)
 end
+
+function spawnable:onParentChanged(newParent) end
+
+function spawnable:onObjectRemoved() end
 
 function spawnable:setOutline(color)
     if not self:isSpawned() then return end

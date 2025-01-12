@@ -2,6 +2,7 @@ local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 
+local minScriptVersion = "1.0.0"
 local sectorCategory
 
 exportUI = {
@@ -375,7 +376,8 @@ function exportUI.export()
         name = utils.createFileName(exportUI.projectName):lower():gsub(" ", "_"),
         sectors = {},
         devices = {},
-        psEntries = {}
+        psEntries = {},
+        version = minScriptVersion
     }
 
     local nodeRefs = {}

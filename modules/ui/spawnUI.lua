@@ -246,7 +246,7 @@ function spawnUI.draw()
     ImGui.SameLine()
 
     style.mutedText(IconGlyphs.InformationOutline)
-    style.tooltip("To spawn an object under the cursour, either:\n - Use the Shift-A menu while in editor mode\n - Drag and drop an object from the list to the desired position on the screen.")
+    style.tooltip("To spawn an object under the cursor, either:\n - Use the Shift-A menu while in editor mode\n - Drag and drop an object from the list to the desired position on the screen.")
 
     style.spacedSeparator()
 

@@ -1,3 +1,6 @@
+local CodewareVersion = "1.14.1"
+local ArchiveXLVersion = "1.20.0"
+
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
 local editor = require("modules/utils/editor/editor")
@@ -14,7 +17,8 @@ baseUI = {
     loadTabSize = true,
     loadWindowSize = nil,
     mainWindowPosition = { 0, 0 },
-    restoreWindowPosition = false
+    restoreWindowPosition = false,
+    requirementsIssues = {}
 }
 
 local menuButtonHovered = false
@@ -108,9 +112,34 @@ function baseUI.init()
             settings.save()
         end
     end
+
+    if not ArchiveXL then
+        table.insert(baseUI.requirementsIssues, "ArchiveXL is not installed")
+    elseif not ArchiveXL.Require(ArchiveXLVersion) then
+        table.insert(baseUI.requirementsIssues, "ArchiveXL version is outdated, please update to " .. ArchiveXLVersion)
+    end
+
+    if not Codeware then
+        table.insert(baseUI.requirementsIssues, "Codeware is not installed")
+    elseif not Codeware.Require(CodewareVersion) then
+        table.insert(baseUI.requirementsIssues, "Codeware version is outdated, please update to " .. CodewareVersion)
+    end
 end
 
 function baseUI.draw(spawner)
+    if #baseUI.requirementsIssues > 0 then
+        if ImGui.Begin("Object Spawner Error", ImGuiWindowFlags.AlwaysAutoResize) then
+            style.mutedText("The following issues are preventing Object Spawner from running:")
+
+            for _, issue in pairs(baseUI.requirementsIssues) do
+                ImGui.Text(issue)
+            end
+
+            ImGui.End()
+        end
+        return
+    end
+
     input.resetContext()
     local screenWidth, screenHeight = GetDisplayResolution()
     local editorActive = editor.active

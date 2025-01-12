@@ -81,6 +81,13 @@ function spawnableElement:getGroupedProperties()
 	return properties
 end
 
+function spawnableElement:setParent(parent, index)
+	local oldParent = self.parent
+	positionable.setParent(self, parent, index)
+	
+	self.spawnable:onParentChanged(oldParent)
+end
+
 function spawnableElement:setSelected(state)
 	local update = self.selected ~= state
 
@@ -267,10 +274,13 @@ function spawnableElement:onEdited()
 end
 
 function spawnableElement:remove()
+	local oldParent = self.parent
 	positionable.remove(self)
 
-	if not self.spawnable then return end
-	self.spawnable:despawn()
+	if self.spawnable then
+		self.spawnable:despawn()
+		self.spawnable:onParentChanged(oldParent)
+	end
 end
 
 function spawnableElement:serialize()
