@@ -69,13 +69,17 @@ function outlineMarker:onAssemble(entity)
     entity:AddComponent(marker)
 
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
+
+    self:enforceSameZ()
+
+    for _, neighbor in pairs(self:getNeighbors().neighbors) do
+        neighbor:updateTransform(oldParent)
+    end
 end
 
 function outlineMarker:spawn()
     self.rotation = EulerAngles.new(0, 0, 0)
     spawnable.spawn(self)
-
-    self:enforceSameZ()
 end
 
 function outlineMarker:save()
@@ -93,7 +97,7 @@ function outlineMarker:onParentChanged(oldParent)
 
     local oldNeighbors = self:getNeighbors(oldParent)
     for _, neighbor in pairs(oldNeighbors.neighbors) do
-        neighbor:updateTransform(oldParent)
+        neighbor:updateTransform(neighbor.object.parent)
     end
 end
 
@@ -135,7 +139,6 @@ function outlineMarker:getTransform(parent)
     if #neighbors.neighbors > 1 then
         local diff = utils.subVector(neighbors.nxt.position, self.position)
         yaw = diff:ToRotation().yaw + 90
-
         width = diff:Length() / 2
     end
 
@@ -156,6 +159,8 @@ function outlineMarker:updateTransform(parent)
     local mesh = entity:FindComponentByName("mesh")
     mesh.visualScale = Vector3.new(transform.scale.x, 0.005, transform.scale.z / 2)
     mesh:SetLocalOrientation(EulerAngles.new(0, 0, transform.rotation.yaw):ToQuat())
+
+    mesh:RefreshAppearance()
 end
 
 function outlineMarker:getSize()

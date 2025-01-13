@@ -546,6 +546,17 @@ function entity:drawAddArrayEntry(prop, componentID, path, data)
 
                         self:updatePropValue(componentID, newPath, 1)
                     end
+                elseif base:GetName().value == "TweakDBID" then
+                    if ImGui.MenuItem("TweakDBID (String)") then
+                        local newPath = utils.deepcopy(path)
+                        table.insert(newPath, #data + 1)
+
+                        self:updatePropValue(componentID, newPath, {
+                            ["$type"] = "TweakDBID",
+                            ["$storage"] = "string",
+                            ["$value"] = ""
+                        })
+                    end
                 else
                     ImGui.Text(string.format("%s not yet supported", base:GetName().value))
                 end
@@ -609,7 +620,7 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
 
         ImGui.Text(tostring(key))
         ImGui.SameLine()
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(tostring(key)) + max)
         ImGui.SetNextItemWidth(250 * style.viewSize)
         local value, _ = ImGui.InputText("##" .. componentID .. table.concat(path), data["$value"], 250)
         style.tooltip(info.typeName)

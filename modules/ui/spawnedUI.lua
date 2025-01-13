@@ -173,6 +173,8 @@ function spawnedUI.registerHotkeys()
         history.redo()
     end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.A, ImGuiKey.LeftCtrl }, function()
+        if spawnedUI.nameBeingEdited then return end
+
         for _, entry in pairs(spawnedUI.paths) do
             entry.ref:setSelected(true)
         end
@@ -185,12 +187,12 @@ function spawnedUI.registerHotkeys()
         end
     end)
     input.registerImGuiHotkey({ ImGuiKey.C, ImGuiKey.LeftCtrl }, function()
-        if #spawnedUI.selectedPaths == 0 then return end
+        if #spawnedUI.selectedPaths == 0 or spawnedUI.nameBeingEdited then return end
 
         spawnedUI.clipboard = spawnedUI.copy(true)
     end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.V, ImGuiKey.LeftCtrl }, function()
-        if #spawnedUI.clipboard == 0 then return end
+        if #spawnedUI.clipboard == 0 or spawnedUI.nameBeingEdited then return end
 
         local target
         if #spawnedUI.selectedPaths > 0 then

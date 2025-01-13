@@ -190,6 +190,18 @@ function element:isRoot(realRoot)
 	return self.parent:isRoot(true)
 end
 
+---Returns the visual root parent of the element
+---@return element
+function element:getRootParent()
+	if self:isRoot(true) then
+		return self
+	end
+	if self.parent.parent == nil then
+		return self
+	end
+	return self.parent:getRootParent()
+end
+
 ---Base condition ensuring the target is not contained in a source
 ---@param paths {path : string, ref : element}[]
 ---@return boolean
