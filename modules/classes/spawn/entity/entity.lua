@@ -723,7 +723,7 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
                 history.addAction(history.getElementChange(self.object))
                 self:updatePropValue(componentID, path, value)
             end
-        elseif info.typeName == "uint64" or info.typeName == "CRUID" or info.typeName == "String" then
+        elseif info.typeName == "uint64" or info.typeName == "Uint64" or info.typeName == "CRUID" or info.typeName == "String" then
             ImGui.SetNextItemWidth(100 * style.viewSize)
 
             local value, changed = ImGui.InputText("##" .. componentID .. table.concat(path), data, 250)

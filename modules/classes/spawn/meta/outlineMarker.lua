@@ -52,7 +52,7 @@ function outlineMarker:onAssemble(entity)
     component.name = "mesh"
     component.mesh = ResRef.FromString("base\\spawner\\cube_aligned.mesh")
     component.visualScale = Vector3.new(transform.scale.x, 0.005, transform.scale.z / 2)
-    component.meshAppearance = "red"
+    component.meshAppearance = "blue"
     component.isEnabled = self.previewed
 
     local localTransform = WorldTransform.new()
@@ -73,8 +73,9 @@ end
 
 function outlineMarker:spawn()
     self.rotation = EulerAngles.new(0, 0, 0)
-
     spawnable.spawn(self)
+
+    self:enforceSameZ()
 end
 
 function outlineMarker:save()
