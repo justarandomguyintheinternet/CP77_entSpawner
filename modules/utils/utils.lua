@@ -417,4 +417,117 @@ function miscUtils.getClipboardValue(key)
     return miscUtils.data[key]
 end
 
+--https://stackoverflow.com/questions/18886447/convert-signed-ieee-754-float-to-hexadecimal-representation
+--https://stackoverflow.com/questions/72783502/how-does-one-reverse-the-items-in-a-table-in-lua
+function miscUtils.floatToHex(n)
+    if n == 0.0 then return "00000000" end
+
+    local sign = 0
+    if n < 0.0 then
+        sign = 0x80
+        n = -n
+    end
+
+    local mant, expo = math.frexp(n)
+    local hext = {}
+
+    if mant ~= mant then
+        hext[#hext+1] = string.char(0xFF, 0x88, 0x00, 0x00)
+
+    elseif mant == math.huge or expo > 0x80 then
+        if sign == 0 then
+            hext[#hext+1] = string.char(0x7F, 0x80, 0x00, 0x00)
+        else
+            hext[#hext+1] = string.char(0xFF, 0x80, 0x00, 0x00)
+        end
+
+    elseif (mant == 0.0 and expo == 0) or expo < -0x7E then
+        hext[#hext+1] = string.char(sign, 0x00, 0x00, 0x00)
+
+    else
+        expo = expo + 0x7E
+        mant = (mant * 2.0 - 1.0) * math.ldexp(0.5, 24)
+        hext[#hext+1] = string.char(sign + math.floor(expo / 0x2),
+                                    (expo % 0x2) * 0x80 + math.floor(mant / 0x10000),
+                                    math.floor(mant / 0x100) % 0x100,
+                                    mant % 0x100)
+    end
+
+    local str = string.gsub(table.concat(hext),"(.)", function (c) return string.format("%02X%s",string.byte(c),"") end)
+    local reversed = ""
+
+    for i = 1, #str, 2 do
+        reversed = str:sub(i, i + 1) .. reversed
+    end
+
+    if #reversed < 8 then
+        reversed = reversed .. string.rep("0", 8 - #reversed)
+    end
+
+    return reversed
+end
+
+--https://stackoverflow.com/questions/18886447/convert-signed-ieee-754-float-to-hexadecimal-representation
+function miscUtils.intToHex(IN)
+    local B,K,OUT,I,D=16,"0123456789ABCDEF","",0
+    while IN>0 do
+        I=I+1
+        IN,D=math.floor(IN/B),(IN % B)+1
+        OUT=string.sub(K,D,D)..OUT
+    end
+
+    if OUT == "" then
+        OUT = "00"
+    end
+
+    if #OUT == 1 then
+        OUT = "0" .. OUT
+    end
+
+    return OUT
+end
+
+function miscUtils.hexToBase64(hex)
+    -- Convert hex string to binary data
+    local binary = hex:gsub('..', function(byte)
+        return string.char(tonumber(byte, 16))
+    end)
+
+    -- Base64 character set
+    local b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+    local b64 = {}
+    local padding = #binary % 3 -- Determine the padding needed
+
+    -- Encode binary to base64 without bitwise operations
+    local function toBase64Index(bytes)
+        local a = bytes[1] or 0
+        local b = bytes[2] or 0
+        local c = bytes[3] or 0
+
+        -- Calculate the base64 indices manually
+        local i1 = math.floor(a / 4)
+        local i2 = (a % 4) * 16 + math.floor(b / 16)
+        local i3 = (b % 16) * 4 + math.floor(c / 64)
+        local i4 = c % 64
+
+        return {i1, i2, i3, i4}
+    end
+
+    for i = 1, #binary, 3 do
+        local bytes = {binary:byte(i, i + 2)}
+        local indices = toBase64Index(bytes)
+
+        for j = 1, 4 do
+            table.insert(b64, b64chars:sub(indices[j] + 1, indices[j] + 1))
+        end
+    end
+
+    -- Add padding if needed
+    for _ = 1, (3 - padding) % 3 do
+        b64[#b64] = '='
+    end
+
+    return table.concat(b64)
+end
+
 return miscUtils
