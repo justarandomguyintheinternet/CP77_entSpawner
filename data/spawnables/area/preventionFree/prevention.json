@@ -16,8 +16,8 @@
     "visible": true,
     "spawnable": {
         "rotationRelative": false,
-        "modulePath": "meta/area",
-        "dataType": "Area",
+        "modulePath": "meta/preventionFree",
+        "dataType": "Prevention Free Area",
         "position": {
             "y": 0,
             "w": 0,
@@ -30,7 +30,7 @@
             "roll": 0
         }
     },
-    "name": "Area",
+    "name": "Prevention Free Area - Default",
     "isUsingSpawnables": true,
     "headerOpen": false,
     "modulePath": "modules/classes/editor/spawnableElement"

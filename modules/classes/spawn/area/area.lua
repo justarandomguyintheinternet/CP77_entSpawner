@@ -14,8 +14,8 @@ function area:new()
 
     o.spawnListType = "files"
     o.dataType = "Area"
-    o.spawnDataPath = "data/spawnables/meta/area/"
-    o.modulePath = "meta/area"
+    o.spawnDataPath = "data/spawnables/area/area/"
+    o.modulePath = "area/area"
     o.node = "worldAreaShapeNode"
     o.description = "Base type for all area type nodes. Position is irrelevant, as the actual position is determined by the outline markers."
     o.icon = IconGlyphs.Select
@@ -51,7 +51,7 @@ function area:save()
 
     if utils.indexValue(paths, self.outlinePath) ~= -1 then
         for _, child in pairs(self.object.sUI.getElementByPath(self.outlinePath).childs) do
-            if utils.isA(child, "spawnableElement") and child.spawnable.modulePath == "meta/outlineMarker" then
+            if utils.isA(child, "spawnableElement") and child.spawnable.modulePath == "area/outlineMarker" then
                 table.insert(markers, utils.fromVector(child.spawnable.position))
                 height = child.spawnable.height
             end
@@ -73,7 +73,7 @@ function area:loadOutlinePaths()
         if container.ref:getRootParent() == ownRoot then
             local nMarkers = 0
             for _, child in pairs(container.ref.childs) do
-                if utils.isA(child, "spawnableElement") and child.spawnable.modulePath == "meta/outlineMarker" then
+                if utils.isA(child, "spawnableElement") and child.spawnable.modulePath == "area/outlineMarker" then
                     nMarkers = nMarkers + 1
                 end
 
@@ -121,6 +121,10 @@ function area:export()
     data.type = "worldAreaShapeNode"
     data.data = {}
 
+    if #self.markers == 0 then
+        return data
+    end
+
     if #self.markers > 255 then
         print(string.format("[entSpawner] Issue during export: Area outline %s has more than 255 markers. Only the first 255 will be utilized.", self.outlinePath))
     end
@@ -149,6 +153,7 @@ function area:export()
     end
 
     buffer = buffer .. utils.floatToHex(self.height)
+
     data.data["outline"] = {
         ["Data"] = {
             ["$type"] = "AreaShapeOutline",

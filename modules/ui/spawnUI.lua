@@ -37,9 +37,13 @@ local types = {
     ["Meta"] = {
         ["Occluder"] = require("modules/classes/spawn/meta/occluder"),
         ["Reflection Probe"] = require("modules/classes/spawn/meta/reflectionProbe"),
-        ["Static Marker"] = require("modules/classes/spawn/meta/staticMarker"),
-        ["Outline Marker"] = require("modules/classes/spawn/meta/outlineMarker"),
-        ["Area"] = require("modules/classes/spawn/meta/area")
+        ["Static Marker"] = require("modules/classes/spawn/meta/staticMarker")
+    },
+    ["Area"] = {
+        ["Outline Marker"] = require("modules/classes/spawn/area/outlineMarker"),
+        ["Kill Area"] = require("modules/classes/spawn/area/killArea"),
+        ["Prevention Free"] = require("modules/classes/spawn/area/preventionFree"),
+        ["Water Null"] = require("modules/classes/spawn/area/waterNull")
     }
 }
 

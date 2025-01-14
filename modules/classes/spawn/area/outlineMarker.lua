@@ -23,8 +23,8 @@ function outlineMarker:new()
 
     o.spawnListType = "files"
     o.dataType = "Outline Marker"
-    o.spawnDataPath = "data/spawnables/meta/outlineMarker/"
-    o.modulePath = "meta/outlineMarker"
+    o.spawnDataPath = "data/spawnables/area/outlineMarker/"
+    o.modulePath = "area/outlineMarker"
     o.node = "---"
     o.description = "Places a marker for an outline. Automatically connects with other outline markers in the same group, to form a outline. The parent group can be used to refernce the contained outline, and use it in worldAreaShapeNode's"
     o.icon = IconGlyphs.SelectMarker
@@ -38,6 +38,7 @@ function outlineMarker:new()
     o.streamingMultiplier = 10
     o.primaryRange = 350
     o.secondaryRange = 300
+    o.noExport = true
 
     setmetatable(o, { __index = self })
    	return o
