@@ -96,7 +96,7 @@ function area:draw()
     table.insert(paths, 1, "None")
 
     local index = math.max(1, utils.indexValue(paths, self.outlinePath))
-    local idx, changed = style.trackedCombo(self.object, "Outline Path", index - 1, paths)
+    local idx, changed = style.trackedCombo(self.object, "Outline Path", index - 1, paths, 225)
     if changed then
         self.outlinePath = paths[idx + 1]
     end
