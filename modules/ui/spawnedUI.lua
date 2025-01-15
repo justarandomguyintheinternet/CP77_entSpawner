@@ -300,7 +300,7 @@ end
 function spawnedUI.handleRangeSelect(element)
     local paths = spawnedUI.filter ~= "" and spawnedUI.filteredPaths or spawnedUI.paths
 
-    if #spawnedUI.selectedPaths == 0 then -- Select from first to element
+    if #spawnedUI.selectedPaths == 1 and spawnedUI.selectedPaths[1].ref == element then -- Select from first to element
         for _, entry in pairs(paths) do
             if entry.ref == element then
                 break
@@ -309,6 +309,21 @@ function spawnedUI.handleRangeSelect(element)
         end
     else
         local inRange = false
+        if spawnedUI.selectedPaths[1].ref == element then -- Bottom to top selection
+            for i = #paths, 1, -1 do
+                if paths[i].ref == spawnedUI.selectedPaths[1].ref then
+                    break
+                end
+                if paths[i].ref.selected then
+                    inRange = true
+                end
+                if inRange then
+                    paths[i].ref:setSelected(true)
+                end
+            end
+        end
+
+        inRange = false
         for _, entry in pairs(paths) do
             if entry.ref == spawnedUI.selectedPaths[1].ref then -- From first selected down to element
                 if inRange then

@@ -85,10 +85,12 @@ function spawner:new()
 
         self.GameUI.OnSessionStart(function()
             self.runtimeData.inGame = true
+            self.baseUI.spawnedUI.root:setVisible(true, false)
         end)
 
         self.GameUI.OnSessionEnd(function()
             self.runtimeData.inGame = false
+            self.baseUI.spawnedUI.root:setVisible(false, false)
         end)
 
         self.runtimeData.inGame = not self.GameUI.IsDetached()

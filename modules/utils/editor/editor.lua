@@ -753,7 +753,9 @@ function editor.toggle(state)
         editor.currentAxis = "none"
         editor.hoveredArrow = "none"
         editor.grab = false
+        Game.GetStatsSystem():RemoveModifier(GetPlayer():GetEntityID(), RPGManager.CreateStatModifier(gamedataStatType.KnockdownImmunity, gameStatModifierType.Additive, 1))
     else
+        Game.GetStatsSystem():AddModifier(GetPlayer():GetEntityID(), RPGManager.CreateStatModifier(gamedataStatType.KnockdownImmunity, gameStatModifierType.Additive, 1))
         editor.addHighlightToSelected()
     end
 end
