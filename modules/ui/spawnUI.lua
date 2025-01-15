@@ -77,6 +77,8 @@ end
 ---@field spawnNewBBoxCron? number
 ---@field dragging boolean
 ---@field dragData table?
+---@field lastSpawnedClass table?
+---@field lastSpawnedEntry table?
 spawnUI = {
     filter = "",
     popupFilter = "",
@@ -93,7 +95,9 @@ spawnUI = {
     popupSpawnHit = nil,
     spawnNewBBoxCron = nil,
     dragging = false,
-    dragData = nil
+    dragData = nil,
+    lastSpawnedClass = nil,
+    lastSpawnedEntry = nil
 }
 
 ---Loads the spawn data (Either list of e.g. paths, or exported object files) for each data variant
@@ -362,7 +366,7 @@ function spawnUI.draw()
                     spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
 
                     local class = spawnUI.getActiveSpawnList().class
-                    spawnUI.dragData.lastSpawned = spawnUI.spawnNew(spawnUI.dragData, class)
+                    spawnUI.lastSpawned = spawnUI.spawnNew(spawnUI.dragData, class)
                 end
 
                 spawnUI.dragging = false
@@ -383,8 +387,11 @@ function spawnUI.draw()
 end
 
 function spawnUI.spawnNew(entry, class)
+    spawnUI.lastSpawnedClass = class
+    spawnUI.lastSpawnedEntry = entry
+
     local parent = spawnUI.spawnedUI.root
-    if spawnUI.selectedGroup ~= 0 then
+    if spawnUI.selectedGroup ~= 0 and spawnUI.spawnedUI.containerPaths[spawnUI.selectedGroup] then
         parent = spawnUI.spawnedUI.containerPaths[spawnUI.selectedGroup].ref
     end
 
@@ -469,6 +476,17 @@ function spawnUI.spawnNew(entry, class)
     return new
 end
 
+function spawnUI.repeatLastSpawn()
+    if not spawnUI.lastSpawnedClass or not spawnUI.lastSpawnedEntry then return end
+
+    local ray = editor.getScreenToWorldRay()
+    spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+
+    spawnUI.lastSpawned = spawnUI.spawnNew(spawnUI.lastSpawnedEntry, spawnUI.lastSpawnedClass)
+    spawnUI.spawnedUI.cachePaths()
+    spawnUI.popupSpawnHit = nil
+end
+
 function spawnUI.loadPopupData(typeName, variantName)
     local data = {}
 
@@ -535,7 +553,7 @@ function spawnUI.drawPopupVariant(typeName, variantName)
                     if ImGui.Button(name) then
                         ImGui.SetClipboardText(spawnUI.popupData[i].name)
                         local class = spawnData[typeName][variantName].class
-                        spawnUI.spawnNew(spawnUI.popupData[i], class)
+                        spawnUI.lastSpawned = spawnUI.spawnNew(spawnUI.popupData[i], class)
                         ImGui.CloseCurrentPopup()
                     end
 

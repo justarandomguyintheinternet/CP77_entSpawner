@@ -135,6 +135,9 @@ function editor.init(spawner)
     end, viewportHovered)
 
     input.registerImGuiHotkey({ ImGuiKey.R }, function ()
+        if ImGui.IsKeyDown(ImGuiKey.LeftCtrl) then
+            return
+        end
         editor.toggleTransform("rotate")
     end, viewportHovered)
 
@@ -204,6 +207,10 @@ function editor.init(spawner)
 
     input.registerImGuiHotkey({ ImGuiKey.A, ImGuiKey.LeftShift }, function ()
         editor.baseUI.spawnUI.openPopup = true
+    end, viewportHovered)
+
+    input.registerImGuiHotkey({ ImGuiKey.LeftCtrl, ImGuiKey.R }, function ()
+        editor.baseUI.spawnUI.repeatLastSpawn()
     end, viewportHovered)
 
     Observe("LocomotionEventsTransition", "OnUpdate", function(_, _, _, interface)

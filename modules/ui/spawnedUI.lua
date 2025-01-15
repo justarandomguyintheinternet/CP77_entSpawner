@@ -1031,14 +1031,20 @@ function spawnedUI.drawTop()
             ImGui.MenuItem("Move selected to new group", "CTRL-G")
             ImGui.MenuItem("Drop selected to floor", "CTRL-E")
 
-            style.mutedText("3D-EDITOR")
+            style.mutedText("3D-EDITOR Camera")
             ImGui.Separator()
             ImGui.Spacing()
-
             ImGui.MenuItem("Rotate camera", "Hold MMB")
             ImGui.MenuItem("Move camera", "SHIFT + Hold MMB")
             ImGui.MenuItem("Zoom", "CTRL + Hold MMB")
             ImGui.MenuItem("Center camera on selected", "TAB")
+
+            style.mutedText("3D-EDITOR")
+            ImGui.Separator()
+            ImGui.Spacing()
+
+            ImGui.MenuItem("Repeat last spawn under cursor", "CTRL-R")
+            ImGui.MenuItem("Open spawn new popup", "SHIFT-A")
             ImGui.MenuItem("Open depth select menu", "SHIFT-D")
             ImGui.MenuItem("Select / Confirm", "LMB")
             ImGui.MenuItem("Box Select", "CTRL + LMB Drag")
