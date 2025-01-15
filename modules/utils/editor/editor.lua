@@ -72,7 +72,6 @@ function editor.cancleEditingTransform()
 
     local element = editor.getSelected()
     if not element or editor.currentAxis == "none" then return end
-
     editor.currentAxis = "none"
     element:setPosition(editor.originalPosition)
     element:setRotation(editor.originalRotation)
@@ -215,10 +214,15 @@ end
 function editor.getSelected()
     editor.spawnedUI.cachePaths()
 
-    if #editor.spawnedUI.selectedPaths ~= 1 then return end
-    if not utils.isA(editor.spawnedUI.selectedPaths[1].ref, "spawnableElement") then return end
+    if #editor.spawnedUI.selectedPaths == 0 then return end
 
-    return editor.spawnedUI.selectedPaths[1].ref
+    if #editor.spawnedUI.selectedPaths == 1 then
+        if utils.isA(editor.spawnedUI.selectedPaths[1].ref, "positionable") then
+            return editor.spawnedUI.selectedPaths[1].ref
+        end
+    else
+        return editor.spawnedUI.multiSelectGroup
+    end
 end
 
 function editor.centerCamera()
@@ -429,10 +433,15 @@ function editor.recordChange()
     local newRotation = EulerAngles.new(element:getRotation())
     local newScale = Vector4.new(element:getScale())
 
+    print(editor.originalPosition, newPosition)
     element:setPosition(editor.originalPosition)
     element:setRotation(editor.originalRotation)
     element:setScale(editor.originalScale, false)
-    history.addAction(history.getElementChange(element))
+    if utils.isA(element, "spawnableElement") then
+        history.addAction(history.getElementChange(element))
+    else
+        history.addAction(history.getMultiSelectChange(element.childs))
+    end
     element:setPosition(newPosition)
     element:setRotation(newRotation)
     element:setScale(newScale, true)

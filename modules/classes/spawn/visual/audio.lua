@@ -1,10 +1,10 @@
 local visualized = require("modules/classes/spawn/visualized")
 local style = require("modules/ui/style")
-local intersection = require("modules/utils/editor/intersection")
 
 ---Class for worldStaticSoundEmitterNode
 ---@class sound : visualized
 ---@field private radius number
+---@field private emitterMetadataName string
 local sound = setmetatable({}, { __index = visualized })
 
 function sound:new()
@@ -21,6 +21,7 @@ function sound:new()
 
     o.radius = 5
     o.previewColor = "mediumvioletred"
+    o.emitterMetadataName = ""
 
     setmetatable(o, { __index = self })
    	return o
@@ -48,6 +49,7 @@ end
 function sound:save()
     local data = visualized.save(self)
     data.radius = self.radius
+    data.emitterMetadataName = self.emitterMetadataName
 
     return data
 end
@@ -59,6 +61,8 @@ function sound:draw()
     if change then
         self:updateScale()
     end
+
+    self.emitterMetadataName, change = style.trackedTextField(self.object, "Emitter Metadata Name", self.emitterMetadataName, "", 150)
 
     self:drawPreviewCheckbox()
 end
@@ -96,9 +100,9 @@ function sound:export()
         usePhysicsObstruction = 1,
         useDoppler = 1,
         Settings = {
-        ["Data"] = {
-            ["$type"] = "audioAmbientAreaSettings",
-            ["EventsOnActive"] = {
+            ["Data"] = {
+                ["$type"] = "audioAmbientAreaSettings",
+                ["EventsOnActive"] = {
                     {
                         ["$type"] = "audioAudEventStruct",
                         ["event"] = {
@@ -110,6 +114,11 @@ function sound:export()
                 },
             }
         },
+        ["emitterMetadataName"] = {
+            ["$type"] = "CName",
+            ["$storage"] = "string",
+            ["$value"] = self.emitterMetadataName or ""
+        }
     }
 
     return data

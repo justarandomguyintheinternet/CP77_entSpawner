@@ -6,6 +6,7 @@ local positionable = require("modules/classes/editor/positionable")
 
 ---Class for organizing multiple objects and or groups, with position and rotation
 ---@class positionableGroup : positionable
+---@field yaw number
 local positionableGroup = setmetatable({}, { __index = positionable })
 
 function positionableGroup:new(sUI)
@@ -14,6 +15,7 @@ function positionableGroup:new(sUI)
 	o.name = "New Group"
 	o.modulePath = "modules/classes/editor/positionableGroup"
 
+	o.yaw = 0
 	o.class = utils.combine(o.class, { "positionableGroup" })
 	o.quickOperations = {
 		[IconGlyphs.ContentSaveOutline] = {
@@ -70,6 +72,11 @@ function positionableGroup:getPosition()
 	return Vector4.new(center.x / nLeafs, center.y / nLeafs, center.z / nLeafs, 0)
 end
 
+function positionableGroup:setPosition(position)
+	local delta = utils.subVector(position, self:getPosition())
+	self:setPositionDelta(delta)
+end
+
 function positionableGroup:setPositionDelta(delta)
 	local leafs = self:getPositionableLeafs()
 
@@ -90,6 +97,15 @@ function positionableGroup:drawRotation(rotation)
 end
 
 -- TODO: Track rotation of group independently, use that for rotation axis for objects (In global space, convert group axis to local space (unit vector - (group axis - object axis)))
+
+function positionableGroup:setRotation(rotation)
+	self:setRotationDelta(EulerAngles.new(0, 0, rotation.yaw - self.yaw))
+	self.yaw = rotation.yaw
+end
+
+function positionableGroup:getRotation()
+	return EulerAngles.new(0, 0, self.yaw)
+end
 
 function positionableGroup:setRotationDelta(delta)
 	if delta.roll ~= 0 or delta.pitch ~= 0 or delta.yaw == 0 then return end
