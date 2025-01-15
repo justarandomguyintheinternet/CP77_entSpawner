@@ -530,4 +530,14 @@ function miscUtils.hexToBase64(hex)
     return table.concat(b64)
 end
 
+function miscUtils.getKeys(tab)
+    local keys = {}
+
+    for k, _ in pairs(tab) do
+        table.insert(keys, k)
+    end
+
+    return keys
+end
+
 return miscUtils

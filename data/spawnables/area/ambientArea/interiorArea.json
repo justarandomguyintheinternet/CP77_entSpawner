@@ -1,0 +1,77 @@
+{
+    "rotationRelative": false,
+    "scaleLocked": true,
+    "pos": {
+        "y": 0,
+        "w": 0,
+        "z": 0,
+        "x": 0
+    },
+    "hiddenByParent": false,
+    "transformExpanded": true,
+    "propertyHeaderStates": [],
+    "expandable": false,
+    "childs": [],
+    "selected": false,
+    "visible": true,
+    "spawnable": {
+        "rotationRelative": false,
+        "modulePath": "meta/data/spawnables/area/ambientArea",
+        "dataType": "Ambient Area",
+        "position": {
+            "y": 0,
+            "w": 0,
+            "z": 0,
+            "x": 0
+        },
+        "rotation": {
+            "pitch": 0,
+            "yaw": 0,
+            "roll": 0
+        },
+        "trigger": {
+            "Settings": {
+                "Data": {
+                    "EventsOnEnter": [],
+                    "EventsOnExit": [],
+                    "outerDistance": 10,
+                    "Parameters": [
+                        {
+                            "$type": "audioAudParameter",
+                            "name": {
+                                "$storage": "string",
+                                "$type": "CName",
+                                "$value": "amb_interior"
+                            },
+                            "value": 0.95
+                        }
+                    ],
+                    "Priority": 16,
+                    "Reverb": {
+                        "$storage": "string",
+                        "$type": "CName",
+                        "$value": "revb_interior_room_medium"
+                    },
+                    "verticalOuterDistance": 1,
+                    "$type": "audioAmbientAreaSettings",
+                    "EventsOnActive": [
+                        {
+                            "event": {
+                                "$storage": "string",
+                                "$type": "CName",
+                                "$value": "amb_int_roomtone_office_med_01_aircon"
+                            },
+                            "$type": "audioAudEventStruct"
+                        }
+                    ],
+                    "isMusic": false
+                }
+            },
+            "$type": "audioAmbientAreaNotifier"
+        }
+    },
+    "name": "Interior Muffling Area",
+    "isUsingSpawnables": true,
+    "headerOpen": false,
+    "modulePath": "modules/classes/editor/spawnableElement"
+}

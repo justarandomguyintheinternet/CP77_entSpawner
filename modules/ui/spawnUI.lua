@@ -43,7 +43,9 @@ local types = {
         ["Outline Marker"] = require("modules/classes/spawn/area/outlineMarker"),
         ["Kill Area"] = require("modules/classes/spawn/area/killArea"),
         ["Prevention Free"] = require("modules/classes/spawn/area/preventionFree"),
-        ["Water Null"] = require("modules/classes/spawn/area/waterNull")
+        ["Water Null"] = require("modules/classes/spawn/area/waterNull"),
+        ["Trigger Area"] = require("modules/classes/spawn/area/triggerArea"),
+        ["Ambient Area"] = require("modules/classes/spawn/area/ambientArea")
     }
 }
 
