@@ -49,6 +49,25 @@ function staticMarker:save()
     return data
 end
 
+function staticMarker:getSize()
+    return { x = 0.1, y = 0.1, z = 0.6 }
+end
+
+function staticMarker:getBBox()
+    return {
+        min = { x = -0.075, y = -0.075, z = 0 },
+        max = { x = 0.075, y = 0.075, z = self:getSize().z }
+    }
+end
+
+-- Needed for dropToSurface, uses this and size to get bbox
+function staticMarker:getCenter()
+    local position = Vector4.new(self.position.x, self.position.y, self.position.z, 1)
+    position.z = position.z + self:getSize().z / 2
+
+    return position
+end
+
 function staticMarker:getVisualizerSize()
     return { x = 0.005, y = 0.005, z = 0.005 }
 end
