@@ -107,9 +107,12 @@ function outlineMarker:update()
 
     self:enforceSameZ()
     self:updateTransform(self.object.parent)
+    self:updateHeight()
 
     for _, neighbor in pairs(self:getNeighbors().neighbors) do
         neighbor:updateTransform(neighbor.object.parent)
+        neighbor.height = self.height
+        neighbor:updateHeight()
     end
 end
 

@@ -592,6 +592,19 @@ function spawnedUI.drawContextMenu(element, path)
                 end
             end
         end
+        if element.expandable then
+            if ImGui.MenuItem("Set as \"Spawn New\" group") then
+                local idx = 1
+                local elementPath = element:getPath()
+                for _, entry in pairs(spawnedUI.containerPaths) do
+                    if entry.path == elementPath then
+                        break
+                    end
+                    idx = idx + 1
+                end
+                spawnedUI.spawner.baseUI.spawnUI.selectedGroup = idx
+            end
+        end
 
         ImGui.EndPopup()
     end
