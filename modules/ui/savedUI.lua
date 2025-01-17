@@ -26,7 +26,7 @@ function savedUI.convertObject(object, getState)
         app = object.app
     }, ToVector4(object.pos), ToEulerAngles(object.rot))
 
-    local newObject = require("modules/classes/spawn/object"):new(savedUI)
+    local newObject = require("modules/classes/editor/spawnableElement"):new(savedUI)
     newObject.name = object.name
     newObject.headerOpen = object.headerOpen
     newObject.loadRange = object.loadRange
@@ -34,7 +34,7 @@ function savedUI.convertObject(object, getState)
     newObject.spawnable = spawnable
 
     if getState then
-        return newObject:getState()
+        return newObject:serialize()
     else
         return newObject
     end
