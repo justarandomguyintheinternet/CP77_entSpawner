@@ -104,7 +104,14 @@ function visualized:setPreview(state)
     visualizer.toggleAll(entity, self.previewed)
 end
 
-function visualized:drawPreviewCheckbox(text)
+function visualized:drawPreviewCheckbox(text, textX)
+    if textX then
+        style.mutedText(text)
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(textX)
+        text = "##" .. text
+    end
+
     self.previewed, changed = style.trackedCheckbox(self.object, text or "Visualize", self.previewed)
     if changed then
         self:setPreview(self.previewed)

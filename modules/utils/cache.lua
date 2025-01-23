@@ -22,6 +22,7 @@ function cache.load()
     cache.generateDevicePSClassList()
     cache.generateRecordsList()
 
+    cache.removeDuplicates("data/spawnables/ai/aiSpot/paths_workspot.txt")
     cache.removeDuplicates("data/spawnables/entity/templates/paths_ent.txt")
     cache.removeDuplicates("data/spawnables/mesh/all/paths_mesh.txt")
     cache.removeDuplicates("data/spawnables/mesh/physics/paths_filtered_mesh.txt")

@@ -305,6 +305,258 @@ function exportUI.addGroup(name)
     data.center = utils.fromVector(center)
 end
 
+function exportUI.handleDevice(object, devices, psEntries)
+    local hash = utils.nodeRefStringToHashString(object.ref.spawnable.nodeRef)
+
+    local childHashes = {}
+    for _, child in pairs(object.ref.spawnable.deviceConnections) do
+        table.insert(childHashes, utils.nodeRefStringToHashString(child.nodeRef))
+    end
+
+    devices[hash] = {
+        hash = hash,
+        className = object.ref.spawnable.deviceClassName,
+        nodePosition = utils.fromVector(object.ref:getPosition()),
+        parents = {},
+        children = childHashes
+    }
+
+    if object.ref.spawnable.persistent then
+        local PSID = PersistentID.ForComponent(entEntityID.new({ hash = loadstring("return " .. hash .. "ULL", "")() }), object.ref.spawnable.controllerComponent):ToHash()
+        PSID = tostring(PSID):gsub("ULL", "")
+
+        local psData = object.ref.spawnable:getPSData()
+
+        if psData then
+            psEntries[PSID] = {
+                PSID = PSID,
+                instanceData = psData
+            }
+        end
+    end
+end
+
+function exportUI.getNodeRefsFromMarking(marking, spotNodes)
+    local nodeRefs = {}
+
+    for _, node in pairs(spotNodes) do
+        if utils.has_value(node.markings, marking) then
+            table.insert(nodeRefs, {
+                ["$type"] = "NodeRef",
+                ["$storage"] = "string",
+                ["$value"] = node.ref
+            })
+        end
+    end
+
+    return nodeRefs
+end
+
+function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRefs)
+    local wsPersistentData = {}
+    local registryEntries = {}
+    local periodEnums = utils.enumTable("communityECommunitySpawnTime")
+
+    -- TODO: Missing noderefs
+
+    -- Collect all spots for workspotsPersistentData
+    for _, node in pairs(spotNodes) do
+        table.insert(wsPersistentData, {
+            ["$type"] = "AISpotPersistentData",
+            ["globalNodeId"] = {
+                ["$type"] = "worldGlobalNodeID",
+                ["hash"] = utils.nodeRefStringToHashString(node.ref)
+            },
+            ["isEnabled"] = 1,
+            ["worldPosition"] = {
+                ["$type"] = "WorldPosition",
+                ["x"] = {
+                    ["$type"] = "FixedPoint",
+                    ["Bits"] = math.floor(node.position.x * 131072)
+                },
+                ["y"] = {
+                    ["$type"] = "FixedPoint",
+                    ["Bits"] = math.floor(node.position.y * 131072)
+                },
+                ["z"] = {
+                    ["$type"] = "FixedPoint",
+                    ["Bits"] = math.floor(node.position.z * 131072)
+                }
+            },
+            ["yaw"] = node.yaw
+        })
+    end
+
+    -- Generate registry entry, and resolve markings to nodeRefs
+    for _, community in pairs(communities) do
+        local initialStates = {}
+        local entries = {}
+
+        for entryKey, entry in pairs(community.data) do
+            table.insert(initialStates, {
+                ["$type"] = "worldCommunityEntryInitialState",
+                ["entryActiveOnStart"] = entry.entryActiveOnStart and 1 or 0,
+                ["entryName"] = {
+                    ["$type"] = "CName",
+                    ["$storage"] = "string",
+                    ["$value"] = entry.entryName
+                },
+                ["initialPhaseName"] = {
+                    ["$type"] = "CName",
+                    ["$storage"] = "string",
+                    ["$value"] = entry.initialPhaseName
+                }
+            })
+
+            local phases = {}
+
+            for phaseKey, phase in pairs(entry.phases) do
+                local appearances = {}
+                for _, appearance in pairs(phase.appearances) do
+                    table.insert(appearances, {
+                        ["$type"] = "CName",
+                        ["$storage"] = "string",
+                        ["$value"] = appearance
+                    })
+                end
+
+                local periods = {}
+
+                for periodKey, period in pairs(phase.timePeriods) do
+                    local markings = {}
+                    local spotRefs = {}
+                    if #period.markings > 0 then
+                        for _, marking in pairs(period.markings) do
+                            table.insert(markings, {
+                                ["$type"] = "CName",
+                                ["$storage"] = "string",
+                                ["$value"] = marking
+                            })
+
+                            -- Update spotRefs on communityAreaNode, resolved from markings
+                            local nodeRefs = exportUI.getNodeRefsFromMarking(marking, spotNodes)
+                            for _, ref in pairs(nodeRefs) do
+                                table.insert(community.node.data.area.Data.entriesData[entryKey].phasesData[phaseKey].timePeriodsData[periodKey].spotNodeIds, {
+                                    ["$type"] = "worldGlobalNodeID",
+                                    ["hash"] = utils.nodeRefStringToHashString(ref["$value"])
+                                })
+                            end
+
+                            utils.combine(spotRefs, nodeRefs)
+                        end
+                    else
+                        for _, ref in pairs(period.spotNodeRefs) do
+                            table.insert(spotRefs, {
+                                ["$type"] = "NodeRef",
+                                ["$storage"] = "string",
+                                ["$value"] = ref
+                            })
+                        end
+                    end
+
+                    table.insert(periods, {
+                        ["$type"] = "communityPhaseTimePeriod",
+                        ["hour"] = periodEnums[period.hour + 1],
+                        ["isSequence"] = period.isSequence and 1 or 0,
+                        ["markings"] = markings,
+                        ["quantity"] = period.quantity,
+                        ["spotNodeRefs"] = spotRefs
+                    })
+                end
+
+                table.insert(phases, {
+                    ["Data"] = {
+                        ["$type"] = "communitySpawnPhase",
+                        ["appearances"] = appearances,
+                        ["phaseName"] = {
+                            ["$type"] = "CName",
+                            ["$storage"] = "string",
+                            ["$value"] = phase.phaseName
+                        },
+                        ["timePeriods"] = periods
+                    }
+                  })
+            end
+
+            table.insert(entries, {
+                ["Data"] = {
+                    ["$type"] = "communitySpawnEntry",
+                    ["characterRecordId"] = {
+                        ["$type"] = "TweakDBID",
+                        ["$storage"] = "string",
+                        ["$value"] = entry.characterRecordId
+                    },
+                    ["entryName"] = {
+                        ["$type"] = "CName",
+                        ["$storage"] = "string",
+                        ["$value"] = entry.entryName
+                    },
+                    ["phases"] = phases,
+                }
+            })
+        end
+
+        table.insert(registryEntries, {
+            ["$type"] = "worldCommunityRegistryItem",
+            ["communityAreaType"] = "Regular",
+            ["communityId"] = {
+                ["$type"] = "gameCommunityID",
+                ["entityId"] = {
+                    ["$type"] = "entEntityID",
+                    ["hash"] = utils.nodeRefStringToHashString(community.node.nodeRef)
+                }
+            },
+            ["entriesInitialState"] = initialStates,
+            ["template"] = {
+                ["Data"] = {
+                    ["$type"] = "communityCommunityTemplateData",
+                    ["entries"] = entries
+                }
+            }
+        })
+    end
+
+    return {
+        name = projectName .. "_always_loaded",
+        min = { x = -99999, y = -99999, z = -99999 },
+        max = { x = 99999, y = 99999, z = 99999 },
+        category = "AlwaysLoaded",
+        level = 1,
+        nodes = {
+            {
+                ["scale"] = {
+                    ["x"] = 1,
+                    ["y"] = 1,
+                    ["z"] = 1
+                },
+                ["data"] = {
+                    ["workspotsPersistentData"] = wsPersistentData,
+                    ["communitiesData"] = registryEntries
+                },
+                ["name"] = "registry",
+                ["position"] = {
+                    ["x"] = 0,
+                    ["y"] = 0,
+                    ["w"] = 0,
+                    ["z"] = 0
+                },
+                ["rotation"] = {
+                    ["j"] = 0,
+                    ["k"] = 0,
+                    ["i"] = 0,
+                    ["r"] = 0
+                },
+                ["primaryRange"] = 99999999,
+                ["secondaryRange"] = 17.320507,
+                ["uk11"] = 512,
+                ["type"] = "worldCommunityRegistryNode",
+                ["nodeRef"] = "",
+                ["uk10"] = 32
+            }
+        }
+    }
+end
+
 function exportUI.exportGroup(group)
     if not config.fileExists("data/objects/" .. group.name .. ".json") then return end
 
@@ -328,6 +580,9 @@ function exportUI.exportGroup(group)
 
     local devices = {}
     local psEntries = {}
+    local communities = {}
+    local spotNodes = {}
+
     local objects = g:getPathsRecursive(false)
 
     for key, object in pairs(objects) do
@@ -336,39 +591,21 @@ function exportUI.exportGroup(group)
 
             -- Handle device nodes
             if object.ref.spawnable.node == "worldDeviceNode" then
-                local hash = utils.nodeRefStringToHashString(object.ref.spawnable.nodeRef)
-
-                local childHashes = {}
-                for _, child in pairs(object.ref.spawnable.deviceConnections) do
-                    table.insert(childHashes, utils.nodeRefStringToHashString(child.nodeRef))
-                end
-
-                devices[hash] = {
-                    hash = hash,
-                    className = object.ref.spawnable.deviceClassName,
-                    nodePosition = utils.fromVector(object.ref:getPosition()),
-                    parents = {},
-                    children = childHashes
-                }
-
-                if object.ref.spawnable.persistent then
-                    local PSID = PersistentID.ForComponent(entEntityID.new({ hash = loadstring("return " .. hash .. "ULL", "")() }), object.ref.spawnable.controllerComponent):ToHash()
-                    PSID = tostring(PSID):gsub("ULL", "")
-
-                    local psData = object.ref.spawnable:getPSData()
-
-                    if psData then
-                        psEntries[PSID] = {
-                            PSID = PSID,
-                            instanceData = psData
-                        }
-                    end
-                end
+                exportUI.handleDevice(object, devices, psEntries)
+            elseif object.ref.spawnable.node == "worldCompiledCommunityAreaNode_Streamable" then
+                table.insert(communities, { data = object.ref.spawnable.entries, node = exported.nodes[#exported.nodes] })
+            elseif object.ref.spawnable.node == "worldAISpotNode" then
+                table.insert(spotNodes, {
+                    ref = object.ref.spawnable.nodeRef,
+                    position = utils.fromVector(object.ref:getPosition()),
+                    yaw = object.ref.spawnable.rotation.yaw,
+                    markings = object.ref.spawnable.markings
+                })
             end
         end
     end
 
-    return exported, devices, psEntries
+    return exported, devices, psEntries, communities, spotNodes
 end
 
 function exportUI.export()
@@ -381,9 +618,11 @@ function exportUI.export()
     }
 
     local nodeRefs = {}
+    local spotNodes = {}
+    local communities = {}
 
     for _, group in pairs(exportUI.groups) do
-        local data, devices, psEntries = exportUI.exportGroup(group)
+        local data, devices, psEntries, comms, spots = exportUI.exportGroup(group)
         if data then
             table.insert(project.sectors, data)
 
@@ -394,6 +633,9 @@ function exportUI.export()
             for PSID, entry in pairs(psEntries) do
                 project.psEntries[PSID] = entry
             end
+
+            utils.combine(communities, comms)
+            utils.combine(spotNodes, spots)
 
             for _, node in pairs(data.nodes) do
                 if not nodeRefs[node.nodeRef] then
@@ -421,6 +663,8 @@ function exportUI.export()
             end
         end
     end
+
+    table.insert(project.sectors, exportUI.handleCommunities(project.name, communities, spotNodes, nodeRefs))
 
     config.saveFile("export/" .. project.name .. "_exported.json", project)
 

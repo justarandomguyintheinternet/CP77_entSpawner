@@ -46,6 +46,10 @@ local types = {
         ["Water Null"] = require("modules/classes/spawn/area/waterNull"),
         ["Trigger Area"] = require("modules/classes/spawn/area/triggerArea"),
         ["Ambient Area"] = require("modules/classes/spawn/area/ambientArea")
+    },
+    ["AI"] = {
+        ["AI Spot"] = require("modules/classes/spawn/ai/aiSpot"),
+        ["Community"] = require("modules/classes/spawn/ai/communityArea")
     }
 }
 
