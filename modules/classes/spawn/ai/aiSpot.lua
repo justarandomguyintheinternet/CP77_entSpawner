@@ -126,7 +126,6 @@ function aiSpot:spawn()
     end)
     .found(function ()
         self.rigs = cache.getValue(self.spawnData .. "_rigs")
-        print(#self.rigs)
     end)
 end
 

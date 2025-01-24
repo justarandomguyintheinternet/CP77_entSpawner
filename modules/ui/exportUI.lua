@@ -11,7 +11,7 @@ exportUI = {
     templates = {},
     spawner = nil,
     exportHovered = false,
-    foundDuplicates = nil
+    exportIssues = {}
 }
 
 function exportUI.init(spawner)
@@ -198,35 +198,159 @@ function exportUI.drawTemplates()
     end
 end
 
-function exportUI.draw()
-    if exportUI.foundDuplicates then
+function exportUI.drawIssues()
+    if exportUI.exportIssues.nodeRefDuplicated then
         ImGui.OpenPopup("Duplicated NodeRefs")
         if ImGui.BeginPopupModal("Duplicated NodeRefs", true, ImGuiWindowFlags.AlwaysAutoResize) then
-            ImGui.Text("Duplicated nodeRefs found, please fix them before exporting! (Export aborted)")
+            ImGui.Text("Duplicated nodeRefs found, please fix them before exporting!")
 
             ImGui.Separator()
 
             style.mutedText("NodeRef:")
             ImGui.SameLine()
-            ImGui.Text(exportUI.foundDuplicates.nodeRef)
+            ImGui.Text(exportUI.exportIssues.nodeRefDuplicated.nodeRef)
 
             style.mutedText("Node 1: ")
             ImGui.SameLine()
-            ImGui.Text(exportUI.foundDuplicates.name1)
+            ImGui.Text(exportUI.exportIssues.nodeRefDuplicated.name1)
 
             style.mutedText("Node 2: ")
             ImGui.SameLine()
-            ImGui.Text(exportUI.foundDuplicates.name2)
+            ImGui.Text(exportUI.exportIssues.nodeRefDuplicated.name2)
 
             ImGui.Separator()
 
             if ImGui.Button("OK") then
                 ImGui.CloseCurrentPopup()
-                exportUI.foundDuplicates = nil
+                exportUI.exportIssues.nodeRefDuplicated = nil
             end
             ImGui.EndPopup()
         end
     end
+    if exportUI.exportIssues.noOutlineMarkers and not exportUI.exportIssues.nodeRefDuplicated then
+        ImGui.OpenPopup("Missing Outline Markers")
+        if ImGui.BeginPopupModal("Missing Outline Markers", true, ImGuiWindowFlags.AlwaysAutoResize) then
+            ImGui.Text("The following area nodes have no outline, possibly due to a broken outline group link!")
+
+            ImGui.Separator()
+
+            for _, area in pairs(exportUI.exportIssues.noOutlineMarkers) do
+                style.mutedText("Area Name:")
+                ImGui.SameLine()
+                ImGui.Text(area)
+
+                ImGui.Separator()
+            end
+
+            if ImGui.Button("OK") then
+                ImGui.CloseCurrentPopup()
+                exportUI.exportIssues.noOutlineMarkers = nil
+            end
+            ImGui.EndPopup()
+        end
+    end
+    if exportUI.exportIssues.spotEmptyRef and not exportUI.exportIssues.nodeRefDuplicated and not exportUI.exportIssues.noOutlineMarkers then
+        ImGui.OpenPopup("Empty AISpot NodeRef")
+        if ImGui.BeginPopupModal("Empty AISpot NodeRef", true, ImGuiWindowFlags.AlwaysAutoResize) then
+            ImGui.Text("The following AISpot's do not have a NodeRef assigned to them, making them unusable!")
+
+            ImGui.Separator()
+
+            for _, name in pairs(exportUI.exportIssues.spotEmptyRef) do
+                style.mutedText("Node Name:")
+                ImGui.SameLine()
+                ImGui.Text(name)
+            end
+
+            ImGui.Separator()
+
+            if ImGui.Button("OK") then
+                ImGui.CloseCurrentPopup()
+                exportUI.exportIssues.spotEmptyRef = nil
+            end
+            ImGui.EndPopup()
+        end
+    end
+    if exportUI.exportIssues.spotReferencingEmpty and not exportUI.exportIssues.nodeRefDuplicated and not exportUI.exportIssues.noOutlineMarkers and not exportUI.exportIssues.spotEmptyRef then
+        ImGui.OpenPopup("Community Referencing Missing NodeRef")
+        if ImGui.BeginPopupModal("Community Referencing Missing NodeRef", true, ImGuiWindowFlags.AlwaysAutoResize) then
+            ImGui.Text("The following Community Entries reference a NodeRef that is not part of this export. (Might still work, if the NodeRef is part of another export)")
+
+            ImGui.Separator()
+
+            for _, entry in pairs(exportUI.exportIssues.spotReferencingEmpty) do
+                style.mutedText("Node Name:")
+                ImGui.SameLine()
+                ImGui.Text(entry.name)
+
+                style.mutedText("Community Entry:")
+                ImGui.SameLine()
+                ImGui.Text(entry.entry)
+
+                style.mutedText("Entry Phase:")
+                ImGui.SameLine()
+                ImGui.Text(entry.phase)
+
+                style.mutedText("Phase Period:")
+                ImGui.SameLine()
+                ImGui.Text(entry.period)
+
+                style.mutedText("Missing spotNodeRef:")
+                ImGui.SameLine()
+                ImGui.Text(entry.ref)
+
+                ImGui.Separator()
+            end
+
+            if ImGui.Button("OK") then
+                ImGui.CloseCurrentPopup()
+                exportUI.exportIssues.spotReferencingEmpty = nil
+            end
+            ImGui.EndPopup()
+        end
+    end
+    if exportUI.exportIssues.markingUnresolved and not exportUI.exportIssues.nodeRefDuplicated and not exportUI.exportIssues.noOutlineMarkers and not exportUI.exportIssues.spotEmptyRef and not exportUI.exportIssues.spotReferencingEmpty then
+        ImGui.OpenPopup("Unresolved Marking")
+        if ImGui.BeginPopupModal("Unresolved Marking", true, ImGuiWindowFlags.AlwaysAutoResize) then
+            ImGui.Text("The following markings have no AISpots associated with them.")
+
+            ImGui.Separator()
+
+            for _, entry in pairs(exportUI.exportIssues.markingUnresolved) do
+                style.mutedText("Node Name:")
+                ImGui.SameLine()
+                ImGui.Text(entry.name)
+
+                style.mutedText("Community Entry:")
+                ImGui.SameLine()
+                ImGui.Text(entry.entry)
+
+                style.mutedText("Entry Phase:")
+                ImGui.SameLine()
+                ImGui.Text(entry.phase)
+
+                style.mutedText("Phase Period:")
+                ImGui.SameLine()
+                ImGui.Text(entry.period)
+
+                style.mutedText("Marking:")
+                ImGui.SameLine()
+                ImGui.Text(entry.marking)
+
+                ImGui.Separator()
+            end
+
+            if ImGui.Button("OK") then
+                ImGui.CloseCurrentPopup()
+                exportUI.exportIssues.markingUnresolved = nil
+            end
+            ImGui.EndPopup()
+        end
+    end
+end
+
+function exportUI.draw()
+    exportUI.drawIssues()
 
     if not sectorCategory then
         sectorCategory = utils.enumTable("worldStreamingSectorCategory")
@@ -357,8 +481,6 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
     local registryEntries = {}
     local periodEnums = utils.enumTable("communityECommunitySpawnTime")
 
-    -- TODO: Missing noderefs, empty node ref
-
     -- Collect all spots for workspotsPersistentData
     for _, node in pairs(spotNodes) do
         table.insert(wsPersistentData, {
@@ -385,6 +507,13 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
             },
             ["yaw"] = node.yaw
         })
+
+        if node.ref == "" then
+            if not exportUI.exportIssues.spotEmptyRef then
+                exportUI.exportIssues.spotEmptyRef = {}
+            end
+            table.insert(exportUI.exportIssues.spotEmptyRef, node.name)
+        end
     end
 
     -- Generate registry entry, and resolve markings to nodeRefs
@@ -434,15 +563,28 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
                             })
 
                             -- Update spotRefs on communityAreaNode, resolved from markings
-                            local nodeRefs = exportUI.getNodeRefsFromMarking(marking, spotNodes)
-                            for _, ref in pairs(nodeRefs) do
+                            local refs = exportUI.getNodeRefsFromMarking(marking, spotNodes)
+                            for _, ref in pairs(refs) do
                                 table.insert(community.node.data.area.Data.entriesData[entryKey].phasesData[phaseKey].timePeriodsData[periodKey].spotNodeIds, {
                                     ["$type"] = "worldGlobalNodeID",
                                     ["hash"] = utils.nodeRefStringToHashString(ref["$value"])
                                 })
                             end
 
-                            utils.combine(spotRefs, nodeRefs)
+                            utils.combine(spotRefs, refs)
+
+                            if #spotRefs == 0 then
+                                if not exportUI.exportIssues.markingUnresolved then
+                                    exportUI.exportIssues.markingUnresolved = {}
+                                end
+                                table.insert(exportUI.exportIssues.markingUnresolved, {
+                                    name = community.node.name,
+                                    entry = entry.entryName,
+                                    phase = phase.phaseName,
+                                    period = periodEnums[period.hour + 1],
+                                    marking = marking
+                                })
+                            end
                         end
                     else
                         for _, ref in pairs(period.spotNodeRefs) do
@@ -451,6 +593,18 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
                                 ["$storage"] = "string",
                                 ["$value"] = ref
                             })
+                            if not nodeRefs[ref] then
+                                if not exportUI.exportIssues.spotReferencingEmpty then
+                                    exportUI.exportIssues.spotReferencingEmpty = {}
+                                end
+                                table.insert(exportUI.exportIssues.spotReferencingEmpty, {
+                                    name = community.node.name,
+                                    entry = entry.entryName,
+                                    phase = phase.phaseName,
+                                    period = periodEnums[period.hour + 1],
+                                    ref = ref
+                                })
+                            end
                         end
                     end
 
@@ -599,7 +753,8 @@ function exportUI.exportGroup(group)
                     ref = object.ref.spawnable.nodeRef,
                     position = utils.fromVector(object.ref:getPosition()),
                     yaw = object.ref.spawnable.rotation.yaw,
-                    markings = object.ref.spawnable.markings
+                    markings = object.ref.spawnable.markings,
+                    name = object.ref.name
                 })
             end
         end
@@ -641,7 +796,7 @@ function exportUI.export()
                 if not nodeRefs[node.nodeRef] then
                     nodeRefs[node.nodeRef] = node.name
                 elseif node.nodeRef ~= "" then
-                    exportUI.foundDuplicates = {
+                    exportUI.exportIssues.nodeRefDuplicated = {
                         nodeRef = node.nodeRef,
                         name1 = nodeRefs[node.nodeRef],
                         name2 = node.name
@@ -650,11 +805,7 @@ function exportUI.export()
                 end
             end
         end
-
-        if exportUI.foundDuplicates then break end
     end
-
-    if exportUI.foundDuplicates then return end
 
     for hash, device in pairs(project.devices) do
         for _, childHash in pairs(device.children) do
