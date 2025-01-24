@@ -670,6 +670,8 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
         })
     end
 
+    if #wsPersistentData == 0 and #registryEntries == 0 then return end
+
     return {
         name = projectName .. "_always_loaded",
         min = { x = -99999, y = -99999, z = -99999 },
@@ -815,7 +817,10 @@ function exportUI.export()
         end
     end
 
-    table.insert(project.sectors, exportUI.handleCommunities(project.name, communities, spotNodes, nodeRefs))
+    local always_loaded = exportUI.handleCommunities(project.name, communities, spotNodes, nodeRefs)
+    if always_loaded then
+        table.insert(project.sectors, always_loaded)
+    end
 
     config.saveFile("export/" .. project.name .. "_exported.json", project)
 
