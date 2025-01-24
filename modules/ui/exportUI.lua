@@ -357,7 +357,7 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
     local registryEntries = {}
     local periodEnums = utils.enumTable("communityECommunitySpawnTime")
 
-    -- TODO: Missing noderefs
+    -- TODO: Missing noderefs, empty node ref
 
     -- Collect all spots for workspotsPersistentData
     for _, node in pairs(spotNodes) do
