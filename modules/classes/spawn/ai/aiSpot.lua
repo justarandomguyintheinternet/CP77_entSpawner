@@ -49,6 +49,8 @@ function aiSpot:new()
     o.cronID = nil
     o.rigs = {}
 
+    o.streamingMultiplier = 5
+
     setmetatable(o, { __index = self })
    	return o
 end
@@ -187,11 +189,11 @@ end
 function aiSpot:draw()
     visualized.draw(self)
 
-    if ImGui.TreeNodeEx("Previewing Options", ImGuiTreeNodeFlags.SpanFullWidth) then
-        if not self.maxPropertyWidth then
-            self.maxPropertyWidth = utils.getTextMaxWidth({ "Visualize position", "Is Infinite", "Is Static", "Preview NPC", "Preview NPC Record", "Animation Speed"}) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
-        end
+    if not self.maxPropertyWidth then
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Visualize position", "Is Infinite", "Is Static", "Preview NPC", "Preview NPC Record", "Animation Speed"}) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
 
+    if ImGui.TreeNodeEx("Previewing Options", ImGuiTreeNodeFlags.SpanFullWidth) then
         if ImGui.TreeNodeEx("Supported Rigs", ImGuiTreeNodeFlags.SpanFullWidth) then
             for _, rig in pairs(self.rigs) do
                 style.mutedText(rig)

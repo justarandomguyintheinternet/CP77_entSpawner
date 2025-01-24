@@ -23,6 +23,10 @@ function community:new()
     o.previewed = true
     o.previewColor = "palegreen"
 
+    o.primaryRange = 250
+    o.secondaryRange = 200
+    o.streamingMultiplier = 5
+
     o.entries = {}
     o.periodEnums = {
         "Morning",
