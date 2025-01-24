@@ -24,7 +24,7 @@ function triggerArea:new()
     o.spawnDataPath = "data/spawnables/area/triggerArea/"
     o.modulePath = "area/triggerArea"
     o.node = "worldTriggerAreaNode"
-    o.description = "General purpose node for an area with multiple triggers associated. For more specific triggers, use the specific trigger nodes."
+    o.description = "General purpose node for an area with an associated trigger. For more specific triggers, use the specific trigger nodes."
     o.previewNote = "Triggers are not previewed in editor."
     o.icon = IconGlyphs.SelectSearch
 

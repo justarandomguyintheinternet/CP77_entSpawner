@@ -88,6 +88,13 @@ function device:draw()
     else
         style.tooltip("If true, the device will get an entry in the .psrep file. Not all devices need this, still subject to more testing.")
     end
+    ImGui.SameLine()
+    style.pushButtonNoBG(true)
+    if ImGui.Button(IconGlyphs.Reload) then
+        Game.GetPersistencySystem():ForgetObject(PersistentID.ForComponent(entEntityID.new({ hash = loadstring("return " .. utils.nodeRefStringToHashString(self.nodeRef) .. "ULL", "")() }), self.controllerComponent), true)
+    end
+    style.pushButtonNoBG(false)
+    style.tooltip("Reloads the devices persistent state.\nApplies to the actual device in the world (Imported), not the editor.")
 
     self.connectionsHeaderState = ImGui.TreeNodeEx("Device Connections")
 

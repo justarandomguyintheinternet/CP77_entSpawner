@@ -641,7 +641,7 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
         ImGui.SetNextItemWidth(150 * style.viewSize)
         local value, _ = ImGui.InputText("##" .. componentID .. table.concat(path), data["$value"], 250)
-        style.tooltip(info.typeName .. " (Must be hash, not string)")
+        style.tooltip(info.typeName .. " (String will get converted to hash)")
         self:drawResetProp(componentID, path)
         if ImGui.IsItemDeactivatedAfterEdit() then
             if string.find(value, "%D") then

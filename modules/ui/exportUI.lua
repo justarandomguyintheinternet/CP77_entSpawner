@@ -445,7 +445,7 @@ function exportUI.handleDevice(object, devices, psEntries)
         children = childHashes
     }
 
-    if object.ref.spawnable.persistent then
+    if object.ref.spawnable.persistent and object.ref.spawnable.nodeRef ~= "" then
         local PSID = PersistentID.ForComponent(entEntityID.new({ hash = loadstring("return " .. hash .. "ULL", "")() }), object.ref.spawnable.controllerComponent):ToHash()
         PSID = tostring(PSID):gsub("ULL", "")
 
