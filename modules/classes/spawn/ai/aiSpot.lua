@@ -190,7 +190,7 @@ function aiSpot:draw()
     visualized.draw(self)
 
     if not self.maxPropertyWidth then
-        self.maxPropertyWidth = utils.getTextMaxWidth({ "Visualize position", "Is Infinite", "Is Static", "Preview NPC", "Preview NPC Record", "Animation Speed"}) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Visualize position", "Is Infinite", "Is Static", "Preview NPC", "Preview NPC Record", "Animation Speed"}) + 4 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
     end
 
     if ImGui.TreeNodeEx("Previewing Options", ImGuiTreeNodeFlags.SpanFullWidth) then
