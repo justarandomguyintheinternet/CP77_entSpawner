@@ -70,6 +70,9 @@ function settingsUI.draw()
     settings.outlineColor, changed = ImGui.Combo("Outline color", settings.outlineColor, outlineColors, #outlineColors)
     if changed then settings.save() end
 
+    settings.defaultAISpotNPC, changed = ImGui.InputTextWithHint("Default AI Spot NPC", "Character.", settings.defaultAISpotNPC, 128)
+    if changed then settings.save() end
+
     style.sectionHeaderEnd()
     style.sectionHeaderStart("COLLIDERS")
 

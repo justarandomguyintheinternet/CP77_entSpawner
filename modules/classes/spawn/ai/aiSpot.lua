@@ -5,6 +5,7 @@ local history = require("modules/utils/history")
 local cache = require("modules/utils/cache")
 local builder = require("modules/utils/entityBuilder")
 local Cron = require("modules/utils/Cron")
+local settings = require("modules/utils/settings")
 
 ---Class for worldAISpotNode
 ---@class aiSpot : visualized
@@ -36,7 +37,7 @@ function aiSpot:new()
     o.previewed = true
     o.previewColor = "fuchsia"
 
-    o.previewNPC = "Character.Judy"
+    o.previewNPC = settings.defaultAISpotNPC
     o.spawnNPC = true
     o.workspotSpeed = 3
 
@@ -61,6 +62,10 @@ function aiSpot:getVisualizerSize()
     return { x = 0.15, y = 0.15, z = 0.15 }
 end
 
+function aiSpot:getSize()
+    return { x = 0.02, y = 0.2, z = 0.001 }
+end
+
 function aiSpot:getBBox()
     return {
         min = { x = -0.01, y = -0.01, z = -0.005 },
@@ -69,6 +74,8 @@ function aiSpot:getBBox()
 end
 
 function aiSpot:onNPCSpawned(npc)
+    if not self.previewNPC:match("^Character.") then return end
+
     Game.GetWorkspotSystem():PlayInDeviceSimple(self:getEntity(), npc, false, "workspot", "", "", 0, gameWorkspotSlidingBehaviour.PlayAtResourcePosition)
 
     self.cronID = Cron.Every(0.25, function ()
@@ -112,11 +119,12 @@ function aiSpot:onAssemble(entity)
         cache.tryGet(self.previewNPC)
         .notFound(function (task)
             builder.registerLoadResource(ResRef.FromHash(TweakDB:GetFlat(self.previewNPC .. ".entityTemplatePath").hash), function (resource)
+                local apps = {}
                 for _, appearance in ipairs(resource.appearances) do
-                    table.insert(self.apps, appearance.name.value)
+                    table.insert(apps, appearance.name.value)
                 end
 
-                cache.addValue(self.previewNPC, self.apps)
+                cache.addValue(self.previewNPC, apps)
                 task:taskCompleted()
             end)
         end)
@@ -178,6 +186,11 @@ function aiSpot:onEdited(edited)
 
     local handle = self:getNPC()
     if not handle then return end
+
+    if not self.previewNPC:match("^Character.") then
+        Game.GetTeleportationFacility():Teleport(handle, self.position,  self.rotation)
+        return
+    end
 
     local cmd = AITeleportCommand.new()
     cmd.position = self.position
@@ -249,22 +262,35 @@ function aiSpot:draw()
         if finished then
             self:respawn()
         end
+        ImGui.SameLine()
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.ContentSaveSettingsOutline) then
+            settings.defaultAISpotNPC = self.previewNPC
+            settings.save()
+        end
+        style.tooltip("Save this NPC as the default for AI Spots.")
+        style.pushButtonNoBG(false)
 
         if self.spawnNPC then
             local npc = self:getNPC()
+            local isNPC = self.previewNPC:match("^Character.")
 
-            style.mutedText("Animation Speed")
-            ImGui.SameLine()
-            ImGui.SetCursorPosX(self.maxPropertyWidth)
-            self.workspotSpeed, changed, _ = style.trackedDragFloat(self.object, "##workspotSpeed", self.workspotSpeed, 0.1, 0, 25, "%.2f", 60)
-            style.tooltip("Speed of the animation of the NPC in the workspot. Preview only.")
-            if changed then
-                npc:SetIndividualTimeDilation("", self.workspotSpeed)
+            if isNPC then
+                style.mutedText("Animation Speed")
+                ImGui.SameLine()
+                ImGui.SetCursorPosX(self.maxPropertyWidth)
+                self.workspotSpeed, changed, _ = style.trackedDragFloat(self.object, "##workspotSpeed", self.workspotSpeed, 0.1, 0, 25, "%.2f", 60)
+                style.tooltip("Speed of the animation of the NPC in the workspot. Preview only.")
+                if changed then
+                    npc:SetIndividualTimeDilation("", self.workspotSpeed)
+                end
             end
 
-            if ImGui.Button("Forward Workspot") then
+            style.pushGreyedOut(not isNPC)
+            if ImGui.Button("Forward Workspot") and isNPC then
                 Game.GetWorkspotSystem():SendForwardSignal(npc)
             end
+            style.popGreyedOut(not isNPC)
         end
 
         ImGui.TreePop()
@@ -302,7 +328,7 @@ function aiSpot:draw()
 
         ImGui.TreePop()
     end
-    style.tooltip("Still requires to assign a NodeRef to this spot.")
+    style.tooltip("Still requires assigning a NodeRef to this spot.")
 end
 
 function aiSpot:getProperties()

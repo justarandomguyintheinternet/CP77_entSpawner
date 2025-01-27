@@ -357,7 +357,6 @@ function spawnUI.draw()
             end
 
             if ImGui.Button(buttonText) and not ImGui.IsMouseDragging(0, 0.6) then
-                ImGui.SetClipboardText(entry.name)
                 local class = spawnUI.getActiveSpawnList().class
                 entry.lastSpawned = spawnUI.spawnNew(entry, class)
             elseif ImGui.IsMouseDragging(0, 0.6) and not spawnUI.dragging and ImGui.IsItemHovered() then
@@ -365,7 +364,6 @@ function spawnUI.draw()
                 spawnUI.dragData = entry
             elseif not ImGui.IsMouseDragging(0, 0.6) and spawnUI.dragging then
                 if not ImGui.IsItemHovered() then
-                    ImGui.SetClipboardText(spawnUI.dragData.name)
                     local ray = editor.getScreenToWorldRay()
                     spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
 
@@ -555,7 +553,6 @@ function spawnUI.drawPopupVariant(typeName, variantName)
                     end
 
                     if ImGui.Button(name) then
-                        ImGui.SetClipboardText(spawnUI.popupData[i].name)
                         local class = spawnData[typeName][variantName].class
                         spawnUI.lastSpawned = spawnUI.spawnNew(spawnUI.popupData[i], class)
                         ImGui.CloseCurrentPopup()

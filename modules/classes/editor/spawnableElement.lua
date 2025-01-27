@@ -266,6 +266,7 @@ function spawnableElement:dropToSurface(grouped, direction)
 
 	if hit.hit then
 		self:setPosition(utils.addVector(newCenter, utils.subVector(self.spawnable.position, self.spawnable:getCenter())))
+		self:onEdited()
 	end
 end
 

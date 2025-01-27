@@ -30,6 +30,7 @@ local config = require("modules/utils/config")
 ---@field public editorWidth integer
 ---@field public resetSpawnPopupSearch boolean
 ---@field public spawnAtCursor boolean
+---@field public defaultAISpotNPC string
 ---@field tabSizes table
 local settingsData = {
     spawnPos = 1,
@@ -61,6 +62,7 @@ local settingsData = {
     editorWidth = 0,
     resetSpawnPopupSearch = true,
     spawnAtCursor = true,
+    defaultAISpotNPC = "Character.Judy",
 
     tabSizes = {}
 }

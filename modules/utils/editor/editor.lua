@@ -440,7 +440,6 @@ function editor.recordChange()
     local newRotation = EulerAngles.new(element:getRotation())
     local newScale = Vector4.new(element:getScale())
 
-    print(editor.originalPosition, newPosition)
     element:setPosition(editor.originalPosition)
     element:setRotation(editor.originalRotation)
     element:setScale(editor.originalScale, false)
@@ -452,6 +451,7 @@ function editor.recordChange()
     element:setPosition(newPosition)
     element:setRotation(newRotation)
     element:setScale(newScale, true)
+    element:onEdited()
 
     editor.originalDiff.pos = nil
     editor.originalDiff.rot = nil
