@@ -19,6 +19,7 @@ local Cron = require("modules/utils/Cron")
 ---@field cronID number
 ---@field workspotSpeed number
 ---@field rigs table
+---@field apps table
 local aiSpot = setmetatable({}, { __index = visualized })
 
 function aiSpot:new()
@@ -48,6 +49,7 @@ function aiSpot:new()
     o.npcSpawning = false
     o.cronID = nil
     o.rigs = {}
+    o.apps = {}
 
     o.streamingMultiplier = 5
 
@@ -76,7 +78,11 @@ function aiSpot:onNPCSpawned(npc)
         if Game.GetWorkspotSystem():GetExtendedInfo(npc).exiting or not Game.GetWorkspotSystem():IsActorInWorkspot(npc) then
             Game.GetWorkspotSystem():SendFastExitSignal(npc, Vector3.new(), false, false, true)
             Cron.After(0.1, function ()
-                Game.GetWorkspotSystem():PlayInDeviceSimple(self:getEntity(), npc, false, "workspot", "", "", 0, gameWorkspotSlidingBehaviour.PlayAtResourcePosition)
+                local npc = self:getNPC()
+                local ent = self:getEntity()
+                if not npc or not ent then return end
+
+                Game.GetWorkspotSystem():PlayInDeviceSimple(ent, npc, false, "workspot", "", "", 0, gameWorkspotSlidingBehaviour.PlayAtResourcePosition)
             end)
         end
     end)
@@ -101,6 +107,21 @@ function aiSpot:onAssemble(entity)
 
         builder.registerAttachCallback(self.npcID, function (entity)
             self:onNPCSpawned(entity)
+        end)
+
+        cache.tryGet(self.previewNPC)
+        .notFound(function (task)
+            builder.registerLoadResource(ResRef.FromHash(TweakDB:GetFlat(self.previewNPC .. ".entityTemplatePath").hash), function (resource)
+                for _, appearance in ipairs(resource.appearances) do
+                    table.insert(self.apps, appearance.name.value)
+                end
+
+                cache.addValue(self.previewNPC, self.apps)
+                task:taskCompleted()
+            end)
+        end)
+        .found(function ()
+            self.apps = cache.getValue(self.previewNPC)
         end)
     end
 end
@@ -167,9 +188,10 @@ function aiSpot:onEdited(edited)
 
     Cron.After(0.1, function ()
         local handle = self:getNPC()
-        if not handle then return end
+        local ent = self:getEntity()
+        if not handle or not ent then return end
 
-        Game.GetWorkspotSystem():PlayInDeviceSimple(self:getEntity(), handle, false, "workspot", "", "", 0, gameWorkspotSlidingBehaviour.PlayAtResourcePosition)
+        Game.GetWorkspotSystem():PlayInDeviceSimple(ent, handle, false, "workspot", "", "", 0, gameWorkspotSlidingBehaviour.PlayAtResourcePosition)
     end)
 end
 
@@ -197,6 +219,14 @@ function aiSpot:draw()
         if ImGui.TreeNodeEx("Supported Rigs", ImGuiTreeNodeFlags.SpanFullWidth) then
             for _, rig in pairs(self.rigs) do
                 style.mutedText(rig)
+            end
+
+            ImGui.TreePop()
+        end
+
+        if ImGui.TreeNodeEx("NPC Appearances", ImGuiTreeNodeFlags.SpanFullWidth) then
+            for _, app in pairs(self.apps) do
+                style.mutedText(app)
             end
 
             ImGui.TreePop()
