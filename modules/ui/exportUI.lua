@@ -829,17 +829,24 @@ function exportUI.export()
     end
 
     -- TODO: Aggregate all parents of double entries, so a device that isnt a device can be linked to multiple parents
+    local additionalEntries = {}
     for _, child in pairs(childs) do
         local hash = utils.nodeRefStringToHashString(child.ref)
-        if not project.devices[hash] then
-            project.devices[hash] = {
+        if not additionalEntries[hash] then
+            additionalEntries[hash] = {
                 hash = hash,
                 className = child.className,
                 nodePosition = child.nodePosition,
                 parents = { child.parent },
                 children = {}
             }
+        else
+            table.insert(additionalEntries[hash].parents, child.parent)
         end
+    end
+
+    for _, child in pairs(additionalEntries) do
+        project.devices[child.hash] = child
     end
 
     local always_loaded = exportUI.handleCommunities(project.name, communities, spotNodes, nodeRefs)

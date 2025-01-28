@@ -216,7 +216,7 @@ function aiSpot:save()
     data.workspotSpeed = self.workspotSpeed
     data.isWorkspotInfinite = self.isWorkspotInfinite
     data.isWorkspotStatic = self.isWorkspotStatic
-    data.markings = self.markings
+    data.markings = utils.deepcopy(self.markings)
 
     return data
 end

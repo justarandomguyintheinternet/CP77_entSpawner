@@ -43,7 +43,7 @@ end
 
 function device:save()
     local data = entity.save(self)
-    data.deviceConnections = self.deviceConnections
+    data.deviceConnections = utils.deepcopy(self.deviceConnections)
     data.deviceClassName = self.deviceClassName
     data.persistent = self.persistent
     data.controllerComponent = self.controllerComponent
