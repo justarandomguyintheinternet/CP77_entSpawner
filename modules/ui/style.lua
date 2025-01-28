@@ -246,6 +246,11 @@ function style.trackedColor(element, name, color, width)
 end
 
 function style.trackedTextField(element, text, value, hint, width)
+    if width == -1 then
+        width = (ImGui.GetWindowContentRegionWidth() - ImGui.GetCursorPosX() - ImGui.GetStyle().ScrollbarSize) / style.viewSize
+        width = math.max(width, 140)
+    end
+
     width = width or 80
     ImGui.SetNextItemWidth(width * style.viewSize)
     local newValue, changed = ImGui.InputTextWithHint(text, hint, value, 500)

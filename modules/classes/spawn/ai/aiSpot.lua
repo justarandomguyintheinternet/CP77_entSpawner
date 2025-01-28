@@ -31,7 +31,7 @@ function aiSpot:new()
     o.spawnDataPath = "data/spawnables/ai/aiSpot/"
     o.modulePath = "ai/aiSpot"
     o.node = "worldAISpotNode"
-    o.description = ""
+    o.description = "Defines a spot at which NPCs use a workspot. Must be used together with a community node."
     o.icon = IconGlyphs.MapMarkerStar
 
     o.previewed = true
@@ -39,7 +39,7 @@ function aiSpot:new()
 
     o.previewNPC = settings.defaultAISpotNPC
     o.spawnNPC = true
-    o.workspotSpeed = 3
+    o.workspotSpeed = settings.defaultAISpotSpeed
 
     o.isWorkspotInfinite = true
     o.isWorkspotStatic = false
@@ -284,6 +284,18 @@ function aiSpot:draw()
                 if changed then
                     npc:SetIndividualTimeDilation("", self.workspotSpeed)
                 end
+                ImGui.SameLine()
+                style.pushButtonNoBG(true)
+
+                ImGui.PushID("saveSpeed")
+                if ImGui.Button(IconGlyphs.ContentSaveSettingsOutline) then
+                    settings.defaultAISpotSpeed = self.workspotSpeed
+                    settings.save()
+                end
+                ImGui.PopID()
+
+                style.tooltip("Save this speed as the default for AI Spots.")
+                style.pushButtonNoBG(false)
             end
 
             style.pushGreyedOut(not isNPC)

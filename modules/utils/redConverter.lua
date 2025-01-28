@@ -131,7 +131,11 @@ local function convertResRef(data, key)
     local value = ""
 
     if data then
-        value = ResourceHelper.GetReferencePath(data, key):ToString()
+        if Reflection.GetClassOf(ToVariant(data)):IsA("ISerializable") then
+            value = ResourceHelper.GetReferencePath(data, key):ToString()
+        else
+            return nil
+        end
     end
 
     return {

@@ -79,6 +79,10 @@ local function generateGroup(savedUI, name, parent)
     return group
 end
 
+local function CRUIDToString(id)
+    return tostring(CRUIDToHash(id)):gsub("ULL", "")
+end
+
 local function convertLight(propData, data)
     local lightData = getAMMLightByID(data.lights, propData.uid)
 
@@ -141,10 +145,10 @@ end
 local function setInstanceDataMesh(entity, propData, spawnable)
     for _, component in pairs(entity:GetComponents()) do
         local use = entityBuilder.shouldUseMesh(component)
-        if use.use and component:IsA("entMeshComponent") then
+        if use.use and component:IsA("entMeshComponent") and CRUIDToString(component.id) ~= "0" then
             local change = {}
             if propData.scale.x == 0 and propData.scale.y == 0 and propData.scale.z == 0 then
-                change = {chunkMask = "0"}
+                change = { chunkMask = "0" }
             else
                 change = {
                     visualScale = {
@@ -164,7 +168,7 @@ end
 local function setInstanceDataLight(entity, lightData, spawnable)
     for _, name in pairs(componentNames) do
         local component = entity:FindComponentByName(name)
-        if component then
+        if component and CRUIDToString(component.id) ~= "0" then
             local angles = loadstring("return " .. lightData.angles, "")()
             local color = loadstring("return " .. lightData.color, "")()
 

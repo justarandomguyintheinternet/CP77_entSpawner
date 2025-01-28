@@ -40,7 +40,7 @@ local function calculateExtents(center, objects)
     for _, point in ipairs(objects) do
         if utils.isA(point.ref, "spawnableElement") and Vector4.Distance(point.ref:getPosition(), Vector4.new(0, 0, 0, 0)) > 25 then
             local pos = point.ref:getPosition()
-            local range = point.ref.spawnable.primaryRange
+            local range = math.min(point.ref.spawnable.primaryRange, 500)
 
             local dx = math.abs(pos.x - center.x) + range
             local dy = math.abs(pos.y - center.y) + range
@@ -429,12 +429,20 @@ function exportUI.addGroup(name)
     data.center = utils.fromVector(center)
 end
 
-function exportUI.handleDevice(object, devices, psEntries)
+function exportUI.handleDevice(object, devices, psEntries, childs)
     local hash = utils.nodeRefStringToHashString(object.ref.spawnable.nodeRef)
 
     local childHashes = {}
     for _, child in pairs(object.ref.spawnable.deviceConnections) do
         table.insert(childHashes, utils.nodeRefStringToHashString(child.nodeRef))
+
+        -- Remember what childs exist, so that we can also add those to the devices file which are entityNodes, not deviceNodes
+        table.insert(childs, {
+            className = child.deviceClassName,
+            nodePosition = utils.fromVector(object.ref:getPosition()),
+            ref = child.nodeRef,
+            parent = hash
+        })
     end
 
     devices[hash] = {
@@ -736,6 +744,7 @@ function exportUI.exportGroup(group)
 
     local devices = {}
     local psEntries = {}
+    local childs = {}
     local communities = {}
     local spotNodes = {}
 
@@ -747,7 +756,7 @@ function exportUI.exportGroup(group)
 
             -- Handle device nodes
             if object.ref.spawnable.node == "worldDeviceNode" then
-                exportUI.handleDevice(object, devices, psEntries)
+                exportUI.handleDevice(object, devices, psEntries, childs)
             elseif object.ref.spawnable.node == "worldCompiledCommunityAreaNode_Streamable" then
                 table.insert(communities, { data = object.ref.spawnable.entries, node = exported.nodes[#exported.nodes] })
             elseif object.ref.spawnable.node == "worldAISpotNode" then
@@ -762,7 +771,7 @@ function exportUI.exportGroup(group)
         end
     end
 
-    return exported, devices, psEntries, communities, spotNodes
+    return exported, devices, psEntries, childs, communities, spotNodes
 end
 
 function exportUI.export()
@@ -777,9 +786,10 @@ function exportUI.export()
     local nodeRefs = {}
     local spotNodes = {}
     local communities = {}
+    local childs = {}
 
     for _, group in pairs(exportUI.groups) do
-        local data, devices, psEntries, comms, spots = exportUI.exportGroup(group)
+        local data, devices, psEntries, subChilds, comms, spots = exportUI.exportGroup(group)
         if data then
             table.insert(project.sectors, data)
 
@@ -793,6 +803,7 @@ function exportUI.export()
 
             utils.combine(communities, comms)
             utils.combine(spotNodes, spots)
+            utils.combine(childs, subChilds)
 
             for _, node in pairs(data.nodes) do
                 if not nodeRefs[node.nodeRef] then
@@ -814,6 +825,20 @@ function exportUI.export()
             if project.devices[childHash] then
                 table.insert(project.devices[childHash].parents, hash)
             end
+        end
+    end
+
+    -- TODO: Aggregate all parents of double entries, so a device that isnt a device can be linked to multiple parents
+    for _, child in pairs(childs) do
+        local hash = utils.nodeRefStringToHashString(child.ref)
+        if not project.devices[hash] then
+            project.devices[hash] = {
+                hash = hash,
+                className = child.className,
+                nodePosition = child.nodePosition,
+                parents = { child.parent },
+                children = {}
+            }
         end
     end
 

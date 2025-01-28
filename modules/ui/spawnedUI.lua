@@ -234,7 +234,7 @@ function spawnedUI.registerHotkeys()
         spawnedUI.unselectAll()
     end, hotkeyRunConditionProperties)
     input.registerImGuiHotkey({ ImGuiKey.H }, function()
-        if #spawnedUI.selectedPaths == 0 then return end
+        if #spawnedUI.selectedPaths == 0 or spawnedUI.nameBeingEdited then return end
 
         local changes = {}
         for _, entry in pairs(spawnedUI.selectedPaths) do
@@ -837,7 +837,7 @@ function spawnedUI.drawHierarchy()
 
     if ySpace < 0 then return end
 
-    if ySpace - settings.editorBottomSize < 75 * style.viewSize then
+    if ySpace - settings.editorBottomSize < 75 * style.viewSize and not spawnedUI.spawner.baseUI.loadTabSize then
         settings.editorBottomSize = ySpace - 75 * style.viewSize
     end
     local nRows = math.floor((ySpace - settings.editorBottomSize) / (ImGui.GetFrameHeight() + spawnedUI.cellPadding * 2 - style.viewSize * 2))

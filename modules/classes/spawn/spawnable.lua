@@ -36,6 +36,7 @@ local intersection = require("modules/utils/editor/intersection")
 ---@field private spawnedAndCachedCallback function[]
 ---@field protected nodeRef string
 ---@field public noExport boolean
+---@field private worldNodePropertyWidth number
 local spawnable = {}
 
 function spawnable:new()
@@ -60,6 +61,7 @@ function spawnable:new()
     o.spawned = false
     o.spawning = false
     o.spawnedAndCachedCallback = {}
+    o.worldNodePropertyWidth = nil
 
     o.noExport = false
     o.primaryRange = 120
@@ -212,15 +214,28 @@ function spawnable:getProperties()
         name = "World Node",
         defaultHeader = false,
         draw = function()
-            self.nodeRef, _, _ = style.trackedTextField(self.object, "Node Ref", self.nodeRef, "$/#foobar", 110)
+            if not self.worldNodePropertyWidth then
+                self.worldNodePropertyWidth = utils.getTextMaxWidth({ "Node Ref", "Primary Range", "Secondary Range" }) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+            end
 
-            self.primaryRange, _, _ = style.trackedDragFloat(self.object, "Primary Range", self.primaryRange, 0.1, 0, 9999, "%.2f", 110)
+            style.mutedText("Node Ref")
+            ImGui.SameLine()
+            ImGui.SetCursorPosX(self.worldNodePropertyWidth)
+            self.nodeRef, _, _ = style.trackedTextField(self.object, "##noderef", self.nodeRef, "$/#foobar", -1)
+
+            style.mutedText("Primary Range")
+            ImGui.SameLine()
+            ImGui.SetCursorPosX(self.worldNodePropertyWidth)
+            self.primaryRange, _, _ = style.trackedDragFloat(self.object, "##primaryRange", self.primaryRange, 0.1, 0, 9999, "%.2f", 90)
             ImGui.SameLine()
             local distance = utils.distanceVector(self.position, GetPlayer():GetWorldPosition())
             style.styledText(IconGlyphs.AxisArrowInfo, distance > self.primaryRange and 0xFF0000FF or 0xFF00FF00)
             style.tooltip("Distance to player: " .. string.format("%.2f", distance))
 
-            self.secondaryRange, _, _ = style.trackedDragFloat(self.object, "Secondary Range", self.secondaryRange, 0.1, 0, 9999, "%.2f", 110)
+            style.mutedText("Secondary Range")
+            ImGui.SameLine()
+            ImGui.SetCursorPosX(self.worldNodePropertyWidth)
+            self.secondaryRange, _, _ = style.trackedDragFloat(self.object, "##secondaryRange", self.secondaryRange, 0.1, 0, 9999, "%.2f", 90)
             ImGui.SameLine()
             style.styledText(IconGlyphs.AxisArrowInfo, distance > self.secondaryRange and 0xFF0000FF or 0xFF00FF00)
             style.tooltip("Distance to player: " .. string.format("%.2f", distance))
@@ -332,6 +347,7 @@ function spawnable:calculateStreamingValues(multiplier)
     local scale = self:getSize()
 
     local primary = math.max(math.max(scale.x, scale.y, scale.z) * multiplier * 60, 25)
+    primary = math.min(primary, 200)
     local secondary = primary * 0.8
 
     return { primary = primary, secondary = secondary, uk10 = self.uk10, uk11 = self.uk11 }

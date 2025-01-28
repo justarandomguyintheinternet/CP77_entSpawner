@@ -73,6 +73,9 @@ function settingsUI.draw()
     settings.defaultAISpotNPC, changed = ImGui.InputTextWithHint("Default AI Spot NPC", "Character.", settings.defaultAISpotNPC, 128)
     if changed then settings.save() end
 
+    settings.defaultAISpotSpeed, changed = ImGui.InputFloat("Default AI Spot Animation Speed", settings.defaultAISpotSpeed, 0, 25, "%.1f")
+    if changed then settings.save() end
+
     style.sectionHeaderEnd()
     style.sectionHeaderStart("COLLIDERS")
 

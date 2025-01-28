@@ -17,7 +17,7 @@ function community:new()
     o.spawnDataPath = "data/spawnables/ai/community/"
     o.modulePath = "ai/communityArea"
     o.node = "worldCompiledCommunityAreaNode_Streamable"
-    o.description = ""
+    o.description = "A collection of NPCs, with their phases, time periods and assigned spots."
     o.icon = IconGlyphs.AccountGroup
 
     o.previewed = true
@@ -78,11 +78,15 @@ local function drawHeaderText(key, text)
     ImGui.Text(string.format("[%d] %s", key, text))
 end
 
-function community:drawDeleteContext(key, tbl)
+function community:drawContext(key, tbl)
     if ImGui.BeginPopupContextItem("##remove" .. key, ImGuiPopupFlags.MouseButtonRight) then
         if ImGui.MenuItem("Delete") then
             history.addAction(history.getElementChange(self.object))
             table.remove(tbl, key)
+        end
+        if ImGui.MenuItem("Duplicate") then
+            history.addAction(history.getElementChange(self.object))
+            table.insert(tbl, utils.deepcopy(tbl[key]))
         end
         ImGui.EndPopup()
     end
@@ -117,7 +121,10 @@ function community:drawSpotNodeRefs(period)
         for key, _ in pairs(period.spotNodeRefs) do
             ImGui.PushID(key)
 
-            period.spotNodeRefs[key], _ = style.trackedTextField(self.object, "##node", period.spotNodeRefs[key], "", 200)
+            local x = (ImGui.GetWindowContentRegionWidth() - ImGui.GetCursorPosX() - ImGui.GetStyle().ScrollbarSize) / style.viewSize
+            x = x - ImGui.GetStyle().ItemSpacing.x - 15 -- Delete button
+            x = math.max(x, 140)
+            period.spotNodeRefs[key], _ = style.trackedTextField(self.object, "##node", period.spotNodeRefs[key], "", x)
             ImGui.SameLine()
             if ImGui.Button(IconGlyphs.Delete) then
                 history.addAction(history.getElementChange(self.object))
@@ -166,7 +173,7 @@ function community:drawPeriod(periods, periodKey)
     local period = periods[periodKey]
 
     if ImGui.TreeNodeEx("##" .. tostring(periodKey), ImGuiTreeNodeFlags.SpanFullWidth) then
-        self:drawDeleteContext(periodKey, periods)
+        self:drawContext(periodKey, periods)
         drawHeaderText(periodKey, self.periodEnums[period.hour + 1])
 
         local max = utils.getTextMaxWidth({"Hour", "Is Sequence", "Quantity"}) + 4 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
@@ -195,7 +202,7 @@ function community:drawPeriod(periods, periodKey)
 
         ImGui.TreePop()
     else
-        self:drawDeleteContext(periodKey, periods)
+        self:drawContext(periodKey, periods)
         drawHeaderText(periodKey, self.periodEnums[period.hour + 1])
     end
 end
@@ -231,7 +238,7 @@ function community:drawPhases(entry)
             ImGui.PushID(key)
 
             if ImGui.TreeNodeEx("##" .. tostring(key), ImGuiTreeNodeFlags.SpanFullWidth) then
-                self:drawDeleteContext(key, entry.phases)
+                self:drawContext(key, entry.phases)
                 drawHeaderText(key, phase.phaseName)
 
                 style.mutedText("Phase Name")
@@ -243,7 +250,7 @@ function community:drawPhases(entry)
 
                 ImGui.TreePop()
             else
-                self:drawDeleteContext(key, entry.phases)
+                self:drawContext(key, entry.phases)
                 drawHeaderText(key, phase.phaseName)
             end
 
@@ -268,7 +275,7 @@ function community:drawEntries()
             ImGui.PushID(key)
 
             if ImGui.TreeNodeEx("##" .. tostring(key), ImGuiTreeNodeFlags.SpanFullWidth) then
-                self:drawDeleteContext(key, self.entries)
+                self:drawContext(key, self.entries)
                 drawHeaderText(key, entry.entryName)
 
                 local max = utils.getTextMaxWidth({"Entry Name", "Character Record", "Initial Phase Name", "Active On Start"}) + 10 * ImGui.GetStyle().ItemSpacing.x
@@ -276,17 +283,17 @@ function community:drawEntries()
                 style.mutedText("Entry Name")
                 ImGui.SameLine()
                 ImGui.SetCursorPosX(max)
-                entry.entryName, _ = style.trackedTextField(self.object, "##entryName", entry.entryName, "uniqueName", 200)
+                entry.entryName, _ = style.trackedTextField(self.object, "##entryName", entry.entryName, "uniqueName", -1)
 
                 style.mutedText("Character Record")
                 ImGui.SameLine()
                 ImGui.SetCursorPosX(max)
-                entry.characterRecordId, _ = style.trackedTextField(self.object, "##characterRecordId", entry.characterRecordId, "Character.", 200)
+                entry.characterRecordId, _ = style.trackedTextField(self.object, "##characterRecordId", entry.characterRecordId, "Character.", -1)
 
                 style.mutedText("Initial Phase Name")
                 ImGui.SameLine()
                 ImGui.SetCursorPosX(max)
-                entry.initialPhaseName, _ = style.trackedTextField(self.object, "##initialPhaseName", entry.initialPhaseName, "", 200)
+                entry.initialPhaseName, _ = style.trackedTextField(self.object, "##initialPhaseName", entry.initialPhaseName, "", -1)
 
                 style.mutedText("Active On Start")
                 ImGui.SameLine()
@@ -297,7 +304,7 @@ function community:drawEntries()
 
                 ImGui.TreePop()
             else
-                self:drawDeleteContext(key, self.entries)
+                self:drawContext(key, self.entries)
                 drawHeaderText(key, entry.entryName)
             end
 
@@ -329,7 +336,7 @@ function community:draw()
     style.mutedText("CommunityID (NodeRef)")
     ImGui.SameLine()
     ImGui.SetCursorPosX(x)
-    self.nodeRef, _, _ = style.trackedTextField(self.object, "##commID", self.nodeRef, "$/#foobar", 110)
+    self.nodeRef, _, _ = style.trackedTextField(self.object, "##commID", self.nodeRef, "$/#foobar", -1)
 
     self:drawEntries()
 end

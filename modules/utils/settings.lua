@@ -31,7 +31,8 @@ local config = require("modules/utils/config")
 ---@field public resetSpawnPopupSearch boolean
 ---@field public spawnAtCursor boolean
 ---@field public defaultAISpotNPC string
----@field tabSizes table
+---@field public tabSizes table
+---@field public defaultAISpotSpeed number
 local settingsData = {
     spawnPos = 1,
     spawnDist = 1,
@@ -63,6 +64,7 @@ local settingsData = {
     resetSpawnPopupSearch = true,
     spawnAtCursor = true,
     defaultAISpotNPC = "Character.Judy",
+    defaultAISpotSpeed = 3,
 
     tabSizes = {}
 }

@@ -138,7 +138,26 @@ function entity:save()
 
     local default = {}
     for key, _ in pairs(self.instanceDataChanges) do
-        default[key] = utils.deepcopy(self.defaultComponentData[key])
+        local wrongData = false
+        if key == "0" and self.defaultComponentData["0"] then
+            for propKey, _ in pairs(self.instanceDataChanges["0"]) do
+                if not self.defaultComponentData["0"][propKey] then
+                    wrongData = true
+                    break
+                end
+            end
+        end
+
+        if not wrongData then
+            default[key] = utils.deepcopy(self.defaultComponentData[key])
+
+            if not self.defaultComponentData[key] then
+                data.instanceDataChanges[key] = nil
+            end
+        else
+            print("[entSpawner] Something went wrong with instance data for entity " .. self.object.name .. " had to reset some data...")
+            data.instanceDataChanges[key] = nil
+        end
     end
     data.defaultComponentData = default
 
