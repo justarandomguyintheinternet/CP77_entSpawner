@@ -275,7 +275,7 @@ function outlineMarker:draw()
 end
 
 function outlineMarker:getGroupedProperties()
-    local properties = spawnable.getGroupedProperties(self)
+    local properties = {}
 
     properties["visualization"] = {
 		name = "Visualization",
@@ -325,7 +325,7 @@ function outlineMarker:getGroupedProperties()
 end
 
 function outlineMarker:getProperties()
-    local properties = spawnable.getProperties(self)
+    local properties = {}
     table.insert(properties, {
         id = self.node,
         name = self.dataType,
