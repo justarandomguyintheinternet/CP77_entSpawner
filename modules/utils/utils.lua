@@ -311,7 +311,7 @@ function miscUtils.log(...)
 end
 
 function miscUtils.getFileName(path)
-    return path:match("([^/\\]+)%..*$")
+    return path:match("([^/\\]+)%..*$") or path
 end
 
 function miscUtils.combine(target, data)
