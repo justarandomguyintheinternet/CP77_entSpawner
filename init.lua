@@ -21,6 +21,7 @@ local cache = require("modules/utils/cache")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 local input = require("modules/utils/input")
+local registry = require("modules/utils/nodeRefRegistry")
 
 ---@class spawner
 ---@field runtimeData {cetOpen: boolean, inGame: boolean, inMenu: boolean}
@@ -76,6 +77,7 @@ function spawner:new()
 
         self.baseUI.exportUI.init(self)
         history.spawnedUI = self.baseUI.spawnedUI
+        registry.init(self)
 
         self.editor.init(self)
 

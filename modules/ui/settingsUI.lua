@@ -52,6 +52,10 @@ function settingsUI.draw()
     if changed then settings.save() end
     style.tooltip("When holding shift, the step size will be multiplied by this value")
 
+    settings.nodeRefPrefix, changed = ImGui.InputTextWithHint("NodeRef Prefix", "", settings.nodeRefPrefix, 128)
+    if changed then settings.save() end
+    style.tooltip("Prefix to add when auto generating NodeRef")
+
     style.sectionHeaderEnd()
     style.sectionHeaderStart("VISUALIZERS")
 

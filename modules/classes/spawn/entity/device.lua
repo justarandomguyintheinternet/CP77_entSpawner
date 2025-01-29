@@ -1,6 +1,7 @@
 local entity = require("modules/classes/spawn/entity/entity")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
+local registry = require("modules/utils/nodeRefRegistry")
 
 local propertyNames = {
     "Device Class Name",
@@ -58,7 +59,7 @@ function device:onAssemble(entRef)
         if component:IsA("gameDeviceComponent") then
             self.controllerComponent = component.name.value
 
-            if self.deviceClassName == "" then
+            if self.deviceClassName == "" and component.persistentState then
                 self.deviceClassName = component.persistentState:GetClassName().value
             end
         end
@@ -105,7 +106,7 @@ function device:draw()
             connection.deviceClassName, _, _ = style.trackedTextField(self.object, "##className", connection.deviceClassName, "gameDeviceComponentPS", 150)
             style.tooltip("Device class name of the connected device. Name of the gameDeviceComponentPS used in the devices gameDeviceComponent")
             ImGui.SameLine()
-            connection.nodeRef, _, _ = style.trackedTextField(self.object, "##deviceNodeRef", connection.nodeRef, "$/#foobar", 150)
+            connection.nodeRef, _ = registry.drawNodeRefSelector(style.getMaxWidth(250) - 30, connection.nodeRef, self.object, false)
             style.tooltip("NodeRef of the connected device. Can be set using \"World Node\" section of the target device")
             ImGui.SameLine()
             if ImGui.Button(IconGlyphs.Delete) then

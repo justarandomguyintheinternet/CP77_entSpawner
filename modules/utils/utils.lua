@@ -155,6 +155,7 @@ function miscUtils.createFileName(name)
     name = name:gsub("?", "_")
     name = name:gsub("*", "_")
     name = name:gsub("'", "_")
+    name = name:gsub(" ", "_")
 
     return name
 end
@@ -310,7 +311,7 @@ function miscUtils.log(...)
 end
 
 function miscUtils.getFileName(path)
-    return path:match("[^/\\]+$")
+    return path:match("([^/\\]+)%..*$")
 end
 
 function miscUtils.combine(target, data)
@@ -538,6 +539,26 @@ function miscUtils.getKeys(tab)
     end
 
     return keys
+end
+
+function miscUtils.shortenPath(path, width, backwardsSlash)
+    if ImGui.CalcTextSize(path) <= width then return path end
+
+    local pattern = backwardsSlash and "^\\?[^\\]*" or "^%/?[^%/]*"
+    local dotsWidth = ImGui.CalcTextSize("...")
+    while ImGui.CalcTextSize(path) + dotsWidth > width do
+        local stripped = path:gsub(pattern, "")
+        if #stripped == 0 then
+            break
+        end
+        path = stripped
+    end
+
+    while ImGui.CalcTextSize(path) + dotsWidth > width and #path > 0 do
+        path = path:sub(2, #path)
+    end
+
+    return "..." .. path
 end
 
 return miscUtils

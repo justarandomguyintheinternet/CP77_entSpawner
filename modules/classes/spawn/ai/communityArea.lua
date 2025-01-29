@@ -2,6 +2,7 @@ local visualized = require("modules/classes/spawn/visualized")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 local history = require("modules/utils/history")
+local registry = require("modules/utils/nodeRefRegistry")
 
 ---Class for worldCompiledCommunityAreaNode_Streamable
 ---@class community : visualized
@@ -121,10 +122,11 @@ function community:drawSpotNodeRefs(period)
         for key, _ in pairs(period.spotNodeRefs) do
             ImGui.PushID(key)
 
-            local x = (ImGui.GetWindowContentRegionWidth() - ImGui.GetCursorPosX() - ImGui.GetStyle().ScrollbarSize) / style.viewSize
-            x = x - ImGui.GetStyle().ItemSpacing.x - 15 -- Delete button
-            x = math.max(x, 140)
-            period.spotNodeRefs[key], _ = style.trackedTextField(self.object, "##node", period.spotNodeRefs[key], "", x)
+            -- local x = (ImGui.GetWindowContentRegionWidth() - ImGui.GetCursorPosX() - ImGui.GetStyle().ScrollbarSize) / style.viewSize
+            -- x = x - ImGui.GetStyle().ItemSpacing.x - 15 -- Delete button
+            -- x = math.max(x, 140)
+            -- period.spotNodeRefs[key], _ = style.trackedTextField(self.object, "##node", period.spotNodeRefs[key], "", x)
+            period.spotNodeRefs[key], _ = registry.drawNodeRefSelector(style.getMaxWidth(250) - 30, period.spotNodeRefs[key], self.object, true)
             ImGui.SameLine()
             if ImGui.Button(IconGlyphs.Delete) then
                 history.addAction(history.getElementChange(self.object))

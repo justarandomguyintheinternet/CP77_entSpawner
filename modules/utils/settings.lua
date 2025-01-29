@@ -65,6 +65,7 @@ local settingsData = {
     spawnAtCursor = true,
     defaultAISpotNPC = "Character.Judy",
     defaultAISpotSpeed = 3,
+    nodeRefPrefix = "mod",
 
     tabSizes = {}
 }

@@ -4,6 +4,7 @@ local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 local input = require("modules/utils/input")
+local registry = require("modules/utils/nodeRefRegistry")
 
 ---@class spawnedUI
 ---@field root element
@@ -1103,6 +1104,7 @@ end
 
 function spawnedUI.draw()
     spawnedUI.cachePaths()
+    registry.update()
 
     spawnedUI.drawTop()
 

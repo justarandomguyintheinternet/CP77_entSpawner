@@ -321,6 +321,8 @@ function spawnUI.draw()
     local clipper = ImGuiListClipper.new()
     clipper:Begin(#spawnUI.filteredList, -1)
 
+    local xSpace, _ = ImGui.GetItemRectSize() - 2 * ImGui.GetStyle().WindowPadding.x - (ImGui.GetScrollMaxY() > 0 and ImGui.GetStyle().ScrollbarSize or 0)
+
     while (clipper:Step()) do
         for i = clipper.DisplayStart + 1, clipper.DisplayEnd, 1 do
             local entry = spawnUI.filteredList[i]
@@ -356,7 +358,7 @@ function spawnUI.draw()
                 buttonText = utils.getFileName(entry.name)
             end
 
-            if ImGui.Button(buttonText) and not ImGui.IsMouseDragging(0, 0.6) then
+            if ImGui.Button(utils.shortenPath(buttonText, xSpace - ImGui.GetCursorPosX(), true)) and not ImGui.IsMouseDragging(0, 0.6) then
                 local class = spawnUI.getActiveSpawnList().class
                 entry.lastSpawned = spawnUI.spawnNew(entry, class)
             elseif ImGui.IsMouseDragging(0, 0.6) and not spawnUI.dragging and ImGui.IsItemHovered() then
@@ -540,19 +542,7 @@ function spawnUI.drawPopupVariant(typeName, variantName)
                 for i = clipper.DisplayStart + 1, clipper.DisplayEnd, 1 do
                     ImGui.PushID(spawnUI.popupData[i].name)
 
-                    local clippedName = spawnUI.popupData[i].name
-
-                    if settings.spawnUIOnlyNames then
-                        clippedName = utils.getFileName(spawnUI.popupData[i].name)
-                    end
-
-                    local name = clippedName
-                    while ImGui.CalcTextSize(name) > xSpace - ImGui.GetStyle().ItemSpacing.x * 3 do
-                        clippedName = clippedName:sub(2, #clippedName)
-                        name = "..." .. clippedName:sub(2, #clippedName)
-                    end
-
-                    if ImGui.Button(name) then
+                    if ImGui.Button(utils.shortenPath(spawnUI.popupData[i].name, xSpace - ImGui.GetStyle().ItemSpacing.x * 3, true)) then
                         local class = spawnData[typeName][variantName].class
                         spawnUI.lastSpawned = spawnUI.spawnNew(spawnUI.popupData[i], class)
                         ImGui.CloseCurrentPopup()

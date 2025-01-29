@@ -7,6 +7,7 @@ local visualizer = require("modules/utils/visualizer")
 local red = require("modules/utils/redConverter")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
+local registry = require("modules/utils/nodeRefRegistry")
 
 ---Class for base entity handling
 ---@class entity : spawnable
@@ -658,11 +659,11 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
         ImGui.Text(tostring(key))
         ImGui.SameLine()
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize(key) + max)
-        ImGui.SetNextItemWidth(150 * style.viewSize)
-        local value, _ = ImGui.InputText("##" .. componentID .. table.concat(path), data["$value"], 250)
+
+        local value, finished = registry.drawNodeRefSelector(style.getMaxWidth(250), data["$value"], self.object, false)
         style.tooltip(info.typeName .. " (String will get converted to hash)")
         self:drawResetProp(componentID, path)
-        if ImGui.IsItemDeactivatedAfterEdit() then
+        if finished then
             if string.find(value, "%D") then
                 value, _ = value:gsub("#", "")
                 value, _ = tostring(FNV1a64(value)):gsub("ULL", "")

@@ -4,6 +4,7 @@ local visualizer = require("modules/utils/visualizer")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 local intersection = require("modules/utils/editor/intersection")
+local registry = require("modules/utils/nodeRefRegistry")
 
 ---Base class for any object / node that can be spawned
 ---@class spawnable
@@ -218,10 +219,30 @@ function spawnable:getProperties()
                 self.worldNodePropertyWidth = utils.getTextMaxWidth({ "Node Ref", "Primary Range", "Secondary Range" }) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
             end
 
+            local entry = self.nodeRef ~= "" and registry.refs[self.object:getRootParent().name] and registry.refs[self.object:getRootParent().name][self.nodeRef]
+            local refDuplicate = entry and (entry.path ~= self.object:getPath() or entry.duplicate)
+
             style.mutedText("Node Ref")
             ImGui.SameLine()
             ImGui.SetCursorPosX(self.worldNodePropertyWidth)
-            self.nodeRef, _, _ = style.trackedTextField(self.object, "##noderef", self.nodeRef, "$/#foobar", -1)
+            self.nodeRef, _, _ = style.trackedTextField(self.object, "##noderef", self.nodeRef, "$/#foobar", style.getMaxWidth(250) - 30 - (refDuplicate and 25 or 0))
+            style.pushButtonNoBG(true)
+            ImGui.SameLine()
+            if ImGui.Button(IconGlyphs.ReloadAlert) then
+                local generated = registry.generate(self.object)
+
+                if generated ~= self.nodeRef then
+                    history.addAction(history.getElementChange(self.object))
+                    self.nodeRef = generated
+                end
+            end
+            style.pushButtonNoBG(false)
+
+            if refDuplicate then
+                ImGui.SameLine()
+                style.styledText(IconGlyphs.AlertOutline, 0xFF0000FF)
+                style.tooltip("NodeRef is already in use elsewhere")
+            end
 
             style.mutedText("Primary Range")
             ImGui.SameLine()
