@@ -237,6 +237,7 @@ function spawnable:getProperties()
                 end
             end
             style.pushButtonNoBG(false)
+            style.tooltip("Generate a unique NodeRef for this object")
 
             if refDuplicate then
                 ImGui.SameLine()

@@ -176,7 +176,7 @@ function savedUI.drawGroup(group, spawner)
 
         if ImGui.Button("Load") then
             local g = require("modules/classes/editor/positionableGroup"):new(spawner.baseUI.spawnedUI)
-            g:load(group)
+            g:load(utils.deepcopy(group))
             spawner.baseUI.spawnedUI.addRootElement(g)
             history.addAction(history.getInsert({ g }))
         end
