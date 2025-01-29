@@ -2,7 +2,7 @@ local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 
-local minScriptVersion = "1.0.0"
+local minScriptVersion = "1.0.1"
 local sectorCategory
 
 exportUI = {
@@ -11,7 +11,8 @@ exportUI = {
     templates = {},
     spawner = nil,
     exportHovered = false,
-    exportIssues = {}
+    exportIssues = {},
+    sectorPropertiesWidth = nil
 }
 
 function exportUI.init(spawner)
@@ -71,19 +72,36 @@ function exportUI.drawGroups()
                 ImGui.PopStyleColor()
                 ImGui.PopStyleVar()
 
+                if not exportUI.sectorPropertiesWidth then
+                    exportUI.sectorPropertiesWidth = utils.getTextMaxWidth({"Group file name:", "Sector Category:", "Sector Level:", "Streaming Box Extents:"}) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+                end
+
                 style.mutedText("Group file name:")
                 ImGui.SameLine()
+                ImGui.SetCursorPosX(exportUI.sectorPropertiesWidth)
                 ImGui.Text(group.name)
 
                 style.mutedText("Sector Category:")
                 style.tooltip("Select the type of the sector for the group, if in doubt use Interior or Exterior")
                 ImGui.SameLine()
+                ImGui.SetCursorPosX(exportUI.sectorPropertiesWidth)
                 ImGui.SetNextItemWidth(150 * style.viewSize)
                 group.category = ImGui.Combo("##category", group.category, sectorCategory, #sectorCategory)
+
+                if group.category == 3 then
+                    style.mutedText("Prefab Ref:")
+                    style.tooltip("Prefab NodeRef of the sector")
+                    ImGui.SameLine()
+                    ImGui.SetCursorPosX(exportUI.sectorPropertiesWidth)
+                    ImGui.SetNextItemWidth(150 * style.viewSize)
+
+                    group.prefabRef, _ = ImGui.InputTextWithHint('##prefabRef', '$/#foobar', group.prefabRef, 100)
+                end
 
                 style.mutedText("Sector Level:")
                 style.tooltip("Select the level of the sector for the group")
                 ImGui.SameLine()
+                ImGui.SetCursorPosX(exportUI.sectorPropertiesWidth)
                 ImGui.SetNextItemWidth(150 * style.viewSize)
                 group.level, changed = ImGui.InputInt("##level", group.level)
                 if changed then
@@ -93,6 +111,7 @@ function exportUI.drawGroups()
                 style.mutedText("Streaming Box Extents:")
                 style.tooltip("Change the size of the streaming box for the sector, extends the given amount on each axis in both directions")
                 ImGui.SameLine()
+                ImGui.SetCursorPosX(exportUI.sectorPropertiesWidth)
                 if ImGui.Button("Auto") then
                     local blob = config.loadFile("data/objects/" .. group.name .. ".json")
                     local g = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
@@ -414,7 +433,8 @@ function exportUI.addGroup(name)
         streamingX = 150,
         streamingY = 150,
         streamingZ = 100,
-        center = nil
+        center = nil,
+        prefabRef = ""
     }
 
     table.insert(exportUI.groups, data)
@@ -739,7 +759,8 @@ function exportUI.exportGroup(group)
         max = max,
         category = sectorCategory[group.category + 1],
         level = group.level,
-        nodes = {}
+        nodes = {},
+        prefabRef = group.prefabRef
     }
 
     local devices = {}

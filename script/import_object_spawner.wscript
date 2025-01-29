@@ -1,6 +1,6 @@
 // Imports an entitySpawner json export
 // @author keanuwheeze
-// @version 1.0.0
+// @version 1.0.1
 
 //////////////// Modify this //////////////////
 
@@ -10,7 +10,7 @@ const inputFilePathInRawFolder = "new_project_exported.json"
 
 import * as Logger from 'Logger.wscript';
 
-const version = "1.0.0"
+const version = "1.0.1"
 const header = {
   "Header": {
     "WolvenKitVersion": "8.14.1",
@@ -180,7 +180,12 @@ const addSectorToBlock = (block, info, root) => {
 	
 	descriptor.data.DepotPath.$storage = "string"
 	descriptor.data.DepotPath.$value = `${root}/sectors/${info.name}.streamingsector`
-	
+
+	if (info.prefabRef !== undefined && info.prefabRef !== "") {
+		descriptor.questPrefabNodeRef.$storage = "string"
+		descriptor.questPrefabNodeRef.$value = info.prefabRef
+	}
+
 	block.Data.RootChunk.descriptors.push(descriptor)
 }
 
