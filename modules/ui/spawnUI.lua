@@ -9,47 +9,71 @@ local Cron = require("modules/utils/Cron")
 
 local types = {
     ["Entity"] = {
-        ["Record"] = require("modules/classes/spawn/entity/entityRecord"),
-        ["Template"] = require("modules/classes/spawn/entity/entityTemplate"),
-        ["Template (AMM)"] = require("modules/classes/spawn/entity/ammEntity"),
-        ["Device"] = require("modules/classes/spawn/entity/device")
+        variants = {
+            ["Template"] = { class = require("modules/classes/spawn/entity/entityTemplate"), index = 1},
+            ["Template (AMM)"] = { class = require("modules/classes/spawn/entity/ammEntity"), index = 2},
+            ["Record"] = { class = require("modules/classes/spawn/entity/entityRecord"), index = 3},
+            ["Device"] = { class = require("modules/classes/spawn/entity/device"), index = 4}
+        },
+        index = 1
     },
     ["Lights"] = {
-        ["Light"] = require("modules/classes/spawn/light/light")
+        variants = {
+            ["Light"] = { class = require("modules/classes/spawn/light/light"), index = 1 }
+        },
+        index = 3
     },
     ["Mesh"] = {
-        ["Mesh"] = require("modules/classes/spawn/mesh/mesh"),
-        ["Rotating Mesh"] = require("modules/classes/spawn/mesh/rotatingMesh"),
-        ["Cloth Mesh"] = require("modules/classes/spawn/mesh/clothMesh"),
-        ["Dynamic Mesh"] = require("modules/classes/spawn/physics/dynamicMesh")
+        variants = {
+            ["Mesh"] = { class = require("modules/classes/spawn/mesh/mesh"), index = 1 },
+            ["Rotating Mesh"] = { class = require("modules/classes/spawn/mesh/rotatingMesh"), index = 2 },
+            ["Cloth Mesh"] = { class = require("modules/classes/spawn/mesh/clothMesh"), index = 3 },
+            ["Dynamic Mesh"] = { class = require("modules/classes/spawn/physics/dynamicMesh"), index = 4 }
+        },
+        index = 2
     },
     ["Collision"] = {
-        ["Collision Shape"] = require("modules/classes/spawn/collision/collider")
+        variants = {
+            ["Collision Shape"] = { class = require("modules/classes/spawn/collision/collider"), index = 1 }
+        },
+        index = 5
     },
     ["Deco"] = {
-        ["Particles"] = require("modules/classes/spawn/visual/particle"),
-        ["Decals"] = require("modules/classes/spawn/visual/decal"),
-        ["Effects"] = require("modules/classes/spawn/visual/effect"),
-        ["Static Audio Emitter"] = require("modules/classes/spawn/visual/audio"),
-        ["Water Patch"] = require("modules/classes/spawn/visual/waterPatch"),
-        ["Fog Volume"] = require("modules/classes/spawn/visual/fog")
+        variants = {
+            ["Particles"] = { class = require("modules/classes/spawn/visual/particle"), index = 2 },
+            ["Decals"] = { class = require("modules/classes/spawn/visual/decal"), index = 1 },
+            ["Effects"] = { class = require("modules/classes/spawn/visual/effect"), index = 3 },
+            ["Static Audio Emitter"] = { class = require("modules/classes/spawn/visual/audio"), index = 4 },
+            ["Water Patch"] = { class = require("modules/classes/spawn/visual/waterPatch"), index = 5 },
+            ["Fog Volume"] = { class = require("modules/classes/spawn/visual/fog"), index = 6 }
+        },
+        index = 4
     },
     ["Meta"] = {
-        ["Occluder"] = require("modules/classes/spawn/meta/occluder"),
-        ["Reflection Probe"] = require("modules/classes/spawn/meta/reflectionProbe"),
-        ["Static Marker"] = require("modules/classes/spawn/meta/staticMarker")
+        variants = {
+            ["Occluder"] = { class = require("modules/classes/spawn/meta/occluder"), index = 1 },
+            ["Reflection Probe"] = { class = require("modules/classes/spawn/meta/reflectionProbe"), index = 2 },
+            ["Static Marker"] = { class = require("modules/classes/spawn/meta/staticMarker"), index = 3 }
+        },
+        index = 6
     },
     ["Area"] = {
-        ["Outline Marker"] = require("modules/classes/spawn/area/outlineMarker"),
-        ["Kill Area"] = require("modules/classes/spawn/area/killArea"),
-        ["Prevention Free"] = require("modules/classes/spawn/area/preventionFree"),
-        ["Water Null"] = require("modules/classes/spawn/area/waterNull"),
-        ["Trigger Area"] = require("modules/classes/spawn/area/triggerArea"),
-        ["Ambient Area"] = require("modules/classes/spawn/area/ambientArea")
+        variants = {
+            ["Outline Marker"] = { class = require("modules/classes/spawn/area/outlineMarker"), index = 1 },
+            ["Kill Area"] = { class = require("modules/classes/spawn/area/killArea"), index = 4 },
+            ["Prevention Free"] = { class = require("modules/classes/spawn/area/preventionFree"), index = 5 },
+            ["Water Null"] = { class = require("modules/classes/spawn/area/waterNull"), index = 6 },
+            ["Trigger Area"] = { class = require("modules/classes/spawn/area/triggerArea"), index = 2 },
+            ["Ambient Area"] = { class = require("modules/classes/spawn/area/ambientArea"), index = 3 }
+        },
+        index = 7
     },
     ["AI"] = {
-        ["AI Spot"] = require("modules/classes/spawn/ai/aiSpot"),
-        ["Community"] = require("modules/classes/spawn/ai/communityArea")
+        variants = {
+            ["AI Spot"] = { class = require("modules/classes/spawn/ai/aiSpot"), index = 1 },
+            ["Community"] = { class = require("modules/classes/spawn/ai/communityArea"), index = 2 }
+        },
+        index = 8
     }
 }
 
@@ -117,26 +141,25 @@ function spawnUI.loadSpawnData(spawner)
 
     for dataName, dataType in pairs(types) do
         spawnData[dataName] = {}
-        for variantName, variant in pairs(dataType) do
-            local variantInstance = variant:new()
+
+        for variantName, variant in pairs(dataType.variants) do
+            local variantInstance = variant.class:new()
             local info = { node = variantInstance.node, description = variantInstance.description, previewNote = variantInstance.previewNote }
             if variantInstance.spawnListType == "list" then
-                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant, info = info, isPaths = true }
+                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = true }
             else
-                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant, info = info, isPaths = false }
+                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = false }
             end
         end
     end
 
-    for name, _ in pairs(types) do
-        table.insert(typeNames, name)
-    end
+    typeNames = utils.getKeys(types)
+    table.sort(typeNames, function(a, b) return types[a].index < types[b].index end)
 
     spawnUI.selectedType = utils.indexValue(typeNames, settings.selectedType) - 1
 
-    for name, _ in pairs(types[typeNames[spawnUI.selectedType + 1]]) do
-        table.insert(variantNames, name)
-    end
+    variantNames = utils.getKeys(types[typeNames[spawnUI.selectedType + 1]].variants)
+    table.sort(variantNames, function(a, b) return types[typeNames[spawnUI.selectedType + 1]].variants[a].index < types[typeNames[spawnUI.selectedType + 1]].variants[b].index end)
 
     spawnUI.selectedVariant = utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1
 
@@ -271,10 +294,8 @@ function spawnUI.draw()
         settings.selectedType = typeNames[spawnUI.selectedType + 1]
         settings.save()
 
-        variantNames = {}
-        for name, _ in pairs(types[typeNames[spawnUI.selectedType + 1]]) do
-            table.insert(variantNames, name)
-        end
+        variantNames = utils.getKeys(types[typeNames[spawnUI.selectedType + 1]].variants)
+        table.sort(variantNames, function(a, b) return types[typeNames[spawnUI.selectedType + 1]].variants[a].index < types[typeNames[spawnUI.selectedType + 1]].variants[b].index end)
 
         spawnUI.selectedVariant = utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1
 
@@ -589,9 +610,12 @@ function spawnUI.drawPopup()
 
         ImGui.Separator()
 
-        for typeName, typeData in pairs(types) do
+        for _, typeName in pairs(typeNames) do
             if ImGui.BeginMenu(typeName) then
-                for variantName, _ in pairs(typeData) do
+                local variantKeys = utils.getKeys(types[typeName].variants)
+                table.sort(variantKeys, function(a, b) return types[typeName].variants[a].index < types[typeName].variants[b].index end)
+
+                for _, variantName in pairs(variantKeys) do
                     if ImGui.BeginMenu(variantName) then
                         spawnUI.drawPopupVariant(typeName, variantName)
                         ImGui.EndMenu()
