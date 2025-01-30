@@ -2,7 +2,7 @@ local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 
-local minScriptVersion = "1.0.1"
+local minScriptVersion = "1.0.2"
 local sectorCategory
 
 exportUI = {
@@ -56,6 +56,12 @@ local function calculateExtents(center, objects)
     return maxExtent
 end
 
+local function drawVariantsTooltip()
+    ImGui.SameLine()
+    ImGui.Text(IconGlyphs.InformationOutline)
+    style.tooltip("All objects placed within the root of the group will be part of the default variant\nYou can assign to each group what variant they should belong to")
+end
+
 function exportUI.drawGroups()
     if #exportUI.groups > 0 then
         ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0)
@@ -74,6 +80,38 @@ function exportUI.drawGroups()
 
                 if not exportUI.sectorPropertiesWidth then
                     exportUI.sectorPropertiesWidth = utils.getTextMaxWidth({"Group file name:", "Sector Category:", "Sector Level:", "Streaming Box Extents:"}) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+                end
+
+                if ImGui.TreeNodeEx("Variants", ImGuiTreeNodeFlags.SpanFullWidth) then
+                    drawVariantsTooltip()
+
+                    style.mutedText("Variant Node Ref")
+                    ImGui.SameLine()
+                    group.variantRef = ImGui.InputTextWithHint('##variantRef', '$/#foobar', group.variantRef, 100)
+
+                    for name, _ in pairs(group.variantData) do
+                        ImGui.PushID(name)
+                        ImGui.SetNextItemWidth(100 * style.viewSize)
+                        group.variantData[name].name = ImGui.InputTextWithHint('##variantName', 'default', group.variantData[name].name, 100)
+                        ImGui.SameLine()
+                        ImGui.SetNextItemWidth(185 * style.viewSize)
+                        group.variantData[name].defaultOn, changed = ImGui.Checkbox("Default On", group.variantData[name].defaultOn)
+                        if changed then
+                            for variant, _ in pairs(group.variantData) do
+                                if group.variantData[variant].name == group.variantData[name].name then
+                                    group.variantData[variant].defaultOn = group.variantData[name].defaultOn
+                                end
+                            end
+                        end
+                        ImGui.SameLine()
+                        style.mutedText(name)
+
+                        ImGui.PopID()
+                    end
+
+                    ImGui.TreePop()
+                else
+                    drawVariantsTooltip()
                 end
 
                 style.mutedText("Group file name:")
@@ -170,6 +208,42 @@ function exportUI.drawGroups()
     end
 end
 
+function exportUI.loadTemplate(data)
+    for _, group in pairs(utils.deepcopy(data.groups)) do
+        if config.fileExists("data/objects/" .. group.name .. ".json") then
+            if not group.variantData then
+                group.variantData = {}
+            end
+            if not group.prefabRef then
+                group.prefabRef = ""
+            end
+            if not group.variantRef then
+                group.variantRef = ""
+            end
+
+            local g = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
+            g:load(config.loadFile("data/objects/" .. group.name .. ".json"), true)
+
+            local variants = {}
+
+            for _, child in pairs(g.childs) do
+                if child.expandable then
+                    if not group.variantData[child.name] then
+                        variants[child.name] = { name = "default", ref = "", defaultOn = true }
+                    else
+                        variants[child.name] = group.variantData[child.name]
+                    end
+                end
+            end
+
+            group.variantData = variants
+            table.insert(exportUI.groups, group)
+        end
+    end
+
+    exportUI.projectName = data.projectName
+end
+
 function exportUI.drawTemplates()
     if utils.tableLength(exportUI.templates) > 0 then
         ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0)
@@ -191,8 +265,7 @@ function exportUI.drawTemplates()
                 ImGui.Text(tostring(#data.groups))
 
                 if ImGui.Button("Load") then
-                    exportUI.groups = utils.deepcopy(data.groups)
-                    exportUI.projectName = data.projectName
+                    exportUI.loadTemplate(data)
                 end
                 ImGui.SameLine()
                 if ImGui.Button("Delete") then
@@ -434,7 +507,9 @@ function exportUI.addGroup(name)
         streamingY = 150,
         streamingZ = 100,
         center = nil,
-        prefabRef = ""
+        prefabRef = "",
+        variantRef = "",
+        variantData = {}
     }
 
     table.insert(exportUI.groups, data)
@@ -442,10 +517,16 @@ function exportUI.addGroup(name)
     if not config.fileExists("data/objects/" .. name .. ".json") then return end
 
     local blob = config.loadFile("data/objects/" .. name .. ".json")
-    local g = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
-    g:load(blob, true)
+    local group = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
+    group:load(blob, true)
 
-    local center = g:getPosition()
+    for _, child in pairs(group.childs) do
+        if child.expandable then
+            data.variantData[child.name] = { name = "default", ref = "", defaultOn = true }
+        end
+    end
+
+    local center = group:getPosition()
     data.center = utils.fromVector(center)
 end
 
@@ -760,7 +841,9 @@ function exportUI.exportGroup(group)
         category = sectorCategory[group.category + 1],
         level = group.level,
         nodes = {},
-        prefabRef = group.prefabRef
+        prefabRef = group.prefabRef,
+        variantIndices = { 0 },
+        variants = {}
     }
 
     local devices = {}
@@ -770,8 +853,56 @@ function exportUI.exportGroup(group)
     local spotNodes = {}
 
     local objects = g:getPathsRecursive(false)
+    local variantNodes = {}
+    local variantInfo = {}
+    local nodes = {}
 
-    for key, object in pairs(objects) do
+    -- Group and bring the nodes in order, based on their variant, starting with default
+    for groupName, variant in pairs(group.variantData) do
+        if not variantNodes[variant.name] then
+            variantNodes[variant.name] = {}
+            variantInfo[variant.name] = {
+                defaultOn = variant.defaultOn
+            }
+        end
+
+        for _, node in pairs(g.childs) do
+            if node.name == groupName then
+                for _, entry in pairs(node:getPathsRecursive(false)) do
+                    if utils.isA(entry.ref, "spawnableElement") and not entry.ref.spawnable.noExport then
+                        table.insert(variantNodes[variant.name], entry)
+                    end
+                end
+            end
+        end
+    end
+
+    for _, node in pairs(g.childs) do
+        if utils.isA(node, "spawnableElement") and not node.spawnable.noExport then
+            table.insert(variantNodes["default"], { ref = node })
+        end
+    end
+
+    nodes = variantNodes["default"]
+
+    local index = 1
+    for key, variant in pairs(variantNodes) do
+        if key ~= "default" then
+            table.insert(exported.variantIndices, #nodes)
+            utils.combine(nodes, variant)
+
+            table.insert(exported.variants, {
+                name = key,
+                index = index,
+                defaultOn = variantInfo[key].defaultOn and 1 or 0,
+                ref = group.variantRef
+            })
+
+            index = index + 1
+        end
+    end
+
+    for key, object in pairs(nodes) do
         if utils.isA(object.ref, "spawnableElement") and not object.ref.spawnable.noExport then
             table.insert(exported.nodes, object.ref.spawnable:export(key, #objects))
 

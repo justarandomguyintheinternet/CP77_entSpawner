@@ -201,7 +201,7 @@ function mesh:draw()
     ImGui.SameLine()
     local x = ImGui.GetCursorPosX()
 
-    local index, changed = style.trackedCombo(self.object, "##app", self.appIndex, list, 110)
+    local index, changed = style.trackedCombo(self.object, "##app", self.appIndex, list, 160)
     style.tooltip("Select the mesh appearance")
     if changed and #self.apps > 0 then
         self.appIndex = index

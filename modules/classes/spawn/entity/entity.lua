@@ -19,6 +19,8 @@ local registry = require("modules/utils/nodeRefRegistry")
 ---@field public meshes table
 ---@field public instanceDataChanges table Changes to the default data, regardless of app (Matched by ID)
 ---@field public defaultComponentData table Default data for each component, regardless of whether it was changed. Keeps up to date with app changes
+---@field public deviceClassName string
+---@field public propertiesWidth table?
 local entity = setmetatable({}, { __index = spawnable })
 
 function entity:new()
@@ -40,6 +42,8 @@ function entity:new()
     o.defaultComponentData = {}
     o.typeInfo = {}
     o.enumInfo = {}
+    o.deviceClassName = ""
+    o.propertiesMaxWidth = nil
 
     o.uk10 = 1056
 
@@ -114,6 +118,14 @@ function entity:onAssemble(entRef)
     spawnable.onAssemble(self, entRef)
 
     self:loadInstanceData(entRef, false)
+
+    for _, component in pairs(entRef:GetComponents()) do
+        if component:IsA("gameDeviceComponent") then
+            if self.deviceClassName == "" and component.persistentState then
+                self.deviceClassName = component.persistentState:GetClassName().value
+            end
+        end
+    end
 end
 
 function entity:onAttached(entRef)
@@ -240,6 +252,17 @@ end
 function entity:draw()
     spawnable.draw(self)
 
+    if not self.propertiesWidth then
+        local app, _ = ImGui.CalcTextSize("Appearance")
+        local class, _ = ImGui.CalcTextSize("Device Class Name")
+        local padding = ImGui.GetCursorPosX() + 2 * ImGui.GetStyle().ItemSpacing.x
+
+        self.propertiesWidth = {
+            app = app + padding,
+            class = class + padding
+        }
+    end
+
     local greyOut = #self.apps == 0 or not self:isSpawned()
     style.pushGreyedOut(greyOut)
 
@@ -249,7 +272,10 @@ function entity:draw()
         list = {"No apps"}
     end
 
-    local index, changed = style.trackedCombo(self.object, "##app", self.appIndex, list, 110)
+    style.mutedText("Appearance")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.deviceClassName == "" and self.propertiesWidth.app or self.propertiesWidth.class)
+    local index, changed = style.trackedCombo(self.object, "##app", self.appIndex, list, 160)
     if changed and #self.apps > 0 and self:isSpawned() then
         self.appIndex = index
         self.app = self.apps[self.appIndex + 1]
@@ -263,6 +289,20 @@ function entity:draw()
         end
     end
     style.popGreyedOut(greyOut)
+
+    if self.deviceClassName ~= "" then
+        style.mutedText("Device Class Name")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.propertiesWidth.class)
+        ImGui.Text(self.deviceClassName)
+        ImGui.SameLine()
+
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.ContentCopy) then
+            ImGui.SetClipboardText(self.deviceClassName)
+        end
+        style.pushButtonNoBG(false)
+    end
 end
 
 function entity:getProperties()

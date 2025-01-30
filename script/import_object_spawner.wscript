@@ -1,6 +1,6 @@
 // Imports an entitySpawner json export
 // @author keanuwheeze
-// @version 1.0.1
+// @version 1.0.2
 
 //////////////// Modify this //////////////////
 
@@ -10,7 +10,7 @@ const inputFilePathInRawFolder = "new_project_exported.json"
 
 import * as Logger from 'Logger.wscript';
 
-const version = "1.0.1"
+const version = "1.0.2"
 const header = {
   "Header": {
     "WolvenKitVersion": "8.14.1",
@@ -160,7 +160,11 @@ const createSectorFromData = (data) => {
 	sector.Data.RootChunk.level = data.level
 	sector.Data.RootChunk.variantIndices = [0]
 	sector.Data.RootChunk.version = 62
-	
+
+	if (data.variantIndices !== undefined) {
+		sector.Data.RootChunk.variantIndices = data.variantIndices
+	}
+
 	return sector
 }
 
@@ -168,7 +172,8 @@ const addSectorToBlock = (block, info, root) => {
 	let descriptor = JSON.parse(wkit.CreateInstanceAsJSON("worldStreamingSectorDescriptor"))
 	descriptor.category = info.category
 	descriptor.level = info.level
-	descriptor.numNodeRanges = 1
+
+	descriptor.numNodeRanges = 1 + (info.variants !== undefined ? info.variants.length : 0)
 	
 	descriptor.streamingBox.Max.X = info.max.x
 	descriptor.streamingBox.Max.Y = info.max.y
@@ -184,6 +189,21 @@ const addSectorToBlock = (block, info, root) => {
 	if (info.prefabRef !== undefined && info.prefabRef !== "") {
 		descriptor.questPrefabNodeRef.$storage = "string"
 		descriptor.questPrefabNodeRef.$value = info.prefabRef
+	}
+
+	if (info.variants !== undefined) {
+		info.variants.forEach((variant) => {
+			let variantData = JSON.parse(wkit.CreateInstanceAsJSON("worldStreamingSectorVariant"))
+
+			variantData.enabledByDefault = variant.defaultOn
+			variantData.name.$value = variant.name
+			variantData.nodeRef.$storage = "string"
+			variantData.nodeRef.$value = variant.ref
+			variantData.rangeIndex = variant.index
+			variantData.variantId = Math.abs(~~wkit.HashString(variant.ref + variant.name, "fnv1a32"))
+
+			descriptor.variants.push(variantData)
+		})
 	}
 
 	block.Data.RootChunk.descriptors.push(descriptor)
