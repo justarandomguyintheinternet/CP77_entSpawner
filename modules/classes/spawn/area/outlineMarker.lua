@@ -87,6 +87,7 @@ function outlineMarker:save()
     local data = spawnable.save(self)
 
     data.height = self.height
+    data.previewed = self.previewed
 
     return data
 end

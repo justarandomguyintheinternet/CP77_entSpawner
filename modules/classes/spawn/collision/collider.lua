@@ -138,7 +138,7 @@ function collider:getArrowSize()
 end
 
 function collider:calculateIntersection(origin, ray)
-    if not self:getEntity() then
+    if not self:getEntity() or not self.previewed then
         return { hit = false }
     end
 

@@ -95,8 +95,14 @@ function exportUI.drawGroups()
                         group.variantData[name].name = ImGui.InputTextWithHint('##variantName', 'default', group.variantData[name].name, 100)
                         ImGui.SameLine()
                         ImGui.SetNextItemWidth(185 * style.viewSize)
+                        local default = group.variantData[name].name == "default"
+                        style.pushGreyedOut(default)
                         group.variantData[name].defaultOn, changed = ImGui.Checkbox("Default On", group.variantData[name].defaultOn)
-                        if changed then
+                        style.popGreyedOut(default)
+                        if default then
+                            group.variantData[name].defaultOn = true
+                        end
+                        if changed and not default then
                             for variant, _ in pairs(group.variantData) do
                                 if group.variantData[variant].name == group.variantData[name].name then
                                     group.variantData[variant].defaultOn = group.variantData[name].defaultOn

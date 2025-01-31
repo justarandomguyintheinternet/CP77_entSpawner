@@ -33,6 +33,7 @@ local config = require("modules/utils/config")
 ---@field public defaultAISpotNPC string
 ---@field public tabSizes table
 ---@field public defaultAISpotSpeed number
+---@field public nodeRefPrefix string
 local settingsData = {
     spawnPos = 1,
     spawnDist = 1,
