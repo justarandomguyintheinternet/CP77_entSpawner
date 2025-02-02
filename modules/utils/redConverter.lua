@@ -159,8 +159,7 @@ local function convertResRefAsync(propValue)
     local storage = "string"
 
     if str == "" then
-        storage = "uint64"
-        str = tostring(hash):gsub("ULL", "")
+        return nil
     end
 
     return {

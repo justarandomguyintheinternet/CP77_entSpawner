@@ -68,12 +68,6 @@ function entity:loadSpawnData(data, position, rotation)
     self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
 end
 
-local function assembleInstanceData(instanceDataPart, instanceData)
-    for key, data in pairs(instanceDataPart) do
-        instanceData[key] = data
-    end
-end
-
 local function CRUIDToString(id)
     return tostring(CRUIDToHash(id)):gsub("ULL", "")
 end
@@ -114,8 +108,26 @@ function entity:loadInstanceData(entity, forceLoadDefault)
     end
 end
 
+local function fixInstanceData(data)
+    for key, value in pairs(data) do
+        if type(value) == "table" then
+            if value["$type"] == "ResourcePath" and value["$storage"] and value["$storage"] == "uint64" then
+                data[key] = nil
+            elseif value["$type"] == "FixedPoint" and value["Bits"] then
+                value["Bits"] = math.floor(value["Bits"])
+            end
+
+            fixInstanceData(value)
+        end
+    end
+end
+
 function entity:onAssemble(entRef)
     spawnable.onAssemble(self, entRef)
+
+    for _, component in pairs(self.instanceDataChanges) do
+        fixInstanceData(component)
+    end
 
     self:loadInstanceData(entRef, false)
 
@@ -326,28 +338,22 @@ function entity:getProperties()
     return properties
 end
 
-local function copyAndPrepareData(data, index)
-	local orig_type = type(data)
-    local copy
-
-    if orig_type == 'table' then
-        copy = {}
-        for origin_key, origin_value in next, data, nil do
-            local keyCopy = copyAndPrepareData(origin_key, index)
-            local valueCopy = copyAndPrepareData(origin_value, index)
-
-            if keyCopy == "HandleId" then
-                valueCopy = tostring(index[1])
-                index[1] = index[1] + 1
-            end
-
-            copy[keyCopy] = valueCopy
+local function copyAndPrepareData(data)
+    for key, value in pairs(data) do
+        if key == "HandleId" then
+            data[key] = nil
         end
-        setmetatable(copy, copyAndPrepareData(getmetatable(data), index))
-    else
-        copy = data
+        if type(value) == "table" then
+            copyAndPrepareData(value)
+        end
     end
+
     return copy
+end
+
+local function assembleInstanceData(default, instanceData)
+    instanceData.id = default.id
+    instanceData["$type"] = default["$type"]
 end
 
 function entity:export(index, length)
@@ -371,17 +377,17 @@ function entity:export(index, length)
 
         local combinedData = {}
 
-        for key, data in pairs(utils.deepcopy(self.defaultComponentData)) do
+        for key, data in pairs(self.defaultComponentData) do
             if self.instanceDataChanges[key] then
-                assembleInstanceData(self.instanceDataChanges[key], data)
-                table.insert(combinedData, data)
+                local assembled = utils.deepcopy(self.instanceDataChanges[key])
+                assembleInstanceData(data, assembled)
+                table.insert(combinedData, assembled)
             end
         end
 
-        local baseHandle = length + 10 + index * 100 -- 10 offset to last handle of nodeData, 100 handleIDs per entity for instance data
+        copyAndPrepareData(combinedData)
 
         data.data.instanceData = {
-            ["HandleId"] = tostring(baseHandle), -- 10 offset to last handle of nodeData, 25 handleIDs per entity for instance data
             ["Data"] = {
                 ["$type"] = "entEntityInstanceData",
                 ["buffer"] = {
@@ -392,7 +398,7 @@ function entity:export(index, length)
                         ["Sections"] = 6,
                         ["CruidIndex"] = self.instanceDataChanges["0"] and 0 or -1,
                         ["CruidDict"] = dict,
-                        ["Chunks"] = copyAndPrepareData(combinedData, { baseHandle + 1 })
+                        ["Chunks"] = combinedData
                     }
                 }
             }
@@ -670,7 +676,7 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
         local value, changed = ImGui.InputFloat("##" .. componentID .. table.concat(path), data["Bits"] / 131072, 0, 0, "%.2f")
         if changed then
             history.addAction(history.getElementChange(self.object))
-            self:updatePropValue(componentID, path, value * 131072)
+            self:updatePropValue(componentID, path, math.floor(value * 131072))
         end
         self:drawResetProp(componentID, path)
         style.popStyleColor(modified)

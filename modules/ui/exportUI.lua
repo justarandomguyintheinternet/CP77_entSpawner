@@ -859,7 +859,9 @@ function exportUI.exportGroup(group)
     local spotNodes = {}
 
     local objects = g:getPathsRecursive(false)
-    local variantNodes = {}
+    local variantNodes = {
+        default = {}
+    }
     local variantInfo = {}
     local nodes = {}
 
