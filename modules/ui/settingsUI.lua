@@ -75,7 +75,10 @@ function settingsUI.draw()
     if changed then settings.save() end
 
     settings.defaultAISpotNPC, changed = ImGui.InputTextWithHint("Default AI Spot NPC", "Character.", settings.defaultAISpotNPC, 128)
-    if changed then settings.save() end
+    if changed then
+        settings.defaultAISpotNPC = string.gsub(settings.defaultAISpotNPC, "[\128-\255]", "")
+        settings.save()
+    end
 
     settings.defaultAISpotSpeed, changed = ImGui.InputFloat("Default AI Spot Animation Speed", settings.defaultAISpotSpeed, 0, 25, "%.1f")
     if changed then settings.save() end

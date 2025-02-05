@@ -58,6 +58,12 @@ function aiSpot:new()
    	return o
 end
 
+function aiSpot:loadSpawnData(data, position, rotation)
+    visualized.loadSpawnData(self, data, position, rotation)
+
+    self.previewNPC = string.gsub(self.previewNPC, "[\128-\255]", "")
+end
+
 function aiSpot:getVisualizerSize()
     return { x = 0.15, y = 0.15, z = 0.15 }
 end

@@ -100,6 +100,8 @@ local function convertSimple(propValue, propClass, prop)
 end
 
 local function convertArray(propValue, prop)
+    if not prop:GetType():GetInnerType() then return end
+
     local propData = {}
     local innerType = prop:GetType():GetInnerType():GetMetaType()
 
@@ -116,8 +118,11 @@ local function convertHandle(propValue, prop, name)
     if propValue == nil and utils.has_value(handleIncludes, name) then
         propValue = FromVariant(prop:GetType():GetInnerType():MakeInstance())
     end
-
     if propValue ~= nil then
+        if Reflection.GetClassOf(ToVariant(propValue)):IsA("entEntity") then -- Will very likely lead to infinite recursion
+            return nil
+        end
+
         return {
             HandleId = "0",
             Data = red.redDataToJSON(propValue)

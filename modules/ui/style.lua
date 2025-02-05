@@ -264,6 +264,7 @@ function style.trackedTextField(element, text, value, hint, width)
 
     local finished = ImGui.IsItemDeactivatedAfterEdit()
 	if finished then
+        newValue = string.gsub(newValue, "[\128-\255]", "")
 		dragBeingEdited = false
 	end
 	if changed and not dragBeingEdited then
