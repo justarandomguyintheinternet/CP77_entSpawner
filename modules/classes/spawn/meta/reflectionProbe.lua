@@ -31,7 +31,7 @@ function reflection:new()
     o.icon = IconGlyphs.HomeLightbulbOutline
 
     o.scale = { x = 5, y = 5, z = 5 }
-    o.edgeScale = { x = 1, y = 1, z = 1 }
+    o.edgeScale = { x = 0.5, y = 0.5, z = 0.5 }
     o.previewed = true
 
     o.ambientModes = utils.enumTable("envUtilsReflectionProbeAmbientContributionMode")

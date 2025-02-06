@@ -108,16 +108,20 @@ function entity:loadInstanceData(entity, forceLoadDefault)
     end
 end
 
-local function fixInstanceData(data)
+local function fixInstanceData(data, parent)
     for key, value in pairs(data) do
         if type(value) == "table" then
             if value["$type"] == "ResourcePath" and value["$storage"] and value["$storage"] == "uint64" then
-                data[key] = nil
+                parent = nil
             elseif value["$type"] == "FixedPoint" and value["Bits"] then
                 value["Bits"] = math.floor(value["Bits"])
+            elseif value["Flags"] and not value["DepotPath"] then
+                data[key] = nil
             end
 
-            fixInstanceData(value)
+            if data ~= nil then
+                fixInstanceData(value, data)
+            end
         end
     end
 end
@@ -126,7 +130,7 @@ function entity:onAssemble(entRef)
     spawnable.onAssemble(self, entRef)
 
     for _, component in pairs(self.instanceDataChanges) do
-        fixInstanceData(component)
+        fixInstanceData(component, {})
     end
 
     self:loadInstanceData(entRef, false)

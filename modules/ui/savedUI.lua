@@ -1,12 +1,9 @@
 local config = require("modules/utils/config")
-local CPS = require("CPStyling")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
 local amm = require("modules/utils/ammUtils")
 local history = require("modules/utils/history")
-
-local debug = false
 
 savedUI = {
     filter = "",
@@ -16,7 +13,8 @@ savedUI = {
     spawner = nil,
     popup = false,
     deleteFile = nil,
-    spawned = {}
+    spawned = {},
+    maxTextWidth = nil
 }
 
 function savedUI.convertObject(object, getState)
@@ -84,6 +82,10 @@ function savedUI.importAMMPresets()
 end
 
 function savedUI.draw(spawner)
+    if not savedUI.maxTextWidth then
+        savedUI.maxTextWidth = utils.getTextMaxWidth({"File name:", "Position:"}) + 4 * ImGui.GetStyle().ItemSpacing.x
+    end
+
     ImGui.PushItemWidth(250 * style.viewSize)
     savedUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search for data...', savedUI.filter, 100)
     if changed then
@@ -156,6 +158,7 @@ function savedUI.drawGroup(group, spawner)
 
         style.mutedText("File name:")
         ImGui.SameLine()
+        ImGui.SetCursorPosX(savedUI.maxTextWidth)
         ImGui.PushItemWidth(180 * style.viewSize)
         group.newName = ImGui.InputTextWithHint('##Name', 'Name...', group.newName, 100)
         ImGui.PopItemWidth()
@@ -172,6 +175,7 @@ function savedUI.drawGroup(group, spawner)
 
         style.mutedText("Position:")
         ImGui.SameLine()
+        ImGui.SetCursorPosX(savedUI.maxTextWidth)
         ImGui.Text(posString)
 
         if ImGui.Button("Load") then
