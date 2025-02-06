@@ -214,6 +214,26 @@ function style.trackedDragFloat(element, text, value, step, min, max, format, wi
     return newValue, changed, finished
 end
 
+function style.trackedIntInput(element, text, value, min, max, width)
+    width = width or 80
+    ImGui.SetNextItemWidth(width * style.viewSize)
+    local newValue, changed = ImGui.InputInt(text, value, min, max)
+
+    local finished = ImGui.IsItemDeactivatedAfterEdit()
+	if finished then
+		dragBeingEdited = false
+	end
+	if changed and not dragBeingEdited then
+		history.addAction(history.getElementChange(element))
+		dragBeingEdited = true
+	end
+
+    newValue = math.max(newValue, min)
+    newValue = math.min(newValue, max)
+
+    return newValue, changed, finished
+end
+
 function style.trackedCombo(element, text, selected, options, width)
     width = width or 100
     ImGui.SetNextItemWidth(width * style.viewSize)

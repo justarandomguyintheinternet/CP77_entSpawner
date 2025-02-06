@@ -14,6 +14,9 @@ local utils = require("modules/utils/utils")
 ---@field public neighborMode integer
 ---@field public emissiveScale number
 ---@field public streamingDistance number
+---@field public priority number
+---@field public allInShadow boolean
+---@field public maxPropertyWidth number
 local reflection = setmetatable({}, { __index = spawnable })
 
 function reflection:new()
@@ -38,6 +41,10 @@ function reflection:new()
     o.neighborMode = 3
     o.emissiveScale = 1
     o.streamingDistance = 50
+    o.priority = 25
+    o.allInShadow = false
+
+    o.maxPropertyWidth = nil
 
     o.uk10 = 1056
     o.uk11 = 512
@@ -54,6 +61,8 @@ function reflection:onAssemble(entity)
     local component = entEnvProbeComponent.new()
     component.name = "probe"
     component.probeDataRef = ResRef.FromString(self.spawnData)
+    component.priority = self.priority
+    component.allInShadow = self.allInShadow
     component.size = Vector3.new(self.scale.x, self.scale.y, self.scale.z) -- Size is extents, not size
     component.edgeScale = Vector3.new(self.edgeScale.x, self.edgeScale.y, self.edgeScale.z)
     component.ambientMode = Enum.new("envUtilsReflectionProbeAmbientContributionMode", self.ambientMode)
@@ -84,6 +93,8 @@ function reflection:save()
     data.emissiveScale = self.emissiveScale
     data.streamingDistance = self.streamingDistance
     data.previewed = self.previewed
+    data.allInShadow = self.allInShadow
+    data.priority = self.priority
 
     return data
 end
@@ -109,41 +120,68 @@ end
 function reflection:draw()
     spawnable.draw(self)
 
+    if not self.maxPropertyWidth then
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Ambient Mode", "Neighbor Mode", "Emissive Scale", "Streaming Distance", "Edge Scale", "Priority", "All In Shadow" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
+
     self.previewed, changed = style.trackedCheckbox(self.object, "Visualize outline", self.previewed)
     if changed then
         visualizer.toggleAll(self:getEntity(), self.previewed)
     end
 
-    ImGui.Text("Ambient Mode")
+    style.mutedText("Ambient Mode")
     ImGui.SameLine()
-    local value, changed = style.trackedCombo(self.object, "##ambientMode", self.ambientMode - 1, self.ambientModes)
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    local value, changed = style.trackedCombo(self.object, "##ambientMode", self.ambientMode - 1, self.ambientModes, 225)
     if changed then
         self.ambientMode = value + 1
         self:respawn()
     end
 
-    ImGui.Text("Neighbor Mode")
+    style.mutedText("Neighbor Mode")
     ImGui.SameLine()
-    local value, changed = style.trackedCombo(self.object, "##neighborMode", self.neighborMode - 1, self.neighborModes)
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    local value, changed = style.trackedCombo(self.object, "##neighborMode", self.neighborMode - 1, self.neighborModes, 112)
     if changed then
         self.neighborMode = value + 1
         self:respawn()
     end
 
-    self.emissiveScale, _, finished = style.trackedDragFloat(self.object, "##emissiveScale", self.emissiveScale, 0.01, 0, 50, "%.2f Emissive Scale", 110)
+    style.mutedText("Priority")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.priority, _, finished = style.trackedIntInput(self.object, "##priority", self.priority, 0, 255, 50)
     if finished then
         self:respawn()
     end
 
+    style.mutedText("All In Shadow")
     ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.allInShadow, changed = style.trackedCheckbox(self.object, "##allInShadow", self.allInShadow)
+    if changed then
+        self:respawn()
+    end
 
-    self.streamingDistance, _, finished = style.trackedDragFloat(self.object, "##streamingDistance", self.streamingDistance, 0.1, 0, 9999, "%.1f Streaming Dist.", 110)
+    style.mutedText("Emissive Scale")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.emissiveScale, _, finished = style.trackedDragFloat(self.object, "##emissiveScale", self.emissiveScale, 0.01, 0, 50, "%.2f", 80)
     if finished then
         self:respawn()
     end
 
-    ImGui.Text("Edge Scale")
+    style.mutedText("Streaming Distance")
     ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.streamingDistance, _, finished = style.trackedDragFloat(self.object, "##streamingDistance", self.streamingDistance, 0.1, 0, 9999, "%.1f", 80)
+    if finished then
+        self:respawn()
+    end
+
+    style.mutedText("Edge Scale")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
     self.edgeScale.x, _, finished = style.trackedDragFloat(self.object, "##edgeX", self.edgeScale.x, 0.05, 0, 9999, "%.2f X", 60)
     if finished then
         self:respawn()
@@ -235,7 +273,9 @@ function reflection:export()
         ambientMode = self.ambientModes[self.ambientMode],
         neighborMode = self.neighborModes[self.neighborMode],
         emissiveScale = self.emissiveScale,
-        streamingDistance = self.streamingDistance
+        streamingDistance = self.streamingDistance,
+        priority = self.priority,
+        allInShadow = self.allInShadow and 1 or 0
     }
 
     return data
