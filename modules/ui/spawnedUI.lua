@@ -269,6 +269,27 @@ function spawnedUI.registerHotkeys()
         end
     end)
 
+    input.registerImGuiHotkey({ ImGuiKey.N, ImGuiKey.LeftCtrl }, function ()
+        if #spawnedUI.selectedPaths == 0 then
+            spawnedUI.spawner.baseUI.spawnUI.selectedGroup = 0
+            return
+        end
+
+        local elementPath = spawnedUI.selectedPaths[1].ref:getPath()
+        if not spawnedUI.selectedPaths[1].ref.expandable then
+            elementPath = spawnedUI.selectedPaths[1].ref.parent:getPath()
+        end
+
+        local idx = 1
+        for _, entry in pairs(spawnedUI.containerPaths) do
+            if entry.path == elementPath then
+                break
+            end
+            idx = idx + 1
+        end
+        spawnedUI.spawner.baseUI.spawnUI.selectedGroup = idx
+    end)
+
     -- Open context menu for selected from editor mode
     input.registerMouseAction(ImGuiMouseButton.Right, function()
         if #spawnedUI.selectedPaths == 0 or editor.grab or editor.rotate or editor.scale then return end
@@ -594,7 +615,7 @@ function spawnedUI.drawContextMenu(element, path)
             end
         end
         if element.expandable then
-            if ImGui.MenuItem("Set as \"Spawn New\" group") then
+            if ImGui.MenuItem("Set as \"Spawn New\" group", "CTRL-N") then
                 local idx = 1
                 local elementPath = element:getPath()
                 for _, entry in pairs(spawnedUI.containerPaths) do
@@ -1044,6 +1065,7 @@ function spawnedUI.drawTop()
             ImGui.MenuItem("Move selected to root", "BACKSPACE")
             ImGui.MenuItem("Move selected to new group", "CTRL-G")
             ImGui.MenuItem("Drop selected to floor", "CTRL-E")
+            ImGui.MenuItem("Set as \"Spawn New\" group", "CTRL-N")
 
             style.mutedText("3D-EDITOR Camera")
             ImGui.Separator()
