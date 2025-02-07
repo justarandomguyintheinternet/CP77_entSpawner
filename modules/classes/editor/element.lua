@@ -423,7 +423,6 @@ function element:save()
 	local data = self:serialize()
 
 	if self.fileName ~= self.name then
-		os.rename("data/objects/" .. self.fileName .. ".json", "data/objects/" .. self.name .. ".json")
 		self.fileName = self.name
 	end
 

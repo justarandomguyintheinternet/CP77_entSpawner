@@ -22,6 +22,7 @@ local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 local input = require("modules/utils/input")
 local registry = require("modules/utils/nodeRefRegistry")
+local rht = require("modules/utils/rhtPlugin")
 
 ---@class spawner
 ---@field runtimeData {cetOpen: boolean, inGame: boolean, inMenu: boolean}
@@ -80,6 +81,7 @@ function spawner:new()
         registry.init(self)
 
         self.editor.init(self)
+        rht.init(self)
 
         Observe('RadialWheelController', 'OnIsInMenuChanged', function(_, isInMenu)
             self.runtimeData.inMenu = isInMenu

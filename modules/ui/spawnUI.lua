@@ -205,6 +205,33 @@ function spawnUI.refresh()
     end
 end
 
+function spawnUI.getCategoryIndex(category)
+    return types[category].index
+end
+
+function spawnUI.getVariantIndex(category, sub)
+    return types[category].variants[sub].index
+end
+
+function spawnUI.updateCategory()
+    settings.selectedType = typeNames[spawnUI.selectedType + 1]
+    settings.save()
+
+    variantNames = utils.getKeys(types[typeNames[spawnUI.selectedType + 1]].variants)
+    table.sort(variantNames, function(a, b) return types[typeNames[spawnUI.selectedType + 1]].variants[a].index < types[typeNames[spawnUI.selectedType + 1]].variants[b].index end)
+
+    spawnUI.selectedVariant = utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1
+
+    spawnUI.refresh()
+end
+
+function spawnUI.updateVariant()
+    settings.lastVariants[settings.selectedType] = variantNames[spawnUI.selectedVariant + 1]
+    settings.save()
+
+    spawnUI.refresh()
+end
+
 function spawnUI.drawSpawnPosition()
     ImGui.Text("Spawn position")
     ImGui.SameLine()
@@ -291,25 +318,14 @@ function spawnUI.draw()
     ImGui.PushItemWidth(120 * style.viewSize)
 	spawnUI.selectedType, changed = ImGui.Combo("Object type", spawnUI.selectedType, typeNames, #typeNames)
     if changed then
-        settings.selectedType = typeNames[spawnUI.selectedType + 1]
-        settings.save()
-
-        variantNames = utils.getKeys(types[typeNames[spawnUI.selectedType + 1]].variants)
-        table.sort(variantNames, function(a, b) return types[typeNames[spawnUI.selectedType + 1]].variants[a].index < types[typeNames[spawnUI.selectedType + 1]].variants[b].index end)
-
-        spawnUI.selectedVariant = utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1
-
-        spawnUI.refresh()
+        spawnUI.updateCategory()
     end
 
     ImGui.SameLine()
 
 	spawnUI.selectedVariant, changed = ImGui.Combo("Object variant", spawnUI.selectedVariant, variantNames, #variantNames)
     if changed then
-        settings.lastVariants[settings.selectedType] = variantNames[spawnUI.selectedVariant + 1]
-        settings.save()
-
-        spawnUI.refresh()
+        spawnUI.updateVariant()
     end
     style.spawnableInfo(spawnUI.getActiveSpawnList().info)
 
