@@ -40,25 +40,7 @@
 - **WKit version 18.14.1** or newer is required.
 
 ### Steps to Convert:
-
-#### 1. Exporting from Object Spawner
-1. In Game Open **Object Spawner 2.0**.
-2. Go to the **"Saved" tab** in the Object Spawner and find your saved group(s).
-3. **Click "Add to Export"** to mark the group(s) for export.
-4. Switch to the **"Export" tab** and configure the export settings:
-   - Set the **sector range** and other relevant parameters for your mod.
-   - The **sector range** should be at least as big as the smallest individual streaming range of an object (Better to go big)
-5. **Click Export**.
-
-#### 2. Importing in WKit
-1. Open **Wkit**
-2. **Update your WKit scripts** using the WKit "Scripts" UI.
-3. Put exported json into raw folder in your **Wkit project**.
-4. Go to `Tools -> Script Manager`
-5. Double click `import_object_spawner` (Yes to Create local copy)
-6. Replace `new_project_exported.json` with the name of your exported file placed in raw
-7. Click `Run` in the script
-8. **Profit!**
+- See [the guide](https://wiki.redmodding.org/cyberpunk-2077-modding/modding-guides/world-editing/exporting-from-object-spawner) on the modding wiki
 
 ---
 

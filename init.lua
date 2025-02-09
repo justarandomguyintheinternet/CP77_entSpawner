@@ -54,10 +54,6 @@ spawner = {
 -- local x = collectgarbage("count")
 
 function spawner:new()
-    registerForEvent("onHook", function ()
-        builder.hook()
-    end)
-
     registerForEvent("onInit", function()
         self.player = Game.GetPlayer()
         settings.load()
@@ -82,6 +78,9 @@ function spawner:new()
 
         self.editor.init(self)
         rht.init(self)
+
+        Game.GetScriptableServiceContainer():GetService("EntityBuilder"):Initialize()
+        builder.init()
 
         Observe('RadialWheelController', 'OnIsInMenuChanged', function(_, isInMenu)
             self.runtimeData.inMenu = isInMenu

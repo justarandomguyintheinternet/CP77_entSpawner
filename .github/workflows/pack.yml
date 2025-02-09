@@ -19,10 +19,12 @@ jobs:
         run: |
           cd ${{ github.workspace }}
           sudo mkdir -p /entSpawnerPacked/archive/pc/mod
+          sudo mkdir -p /entSpawnerPacked/r6/scripts/
           sudo mkdir -p /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
       - name: Copy files
         run: |
           sudo cp -r baseEntity.archive /entSpawnerPacked/archive/pc/mod
+          sudo cp -r r6 /entSpawnerPacked/
           sudo cp -r script /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
           sudo cp -r data /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/
           sudo cp -r export /entSpawnerPacked/bin/x64/plugins/cyber_engine_tweaks/mods/entSpawner/

@@ -9,68 +9,55 @@ local builder = {
     resourceCallbacks = {}
 }
 
-local listener
+function builder.init()
+    Observe('EntityBuilder', 'OnAttached', function(_, event)
+        if not event then return end
+        if type(event.GetEntity) ~= "function" then return end
 
-function builder.hook()
-    listener = NewProxy({
-            OnEntityAssemble = {
-                args = {'handle:EntityLifecycleEvent'},
-                callback = function (event)
-                    if not event then return end
-                    if type(event.GetEntity) ~= "function" then return end
+        local entity
+        pcall(function ()
+            entity = event:GetEntity()
+        end)
 
-                    local entity = event:GetEntity()
+        if not entity then return end
 
-                    if not entity then return end
+        local idHash = entity:GetEntityID().hash
 
-                    local idHash = entity:GetEntityID().hash
+        if builder.attachCallbacks[tostring(idHash)] then
+            builder.attachCallbacks[tostring(idHash)](entity)
+            builder.attachCallbacks[tostring(idHash)] = nil
+        end
+    end)
 
-                    if builder.assembleCallbacks[tostring(idHash)] then
-                        builder.assembleCallbacks[tostring(idHash)](entity)
-                        builder.assembleCallbacks[tostring(idHash)] = nil
-                    end
-                end
-            },
-            OnEntityAttach = {
-                args = {'handle:EntityLifecycleEvent'},
-                callback = function (event)
-                    if not event then return end
-                    if type(event.GetEntity) ~= "function" then return end
+    Observe('EntityBuilder', 'OnAssemble', function(_, event)
+        if not event then return end
+        if type(event.GetEntity) ~= "function" then return end
 
-                    local entity
-                    pcall(function ()
-                        entity = event:GetEntity()
-                    end)
+        local entity = event:GetEntity()
 
-                    if not entity then return end
+        if not entity then return end
 
-                    local idHash = entity:GetEntityID().hash
+        local idHash = entity:GetEntityID().hash
 
-                    if builder.attachCallbacks[tostring(idHash)] then
-                        builder.attachCallbacks[tostring(idHash)](entity)
-                        builder.attachCallbacks[tostring(idHash)] = nil
-                    end
-                end
-            },
-            OnResourceReady = {
-                args = {'handle:ResourceToken'},
-                callback = function(token)
-                    if type(token) ~= "userdata" then
-                        print("Token not userdata")
-                        return
-                    end
-                    if not IsDefined(token) then return end
-                    if token:IsFailed() or not token:IsFinished() then return end
+        if builder.assembleCallbacks[tostring(idHash)] then
+            builder.assembleCallbacks[tostring(idHash)](entity)
+            builder.assembleCallbacks[tostring(idHash)] = nil
+        end
+    end)
 
-                    if builder.resourceCallbacks[tostring(token:GetHash())] then
-                        builder.resourceCallbacks[tostring(token:GetHash())](token:GetResource())
-                        builder.resourceCallbacks[tostring(token:GetHash())] = nil
-                    end
-                end
-            }
-        })
-    Game.GetCallbackSystem():RegisterCallback('Entity/Initialize', listener:Target(), listener:Function('OnEntityAssemble'), true)
-    Game.GetCallbackSystem():RegisterCallback('Entity/Attached', listener:Target(), listener:Function('OnEntityAttach'), true)
+    Observe('EntityBuilder', 'OnResourceReady', function(_, token)
+        if type(token) ~= "userdata" then
+            print("Token not userdata")
+            return
+        end
+        if not IsDefined(token) then return end
+        if token:IsFailed() or not token:IsFinished() then return end
+
+        if builder.resourceCallbacks[tostring(token:GetHash())] then
+            builder.resourceCallbacks[tostring(token:GetHash())](token:GetResource())
+            builder.resourceCallbacks[tostring(token:GetHash())] = nil
+        end
+    end)
 end
 
 ---Register a callback to be called when the entity with the specified entEntityID is assembled
@@ -101,8 +88,8 @@ function builder.registerLoadResource(path, callback)
     local token = Game.GetResourceDepot():LoadResource(path)
 
     if not token:IsFailed() then
+        Game.GetScriptableServiceContainer():GetService("EntityBuilder"):RegisterResourceCallback(token)
         builder.resourceCallbacks[tostring(token:GetHash())] = callback
-        token:RegisterCallback(listener:Target(), listener:Function('OnResourceReady'))
     end
 end
 

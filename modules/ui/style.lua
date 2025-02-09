@@ -265,13 +265,6 @@ function style.trackedColor(element, name, color, width)
     return newValue, changed, finished
 end
 
-function style.getMaxWidth(min)
-    local width = (ImGui.GetWindowContentRegionWidth() - ImGui.GetCursorPosX())
-    width = math.max(width, min)
-
-    return width / style.viewSize
-end
-
 function style.trackedTextField(element, text, value, hint, width)
     if width == -1 then
         width = (ImGui.GetWindowContentRegionWidth() - ImGui.GetCursorPosX()) / style.viewSize
@@ -293,6 +286,13 @@ function style.trackedTextField(element, text, value, hint, width)
 	end
 
     return newValue, changed, finished
+end
+
+function style.getMaxWidth(min)
+    local width = (ImGui.GetWindowContentRegionWidth() - ImGui.GetCursorPosX())
+    width = math.max(width, min)
+
+    return width / style.viewSize
 end
 
 return style

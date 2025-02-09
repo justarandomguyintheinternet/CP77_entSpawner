@@ -114,6 +114,7 @@ function visualizer.updateScale(entity, scale, componentName)
     if not entity then return end
 
     local component = entity:FindComponentByName(componentName)
+    if not component then return end
     component.visualScale = ToVector3(scale)
 
     if component:IsEnabled() then

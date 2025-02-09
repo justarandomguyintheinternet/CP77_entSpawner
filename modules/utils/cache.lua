@@ -28,7 +28,7 @@ function cache.load()
     cache.removeDuplicates("data/spawnables/mesh/physics/paths_filtered_mesh.txt")
     cache.removeDuplicates("data/spawnables/visual/particles/paths_particle.txt")
     cache.removeDuplicates("data/spawnables/visual/decals/paths_mi.txt")
-    cache.removeDuplicates("data/spawnables/visual/effects/path_effect.txt")
+    cache.removeDuplicates("data/spawnables/visual/effects/paths_effect.txt")
 end
 
 function cache.addValue(key, value)

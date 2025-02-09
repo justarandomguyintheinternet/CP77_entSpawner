@@ -124,6 +124,10 @@ function baseUI.init()
     elseif not Codeware.Require(CodewareVersion) then
         table.insert(baseUI.requirementsIssues, "Codeware version is outdated, please update to " .. CodewareVersion)
     end
+
+    if not Game.GetScriptableServiceContainer():GetService("EntityBuilder") then
+        table.insert(baseUI.requirementsIssues, "Redscript part of the mod is not installed")
+    end
 end
 
 function baseUI.draw(spawner)
