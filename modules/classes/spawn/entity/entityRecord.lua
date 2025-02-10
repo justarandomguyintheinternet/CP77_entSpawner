@@ -37,11 +37,12 @@ function record:loadSpawnData(data, position, rotation)
             for _, appearance in ipairs(resource.appearances) do
                 table.insert(self.apps, appearance.name.value)
             end
+            cache.addValue(self.spawnData, self.apps)
+            self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
         end)
-        cache.addValue(self.spawnData, self.apps)
+    else
+        self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
     end
-
-    self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
 end
 
 function record:save()

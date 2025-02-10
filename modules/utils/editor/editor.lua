@@ -84,7 +84,7 @@ function editor.cancleEditingTransform()
 end
 
 function editor.confirmEditingTransform()
-    if not editor.grab and not editor.rotate and not editor.scale and editor.hoveredArrow == "none" then
+    if not editor.grab and not editor.rotate and not editor.scale and editor.hoveredArrow == "none" and not editor.spawnUI.popupSpawnHit then
         editor.setTarget()
     end
 

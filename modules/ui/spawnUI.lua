@@ -580,6 +580,7 @@ function spawnUI.drawPopupVariant(typeName, variantName)
                     ImGui.PushID(spawnUI.popupData[i].name)
 
                     if ImGui.Button(utils.shortenPath(spawnUI.popupData[i].name, xSpace - ImGui.GetStyle().ItemSpacing.x * 3, true)) then
+                        if not settings.spawnAtCursor then spawnUI.popupSpawnHit = nil end
                         local class = spawnData[typeName][variantName].class
                         spawnUI.lastSpawned = spawnUI.spawnNew(spawnUI.popupData[i], class)
                         ImGui.CloseCurrentPopup()

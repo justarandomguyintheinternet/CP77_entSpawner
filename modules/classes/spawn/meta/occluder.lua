@@ -102,6 +102,14 @@ function occluder:getSize()
     return self.scale
 end
 
+function occluder:calculateIntersection(origin, ray)
+    if not self.previewed then
+        return { hit = false }
+    end
+
+    return spawnable.calculateIntersection(self, origin, ray)
+end
+
 function occluder:draw()
     spawnable.draw(self)
 
