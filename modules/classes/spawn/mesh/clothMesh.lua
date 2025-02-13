@@ -41,7 +41,7 @@ function clothMesh:draw()
 
     self.affectedByWind = style.trackedCheckbox(self.object, "Affected By Wind", self.affectedByWind)
     ImGui.SameLine()
-    self.collisionType = style.trackedCombo(self.object, "Collision Type", self.collisionType, collisionTypes)
+    self.collisionType = style.trackedCombo(self.object, "Collision Mask", self.collisionType, collisionTypes)
 
     ImGui.PopItemWidth()
 end

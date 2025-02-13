@@ -5,6 +5,7 @@ local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 local intersection = require("modules/utils/editor/intersection")
 local registry = require("modules/utils/nodeRefRegistry")
+local editor = require("modules/utils/editor/editor")
 
 ---Base class for any object / node that can be spawned
 ---@class spawnable
@@ -38,6 +39,9 @@ local registry = require("modules/utils/nodeRefRegistry")
 ---@field protected nodeRef string
 ---@field public noExport boolean
 ---@field private worldNodePropertyWidth number
+---@field public assetPreviewType string none|backdrop|current_position
+---@field public assetPreviewDelay number
+---@field public isAssetPreview boolean
 local spawnable = {}
 
 function spawnable:new()
@@ -76,6 +80,10 @@ function spawnable:new()
     o.arrowDirection = "none"
     o.rotationRelative = false
     o.outline = 0
+
+    o.assetPreviewType = "none"
+    o.assetPreviewDelay = 0.25
+    o.isAssetPreview = false
 
     o.object = object
 
@@ -312,6 +320,44 @@ function spawnable:getGroupedProperties()
 	}
 
     return properties
+end
+
+---@protected
+---@param distance number?
+function spawnable:getAssetPreviewPosition(distance)
+    if self.assetPreviewType == "backdrop" then
+        return editor.getForward(distance or 1)
+    end
+    return self.position
+end
+
+--Attach any custom components needed
+function spawnable:assetPreviewAssemble(entity)
+end
+
+--Assumes entity is fully spawned and BBOX is loaded, set to proper position
+function spawnable:assetPreviewSetPosition()
+    self.position = self:getAssetPreviewPosition()
+    self:update()
+end
+
+---Asset preview can be either not enabled, use the current position, or a backdrop (Must be implemented by the object)
+---@param state boolean
+function spawnable:assetPreview(state)
+    self.isAssetPreview = true
+    if self.assetPreviewType == "none" then return end
+
+    if state then
+        local original = Vector4.new(self.position.x, self.position.y, self.position.z, 0)
+        self.position = utils.addVector(GetPlayer():GetWorldPosition(), Vector4.new(0, 0, -50, 0))
+        self:spawn()
+        self:registerSpawnedAndAttachedCallback(function ()
+            self:assetPreviewSetPosition()
+        end)
+        self.position = original
+    else
+        self:despawn()
+    end
 end
 
 ---Gets the actual physical size of the spawnable, usually BBOX

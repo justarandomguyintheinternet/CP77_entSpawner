@@ -617,6 +617,19 @@ function editor.updateDrag()
     end
 end
 
+function editor.getForward(distance)
+    -- if editor.active then
+
+    -- end
+
+    -- local x = settings.tabSizes[tabs[baseUI.activeTab].id]
+
+    local forward = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation():GetForward()
+    local position = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
+
+    return utils.addVector(position, utils.multVector(forward, distance))
+end
+
 function editor.drawDepthSelect()
     if not editor.active or not editor.depthSelectOpen then return end
 

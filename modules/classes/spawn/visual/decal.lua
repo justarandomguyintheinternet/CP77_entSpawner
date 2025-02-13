@@ -28,6 +28,9 @@ function decal:new()
     o.autoHideDistance = 150
     o.scale = { x = 1, y = 1, z = 1 }
 
+    o.assetPreviewType = "backdrop"
+    o.assetPreviewDelay = 0.05
+
     setmetatable(o, { __index = self })
    	return o
 end
@@ -47,6 +50,26 @@ function decal:onAssemble(entity)
     component.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
 
     entity:AddComponent(component)
+
+    self:assetPreviewAssemble(entity)
+end
+
+function decal:getAssetPreviewPosition()
+    return spawnable.getAssetPreviewPosition(self, 0.2)
+end
+
+function decal:assetPreviewAssemble(entity)
+    if not self.isAssetPreview then return end
+
+    local component = entMeshComponent.new()
+    component.name = "mesh"
+    component.mesh = ResRef.FromString("engine\\meshes\\editor\\cube.mesh")
+    component.visualScale = Vector3.new(0.2, 0.01, 0.2)
+    entity:AddComponent(component)
+
+    local decal = entity:FindComponentByName("decal")
+    decal.visualScale = Vector3.new(0.2, 0.2, 0.2)
+    decal:SetLocalOrientation(EulerAngles.new(0, 90, 180):ToQuat())
 end
 
 function decal:spawn()

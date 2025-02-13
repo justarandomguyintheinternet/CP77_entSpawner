@@ -45,6 +45,8 @@ function entity:new()
     o.deviceClassName = ""
     o.propertiesMaxWidth = nil
 
+    o.assetPreviewType = "backdrop"
+
     o.uk10 = 1056
 
     setmetatable(o, { __index = self })
@@ -158,7 +160,17 @@ function entity:onAttached(entRef)
             self.bBoxCallback(entRef)
         end
         self.bBoxLoaded = true
+
+        if self.isAssetPreview then
+            self:assetPreviewSetPosition()
+        end
     end)
+end
+
+function entity:assetPreview(state)
+    spawnable.assetPreview(self, state)
+
+    self.spawnedAndCachedCallback = {}
 end
 
 function entity:save()
@@ -305,6 +317,13 @@ function entity:draw()
         end
     end
     style.popGreyedOut(greyOut)
+    ImGui.SameLine()
+    style.pushButtonNoBG(true)
+    if ImGui.Button(IconGlyphs.ContentCopy) then
+        ImGui.SetClipboardText(self.app)
+    end
+    style.pushButtonNoBG(false)
+
 
     if self.deviceClassName ~= "" then
         style.mutedText("Device Class Name")

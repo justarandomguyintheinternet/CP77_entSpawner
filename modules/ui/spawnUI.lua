@@ -107,6 +107,9 @@ end
 ---@field dragData table?
 ---@field lastSpawnedClass table?
 ---@field lastSpawnedEntry table?
+---@field previewInstance spawnable?
+---@field previewTimer number?
+---@field hoveredEntry table?
 spawnUI = {
     filter = "",
     popupFilter = "",
@@ -125,7 +128,10 @@ spawnUI = {
     dragging = false,
     dragData = nil,
     lastSpawnedClass = nil,
-    lastSpawnedEntry = nil
+    lastSpawnedEntry = nil,
+    previewInstance = nil,
+    previewTimer = nil,
+    hoveredEntry = nil
 }
 
 ---Loads the spawn data (Either list of e.g. paths, or exported object files) for each data variant
@@ -146,9 +152,9 @@ function spawnUI.loadSpawnData(spawner)
             local variantInstance = variant.class:new()
             local info = { node = variantInstance.node, description = variantInstance.description, previewNote = variantInstance.previewNote }
             if variantInstance.spawnListType == "list" then
-                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = true }
+                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = true, assetPreviewDelay = variantInstance.assetPreviewDelay }
             else
-                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = false }
+                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = false, assetPreviewDelay = variantInstance.assetPreviewDelay }
             end
         end
     end
@@ -232,6 +238,44 @@ function spawnUI.updateVariant()
     spawnUI.refresh()
 end
 
+function spawnUI.handleAssetPreviewHovered(entry)
+    if spawnUI.hoveredEntry ~= entry then
+        if spawnUI.previewInstance then
+            spawnUI.previewInstance:assetPreview(false)
+        end
+
+        spawnUI.hoveredEntry = entry
+
+        if spawnUI.previewTimer then
+            Cron.Halt(spawnUI.previewTimer)
+        end
+        spawnUI.previewTimer = Cron.After(spawnUI.getActiveSpawnList().assetPreviewDelay, function ()
+            spawnUI.previewTimer = nil
+            if not spawnUI.hoveredEntry then return end
+
+            spawnUI.previewInstance = spawnUI.getActiveSpawnList().class:new()
+
+            local data = utils.deepcopy(entry.data)
+            data.modulePath = spawnUI.previewInstance.modulePath
+            local pos, _ = spawnUI.getSpawnNewPosition()
+
+            rot = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation()
+            rot.yaw = rot.yaw - 180
+            rot.pitch = -rot.pitch
+
+            spawnUI.previewInstance:loadSpawnData(data, pos, rot)
+
+            spawnUI.previewInstance:assetPreview(true)
+        end)
+    end
+end
+
+function spawnUI.updateAssetPreview()
+    if spawnUI.previewInstance and spawnUI.previewInstance:isSpawned() then
+        spawnUI.previewInstance:assetPreviewSetPosition()
+    end
+end
+
 function spawnUI.drawSpawnPosition()
     ImGui.Text("Spawn position")
     ImGui.SameLine()
@@ -263,6 +307,7 @@ function spawnUI.drawDragWindow()
 end
 
 function spawnUI.draw()
+    spawnUI.updateAssetPreview()
     spawnUI.drawDragWindow()
 
     ImGui.SetNextItemWidth(300 * style.viewSize)
@@ -414,6 +459,19 @@ function spawnUI.draw()
                 spawnUI.dragData = nil
                 spawnUI.popupSpawnHit = nil
             end
+            if ImGui.IsItemClicked(ImGuiMouseButton.Middle) then
+                ImGui.SetClipboardText(ImGui.SetClipboardText(entry.name))
+            end
+            if ImGui.IsItemHovered() then
+                spawnUI.handleAssetPreviewHovered(entry)
+            elseif spawnUI.hoveredEntry == entry then
+                spawnUI.hoveredEntry = nil
+                if spawnUI.previewTimer then
+                    Cron.Halt(spawnUI.previewTimer)
+                else
+                    spawnUI.previewInstance:assetPreview(false)
+                end
+            end
             if settings.spawnUIOnlyNames then
                 style.tooltip(entry.name)
             end
@@ -427,16 +485,11 @@ function spawnUI.draw()
     ImGui.EndChild()
 end
 
-function spawnUI.spawnNew(entry, class)
-    spawnUI.lastSpawnedClass = class
-    spawnUI.lastSpawnedEntry = entry
-
-    local parent = spawnUI.spawnedUI.root
-    if spawnUI.selectedGroup ~= 0 and spawnUI.spawnedUI.containerPaths[spawnUI.selectedGroup] then
-        parent = spawnUI.spawnedUI.containerPaths[spawnUI.selectedGroup].ref
+function spawnUI.getSpawnNewPosition()
+    if not GetPlayer() then
+        return Vector4.new(0, 0, 0, 0), EulerAngles.new(0, 0, 0)
     end
 
-    local new = require("modules/classes/editor/spawnableElement"):new(spawnUI.spawnedUI)
     local rot = EulerAngles.new(0, 0, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation().yaw + 180)
     local pos = GetPlayer():GetWorldPosition()
     local forward = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetAxisY()
@@ -457,6 +510,21 @@ function spawnUI.spawnNew(entry, class)
             rot = spawnUI.spawnedUI.multiSelectGroup:getDirection("forward"):ToRotation()
         end
     end
+
+    return pos, rot
+end
+
+function spawnUI.spawnNew(entry, class)
+    spawnUI.lastSpawnedClass = class
+    spawnUI.lastSpawnedEntry = entry
+
+    local parent = spawnUI.spawnedUI.root
+    if spawnUI.selectedGroup ~= 0 and spawnUI.spawnedUI.containerPaths[spawnUI.selectedGroup] then
+        parent = spawnUI.spawnedUI.containerPaths[spawnUI.selectedGroup].ref
+    end
+
+    local new = require("modules/classes/editor/spawnableElement"):new(spawnUI.spawnedUI)
+    local pos, rot = spawnUI.getSpawnNewPosition()
 
     local snap = spawnUI.popupSpawnHit and spawnUI.popupSpawnHit.hit
     if snap then
@@ -584,6 +652,9 @@ function spawnUI.drawPopupVariant(typeName, variantName)
                         local class = spawnData[typeName][variantName].class
                         spawnUI.lastSpawned = spawnUI.spawnNew(spawnUI.popupData[i], class)
                         ImGui.CloseCurrentPopup()
+                    end
+                    if ImGui.IsItemClicked(ImGuiMouseButton.Middle) then
+                        ImGui.SetClipboardText(spawnUI.popupData[i].name)
                     end
 
                     ImGui.PopID()
