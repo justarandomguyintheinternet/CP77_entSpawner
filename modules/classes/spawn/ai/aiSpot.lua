@@ -84,13 +84,13 @@ function aiSpot:onNPCSpawned(npc)
 
     Game.GetWorkspotSystem():PlayInDeviceSimple(self:getEntity(), npc, false, "workspot", "", "", 0, gameWorkspotSlidingBehaviour.PlayAtResourcePosition)
 
-    self.cronID = Cron.Every(0.25, function ()
+    self.cronID = Cron.Every(1.25, function ()
         if not self.npcID or not self:isSpawned() then return end
         local npc = self:getNPC()
 
         if Game.GetWorkspotSystem():GetExtendedInfo(npc).exiting or not Game.GetWorkspotSystem():IsActorInWorkspot(npc) then
             Game.GetWorkspotSystem():SendFastExitSignal(npc, Vector3.new(), false, false, true)
-            Cron.After(0.1, function ()
+            Cron.After(0.5, function ()
                 local npc = self:getNPC()
                 local ent = self:getEntity()
                 if not npc or not ent then return end
