@@ -186,8 +186,10 @@ function style.toggleButton(text, state)
     return state, false
 end
 
-function style.trackedCheckbox(element, text, state)
+function style.trackedCheckbox(element, text, state, disabled)
+    ImGui.BeginDisabled(disabled == true)
     local newState, changed = ImGui.Checkbox(text, state)
+    ImGui.EndDisabled()
     if changed then
         history.addAction(history.getElementChange(element))
     end

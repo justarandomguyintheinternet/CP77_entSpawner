@@ -618,9 +618,9 @@ function editor.updateDrag()
 end
 
 function editor.getForward(distance)
-    -- if editor.active then
+    if editor.active then
 
-    -- end
+    end
 
     -- local x = settings.tabSizes[tabs[baseUI.activeTab].id]
 
