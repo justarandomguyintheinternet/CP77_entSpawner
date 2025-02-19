@@ -21,6 +21,7 @@ local settings = require("modules/utils/settings")
 ---@field workspotSpeed number
 ---@field rigs table
 ---@field apps table
+---@field workspotDefInfinite boolean
 local aiSpot = setmetatable({}, { __index = visualized })
 
 function aiSpot:new()
@@ -51,6 +52,7 @@ function aiSpot:new()
     o.cronID = nil
     o.rigs = {}
     o.apps = {}
+    o.workspotDefInfinite = false
 
     o.streamingMultiplier = 5
 
@@ -84,13 +86,13 @@ function aiSpot:onNPCSpawned(npc)
 
     Game.GetWorkspotSystem():PlayInDeviceSimple(self:getEntity(), npc, false, "workspot", "", "", 0, gameWorkspotSlidingBehaviour.PlayAtResourcePosition)
 
-    self.cronID = Cron.Every(0.25, function ()
+    self.cronID = Cron.Every(1.25, function ()
         if not self.npcID or not self:isSpawned() then return end
         local npc = self:getNPC()
 
         if Game.GetWorkspotSystem():GetExtendedInfo(npc).exiting or not Game.GetWorkspotSystem():IsActorInWorkspot(npc) then
             Game.GetWorkspotSystem():SendFastExitSignal(npc, Vector3.new(), false, false, true)
-            Cron.After(0.1, function ()
+            Cron.After(0.5, function ()
                 local npc = self:getNPC()
                 local ent = self:getEntity()
                 if not npc or not ent then return end
@@ -147,10 +149,11 @@ function aiSpot:spawn()
     visualized.spawn(self)
     self.spawnData = worspot
 
-    cache.tryGet(self.spawnData .. "_rigs")
+    cache.tryGet(self.spawnData .. "_rigs", self.spawnData .. "_infinite")
     .notFound(function (task)
         builder.registerLoadResource(self.spawnData, function(resource)
             local rigs = {}
+            local infinite = false
 
             for _, set in ipairs(resource.workspotTree.finalAnimsets) do
                 table.insert(rigs, ResRef.FromHash(set.rig.hash):ToString())
@@ -158,11 +161,23 @@ function aiSpot:spawn()
 
             cache.addValue(self.spawnData .. "_rigs", rigs)
 
+            if resource.workspotTree.rootEntry:IsA("workIContainerEntry") then
+                for _, entry in pairs(resource.workspotTree.rootEntry.list) do
+                    if entry:IsA("workSequence") and entry.loopInfinitely then
+                        infinite = true
+                        break
+                    end
+                end
+            end
+
+            cache.addValue(self.spawnData .. "_infinite", infinite)
+
             task:taskCompleted()
         end)
     end)
     .found(function ()
         self.rigs = cache.getValue(self.spawnData .. "_rigs")
+        self.workspotDefInfinite = cache.getValue(self.spawnData .. "_infinite")
     end)
 end
 
@@ -317,8 +332,14 @@ function aiSpot:draw()
     style.mutedText("Is Infinite")
     ImGui.SameLine()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.isWorkspotInfinite, _ = style.trackedCheckbox(self.object, "##isWorkspotInfinite", self.isWorkspotInfinite)
+    self.isWorkspotInfinite, _ = style.trackedCheckbox(self.object, "##isWorkspotInfinite", self.isWorkspotInfinite, self.workspotDefInfinite)
     style.tooltip("If checked, the NPC will use this spot indefinitely, while streamed in.\nIf unchecked, the NPC will walk to the next spot defined in its community entry.")
+
+    if self.workspotDefInfinite then
+        ImGui.SameLine()
+        style.styledText(IconGlyphs.AlertOutline, 0xFF0000FF)
+        style.tooltip("This workspot file definition is infinite by default.\nSetting would not have any affect.")
+    end
 
     style.mutedText("Is Static")
     ImGui.SameLine()
@@ -359,6 +380,49 @@ function aiSpot:getProperties()
             self:draw()
         end
     })
+    return properties
+end
+
+function aiSpot:getGroupedProperties()
+    local properties = visualized.getGroupedProperties(self)
+
+    properties["aiSpotGrouped"] = {
+		name = "AI Spot",
+        id = "aiSpotGrouped",
+		data = {
+            marking = ""
+        },
+		draw = function(element, entries)
+            if ImGui.Button("Remove all markings") then
+                history.addAction(history.getMultiSelectChange(entries))
+
+                for _, entry in ipairs(entries) do
+                    if entry.spawnable.node == self.node then
+                        entry.spawnable.markings = {}
+                    end
+                end
+            end
+            style.tooltip("Clears the markings list of all selected AISpot's.")
+
+            ImGui.SetNextItemWidth(150 * style.viewSize)
+            element.groupOperationData["aiSpotGrouped"].marking, _ = ImGui.InputTextWithHint("##markings", "Marking", element.groupOperationData["aiSpotGrouped"].marking, 100)
+
+            ImGui.SameLine()
+
+            if ImGui.Button("Add Marking") then
+                history.addAction(history.getMultiSelectChange(entries))
+
+                for _, entry in ipairs(entries) do
+                    if entry.spawnable.node == self.node then
+                        table.insert(entry.spawnable.markings, element.groupOperationData["aiSpotGrouped"].marking)
+                    end
+                end
+            end
+            style.tooltip("Adds the specified marking to the markings list of all selected AISpot's.")
+        end,
+		entries = { self.object }
+	}
+
     return properties
 end
 
