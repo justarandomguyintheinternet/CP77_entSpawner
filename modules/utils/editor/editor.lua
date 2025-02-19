@@ -618,13 +618,15 @@ function editor.updateDrag()
 end
 
 function editor.getForward(distance)
-    -- if editor.active then
-
-    -- end
-
-    -- local x = settings.tabSizes[tabs[baseUI.activeTab].id]
-
     local forward = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation():GetForward()
+
+    if editor.active then
+        local screenWidth, _ = GetDisplayResolution()
+        local x = (screenWidth - settings.editorWidth) / 2
+
+        _, forward = editor.camera.screenToWorld((x / screenWidth * 2) - 1, 0)
+    end
+
     local position = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
 
     return utils.addVector(position, utils.multVector(forward, distance))

@@ -23,6 +23,7 @@ local history = require("modules/utils/history")
 local input = require("modules/utils/input")
 local registry = require("modules/utils/nodeRefRegistry")
 local rht = require("modules/utils/rhtPlugin")
+local hud = require("modules/utils/hud")
 
 ---@class spawner
 ---@field runtimeData {cetOpen: boolean, inGame: boolean, inMenu: boolean}
@@ -89,14 +90,22 @@ function spawner:new()
         self.GameUI.OnSessionStart(function()
             self.runtimeData.inGame = true
             self.baseUI.spawnedUI.root:setVisible(true, false)
+            hud.addHUDText("previewApp", 30, 730, 180)
+            hud.addHUDText("previewSize", 30, 730, 225)
         end)
 
         self.GameUI.OnSessionEnd(function()
             self.runtimeData.inGame = false
             self.baseUI.spawnedUI.root:setVisible(false, false)
+            hud.elements = {}
         end)
 
         self.runtimeData.inGame = not self.GameUI.IsDetached()
+
+        if self.runtimeData.inGame then
+            hud.addHUDText("previewApp", 30, 730, 180)
+            hud.addHUDText("previewSize", 30, 730, 225)
+        end
     end)
 
     registerForEvent("onUpdate", function (dt)

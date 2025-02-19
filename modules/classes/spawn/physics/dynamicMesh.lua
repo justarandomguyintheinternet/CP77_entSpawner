@@ -17,7 +17,6 @@ function dynamicMesh:new()
     o.spawnDataPath = "data/spawnables/mesh/physics/"
     o.node = "worldDynamicMeshNode"
     o.description = "Places a mesh with simulated physics, from a given .mesh file. Not destructible."
-    o.previewNote = "Dynamic meshes do not have simulated physics in the editor"
     o.icon = IconGlyphs.CubeSend
 
     o.startAsleep = true
@@ -35,26 +34,30 @@ function dynamicMesh:onAssemble(entity)
     component.mesh = ResRef.FromString(self.spawnData)
     component.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
     component.meshAppearance = self.app
-    component.simulationType = physicsSimulationType.Dynamic
 
-    local filterData = physicsFilterData.new()
-    filterData.preset = "World Dynamic"
+    if not self.isAssetPreview then
+        component.simulationType = physicsSimulationType.Dynamic
 
-    local query = physicsQueryFilter.new()
-    query.mask1 = 0
-    query.mask2 = 70107400
+        local filterData = physicsFilterData.new()
+        filterData.preset = "World Dynamic"
 
-    local sim = physicsSimulationFilter.new()
-    sim.mask1 = 114696
-    sim.mask2 = 23627
+        local query = physicsQueryFilter.new()
+        query.mask1 = 0
+        query.mask2 = 70107400
 
-    filterData.queryFilter = query
-    filterData.simulationFilter = sim
-    component.filterData = filterData
+        local sim = physicsSimulationFilter.new()
+        sim.mask1 = 114696
+        sim.mask2 = 23627
+
+        filterData.queryFilter = query
+        filterData.simulationFilter = sim
+        component.filterData = filterData
+    end
 
     entity:AddComponent(component)
 
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
+    mesh.assetPreviewAssemble(self, entity)
 end
 
 function dynamicMesh:save()

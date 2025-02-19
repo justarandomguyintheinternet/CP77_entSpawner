@@ -1,6 +1,7 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local style = require("modules/ui/style")
 local intersection = require("modules/utils/editor/intersection")
+local preview = require("modules/utils/previewUtils")
 
 ---Class for worldStaticDecalNode
 ---@class decal : spawnable
@@ -55,20 +56,23 @@ function decal:onAssemble(entity)
 end
 
 function decal:getAssetPreviewPosition()
-    return spawnable.getAssetPreviewPosition(self, 0.2)
+    return spawnable.getAssetPreviewPosition(self, 0.5)
 end
 
 function decal:assetPreviewAssemble(entity)
     if not self.isAssetPreview then return end
 
     local component = entMeshComponent.new()
-    component.name = "mesh"
-    component.mesh = ResRef.FromString("engine\\meshes\\editor\\cube.mesh")
-    component.visualScale = Vector3.new(0.2, 0.01, 0.2)
+    component.name = "backdrop"
+    component.mesh = ResRef.FromString("base\\spawner\\base_grid.w2mesh")
+    component.visualScale = Vector3.new(0.05, 0.05, 0.05)
+    component:SetLocalOrientation(EulerAngles.new(0, 90, 180):ToQuat())
     entity:AddComponent(component)
 
+    preview.addLight(entity, 5, 0.75, 1)
+
     local decal = entity:FindComponentByName("decal")
-    decal.visualScale = Vector3.new(0.2, 0.2, 0.2)
+    decal.visualScale = Vector3.new(0.5, 0.5, 0.5)
     decal:SetLocalOrientation(EulerAngles.new(0, 90, 180):ToQuat())
 end
 

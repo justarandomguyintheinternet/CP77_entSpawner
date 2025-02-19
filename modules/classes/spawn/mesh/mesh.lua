@@ -6,6 +6,9 @@ local cache = require("modules/utils/cache")
 local visualizer = require("modules/utils/visualizer")
 local history = require("modules/utils/history")
 local intersection = require("modules/utils/editor/intersection")
+local Cron = require("modules/utils/Cron")
+local hud = require("modules/utils/hud")
+local preview = require("modules/utils/previewUtils")
 
 local colliderShapes = { "Box", "Capsule", "Sphere" }
 
@@ -18,6 +21,7 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@field public colliderShape integer
 ---@field public hideGenerate boolean
 ---@field private bBoxLoaded boolean
+---@field private assetStartTime number
 local mesh = setmetatable({}, { __index = spawnable })
 
 function mesh:new()
@@ -40,6 +44,10 @@ function mesh:new()
     o.colliderShape = 0
     o.hideGenerate = false
 
+    o.assetPreviewType = "backdrop"
+    o.assetPreviewDelay = 0.1
+    o.assetStartTime = 0
+
     o.uk10 = 1040
 
     setmetatable(o, { __index = self })
@@ -49,17 +57,12 @@ end
 function mesh:loadSpawnData(data, position, rotation)
     spawnable.loadSpawnData(self, data, position, rotation)
 
-    -- Get from cache
-    self.apps = cache.getValue(self.spawnData .. "_apps")
-    self.bBox.max = cache.getValue(self.spawnData .. "_bBox_max")
-    self.bBox.min = cache.getValue(self.spawnData .. "_bBox_min")
-
-    -- Something is missing
-    if (not self.apps) or (not self.bBox.max) or (not self.bBox.min) then
+    cache.tryGet(self.spawnData .. "_apps", self.spawnData .. "_bBox_max", self.spawnData .. "_bBox_min")
+    .notFound(function (task)
         self.bBox.max = Vector4.new(0.5, 0.5, 0.5, 0) -- Temp values, so that onAssemble//updateScale can work
         self.bBox.min = Vector4.new(-0.5, -0.5, -0.5, 0)
-
         self.apps = {}
+
         builder.registerLoadResource(self.spawnData, function (resource)
             for _, appearance in ipairs(resource.appearances) do
                 table.insert(self.apps, appearance.name.value)
@@ -74,14 +77,20 @@ function mesh:loadSpawnData(data, position, rotation)
             cache.addValue(self.spawnData .. "_bBox_max", utils.fromVector(self.bBox.max))
             cache.addValue(self.spawnData .. "_bBox_min", utils.fromVector(self.bBox.min))
             self.bBoxLoaded = true
-        end)
-    else
-        self.bBox.max = ToVector4(self.bBox.max)
-        self.bBox.min = ToVector4(self.bBox.min)
-        self.bBoxLoaded = true
-    end
 
-    self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
+            task:taskCompleted()
+
+            if self:isSpawned() and self.isAssetPreview then
+                self:assetPreviewSetPosition()
+            end
+        end)
+    end)
+    .found(function ()
+        self.apps = cache.getValue(self.spawnData .. "_apps")
+        self.bBox.max = cache.getValue(self.spawnData .. "_bBox_max")
+        self.bBox.min = cache.getValue(self.spawnData .. "_bBox_min")
+        self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
+    end)
 end
 
 function mesh:onAssemble(entity)
@@ -94,6 +103,63 @@ function mesh:onAssemble(entity)
     entity:AddComponent(component)
 
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
+
+    self:assetPreviewAssemble(entity)
+end
+
+function mesh:getAssetPreviewPosition()
+    -- Scale mesh to fit
+    local mesh = self:getEntity():FindComponentByName("mesh")
+    local extents = { self.bBox.max.x - self.bBox.min.x, self.bBox.max.y - self.bBox.min.y, self.bBox.max.z - self.bBox.min.z }
+    local factor = 0.275 / math.max(table.unpack(extents))
+
+    self.scale = { x = factor, y = factor, z = factor }
+    mesh.visualScale = Vector3.new(factor, factor, factor)
+
+    -- Calculate rotation and cycle app
+    local rotation = (((Cron.time - self.assetStartTime) % 4) / 4) * 360
+    local app = math.floor((((Cron.time - self.assetStartTime) % (#self.apps)) / (#self.apps)) * #self.apps)
+    if app ~= self.appIndex then
+        self.appIndex = app
+        self.app = self.apps[self.appIndex + 1]
+        mesh.meshAppearance = CName.new(self.app)
+        mesh:LoadAppearance()
+    end
+
+    mesh:SetLocalOrientation(EulerAngles.new(0, 7.5, rotation):ToQuat())
+
+    -- Adjust for offcenter bbox, and adjust for rotation
+    local diff = utils.subVector(self.position, self:getCenter())
+    diff = self.rotation:ToQuat():TransformInverse(diff)
+    diff = Vector4.RotateAxis(diff, Vector4.new(0, 0, 1, 0), Deg2Rad(rotation))
+    diff.y = diff.y + 0.275
+
+    mesh:SetLocalPosition(diff)
+
+    hud.elements["previewApp"]:SetText("Appearance: " .. self.app)
+    hud.elements["previewSize"]:SetText(("Size: X=%.2fm Y=%.2fm Z=%.2fm"):format(extents[1], extents[2], extents[3]))
+
+    return spawnable.getAssetPreviewPosition(self, 0.75)
+end
+
+function mesh:assetPreviewAssemble(entity)
+    if not self.isAssetPreview then return end
+
+    local component = entMeshComponent.new()
+    component.name = "backdrop"
+    component.mesh = ResRef.FromString("base\\spawner\\base_grid.w2mesh")
+    component.visualScale = Vector3.new(0.08, 0.08, 0.05)
+    component.renderingPlane = ERenderingPlane.RPl_Weapon
+    component:SetLocalOrientation(EulerAngles.new(0, 90, 180):ToQuat())
+    entity:AddComponent(component)
+    preview.addLight(entity, 7.55, 0.75, 1)
+
+    local mesh = entity:FindComponentByName("mesh")
+    mesh.renderingPlane = ERenderingPlane.RPl_Weapon
+
+    hud.elements["previewApp"]:SetVisible(true)
+    hud.elements["previewSize"]:SetVisible(true)
+    self.assetStartTime = Cron.time
 end
 
 function mesh:spawn()

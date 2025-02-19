@@ -37,6 +37,8 @@ end
 function rotatingMesh:onAssemble(entity)
     mesh.onAssemble(self, entity)
 
+    if self.isAssetPreview then return end
+
     self.cronID = Cron.OnUpdate(function ()
         local entity = self:getEntity()
 

@@ -443,6 +443,14 @@ function spawnUI.draw()
             if ImGui.Button(utils.shortenPath(buttonText, xSpace - ImGui.GetCursorPosX(), true)) and not ImGui.IsMouseDragging(0, 0.6) then
                 local class = spawnUI.getActiveSpawnList().class
                 entry.lastSpawned = spawnUI.spawnNew(entry, class)
+
+                -- Despawn the preview
+                if spawnUI.previewTimer then
+                    Cron.Halt(spawnUI.previewTimer)
+                end
+                if spawnUI.previewInstance then
+                    spawnUI.previewInstance:assetPreview(false)
+                end
             elseif ImGui.IsMouseDragging(0, 0.6) and not spawnUI.dragging and ImGui.IsItemHovered() then
                 spawnUI.dragging = true
                 spawnUI.dragData = entry

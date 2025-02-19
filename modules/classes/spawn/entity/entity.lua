@@ -8,6 +8,8 @@ local red = require("modules/utils/redConverter")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 local registry = require("modules/utils/nodeRefRegistry")
+local Cron = require("modules/utils/Cron")
+local hud = require("modules/utils/hud")
 
 ---Class for base entity handling
 ---@class entity : spawnable
@@ -46,6 +48,8 @@ function entity:new()
     o.propertiesMaxWidth = nil
 
     o.assetPreviewType = "backdrop"
+    o.assetPreviewDelay = 0.1
+    o.assetPreviewStartTime = 0
 
     o.uk10 = 1056
 
@@ -144,6 +148,8 @@ function entity:onAssemble(entRef)
             end
         end
     end
+
+    self:assetPreviewAssemble(entRef)
 end
 
 function entity:onAttached(entRef)

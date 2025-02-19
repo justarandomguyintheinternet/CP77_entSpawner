@@ -2,7 +2,7 @@ local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 
-local minScriptVersion = "1.0.2"
+local minScriptVersion = "1.0.3"
 local sectorCategory
 
 exportUI = {

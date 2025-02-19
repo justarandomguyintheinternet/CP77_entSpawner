@@ -6,6 +6,7 @@ local history = require("modules/utils/history")
 local intersection = require("modules/utils/editor/intersection")
 local registry = require("modules/utils/nodeRefRegistry")
 local editor = require("modules/utils/editor/editor")
+local hud = require("modules/utils/hud")
 
 ---Base class for any object / node that can be spawned
 ---@class spawnable
@@ -327,6 +328,7 @@ end
 function spawnable:getAssetPreviewPosition(distance)
     if self.assetPreviewType == "backdrop" then
         return editor.getForward(distance or 1)
+        -- TODO: Adjust HUD text
     end
     return self.position
 end
@@ -356,6 +358,10 @@ function spawnable:assetPreview(state)
         end)
         self.position = original
     else
+        if self.assetPreviewType == "backdrop" then
+            hud.elements["previewApp"]:SetVisible(false)
+            hud.elements["previewSize"]:SetVisible(false)
+        end
         self:despawn()
     end
 end
