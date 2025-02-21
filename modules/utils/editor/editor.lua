@@ -624,7 +624,10 @@ function editor.getForward(distance)
         local screenWidth, _ = GetDisplayResolution()
         local x = (screenWidth - settings.editorWidth) / 2
 
-        _, forward = editor.camera.screenToWorld((x / screenWidth * 2) - 1, 0)
+        local _, adjusted = editor.camera.screenToWorld((x / screenWidth * 2) - 1, 0)
+        adjusted = adjusted:Normalize()
+        distance = distance / math.cos(math.rad(Vector4.GetAngleBetween(forward, adjusted)))
+        forward = adjusted
     end
 
     local position = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()

@@ -9,6 +9,7 @@ local intersection = require("modules/utils/editor/intersection")
 local Cron = require("modules/utils/Cron")
 local hud = require("modules/utils/hud")
 local preview = require("modules/utils/previewUtils")
+local editor = require("modules/utils/editor/editor")
 
 local colliderShapes = { "Box", "Capsule", "Sphere" }
 
@@ -107,6 +108,11 @@ function mesh:onAssemble(entity)
     self:assetPreviewAssemble(entity)
 end
 
+function mesh:getAssetPreviewTextAnchor()
+    print(utils.addVector(self.position, self.rotation:ToQuat():Transform(Vector4.new(0.4, 0, 0.4, 0))))
+    return utils.addVector(self.position, self.rotation:ToQuat():Transform(Vector4.new(0.4, 0, 0.4, 0)))
+end
+
 function mesh:getAssetPreviewPosition()
     -- Scale mesh to fit
     local mesh = self:getEntity():FindComponentByName("mesh")
@@ -133,11 +139,19 @@ function mesh:getAssetPreviewPosition()
     diff = self.rotation:ToQuat():TransformInverse(diff)
     diff = Vector4.RotateAxis(diff, Vector4.new(0, 0, 1, 0), Deg2Rad(rotation))
     diff.y = diff.y + 0.275
+    if editor.active then
+        diff.x = diff.x - 0.065
+    end
+
+    if extents[3] < 0.02 then
+        diff.z = diff.z - 0.075
+    end
 
     mesh:SetLocalPosition(diff)
 
-    hud.elements["previewApp"]:SetText("Appearance: " .. self.app)
-    hud.elements["previewSize"]:SetText(("Size: X=%.2fm Y=%.2fm Z=%.2fm"):format(extents[1], extents[2], extents[3]))
+    hud.elements["previewFirstLine"]:SetText(".")
+    -- hud.elements["previewFirstLine"]:SetText("Appearance: " .. self.app)
+    hud.elements["previewSecondLine"]:SetText(("Size: X=%.2fm Y=%.2fm Z=%.2fm"):format(extents[1], extents[2], extents[3]))
 
     return spawnable.getAssetPreviewPosition(self, 0.75)
 end
@@ -154,11 +168,20 @@ function mesh:assetPreviewAssemble(entity)
     entity:AddComponent(component)
     preview.addLight(entity, 7.55, 0.75, 1)
 
+    local lightBlocker = entMeshComponent.new()
+    lightBlocker.name = "lightBlocker"
+    lightBlocker.mesh = ResRef.FromString("engine\\meshes\\editor\\sphere.w2mesh")
+    lightBlocker.visualScale = Vector3.new(1.65, 1.65, 1.65)
+    lightBlocker:SetLocalPosition(Vector4.new(0, 0.75, 0, 0))
+    entity:AddComponent(lightBlocker)
+
+    preview.addLight(entity, 7.55, 0.75, 1)
+
     local mesh = entity:FindComponentByName("mesh")
     mesh.renderingPlane = ERenderingPlane.RPl_Weapon
 
-    hud.elements["previewApp"]:SetVisible(true)
-    hud.elements["previewSize"]:SetVisible(true)
+    hud.elements["previewFirstLine"]:SetVisible(true)
+    hud.elements["previewSecondLine"]:SetVisible(true)
     self.assetStartTime = Cron.time
 end
 
@@ -190,6 +213,9 @@ function mesh:updateScale()
 
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
     self:setOutline(self.outline)
+
+    local x, y = editor.camera.worldToScreen(self.position)
+    print(x,y)
 end
 
 function mesh:getSize()

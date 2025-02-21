@@ -2,6 +2,9 @@ local spawnable = require("modules/classes/spawn/spawnable")
 local style = require("modules/ui/style")
 local intersection = require("modules/utils/editor/intersection")
 local preview = require("modules/utils/previewUtils")
+local cache = require("modules/utils/cache")
+local builder = require("modules/utils/entityBuilder")
+local hud = require("modules/utils/hud")
 
 ---Class for worldStaticDecalNode
 ---@class decal : spawnable
@@ -10,6 +13,7 @@ local preview = require("modules/utils/previewUtils")
 ---@field private verticalFlip boolean
 ---@field private autoHideDistance number
 ---@field private scale {x: number, y: number, z: number}
+---@field private isTiling boolean
 local decal = setmetatable({}, { __index = spawnable })
 
 function decal:new()
@@ -31,6 +35,7 @@ function decal:new()
 
     o.assetPreviewType = "backdrop"
     o.assetPreviewDelay = 0.05
+    o.isTiling = false
 
     setmetatable(o, { __index = self })
    	return o
@@ -56,6 +61,8 @@ function decal:onAssemble(entity)
 end
 
 function decal:getAssetPreviewPosition()
+    hud.elements["previewFirstLine"]:SetText("Is Tiling: " .. (self.isTiling and "True" or "False"))
+
     return spawnable.getAssetPreviewPosition(self, 0.5)
 end
 
@@ -65,15 +72,24 @@ function decal:assetPreviewAssemble(entity)
     local component = entMeshComponent.new()
     component.name = "backdrop"
     component.mesh = ResRef.FromString("base\\spawner\\base_grid.w2mesh")
-    component.visualScale = Vector3.new(0.05, 0.05, 0.05)
+    component.visualScale = Vector3.new(0.0535, 0.0535, 0.0535)
     component:SetLocalOrientation(EulerAngles.new(0, 90, 180):ToQuat())
     entity:AddComponent(component)
 
-    preview.addLight(entity, 5, 0.75, 1)
+    local lightBlocker = entMeshComponent.new()
+    lightBlocker.name = "lightBlocker"
+    lightBlocker.mesh = ResRef.FromString("engine\\meshes\\editor\\sphere.w2mesh")
+    lightBlocker.visualScale = Vector3.new(1.65, 1.65, 1.65)
+    lightBlocker:SetLocalPosition(Vector4.new(0, 0.75, 0, 0))
+    entity:AddComponent(lightBlocker)
+
+    preview.addLight(entity, 6, 0.75, 1)
 
     local decal = entity:FindComponentByName("decal")
     decal.visualScale = Vector3.new(0.5, 0.5, 0.5)
     decal:SetLocalOrientation(EulerAngles.new(0, 90, 180):ToQuat())
+
+    hud.elements["previewFirstLine"]:SetVisible(true)
 end
 
 function decal:spawn()
@@ -82,6 +98,27 @@ function decal:spawn()
 
     spawnable.spawn(self)
     self.spawnData = decal
+
+    cache.tryGet(self.spawnData .. "_tiling")
+    .notFound(function (task)
+        builder.registerLoadResource(self.spawnData, function(resource)
+            local tiling = false
+
+            for _, param in ipairs(resource.params) do
+                if param.name.value == "MaterialTiling" then
+                    tiling = true
+                    break
+                end
+            end
+
+            cache.addValue(self.spawnData .. "_tiling", tiling)
+
+            task:taskCompleted()
+        end)
+    end)
+    .found(function ()
+        self.isTiling = cache.getValue(self.spawnData .. "_tiling")
+    end)
 end
 
 function decal:save()

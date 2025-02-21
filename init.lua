@@ -90,8 +90,8 @@ function spawner:new()
         self.GameUI.OnSessionStart(function()
             self.runtimeData.inGame = true
             self.baseUI.spawnedUI.root:setVisible(true, false)
-            hud.addHUDText("previewApp", 30, 730, 180)
-            hud.addHUDText("previewSize", 30, 730, 225)
+            hud.addHUDText("previewFirstLine", 30, 730, 180)
+            hud.addHUDText("previewSecondLine", 30, 730, 225)
         end)
 
         self.GameUI.OnSessionEnd(function()
@@ -103,8 +103,8 @@ function spawner:new()
         self.runtimeData.inGame = not self.GameUI.IsDetached()
 
         if self.runtimeData.inGame then
-            hud.addHUDText("previewApp", 30, 730, 180)
-            hud.addHUDText("previewSize", 30, 730, 225)
+            hud.addHUDText("previewFirstLine", 30, 730, 180)
+            hud.addHUDText("previewSecondLine", 30, 730, 225)
         end
     end)
 

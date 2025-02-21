@@ -323,12 +323,27 @@ function spawnable:getGroupedProperties()
     return properties
 end
 
+---Returns the world position of the top left corner, which shall act as anchor for any HUD text of the asset preview
+function spawnable:getAssetPreviewTextAnchor()
+    return self.position
+end
+
 ---@protected
 ---@param distance number?
 function spawnable:getAssetPreviewPosition(distance)
     if self.assetPreviewType == "backdrop" then
-        return editor.getForward(distance or 1)
-        -- TODO: Adjust HUD text
+        local forward = editor.getForward(distance or 1)
+        if self.assetPreviewType == "backdrop" then
+            local x, y = editor.camera.worldToScreen(self:getAssetPreviewTextAnchor())
+
+            local width, height = GetDisplayResolution()
+            local rx, ry = (x + 1) * width / 2, (- y + 1) * height / 2
+            print(rx, ry)
+            hud.elements["previewFirstLine"]:SetTranslation(rx, ry)
+            -- hud.elements["previewSecondLine"]:SetVisible(false)
+        end
+
+        return forward
     end
     return self.position
 end
@@ -359,8 +374,8 @@ function spawnable:assetPreview(state)
         self.position = original
     else
         if self.assetPreviewType == "backdrop" then
-            hud.elements["previewApp"]:SetVisible(false)
-            hud.elements["previewSize"]:SetVisible(false)
+            hud.elements["previewFirstLine"]:SetVisible(false)
+            hud.elements["previewSecondLine"]:SetVisible(false)
         end
         self:despawn()
     end
