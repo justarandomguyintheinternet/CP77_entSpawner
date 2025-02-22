@@ -6,8 +6,8 @@ local history = require("modules/utils/history")
 local intersection = require("modules/utils/editor/intersection")
 local registry = require("modules/utils/nodeRefRegistry")
 local editor = require("modules/utils/editor/editor")
-local hud = require("modules/utils/hud")
 local GameSettings = require("modules/utils/GameSettings")
+local preview = require("modules/utils/previewUtils")
 
 ---Base class for any object / node that can be spawned
 ---@class spawnable
@@ -342,10 +342,11 @@ function spawnable:setAssetPreviewTextPostition()
     ry = ry + 20 * factor
     rx = rx + 20 * factor
 
-    hud.elements["previewFirstLine"]:SetTranslation(rx, ry)
-    hud.elements["previewSecondLine"]:SetTranslation(rx, ry + 40 * factor)
+    preview.elements["previewFirstLine"]:SetTranslation(rx, ry)
+    preview.elements["previewSecondLine"]:SetTranslation(rx, ry + 40 * factor)
 end
 
+---Position where the asset preview should be spawned, the actual entity position
 ---@protected
 ---@param distance number?
 function spawnable:getAssetPreviewPosition(distance)
@@ -359,7 +360,7 @@ end
 function spawnable:assetPreviewAssemble(entity)
 end
 
---Assumes entity is fully spawned and BBOX is loaded, set to proper position
+--Assumes entity is fully spawned and BBOX is loaded, set to proper position. Called each frame.
 function spawnable:assetPreviewSetPosition()
     self.position = self:getAssetPreviewPosition()
     self:update()
@@ -372,10 +373,12 @@ function spawnable:assetPreview(state)
     if self.assetPreviewType == "none" then return end
 
     if state then
+        -- Needed, to avoid text being off due to screen curvature effect
         if self.assetPreviewType == "backdrop" and editor.active then
             self.assetPreviewLensDistortion = GameSettings.Get("/accessibility/interface/LensDistortionOverride")
             GameSettings.Set("/accessibility/interface/LensDistortionOverride", true)
         end
+        -- Only move into position once bbox is loaded, see first assetPreviewSetPosition call
         local original = Vector4.new(self.position.x, self.position.y, self.position.z, 0)
         self.position = utils.addVector(GetPlayer():GetWorldPosition(), Vector4.new(0, 0, -50, 0))
         self:spawn()
@@ -386,8 +389,8 @@ function spawnable:assetPreview(state)
         self.position = original
     else
         if self.assetPreviewType == "backdrop" then
-            hud.elements["previewFirstLine"]:SetVisible(false)
-            hud.elements["previewSecondLine"]:SetVisible(false)
+            preview.elements["previewFirstLine"]:SetVisible(false)
+            preview.elements["previewSecondLine"]:SetVisible(false)
             if editor.active then GameSettings.Set("/accessibility/interface/LensDistortionOverride", self.assetPreviewLensDistortion) end
         end
         self:despawn()

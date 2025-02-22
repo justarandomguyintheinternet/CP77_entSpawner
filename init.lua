@@ -23,8 +23,7 @@ local history = require("modules/utils/history")
 local input = require("modules/utils/input")
 local registry = require("modules/utils/nodeRefRegistry")
 local rht = require("modules/utils/rhtPlugin")
-local hud = require("modules/utils/hud")
-local previewUtils = require("modules/utils/previewUtils")
+local preview = require("modules/utils/previewUtils")
 
 ---@class spawner
 ---@field runtimeData {cetOpen: boolean, inGame: boolean, inMenu: boolean}
@@ -91,19 +90,19 @@ function spawner:new()
         self.GameUI.OnSessionStart(function()
             self.runtimeData.inGame = true
             self.baseUI.spawnedUI.root:setVisible(true, false)
-            previewUtils.addHUD()
+            preview.addHUD()
         end)
 
         self.GameUI.OnSessionEnd(function()
             self.runtimeData.inGame = false
             self.baseUI.spawnedUI.root:setVisible(false, false)
-            hud.elements = {}
+            preview.elements = {}
         end)
 
         self.runtimeData.inGame = not self.GameUI.IsDetached()
 
         if self.runtimeData.inGame then
-            previewUtils.addHUD()
+            preview.addHUD()
         end
     end)
 

@@ -577,7 +577,6 @@ function spawnUI.spawnNew(entry, class)
 
         spawnUI.spawnNewBBoxCron = Cron.Every(0.05, function ()
             if new.spawnable.bBoxLoaded and new.spawnable:getEntity() then
-                print("insert")
                 Cron.After(0.1, function ()
                     local adjustedPos = utils.addVector(position, utils.multVector(normal, math.abs(new.spawnable:getBBox().min.z)))
                     new:setPosition(adjustedPos)

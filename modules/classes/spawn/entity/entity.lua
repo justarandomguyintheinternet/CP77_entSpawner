@@ -8,8 +8,6 @@ local red = require("modules/utils/redConverter")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 local registry = require("modules/utils/nodeRefRegistry")
-local Cron = require("modules/utils/Cron")
-local hud = require("modules/utils/hud")
 
 ---Class for base entity handling
 ---@class entity : spawnable

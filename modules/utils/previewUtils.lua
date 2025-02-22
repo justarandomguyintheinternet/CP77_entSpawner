@@ -1,6 +1,24 @@
-local hud = require("modules/utils/hud")
+local preview = {
+    elements = {}
+}
 
-local preview = {}
+function preview.addHUDText(key, size, x, y)
+    local text = inkText.new()
+    text:SetText("")
+    text:SetFontSize(size)
+    text:SetAnchor(inkEAnchor.TopLeft)
+    text:SetAnchorPoint(0.5, 0.5)
+    text:SetVisible(false)
+    text:SetFontFamily("base\\gameplay\\gui\\fonts\\orbitron\\orbitron.inkfontfamily")
+    text:SetStyle("base\\gameplay\\gui\\common\\main_colors.inkstyle")
+    text:BindProperty("tintColor", "MainColors.Blue")
+    text:SetTranslation(x, y)
+    text:SetFitToContent(false)
+    text:SetHorizontalAlignment(textHorizontalAlignment.Left)
+    text:Reparent(Game.GetInkSystem():GetLayer("inkHUDLayer"):GetVirtualWindow())
+
+    preview.elements[key] = text
+end
 
 function preview.addLight(entity, intensity, ev, distance)
     local component = gameLightComponent.new()
@@ -23,8 +41,16 @@ function preview.addHUD()
     local width, _ = GetDisplayResolution()
     local factor = width / 2560
 
-    hud.addHUDText("previewFirstLine", 30 * factor, 730, 180)
-    hud.addHUDText("previewSecondLine", 30 * factor, 730, 180 + 45 * factor)
+    preview.addHUDText("previewFirstLine", 30 * factor, 730, 180)
+    preview.addHUDText("previewSecondLine", 30 * factor, 730, 180 + 45 * factor)
+end
+
+function preview.getBackplaneSize(size)
+    return size / 10
+end
+
+function preview.getTopLeft(backplaneSize)
+    return backplaneSize / 2
 end
 
 return preview

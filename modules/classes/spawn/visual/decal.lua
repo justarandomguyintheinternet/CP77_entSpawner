@@ -1,10 +1,10 @@
 local spawnable = require("modules/classes/spawn/spawnable")
 local style = require("modules/ui/style")
 local intersection = require("modules/utils/editor/intersection")
-local preview = require("modules/utils/previewUtils")
 local cache = require("modules/utils/cache")
 local builder = require("modules/utils/entityBuilder")
-local hud = require("modules/utils/hud")
+local preview = require("modules/utils/previewUtils")
+local utils = require("modules/utils/utils")
 
 ---Class for worldStaticDecalNode
 ---@class decal : spawnable
@@ -60,8 +60,13 @@ function decal:onAssemble(entity)
     self:assetPreviewAssemble(entity)
 end
 
+function decal:getAssetPreviewTextAnchor()
+    local pos = preview.getTopLeft(0.535)
+    return utils.addVector(self.position, self.rotation:ToQuat():Transform(Vector4.new(pos, 0, pos, 0)))
+end
+
 function decal:getAssetPreviewPosition()
-    hud.elements["previewFirstLine"]:SetText("Is Tiling: " .. (self.isTiling and "True" or "False"))
+    preview.elements["previewFirstLine"]:SetText("Is Tiling: " .. (self.isTiling and "True" or "False"))
 
     return spawnable.getAssetPreviewPosition(self, 0.5)
 end
@@ -69,10 +74,11 @@ end
 function decal:assetPreviewAssemble(entity)
     if not self.isAssetPreview then return end
 
+    local size = preview.getBackplaneSize(0.535)
     local component = entMeshComponent.new()
     component.name = "backdrop"
     component.mesh = ResRef.FromString("base\\spawner\\base_grid.w2mesh")
-    component.visualScale = Vector3.new(0.0535, 0.0535, 0.0535)
+    component.visualScale = Vector3.new(size, size, size)
     component:SetLocalOrientation(EulerAngles.new(0, 90, 180):ToQuat())
     entity:AddComponent(component)
 
@@ -89,7 +95,7 @@ function decal:assetPreviewAssemble(entity)
     decal.visualScale = Vector3.new(0.5, 0.5, 0.5)
     decal:SetLocalOrientation(EulerAngles.new(0, 90, 180):ToQuat())
 
-    hud.elements["previewFirstLine"]:SetVisible(true)
+    preview.elements["previewFirstLine"]:SetVisible(true)
 end
 
 function decal:spawn()

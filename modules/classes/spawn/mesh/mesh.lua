@@ -7,7 +7,6 @@ local visualizer = require("modules/utils/visualizer")
 local history = require("modules/utils/history")
 local intersection = require("modules/utils/editor/intersection")
 local Cron = require("modules/utils/Cron")
-local hud = require("modules/utils/hud")
 local preview = require("modules/utils/previewUtils")
 
 local colliderShapes = { "Box", "Capsule", "Sphere" }
@@ -76,7 +75,6 @@ function mesh:loadSpawnData(data, position, rotation)
             cache.addValue(self.spawnData .. "_apps", self.apps)
             cache.addValue(self.spawnData .. "_bBox_max", utils.fromVector(self.bBox.max))
             cache.addValue(self.spawnData .. "_bBox_min", utils.fromVector(self.bBox.min))
-            self.bBoxLoaded = true
 
             task:taskCompleted()
 
@@ -90,6 +88,7 @@ function mesh:loadSpawnData(data, position, rotation)
         self.bBox.max = cache.getValue(self.spawnData .. "_bBox_max")
         self.bBox.min = cache.getValue(self.spawnData .. "_bBox_min")
         self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
+        self.bBoxLoaded = true
     end)
 end
 
@@ -108,7 +107,8 @@ function mesh:onAssemble(entity)
 end
 
 function mesh:getAssetPreviewTextAnchor()
-    return utils.addVector(self.position, self.rotation:ToQuat():Transform(Vector4.new(0.4, 0, 0.4, 0)))
+    local pos = preview.getTopLeft(0.8)
+    return utils.addVector(self.position, self.rotation:ToQuat():Transform(Vector4.new(pos, 0, pos, 0)))
 end
 
 function mesh:getAssetPreviewPosition()
@@ -125,7 +125,7 @@ function mesh:getAssetPreviewPosition()
     local app = math.floor((((Cron.time - self.assetStartTime) % (#self.apps)) / (#self.apps)) * #self.apps)
     if app ~= self.appIndex then
         self.appIndex = app
-        self.app = self.apps[self.appIndex + 1]
+        self.app = self.apps[self.appIndex + 1] or "default"
         mesh.meshAppearance = CName.new(self.app)
         mesh:LoadAppearance()
     end
@@ -148,8 +148,8 @@ function mesh:getAssetPreviewPosition()
 
     mesh:SetLocalPosition(diff)
 
-    hud.elements["previewFirstLine"]:SetText("Appearance: " .. self.app)
-    hud.elements["previewSecondLine"]:SetText(("Size: X=%.2fm Y=%.2fm Z=%.2fm"):format(extents[1], extents[2], extents[3]))
+    preview.elements["previewFirstLine"]:SetText("Appearance: " .. self.app)
+    preview.elements["previewSecondLine"]:SetText(("Size: X=%.2fm Y=%.2fm Z=%.2fm"):format(extents[1], extents[2], extents[3]))
 
     return position
 end
@@ -157,10 +157,11 @@ end
 function mesh:assetPreviewAssemble(entity)
     if not self.isAssetPreview then return end
 
+    local size = preview.getBackplaneSize(0.8)
     local component = entMeshComponent.new()
     component.name = "backdrop"
     component.mesh = ResRef.FromString("base\\spawner\\base_grid.w2mesh")
-    component.visualScale = Vector3.new(0.08, 0.08, 0.05)
+    component.visualScale = Vector3.new(size, size, size)
     component.renderingPlane = ERenderingPlane.RPl_Weapon
     component:SetLocalOrientation(EulerAngles.new(0, 90, 180):ToQuat())
     entity:AddComponent(component)
@@ -178,8 +179,8 @@ function mesh:assetPreviewAssemble(entity)
     local mesh = entity:FindComponentByName("mesh")
     mesh.renderingPlane = ERenderingPlane.RPl_Weapon
 
-    hud.elements["previewFirstLine"]:SetVisible(true)
-    hud.elements["previewSecondLine"]:SetVisible(true)
+    preview.elements["previewFirstLine"]:SetVisible(true)
+    preview.elements["previewSecondLine"]:SetVisible(true)
     self.assetStartTime = Cron.time
 end
 
@@ -292,7 +293,7 @@ function mesh:draw()
     style.tooltip("Select the mesh appearance")
     if changed and #self.apps > 0 then
         self.appIndex = index
-        self.app = self.apps[self.appIndex + 1]
+        self.app = self.apps[self.appIndex + 1] or "default"
 
         local entity = self:getEntity()
 
