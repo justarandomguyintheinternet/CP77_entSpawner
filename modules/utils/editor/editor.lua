@@ -619,12 +619,13 @@ end
 
 function editor.getForward(distance)
     local forward = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation():GetForward()
+    local relativeForward = Vector4.new(0, 1, 0, 0)
 
     if editor.active then
         local screenWidth, _ = GetDisplayResolution()
         local x = (screenWidth - settings.editorWidth) / 2
 
-        local _, adjusted = editor.camera.screenToWorld((x / screenWidth * 2) - 1, 0)
+        relativeForward, adjusted = editor.camera.screenToWorld((x / screenWidth * 2) - 1, 0)
         adjusted = adjusted:Normalize()
         distance = distance / math.cos(math.rad(Vector4.GetAngleBetween(forward, adjusted)))
         forward = adjusted
@@ -632,7 +633,7 @@ function editor.getForward(distance)
 
     local position = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
 
-    return utils.addVector(position, utils.multVector(forward, distance))
+    return utils.addVector(position, utils.multVector(forward, distance)), relativeForward
 end
 
 function editor.drawDepthSelect()

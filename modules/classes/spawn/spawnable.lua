@@ -7,6 +7,7 @@ local intersection = require("modules/utils/editor/intersection")
 local registry = require("modules/utils/nodeRefRegistry")
 local editor = require("modules/utils/editor/editor")
 local hud = require("modules/utils/hud")
+local GameSettings = require("modules/utils/GameSettings")
 
 ---Base class for any object / node that can be spawned
 ---@class spawnable
@@ -43,6 +44,7 @@ local hud = require("modules/utils/hud")
 ---@field public assetPreviewType string none|backdrop|current_position
 ---@field public assetPreviewDelay number
 ---@field public isAssetPreview boolean
+---@field private assetPreviewLensDistortion boolean
 local spawnable = {}
 
 function spawnable:new()
@@ -85,6 +87,7 @@ function spawnable:new()
     o.assetPreviewType = "none"
     o.assetPreviewDelay = 0.25
     o.isAssetPreview = false
+    o.assetPreviewLensDistortion = false
 
     o.object = object
 
@@ -328,22 +331,26 @@ function spawnable:getAssetPreviewTextAnchor()
     return self.position
 end
 
+--Should be called once getAssetPreviewTextAnchor will return the correct position (BBOX loaded)
+function spawnable:setAssetPreviewTextPostition()
+    local x, y = editor.camera.worldToScreen(self:getAssetPreviewTextAnchor())
+
+    local width, height = GetDisplayResolution()
+    local factor = width / 2560
+    local rx, ry = (x + 1) * width / 2, (- y + 1) * height / 2
+
+    ry = ry + 20 * factor
+    rx = rx + 20 * factor
+
+    hud.elements["previewFirstLine"]:SetTranslation(rx, ry)
+    hud.elements["previewSecondLine"]:SetTranslation(rx, ry + 40 * factor)
+end
+
 ---@protected
 ---@param distance number?
 function spawnable:getAssetPreviewPosition(distance)
     if self.assetPreviewType == "backdrop" then
-        local forward = editor.getForward(distance or 1)
-        if self.assetPreviewType == "backdrop" then
-            local x, y = editor.camera.worldToScreen(self:getAssetPreviewTextAnchor())
-
-            local width, height = GetDisplayResolution()
-            local rx, ry = (x + 1) * width / 2, (- y + 1) * height / 2
-            print(rx, ry)
-            hud.elements["previewFirstLine"]:SetTranslation(rx, ry)
-            -- hud.elements["previewSecondLine"]:SetVisible(false)
-        end
-
-        return forward
+        return editor.getForward(distance or 1)
     end
     return self.position
 end
@@ -365,17 +372,23 @@ function spawnable:assetPreview(state)
     if self.assetPreviewType == "none" then return end
 
     if state then
+        if self.assetPreviewType == "backdrop" and editor.active then
+            self.assetPreviewLensDistortion = GameSettings.Get("/accessibility/interface/LensDistortionOverride")
+            GameSettings.Set("/accessibility/interface/LensDistortionOverride", true)
+        end
         local original = Vector4.new(self.position.x, self.position.y, self.position.z, 0)
         self.position = utils.addVector(GetPlayer():GetWorldPosition(), Vector4.new(0, 0, -50, 0))
         self:spawn()
         self:registerSpawnedAndAttachedCallback(function ()
             self:assetPreviewSetPosition()
+            self:setAssetPreviewTextPostition()
         end)
         self.position = original
     else
         if self.assetPreviewType == "backdrop" then
             hud.elements["previewFirstLine"]:SetVisible(false)
             hud.elements["previewSecondLine"]:SetVisible(false)
+            if editor.active then GameSettings.Set("/accessibility/interface/LensDistortionOverride", self.assetPreviewLensDistortion) end
         end
         self:despawn()
     end

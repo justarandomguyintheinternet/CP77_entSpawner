@@ -169,10 +169,10 @@ end
 function spawnedUI.registerHotkeys()
     input.registerImGuiHotkey({ ImGuiKey.Z, ImGuiKey.LeftCtrl }, function()
         history.undo()
-    end, hotkeyRunConditionProperties)
+    end)
     input.registerImGuiHotkey({ ImGuiKey.Y, ImGuiKey.LeftCtrl }, function()
         history.redo()
-    end, hotkeyRunConditionProperties)
+    end)
     input.registerImGuiHotkey({ ImGuiKey.A, ImGuiKey.LeftCtrl }, function()
         if spawnedUI.nameBeingEdited then return end
 
@@ -212,7 +212,7 @@ function spawnedUI.registerHotkeys()
         for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
             entry.ref:remove()
         end
-    end, hotkeyRunConditionProperties)
+    end, hotkeyRunConditionGlobal)
     input.registerImGuiHotkey({ ImGuiKey.D, ImGuiKey.LeftCtrl }, function()
         if #spawnedUI.selectedPaths == 0 then return end
 

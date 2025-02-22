@@ -9,7 +9,6 @@ local intersection = require("modules/utils/editor/intersection")
 local Cron = require("modules/utils/Cron")
 local hud = require("modules/utils/hud")
 local preview = require("modules/utils/previewUtils")
-local editor = require("modules/utils/editor/editor")
 
 local colliderShapes = { "Box", "Capsule", "Sphere" }
 
@@ -109,7 +108,6 @@ function mesh:onAssemble(entity)
 end
 
 function mesh:getAssetPreviewTextAnchor()
-    print(utils.addVector(self.position, self.rotation:ToQuat():Transform(Vector4.new(0.4, 0, 0.4, 0))))
     return utils.addVector(self.position, self.rotation:ToQuat():Transform(Vector4.new(0.4, 0, 0.4, 0)))
 end
 
@@ -138,22 +136,22 @@ function mesh:getAssetPreviewPosition()
     local diff = utils.subVector(self.position, self:getCenter())
     diff = self.rotation:ToQuat():TransformInverse(diff)
     diff = Vector4.RotateAxis(diff, Vector4.new(0, 0, 1, 0), Deg2Rad(rotation))
-    diff.y = diff.y + 0.275
-    if editor.active then
-        diff.x = diff.x - 0.065
-    end
 
+    -- Adjust for x offset in editor mode
+    local position, forward = spawnable.getAssetPreviewPosition(self, 0.75)
+    diff = utils.addVector(diff, utils.multVector(forward, 0.275))
+
+    -- Allow for better viewing of slim meshes
     if extents[3] < 0.02 then
         diff.z = diff.z - 0.075
     end
 
     mesh:SetLocalPosition(diff)
 
-    hud.elements["previewFirstLine"]:SetText(".")
-    -- hud.elements["previewFirstLine"]:SetText("Appearance: " .. self.app)
+    hud.elements["previewFirstLine"]:SetText("Appearance: " .. self.app)
     hud.elements["previewSecondLine"]:SetText(("Size: X=%.2fm Y=%.2fm Z=%.2fm"):format(extents[1], extents[2], extents[3]))
 
-    return spawnable.getAssetPreviewPosition(self, 0.75)
+    return position
 end
 
 function mesh:assetPreviewAssemble(entity)
@@ -213,9 +211,6 @@ function mesh:updateScale()
 
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
     self:setOutline(self.outline)
-
-    local x, y = editor.camera.worldToScreen(self.position)
-    print(x,y)
 end
 
 function mesh:getSize()

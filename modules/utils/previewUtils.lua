@@ -1,3 +1,5 @@
+local hud = require("modules/utils/hud")
+
 local preview = {}
 
 function preview.addLight(entity, intensity, ev, distance)
@@ -15,6 +17,14 @@ function preview.addLight(entity, intensity, ev, distance)
     component:SetLocalOrientation(EulerAngles.new(0, 0, 180):ToQuat())
     component:SetLocalPosition(Vector4.new(0, distance or 1, 0, 0))
     entity:AddComponent(component)
+end
+
+function preview.addHUD()
+    local width, _ = GetDisplayResolution()
+    local factor = width / 2560
+
+    hud.addHUDText("previewFirstLine", 30 * factor, 730, 180)
+    hud.addHUDText("previewSecondLine", 30 * factor, 730, 180 + 45 * factor)
 end
 
 return preview
