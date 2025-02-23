@@ -34,6 +34,7 @@ local config = require("modules/utils/config")
 ---@field public tabSizes table
 ---@field public defaultAISpotSpeed number
 ---@field public nodeRefPrefix string
+---@field public cacheExlusions table
 local settingsData = {
     spawnPos = 1,
     spawnDist = 1,
@@ -67,6 +68,7 @@ local settingsData = {
     defaultAISpotNPC = "Character.Judy",
     defaultAISpotSpeed = 3,
     nodeRefPrefix = "mod",
+    cacheExlusions = {},
 
     tabSizes = {}
 }

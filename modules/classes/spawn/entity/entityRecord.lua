@@ -30,19 +30,23 @@ function record:loadSpawnData(data, position, rotation)
     spawnable.loadSpawnData(self, data, position, rotation)
     local resRef = ResRef.FromHash(TweakDB:GetFlat(self.spawnData .. ".entityTemplatePath").hash)
 
-    self.apps = cache.getValue(self.spawnData)
-    if not self.apps then
-        self.apps = {}
+    cache.tryGet(self.spawnData .. "_apps")
+    .notFound(function (task)
         builder.registerLoadResource(resRef, function (resource)
+            local apps = {}
+
             for _, appearance in ipairs(resource.appearances) do
-                table.insert(self.apps, appearance.name.value)
+                table.insert(apps, appearance.name.value)
             end
-            cache.addValue(self.spawnData, self.apps)
-            self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
+
+            cache.addValue(self.spawnData .. "_apps", apps)
+            task:taskCompleted()
         end)
-    else
+    end)
+    .found(function ()
+        self.apps = cache.getValue(self.spawnData .. "_apps")
         self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
-    end
+    end)
 end
 
 function record:save()

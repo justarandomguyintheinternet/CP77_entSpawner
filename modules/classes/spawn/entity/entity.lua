@@ -58,18 +58,22 @@ end
 function entity:loadSpawnData(data, position, rotation)
     spawnable.loadSpawnData(self, data, position, rotation)
 
-    self.apps = cache.getValue(self.spawnData .. "_apps")
-    if not self.apps then
-        self.apps = {}
+    cache.tryGet(self.spawnData .. "_apps")
+    .notFound(function (task)
         builder.registerLoadResource(self.spawnData, function (resource)
-            for _, appearance in ipairs(resource.appearances) do
-                table.insert(self.apps, appearance.name.value)
-            end
-        end)
-        cache.addValue(self.spawnData .. "_apps", self.apps)
-    end
+            local apps = {}
 
-    self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
+            for _, appearance in ipairs(resource.appearances) do
+                table.insert(apps, appearance.name.value)
+            end
+            cache.addValue(self.spawnData .. "_apps", apps)
+            task:taskCompleted()
+        end)
+    end)
+    .found(function ()
+        self.apps = cache.getValue(self.spawnData .. "_apps")
+        self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
+    end)
 end
 
 local function CRUIDToString(id)

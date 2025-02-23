@@ -124,7 +124,7 @@ function aiSpot:onAssemble(entity)
             self:onNPCSpawned(entity)
         end)
 
-        cache.tryGet(self.previewNPC)
+        cache.tryGet(self.previewNPC .. "_apps")
         .notFound(function (task)
             builder.registerLoadResource(ResRef.FromHash(TweakDB:GetFlat(self.previewNPC .. ".entityTemplatePath").hash), function (resource)
                 local apps = {}
@@ -132,12 +132,12 @@ function aiSpot:onAssemble(entity)
                     table.insert(apps, appearance.name.value)
                 end
 
-                cache.addValue(self.previewNPC, apps)
+                cache.addValue(self.previewNPC .. "_apps", apps)
                 task:taskCompleted()
             end)
         end)
         .found(function ()
-            self.apps = cache.getValue(self.previewNPC)
+            self.apps = cache.getValue(self.previewNPC .. "_apps")
         end)
     end
 end

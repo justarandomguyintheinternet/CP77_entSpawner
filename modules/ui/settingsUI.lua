@@ -1,5 +1,6 @@
 local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
+local cache = require("modules/utils/cache")
 
 local colliderColors = { "Red", "Green", "Blue" }
 local outlineColors = { "Green", "Red", "Blue", "Orange", "Yellow", "Light Blue", "White", "Black" }
@@ -88,6 +89,44 @@ function settingsUI.draw()
 
     settings.colliderColor, changed = ImGui.Combo("Collider color", settings.colliderColor, colliderColors, #colliderColors)
     if changed then settings.save() end
+
+    style.sectionHeaderEnd()
+    style.sectionHeaderStart("CACHE")
+
+    if ImGui.TreeNodeEx("Cache Exlusions", ImGuiTreeNodeFlags.SpanFullWidth) then
+        local x, _ = ImGui.GetContentRegionAvail()
+        if ImGui.BeginChild("##list", -1, 115 * style.viewSize) then
+            x = x - (30 * style.viewSize) - (ImGui.GetScrollMaxY() > 0 and ImGui.GetStyle().ScrollbarSize or 0)
+            for key, exclusion in pairs(settings.cacheExlusions) do
+                ImGui.PushID(key)
+                ImGui.SetNextItemWidth(x)
+                settings.cacheExlusions[key], changed = ImGui.InputTextWithHint("##exclusion", "", exclusion, 128)
+                if changed then
+                    settings.save()
+                end
+                ImGui.SameLine()
+                if ImGui.Button(IconGlyphs.Delete) then
+                    table.remove(settings.cacheExlusions, key)
+                    settings.save()
+                end
+                ImGui.PopID()
+            end
+
+            if ImGui.Button("+") then
+                table.insert(settings.cacheExlusions, "")
+                settings.save()
+            end
+
+            ImGui.EndChild()
+        end
+
+        ImGui.TreePop()
+    end
+
+    if ImGui.Button("Clear cache") then
+        cache.reset()
+    end
+    style.tooltip("Clears the cache.")
 
     style.sectionHeaderEnd()
     style.sectionHeaderStart("MISC")

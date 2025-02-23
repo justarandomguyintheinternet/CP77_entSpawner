@@ -1,6 +1,7 @@
 local config = require("modules/utils/config")
 local tasks = require("modules/utils/tasks")
 local utils = require("modules/utils/utils")
+local settings = require("modules/utils/settings")
 
 local sanitizeSpawnData = false
 local data = {}
@@ -42,6 +43,10 @@ function cache.getValue(key)
         return utils.deepcopy(value)
     end
     return value
+end
+
+function cache.reset()
+    config.saveFile("data/cache.json", { version = version })
 end
 
 function cache.removeDuplicates(path)
@@ -97,6 +102,30 @@ function cache.generateDevicePSClassList()
     config.saveFile("deviceComponentPSClasses.json", utils.getDerivedClasses("gameDeviceComponent"))
 end
 
+local function shouldExclude(args)
+    local variants = {
+        "_apps",
+        "_rigs",
+        "_infinite",
+        "_tiling",
+        "_bBox_max",
+        "_bBox_min"
+    }
+
+    for _, arg in pairs(args) do
+        local name = arg
+        for _, variant in pairs(variants) do
+            name = name:gsub(variant, "")
+        end
+
+        for _, exclusion in pairs(settings.cacheExlusions) do
+            if name == exclusion then
+                return true
+            end
+        end
+    end
+end
+
 ---Tries to get the cached value for each key, if any of the keys is not cached, the notFound callback is called with a task object on which task:taskCompleted() must be called once the value has been put into the cache
 ---@param ... string List of keys to check
 ---@return table { notFound = function (notFoundCallback) -> { found = function (foundCallback) } }
@@ -110,6 +139,10 @@ function cache.tryGet(...)
         if not value then
             missing = true
         end
+    end
+
+    if shouldExclude(arg) then
+        missing = true
     end
 
     return {
