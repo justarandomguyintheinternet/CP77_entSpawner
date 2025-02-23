@@ -336,11 +336,13 @@ function entity:draw()
         ImGui.Text(self.deviceClassName)
         ImGui.SameLine()
 
+        ImGui.PushID("##copyDeviceClassName")
         style.pushButtonNoBG(true)
         if ImGui.Button(IconGlyphs.ContentCopy) then
             ImGui.SetClipboardText(self.deviceClassName)
         end
         style.pushButtonNoBG(false)
+        ImGui.PopID()
     end
 end
 

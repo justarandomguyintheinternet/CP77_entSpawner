@@ -13,7 +13,6 @@ local propertyNames = {
 ---@class device : entity
 ---@field public deviceConnections {deviceClassName : string, nodeRef : string}[]
 ---@field public connectionsHeaderState boolean
----@field public deviceClassName string
 ---@field public persistent boolean
 ---@field private maxPropertyWidth number?
 ---@field public controllerComponent string
@@ -31,7 +30,6 @@ function device:new()
 
     o.icon = IconGlyphs.DesktopClassic
 
-    o.deviceClassName = ""
     o.deviceConnections = {}
     o.connectionsHeaderState = false
     o.persistent = false
@@ -46,25 +44,10 @@ end
 function device:save()
     local data = entity.save(self)
     data.deviceConnections = utils.deepcopy(self.deviceConnections)
-    data.deviceClassName = self.deviceClassName
     data.persistent = self.persistent
     data.controllerComponent = self.controllerComponent
 
     return data
-end
-
-function device:onAssemble(entRef)
-    entity.onAssemble(self, entRef)
-
-    for _, component in pairs(entRef:GetComponents()) do
-        if component:IsA("gameDeviceComponent") then
-            self.controllerComponent = component.name.value
-
-            if self.deviceClassName == "" and component.persistentState then
-                self.deviceClassName = component.persistentState:GetClassName().value
-            end
-        end
-    end
 end
 
 function device:draw()
@@ -73,12 +56,6 @@ function device:draw()
     if not self.maxPropertyWidth then
         self.maxPropertyWidth = utils.getTextMaxWidth(propertyNames) + 4 * ImGui.GetStyle().ItemSpacing.x
     end
-
-    style.mutedText("Device Class Name")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.deviceClassName, _, _ = style.trackedTextField(self.object, "##nodeClassName", self.deviceClassName, "gameDeviceComponentPS", 150)
-    style.tooltip("Device class name of this device. Name of the gameDeviceComponentPS used in the gameDeviceComponent")
 
     style.mutedText("Persistent")
     ImGui.SameLine()
