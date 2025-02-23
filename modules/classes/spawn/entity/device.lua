@@ -2,6 +2,7 @@ local entity = require("modules/classes/spawn/entity/entity")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 local registry = require("modules/utils/nodeRefRegistry")
+local history = require("modules/utils/history")
 
 local propertyNames = {
     "Device Class Name",
@@ -106,10 +107,11 @@ function device:draw()
             connection.deviceClassName, _, _ = style.trackedTextField(self.object, "##className", connection.deviceClassName, "gameDeviceComponentPS", 150)
             style.tooltip("Device class name of the connected device. Name of the gameDeviceComponentPS used in the devices gameDeviceComponent")
             ImGui.SameLine()
-            connection.nodeRef, _ = registry.drawNodeRefSelector(style.getMaxWidth(250) - 30, connection.nodeRef, self.object, false)
+            connection.nodeRef, _ = registry.drawNodeRefSelector(style.getMaxWidth(250) - 30, connection.nodeRef, self.object, true)
             style.tooltip("NodeRef of the connected device. Can be set using \"World Node\" section of the target device")
             ImGui.SameLine()
             if ImGui.Button(IconGlyphs.Delete) then
+                history.addAction(history.getElementChange(self.object))
                 table.remove(self.deviceConnections, index)
             end
 
@@ -117,6 +119,7 @@ function device:draw()
         end
 
         if ImGui.Button("+") then
+            history.addAction(history.getElementChange(self.object))
             table.insert(self.deviceConnections, { deviceClassName = "", nodeRef = "" })
         end
 

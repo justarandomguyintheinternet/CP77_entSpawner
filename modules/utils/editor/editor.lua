@@ -131,7 +131,7 @@ function editor.init(spawner)
     end)
 
     input.registerImGuiHotkey({ ImGuiKey.G }, function ()
-        editor.toggleTransform("translate") -- TODO: CTRL-G somehow can enable this for groups
+        editor.toggleTransform("translate")
     end, viewportHovered)
 
     input.registerImGuiHotkey({ ImGuiKey.R }, function ()

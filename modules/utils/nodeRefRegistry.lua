@@ -59,12 +59,26 @@ function registry.drawNodeRefSelector(width, ref, object, record)
 
     ImGui.SetNextItemWidth(width * style.viewSize)
     if (ImGui.BeginCombo("##nodeRefSelector", ref)) then
-        local interiorWidth = width - 2 * ImGui.GetStyle().FramePadding.x
+        local interiorWidth = width - (2 * ImGui.GetStyle().FramePadding.x) - 30
         ref, _, finished = style.trackedTextField(object, "##noderef", ref, "$/#foobar", interiorWidth)
+        local x, _ = ImGui.GetItemRectSize()
 
-        if ImGui.BeginChild("##list", ImGui.GetItemRectSize(), 100 * style.viewSize) then
+        ImGui.SameLine()
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.Close) then
+            if record then
+                history.addAction(history.getElementChange(object))
+            end
+            ref = ""
+            finished = true
+        end
+        style.pushButtonNoBG(false)
+
+        local xButton, _ = ImGui.GetItemRectSize()
+        if ImGui.BeginChild("##list", x + xButton + ImGui.GetStyle().ItemSpacing.x, 100 * style.viewSize) then
             for _, node in pairs(registry.refs[object:getRootParent().name] or {}) do
-                if node.ref ~= object.spawnable.nodeRef and node.ref:match(ref) and ImGui.Selectable(utils.shortenPath(node.ref, ((width - 2 * ImGui.GetStyle().FramePadding.x) * style.viewSize) - (ImGui.GetScrollMaxY() > 0 and ImGui.GetStyle().ScrollbarSize or 0), false)) then
+                -- Show everything when "0" is selected, treat it like a wildcard
+                if (ref == "0" or node.ref:match(ref)) and node.ref ~= object.spawnable.nodeRef and ImGui.Selectable(utils.shortenPath(node.ref, ((width - 2 * ImGui.GetStyle().FramePadding.x) * style.viewSize) - (ImGui.GetScrollMaxY() > 0 and ImGui.GetStyle().ScrollbarSize or 0), false)) then
                     if record then
                         history.addAction(history.getElementChange(object))
                     end
