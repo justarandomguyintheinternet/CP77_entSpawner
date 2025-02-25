@@ -8,6 +8,8 @@ local red = require("modules/utils/redConverter")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 local registry = require("modules/utils/nodeRefRegistry")
+local Cron = require("modules/utils/Cron")
+local preview = require("modules/utils/previewUtils")
 
 ---Class for base entity handling
 ---@class entity : spawnable
@@ -21,6 +23,8 @@ local registry = require("modules/utils/nodeRefRegistry")
 ---@field public defaultComponentData table Default data for each component, regardless of whether it was changed. Keeps up to date with app changes
 ---@field public deviceClassName string
 ---@field public propertiesWidth table?
+---@field protected assetStartTime number
+---@field protected assetPreviewBackplane mesh?
 local entity = setmetatable({}, { __index = spawnable })
 
 function entity:new()
@@ -47,7 +51,9 @@ function entity:new()
 
     o.assetPreviewType = "backdrop"
     o.assetPreviewDelay = 0.1
-    o.assetPreviewStartTime = 0
+    o.assetStartTime = 0
+    o.previewMeshesPatched = false
+    o.assetPreviewBackplane = nil
 
     o.uk10 = 1056
 
@@ -175,9 +181,101 @@ function entity:onAttached(entRef)
     end)
 end
 
+function entity:getAssetPreviewPosition()
+    -- Not yet ready, leave off screen
+    if not self.bBoxLoaded or not self:isSpawned() then
+        return self.position, Vector4.new(0, 1, 0, 0)
+    end
+
+    local size = self:getSize()
+    local distance = math.max(size.x, size.y, size.z) * 1.5
+
+    local diff = utils.subVector(self.position, self:getCenter())
+    local position, forward = spawnable.getAssetPreviewPosition(self, distance)
+
+    if self.assetPreviewBackplane and self.assetPreviewBackplane:isSpawned() then
+        local meshPosition, _ = spawnable.getAssetPreviewPosition(self, 0.25)
+        self.assetPreviewBackplane.position = meshPosition
+        self.assetPreviewBackplane:update()
+    end
+
+    --Calculate rotation and cycle app, TODO: Pause cycle while not spawned / loading bbox
+    local app = math.floor((((Cron.time - self.assetStartTime) % math.max(1, #self.apps)) / math.max(1, #self.apps)) * #self.apps)
+    if app ~= self.appIndex then
+        self.appIndex = app
+        self.app = self.apps[self.appIndex + 1] or "default"
+
+        local ent = self:getEntity()
+        if ent then
+            self:respawn()
+        end
+    end
+
+    self.rotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.rotation:ToQuat(), Quaternion.SetAxisAngle(Vector4.new(0, 0, 1, 0), Deg2Rad(Cron.deltaTime * 50))):ToEulerAngles()
+    -- -- Adjust for x offset in editor mode
+    -- diff = utils.addVector(diff, utils.multVector(self.rotation:ToQuat():Transform(forward), 0.275))
+
+    -- Allow for better viewing of slim meshes, TODO: Make this dependent on relative scale of the other axis
+    if size.z < 0.02 then
+        diff = utils.addVector(diff, self.rotation:ToQuat():Transform(Vector4.new(0, 0, -0.1, 0)))
+    end
+
+    preview.elements["previewFirstLine"]:SetText("Appearance: " .. self.app)
+    preview.elements["previewSecondLine"]:SetText(("Size: X=%.2fm Y=%.2fm Z=%.2fm"):format(size.x, size.y, size.z))
+    position = utils.addVector(position, diff)
+
+    return position, forward
+end
+
+function entity:assetPreviewAssemble(entRef)
+    if not self.isAssetPreview then return end
+
+    for _, component in pairs(entRef:GetComponents()) do
+        if component:IsA("entMeshComponent") then
+            component.renderingPlane = ERenderingPlane.RPl_Weapon
+        end
+        if component:IsA("entPhysicalMeshComponent") or component:IsA("entColliderComponent") then
+            component.filterData = physicsFilterData.new()
+        end
+        if component:IsA("entISkinTargetComponent") or component:IsA("entPhysicalDestructionComponent") then
+            self.previewMeshesPatched = true
+            component:Toggle(false)
+
+            local mesh = entMeshComponent.new()
+            mesh.name = component.name.value .. "_copy"
+            mesh.id = component.id
+            mesh.mesh = component.mesh
+            mesh.meshAppearance = component.meshAppearance
+            mesh.renderingPlane = ERenderingPlane.RPl_Weapon
+            mesh:SetLocalTransform(component:GetLocalPosition(), component:GetLocalOrientation())
+            mesh.parentTransform = component.parentTransform
+            entRef:AddComponent(mesh)
+        end
+    end
+    -- self.assetStartTime = Cron.time
+
+    preview.elements["previewFirstLine"]:SetVisible(true)
+    preview.elements["previewSecondLine"]:SetVisible(true)
+    preview.elements["previewThirdLine"]:SetVisible(self.previewMeshesPatched)
+    preview.elements["previewThirdLine"]:SetText("Preview might be innacurate")
+end
+
 function entity:assetPreview(state)
     spawnable.assetPreview(self, state)
 
+    if state then
+        self.assetPreviewBackplane = require("modules/classes/spawn/mesh/mesh"):new()
+        local rot = utils.addEulerRelative(self.rotation, EulerAngles.new(0, -90, 0))
+
+        self.assetPreviewBackplane:loadSpawnData({ spawnData = "base\\spawner\\base_grid.w2mesh", scale = { x = 0.0275, y = 0.0275, z = 0.0275 } }, self.position, rot)
+        self.assetPreviewBackplane:spawn()
+    else
+        if self.assetPreviewBackplane then
+            self.assetPreviewBackplane:despawn()
+            self.assetPreviewBackplane = nil
+        end
+    end
+    self.assetStartTime = Cron.time
     self.spawnedAndCachedCallback = {}
 end
 

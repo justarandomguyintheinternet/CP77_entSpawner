@@ -10,6 +10,7 @@ local Cron = { version = '1.0.2' }
 local timers = {}
 local counter = 0
 Cron.time = 0
+Cron.deltaTime = 0
 
 ---@param timeout number
 ---@param recurring boolean
@@ -156,6 +157,7 @@ end
 ---@return void
 function Cron.Update(delta)
 	Cron.time = Cron.time + delta
+	Cron.deltaTime = delta
 	if #timers > 0 then
 		for i, timer in ipairs(timers) do
 			if timer.active then

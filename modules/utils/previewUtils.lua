@@ -2,7 +2,9 @@ local preview = {
     elements = {}
 }
 
-function preview.addHUDText(key, size, x, y)
+function preview.addHUDText(key, size, x, y, color)
+    color = color or "MainColors.Blue"
+
     local text = inkText.new()
     text:SetText("")
     text:SetFontSize(size)
@@ -11,7 +13,7 @@ function preview.addHUDText(key, size, x, y)
     text:SetVisible(false)
     text:SetFontFamily("base\\gameplay\\gui\\fonts\\orbitron\\orbitron.inkfontfamily")
     text:SetStyle("base\\gameplay\\gui\\common\\main_colors.inkstyle")
-    text:BindProperty("tintColor", "MainColors.Blue")
+    text:BindProperty("tintColor", color)
     text:SetTranslation(x, y)
     text:SetFitToContent(false)
     text:SetHorizontalAlignment(textHorizontalAlignment.Left)
@@ -43,6 +45,7 @@ function preview.addHUD()
 
     preview.addHUDText("previewFirstLine", 30 * factor, 730, 180)
     preview.addHUDText("previewSecondLine", 30 * factor, 730, 180 + 45 * factor)
+    preview.addHUDText("previewThirdLine", 30 * factor, 730, 180 + 90 * factor, "MainColors.Red")
 end
 
 function preview.getBackplaneSize(size)

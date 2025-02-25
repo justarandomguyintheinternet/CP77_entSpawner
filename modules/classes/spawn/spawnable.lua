@@ -344,6 +344,7 @@ function spawnable:setAssetPreviewTextPostition()
 
     preview.elements["previewFirstLine"]:SetTranslation(rx, ry)
     preview.elements["previewSecondLine"]:SetTranslation(rx, ry + 40 * factor)
+    preview.elements["previewThirdLine"]:SetTranslation(rx, ry + 80 * factor)
 end
 
 ---Position where the asset preview should be spawned, the actual entity position
@@ -379,18 +380,17 @@ function spawnable:assetPreview(state)
             GameSettings.Set("/accessibility/interface/LensDistortionOverride", true)
         end
         -- Only move into position once bbox is loaded, see first assetPreviewSetPosition call
-        local original = Vector4.new(self.position.x, self.position.y, self.position.z, 0)
-        self.position = utils.addVector(GetPlayer():GetWorldPosition(), Vector4.new(0, 0, -50, 0))
+        -- self.position = utils.addVector(GetPlayer():GetWorldPosition(), Vector4.new(0, 0, -50, 0)) -- TODO, fix for int_garbage_002__trash_packaging_c_stack
         self:spawn()
         self:registerSpawnedAndAttachedCallback(function ()
             self:assetPreviewSetPosition()
             self:setAssetPreviewTextPostition()
         end)
-        self.position = original
     else
         if self.assetPreviewType == "backdrop" then
             preview.elements["previewFirstLine"]:SetVisible(false)
             preview.elements["previewSecondLine"]:SetVisible(false)
+            preview.elements["previewThirdLine"]:SetVisible(false)
             if editor.active then GameSettings.Set("/accessibility/interface/LensDistortionOverride", self.assetPreviewLensDistortion) end
         end
         self:despawn()

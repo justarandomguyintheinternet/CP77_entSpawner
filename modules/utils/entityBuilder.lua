@@ -211,7 +211,7 @@ function builder.getEntityBBox(entity, callback)
         callback({ bBox = { min = bboxMin, max = bboxMax }, meshes = meshes }) -- Keep mesh for more accurate bbox check for entity
     end)
 
-    meshesTask.taskDelay = 0.1
+    meshesTask.taskDelay = 0.015
     meshesTask:run(true)
 end
 

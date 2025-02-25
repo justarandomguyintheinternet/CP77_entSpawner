@@ -94,13 +94,15 @@ function settingsUI.draw()
     style.sectionHeaderStart("CACHE")
 
     if ImGui.TreeNodeEx("Cache Exlusions", ImGuiTreeNodeFlags.SpanFullWidth) then
+        style.tooltip("List of resource paths for which properties (E.g. Appearances, BBOX) should not be cached")
+
         local x, _ = ImGui.GetContentRegionAvail()
         if ImGui.BeginChild("##list", -1, 115 * style.viewSize) then
             x = x - (30 * style.viewSize) - (ImGui.GetScrollMaxY() > 0 and ImGui.GetStyle().ScrollbarSize or 0)
             for key, exclusion in pairs(settings.cacheExlusions) do
                 ImGui.PushID(key)
                 ImGui.SetNextItemWidth(x)
-                settings.cacheExlusions[key], changed = ImGui.InputTextWithHint("##exclusion", "", exclusion, 128)
+                settings.cacheExlusions[key], changed = ImGui.InputTextWithHint("##exclusion", "base\\entity.ent", exclusion, 128)
                 if changed then
                     settings.save()
                 end
@@ -121,12 +123,14 @@ function settingsUI.draw()
         end
 
         ImGui.TreePop()
+    else
+        style.tooltip("List of resource paths for which properties (E.g. Appearances, BBOX) should not be cached")
     end
 
     if ImGui.Button("Clear cache") then
         cache.reset()
     end
-    style.tooltip("Clears the cache.")
+    style.tooltip("Clears the cache")
 
     style.sectionHeaderEnd()
     style.sectionHeaderStart("MISC")
