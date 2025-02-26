@@ -380,7 +380,7 @@ function spawnable:assetPreview(state)
             GameSettings.Set("/accessibility/interface/LensDistortionOverride", true)
         end
         -- Only move into position once bbox is loaded, see first assetPreviewSetPosition call
-        -- self.position = utils.addVector(GetPlayer():GetWorldPosition(), Vector4.new(0, 0, -50, 0)) -- TODO, fix for int_garbage_002__trash_packaging_c_stack
+        self.position = utils.addVector(GetPlayer():GetWorldPosition(), Vector4.new(0, 0, -50, 0))
         self:spawn()
         self:registerSpawnedAndAttachedCallback(function ()
             self:assetPreviewSetPosition()

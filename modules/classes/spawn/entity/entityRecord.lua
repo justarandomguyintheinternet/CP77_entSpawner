@@ -20,6 +20,8 @@ function record:new()
     o.node = "worldPopulationSpawnerNode"
     o.description = "Spawns an entity from a given TweakDB record"
 
+    o.assetPreviewType = "none"
+
     o.spawnOnStart = true
 
     setmetatable(o, { __index = self })

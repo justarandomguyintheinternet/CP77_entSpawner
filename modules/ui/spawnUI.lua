@@ -460,7 +460,7 @@ function spawnUI.draw()
                     spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
 
                     local class = spawnUI.getActiveSpawnList().class
-                    spawnUI.lastSpawned = spawnUI.spawnNew(spawnUI.dragData, class)
+                    spawnUI.dragData.lastSpawned = spawnUI.spawnNew(spawnUI.dragData, class)
                 end
 
                 spawnUI.dragging = false
@@ -599,7 +599,7 @@ function spawnUI.repeatLastSpawn()
     local ray = editor.getScreenToWorldRay()
     spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
 
-    spawnUI.lastSpawned = spawnUI.spawnNew(spawnUI.lastSpawnedEntry, spawnUI.lastSpawnedClass)
+    spawnUI.spawnNew(spawnUI.lastSpawnedEntry, spawnUI.lastSpawnedClass)
     spawnUI.spawnedUI.cachePaths()
     spawnUI.popupSpawnHit = nil
 end
@@ -658,7 +658,7 @@ function spawnUI.drawPopupVariant(typeName, variantName)
                     if ImGui.Button(utils.shortenPath(spawnUI.popupData[i].name, xSpace - ImGui.GetStyle().ItemSpacing.x * 3, true)) then
                         if not settings.spawnAtCursor then spawnUI.popupSpawnHit = nil end
                         local class = spawnData[typeName][variantName].class
-                        spawnUI.lastSpawned = spawnUI.spawnNew(spawnUI.popupData[i], class)
+                        spawnUI.popupData[i].lastSpawned = spawnUI.spawnNew(spawnUI.popupData[i], class)
                         ImGui.CloseCurrentPopup()
                     end
                     if ImGui.IsItemClicked(ImGuiMouseButton.Middle) then

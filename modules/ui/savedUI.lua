@@ -112,7 +112,7 @@ function savedUI.draw(spawner)
         if ImGui.Button("Import AMM Presets") then
             savedUI.importAMMPresets()
         end
-        style.tooltip("Imports all presets from the AMMImport folder.\nImport might take a bit, depending on size.\nThe initial spawn might crash for now.\nMight leave behind unwanted objects, so reloading a save is advised.")
+        style.tooltip("Imports all presets from the AMMImport folder.\nImport might take a bit, depending on size.\nThe initial spawn will lag.\nMight leave behind unwanted objects, so reloading a save is advised.")
     else
         ImGui.ProgressBar(amm.progress / amm.total, 200, 30, string.format("%.2f%%", (amm.progress / amm.total) * 100))
     end

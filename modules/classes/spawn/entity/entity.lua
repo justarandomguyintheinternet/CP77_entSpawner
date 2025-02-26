@@ -23,7 +23,7 @@ local preview = require("modules/utils/previewUtils")
 ---@field public defaultComponentData table Default data for each component, regardless of whether it was changed. Keeps up to date with app changes
 ---@field public deviceClassName string
 ---@field public propertiesWidth table?
----@field protected assetStartTime number
+---@field protected assetPreviewTimer number
 ---@field protected assetPreviewBackplane mesh?
 local entity = setmetatable({}, { __index = spawnable })
 
@@ -50,9 +50,8 @@ function entity:new()
     o.propertiesMaxWidth = nil
 
     o.assetPreviewType = "backdrop"
-    o.assetPreviewDelay = 0.1
-    o.assetStartTime = 0
-    o.previewMeshesPatched = false
+    o.assetPreviewDelay = 0.1 --TODO make longer once done
+    o.assetPreviewTimer = 0
     o.assetPreviewBackplane = nil
 
     o.uk10 = 1056
@@ -163,25 +162,43 @@ end
 function entity:onAttached(entRef)
     spawnable.onAttached(self, entRef)
 
-    builder.getEntityBBox(entRef, function (data)
-        utils.log("[Entity] Loaded initial BBOX for entity " .. self.spawnData .. " with " .. #data.meshes .. " meshes.")
-        self.bBox = data.bBox
-        self.meshes = data.meshes
+    Cron.After(0.1, function ()
+        builder.getEntityBBox(entRef, function (data)
+            utils.log("[Entity] Loaded initial BBOX for entity " .. self.spawnData .. " with " .. #data.meshes .. " meshes.")
+            self.bBox = data.bBox
+            self.meshes = data.meshes
 
-        visualizer.updateScale(entRef, self:getArrowSize(), "arrows")
+            visualizer.updateScale(entRef, self:getArrowSize(), "arrows")
 
-        if self.bBoxCallback then
-            self.bBoxCallback(entRef)
-        end
-        self.bBoxLoaded = true
+            if self.bBoxCallback then
+                self.bBoxCallback(entRef)
+            end
+            self.bBoxLoaded = true
 
-        if self.isAssetPreview then
-            self:assetPreviewSetPosition()
-        end
+            if self.isAssetPreview then
+                self:assetPreviewSetPosition()
+                self:setAssetPreviewTextPostition()
+            end
+        end)
     end)
 end
 
+function entity:getAssetPreviewTextAnchor()
+    if not self.assetPreviewBackplane then
+        return Vector4.new(1, 1, 0, 0)
+    end
+
+    local pos = preview.getTopLeft(0.275)
+    return utils.addVector(self.assetPreviewBackplane.position, utils.addEulerRelative(self.assetPreviewBackplane.rotation, EulerAngles.new(0, 90, 0)):ToQuat():Transform(Vector4.new(pos, 0, pos, 0)))
+end
+
 function entity:getAssetPreviewPosition()
+    if self.assetPreviewBackplane and self.assetPreviewBackplane:isSpawned() then
+        local meshPosition, _ = spawnable.getAssetPreviewPosition(self, 0.25)
+        self.assetPreviewBackplane.position = meshPosition
+        self.assetPreviewBackplane:update()
+    end
+
     -- Not yet ready, leave off screen
     if not self.bBoxLoaded or not self:isSpawned() then
         return self.position, Vector4.new(0, 1, 0, 0)
@@ -193,23 +210,19 @@ function entity:getAssetPreviewPosition()
     local diff = utils.subVector(self.position, self:getCenter())
     local position, forward = spawnable.getAssetPreviewPosition(self, distance)
 
-    if self.assetPreviewBackplane and self.assetPreviewBackplane:isSpawned() then
-        local meshPosition, _ = spawnable.getAssetPreviewPosition(self, 0.25)
-        self.assetPreviewBackplane.position = meshPosition
-        self.assetPreviewBackplane:update()
-    end
-
-    --Calculate rotation and cycle app, TODO: Pause cycle while not spawned / loading bbox
-    local app = math.floor((((Cron.time - self.assetStartTime) % math.max(1, #self.apps)) / math.max(1, #self.apps)) * #self.apps)
-    if app ~= self.appIndex then
-        self.appIndex = app
-        self.app = self.apps[self.appIndex + 1] or "default"
-
-        local ent = self:getEntity()
-        if ent then
+    self.assetPreviewTimer = self.assetPreviewTimer + Cron.deltaTime
+    if self.assetPreviewTimer > 1.5 then
+        self.assetPreviewTimer = 0
+        self.appIndex = (self.appIndex + 1) % (#self.apps + 1)
+        local new = self.apps[self.appIndex] or "default"
+        if new ~= self.app then
+            self.app = new
+            self.bBoxLoaded = false
             self:respawn()
         end
     end
+
+    -- alt character check crash
 
     self.rotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.rotation:ToQuat(), Quaternion.SetAxisAngle(Vector4.new(0, 0, 1, 0), Deg2Rad(Cron.deltaTime * 50))):ToEulerAngles()
     -- -- Adjust for x offset in editor mode
@@ -238,7 +251,6 @@ function entity:assetPreviewAssemble(entRef)
             component.filterData = physicsFilterData.new()
         end
         if component:IsA("entISkinTargetComponent") or component:IsA("entPhysicalDestructionComponent") then
-            self.previewMeshesPatched = true
             component:Toggle(false)
 
             local mesh = entMeshComponent.new()
@@ -252,12 +264,13 @@ function entity:assetPreviewAssemble(entRef)
             entRef:AddComponent(mesh)
         end
     end
-    -- self.assetStartTime = Cron.time
 
     preview.elements["previewFirstLine"]:SetVisible(true)
     preview.elements["previewSecondLine"]:SetVisible(true)
-    preview.elements["previewThirdLine"]:SetVisible(self.previewMeshesPatched)
-    preview.elements["previewThirdLine"]:SetText("Preview might be innacurate")
+    preview.elements["previewThirdLine"]:SetVisible(true)
+    preview.elements["previewFirstLine"]:SetText("Appearance: Loading...")
+    preview.elements["previewSecondLine"]:SetText("Size: Loading...")
+    preview.elements["previewThirdLine"]:SetText("Experimental preview")
 end
 
 function entity:assetPreview(state)
@@ -267,7 +280,9 @@ function entity:assetPreview(state)
         self.assetPreviewBackplane = require("modules/classes/spawn/mesh/mesh"):new()
         local rot = utils.addEulerRelative(self.rotation, EulerAngles.new(0, -90, 0))
 
-        self.assetPreviewBackplane:loadSpawnData({ spawnData = "base\\spawner\\base_grid.w2mesh", scale = { x = 0.0275, y = 0.0275, z = 0.0275 } }, self.position, rot)
+        local size = preview.getBackplaneSize(0.275)
+        local meshPosition, _ = spawnable.getAssetPreviewPosition(self, 0.25)
+        self.assetPreviewBackplane:loadSpawnData({ spawnData = "base\\spawner\\base_grid.w2mesh", scale = { x = size, y = size, z = size } }, meshPosition, rot)
         self.assetPreviewBackplane:spawn()
     else
         if self.assetPreviewBackplane then
@@ -275,7 +290,7 @@ function entity:assetPreview(state)
             self.assetPreviewBackplane = nil
         end
     end
-    self.assetStartTime = Cron.time
+
     self.spawnedAndCachedCallback = {}
 end
 
