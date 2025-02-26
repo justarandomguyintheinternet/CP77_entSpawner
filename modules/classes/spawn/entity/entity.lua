@@ -270,6 +270,8 @@ function entity:assetPreviewAssemble(entRef)
 end
 
 function entity:assetPreview(state)
+    if self.assetPreviewType == "none" then return end
+
     spawnable.assetPreview(self, state)
 
     if state then
