@@ -780,8 +780,10 @@ function editor.toggle(state)
         editor.hoveredArrow = "none"
         editor.grab = false
         Game.GetStatsSystem():RemoveModifier(GetPlayer():GetEntityID(), RPGManager.CreateStatModifier(gamedataStatType.KnockdownImmunity, gameStatModifierType.Additive, 1))
+        Game.GetStatsSystem():RemoveModifier(GetPlayer():GetEntityID(), RPGManager.CreateStatModifier(gamedataStatType.CanBreatheUnderwater, gameStatModifierType.Additive, 1))
     else
         Game.GetStatsSystem():AddModifier(GetPlayer():GetEntityID(), RPGManager.CreateStatModifier(gamedataStatType.KnockdownImmunity, gameStatModifierType.Additive, 1))
+        Game.GetStatsSystem():AddModifier(GetPlayer():GetEntityID(), RPGManager.CreateStatModifier(gamedataStatType.CanBreatheUnderwater, gameStatModifierType.Additive, 1))
         editor.addHighlightToSelected()
     end
 end

@@ -22,6 +22,9 @@ function particle:new()
     o.respawnOnMove = false
     o.previewColor = "magenta"
 
+    o.assetPreviewType = "position"
+    o.assetPreviewDelay = 0.1
+
     setmetatable(o, { __index = self })
    	return o
 end

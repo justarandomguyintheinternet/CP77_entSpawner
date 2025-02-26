@@ -152,9 +152,15 @@ function spawnUI.loadSpawnData(spawner)
             local variantInstance = variant.class:new()
             local info = { node = variantInstance.node, description = variantInstance.description, previewNote = variantInstance.previewNote }
             if variantInstance.spawnListType == "list" then
-                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = true, assetPreviewDelay = variantInstance.assetPreviewDelay }
+                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = true, assetPreviewDelay = variantInstance.assetPreviewDelay, assetPreviewType = variantInstance.assetPreviewType }
             else
-                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = false, assetPreviewDelay = variantInstance.assetPreviewDelay }
+                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = false, assetPreviewDelay = variantInstance.assetPreviewDelay, assetPreviewType = variantInstance.assetPreviewType }
+            end
+
+            if not settings.assetPreviewEnabled[dataName] then settings.assetPreviewEnabled[dataName] = {} end
+            if settings.assetPreviewEnabled[dataName][variantName] == nil then
+                settings.assetPreviewEnabled[dataName][variantName] = true
+                settings.save()
             end
         end
     end
@@ -341,7 +347,8 @@ function spawnUI.draw()
     tooltip("Automatically place any newly spawned object into the selected group")
 	ImGui.PopItemWidth()
 
-    if spawnUI.getActiveSpawnList().isPaths then
+    local activeList = spawnUI.getActiveSpawnList()
+    if activeList.isPaths then
         ImGui.Text("Strip paths")
         ImGui.SameLine()
         settings.spawnUIOnlyNames, changed = ImGui.Checkbox("##strip", settings.spawnUIOnlyNames)
@@ -349,6 +356,28 @@ function spawnUI.draw()
             spawnUI.refresh()
         end
         style.tooltip("Only show the name of the file, without the full path")
+    end
+
+    if activeList.assetPreviewType ~= "none" then
+        if activeList.isPaths then
+            ImGui.SameLine()
+        end
+        ImGui.Text("Asset Preview")
+        ImGui.SameLine()
+        settings.assetPreviewEnabled[typeNames[spawnUI.selectedType + 1]][variantNames[spawnUI.selectedVariant + 1]], changed = ImGui.Checkbox("##assetPreview", settings.assetPreviewEnabled[typeNames[spawnUI.selectedType + 1]][variantNames[spawnUI.selectedVariant + 1]])
+        if changed then
+            settings.save()
+        end
+        style.tooltip("Preview the asset when hovered. Is Experimental.")
+        if activeList.assetPreviewType == "backdrop" then
+            ImGui.SameLine()
+            style.mutedText(IconGlyphs.Checkerboard)
+            style.tooltip("Asset gets previewed with a backdrop")
+        else
+            ImGui.SameLine()
+            style.mutedText(IconGlyphs.AxisArrowInfo)
+            style.tooltip("Asset gets previewed at the same position it would spawn in")
+        end
     end
 
     spawnUI.drawSpawnPosition()
@@ -470,7 +499,7 @@ function spawnUI.draw()
             if ImGui.IsItemClicked(ImGuiMouseButton.Middle) then
                 ImGui.SetClipboardText(ImGui.SetClipboardText(entry.name))
             end
-            if ImGui.IsItemHovered() then
+            if ImGui.IsItemHovered() and settings.assetPreviewEnabled[typeNames[spawnUI.selectedType + 1]][variantNames[spawnUI.selectedVariant + 1]] then
                 spawnUI.handleAssetPreviewHovered(entry)
             elseif spawnUI.hoveredEntry == entry then
                 spawnUI.hoveredEntry = nil
@@ -491,6 +520,15 @@ function spawnUI.draw()
     end
 
     ImGui.EndChild()
+end
+
+function spawnUI.hidden()
+    spawnUI.hoveredEntry = nil
+    if spawnUI.previewTimer then
+        Cron.Halt(spawnUI.previewTimer)
+    else
+        spawnUI.previewInstance:assetPreview(false)
+    end
 end
 
 function spawnUI.getSpawnNewPosition()

@@ -18,6 +18,8 @@ function effect:new()
     o.icon = IconGlyphs.Creation
 
     o.previewColor = "brown"
+    o.assetPreviewType = "position"
+    o.assetPreviewDelay = 0.1
 
     o.disableCron = nil
 

@@ -85,7 +85,7 @@ function spawnable:new()
     o.outline = 0
 
     o.assetPreviewType = "none"
-    o.assetPreviewDelay = 0.25
+    o.assetPreviewDelay = 0.2
     o.isAssetPreview = false
     o.assetPreviewLensDistortion = false
 
@@ -379,8 +379,10 @@ function spawnable:assetPreview(state)
             self.assetPreviewLensDistortion = GameSettings.Get("/accessibility/interface/LensDistortionOverride")
             GameSettings.Set("/accessibility/interface/LensDistortionOverride", true)
         end
+        if self.assetPreviewType == "backdrop" then
+            self.position = utils.addVector(GetPlayer():GetWorldPosition(), Vector4.new(0, 0, -50, 0))
+        end
         -- Only move into position once bbox is loaded, see first assetPreviewSetPosition call
-        self.position = utils.addVector(GetPlayer():GetWorldPosition(), Vector4.new(0, 0, -50, 0))
         self:spawn()
         self:registerSpawnedAndAttachedCallback(function ()
             self:assetPreviewSetPosition()

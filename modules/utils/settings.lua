@@ -35,6 +35,7 @@ local config = require("modules/utils/config")
 ---@field public defaultAISpotSpeed number
 ---@field public nodeRefPrefix string
 ---@field public cacheExlusions table
+---@field public assetPreviewEnabled table
 local settingsData = {
     spawnPos = 1,
     spawnDist = 1,
@@ -69,6 +70,7 @@ local settingsData = {
     defaultAISpotSpeed = 3,
     nodeRefPrefix = "mod",
     cacheExlusions = {},
+    assetPreviewEnabled = {},
 
     tabSizes = {}
 }

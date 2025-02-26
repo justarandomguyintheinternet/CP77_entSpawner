@@ -50,9 +50,10 @@ function entity:new()
     o.propertiesMaxWidth = nil
 
     o.assetPreviewType = "backdrop"
-    o.assetPreviewDelay = 0.1 --TODO make longer once done
+    o.assetPreviewDelay = 0.15
     o.assetPreviewTimer = 0
     o.assetPreviewBackplane = nil
+    o.assetPreviewIsCharacter = false
 
     o.uk10 = 1056
 
@@ -205,7 +206,7 @@ function entity:getAssetPreviewPosition()
     end
 
     local size = self:getSize()
-    local distance = math.max(size.x, size.y, size.z) * 1.5
+    local distance = math.max(size.x, size.y, size.z) * 1.6
 
     local diff = utils.subVector(self.position, self:getCenter())
     local position, forward = spawnable.getAssetPreviewPosition(self, distance)
@@ -222,14 +223,9 @@ function entity:getAssetPreviewPosition()
         end
     end
 
-    -- alt character check crash
-
     self.rotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.rotation:ToQuat(), Quaternion.SetAxisAngle(Vector4.new(0, 0, 1, 0), Deg2Rad(Cron.deltaTime * 50))):ToEulerAngles()
-    -- -- Adjust for x offset in editor mode
-    -- diff = utils.addVector(diff, utils.multVector(self.rotation:ToQuat():Transform(forward), 0.275))
 
-    -- Allow for better viewing of slim meshes, TODO: Make this dependent on relative scale of the other axis
-    if size.z < 0.02 then
+    if size.z < math.max(size.x, size.y, size.z) * 0.1 then
         diff = utils.addVector(diff, self.rotation:ToQuat():Transform(Vector4.new(0, 0, -0.1, 0)))
     end
 

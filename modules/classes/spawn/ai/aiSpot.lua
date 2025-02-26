@@ -54,6 +54,8 @@ function aiSpot:new()
     o.apps = {}
     o.workspotDefInfinite = false
 
+    o.assetPreviewType = "position"
+
     o.streamingMultiplier = 5
 
     setmetatable(o, { __index = self })
@@ -86,7 +88,7 @@ function aiSpot:onNPCSpawned(npc)
 
     Game.GetWorkspotSystem():PlayInDeviceSimple(self:getEntity(), npc, false, "workspot", "", "", 0, gameWorkspotSlidingBehaviour.PlayAtResourcePosition)
 
-    self.cronID = Cron.Every(1.25, function ()
+    self.cronID = Cron.Every(1.25, function () --TODO: Fix this properly
         if not self.npcID or not self:isSpawned() then return end
         local npc = self:getNPC()
 

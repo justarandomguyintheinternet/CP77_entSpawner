@@ -141,8 +141,7 @@ function mesh:getAssetPreviewPosition()
     local position, forward = spawnable.getAssetPreviewPosition(self, 0.75)
     diff = utils.addVector(diff, utils.multVector(forward, 0.275))
 
-    -- Allow for better viewing of slim meshes, TODO: Make this dependent on relative scale of the other axis
-    if extents[3] < 0.02 then
+    if extents[3] < math.max(table.unpack(extents)) * 0.1 then
         diff.z = diff.z - 0.075
     end
 

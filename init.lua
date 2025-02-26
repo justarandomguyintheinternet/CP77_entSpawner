@@ -128,6 +128,8 @@ function spawner:new()
             self.editor.onDraw()
             self.baseUI.draw(self)
             input.update()
+        else
+            self.baseUI.spawnUI.hidden()
         end
 
         -- if ImGui.Begin("Collect", ImGuiWindowFlags.AlwaysAutoResize) then
