@@ -162,7 +162,7 @@ end
 function entity:onAttached(entRef)
     spawnable.onAttached(self, entRef)
 
-    Cron.After(0.1, function ()
+    Cron.AfterTicks(10, function ()
         builder.getEntityBBox(entRef, function (data)
             utils.log("[Entity] Loaded initial BBOX for entity " .. self.spawnData .. " with " .. #data.meshes .. " meshes.")
             self.bBox = data.bBox
