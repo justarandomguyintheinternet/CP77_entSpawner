@@ -523,6 +523,8 @@ function spawnUI.draw()
 end
 
 function spawnUI.hidden()
+    if not spawnUI.previewInstance then return end
+
     spawnUI.hoveredEntry = nil
     if spawnUI.previewTimer then
         Cron.Halt(spawnUI.previewTimer)

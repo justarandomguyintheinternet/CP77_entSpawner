@@ -7,7 +7,7 @@ function preview.addHUDText(key, size, x, y, color)
 
     local text = inkText.new()
     text:SetText("")
-    text:SetFontSize(size)
+    text:SetFontSize(math.floor(size))
     text:SetAnchor(inkEAnchor.TopLeft)
     text:SetAnchorPoint(0.5, 0.5)
     text:SetVisible(false)
@@ -40,8 +40,8 @@ function preview.addLight(entity, intensity, ev, distance)
 end
 
 function preview.addHUD()
-    local width, _ = GetDisplayResolution()
-    local factor = width / 2560
+    local _, height = GetDisplayResolution()
+    local factor = height / 1440
 
     preview.addHUDText("previewFirstLine", 30 * factor, 730, 180)
     preview.addHUDText("previewSecondLine", 30 * factor, 730, 180 + 45 * factor)
