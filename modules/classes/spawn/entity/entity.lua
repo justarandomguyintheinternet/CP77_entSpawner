@@ -320,6 +320,7 @@ function entity:save()
         end
     end
     data.defaultComponentData = default
+    data.deviceClassName = self.deviceClassName
 
     return data
 end
