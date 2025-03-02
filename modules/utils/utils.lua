@@ -375,6 +375,8 @@ function miscUtils.deepcompare(t1,t2,ignore_mt)
 end
 
 function miscUtils.sendOutlineEvent(entity, color)
+    if not entity then return end
+
     entity:QueueEvent(entRenderHighlightEvent.new({
         seeThroughWalls = true,
         outlineIndex = color,

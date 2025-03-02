@@ -872,12 +872,21 @@ function spawnedUI.drawHierarchy()
     ImGui.PushStyleVar(ImGuiStyleVar.ScrollbarSize, 12 * style.viewSize)
     if ImGui.BeginTable("##hierarchyTable", 1, ImGuiTableFlags.ScrollX or ImGuiTableFlags.NoHostExtendX) then
         if spawnedUI.filter == "" then
-            for _, child in pairs(spawnedUI.root.childs) do
-                spawnedUI.drawElement(child, false)
+            local clipper = ImGuiListClipper.new()
+            clipper:Begin(#spawnedUI.root.childs, -1)
+
+            while (clipper:Step()) do
+                for i = clipper.DisplayStart + 1, clipper.DisplayEnd, 1 do
+                    spawnedUI.drawElement(spawnedUI.root.childs[i], false)
+                end
             end
         else
             for _, entry in pairs(spawnedUI.filteredPaths) do
-                spawnedUI.drawElement(entry.ref, false)
+                if spawnedUI.elementCount <= nRows then
+                    spawnedUI.drawElement(entry.ref, false)
+                else
+                    spawnedUI.drawElement(nil, true)
+                end
             end
         end
 

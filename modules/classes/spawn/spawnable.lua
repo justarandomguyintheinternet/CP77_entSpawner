@@ -493,7 +493,7 @@ function spawnable:export(key, length)
         uk11 = self.uk11,
         nodeRef = self.nodeRef,
         type = "worldEntityNode",
-        name = "[" .. self.dataType .. "] " .. self.object.name,
+        name = self.dataType .. self.object.name,
         data = {
             entityTemplate = {
                 DepotPath = {

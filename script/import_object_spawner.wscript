@@ -1,6 +1,6 @@
 // Imports an entitySpawner json export
 // @author keanuwheeze
-// @version 1.0.2
+// @version 1.0.3
 
 //////////////// Modify this //////////////////
 
@@ -10,7 +10,7 @@ const inputFilePathInRawFolder = "new_project_exported.json"
 
 import * as Logger from 'Logger.wscript';
 
-const version = "1.0.2"
+const version = "1.0.3"
 const header = {
   "Header": {
     "WolvenKitVersion": "8.14.1",
@@ -276,25 +276,25 @@ export function RunEntitySpawnerImport(filePath = inputFilePathInRawFolder, call
 		return;
 	}
 
-	if (!wkit.FileExistsInRaw(inputFilePathInRawFolder)) {
-		Logger.Error(`File ${inputFilePathInRawFolder} does not exist! Make sure the file sits either in the root of the raw folder, or adjust the inputFilePathInRawFolder variable accordingly.`)
+	if (!calledFromExternal && (!filePath || !wkit.FileExistsInRaw(filePath))) {
 		return;
 	}
 
-	if (!calledFromExternal && (!filePath || !wkit.FileExistsInRaw(filePath))) {
+	if (!wkit.FileExistsInRaw(filePath)) {
+		Logger.Error(`File ${filePath} does not exist! Make sure the file sits either in the root of the raw folder, or adjust the inputFilePathInRawFolder variable accordingly.`)
 		return;
 	}
 	
 	Logger.Success(`Starting to import ${filePath}`);
-	let data = JSON.parse(wkit.LoadRawJsonFromProject(inputFilePathInRawFolder, "json"))
+	let data = JSON.parse(wkit.LoadRawJsonFromProject(filePath, "json"))
 
 	data = reorderJSONByType(data)
 
 	if (data == null) {
-		Logger.Error(`File ${inputFilePathInRawFolder} does not exist / wrong format!`)
+		Logger.Error(`File ${filePath} does not exist / wrong format!`)
 	} else {
 		if (data.version && data.version > version) {
-			Logger.Error(`File ${inputFilePathInRawFolder} requires import script version ${data.version} or higher, but script version is ${version}.`)
+			Logger.Error(`File ${filePath} requires import script version ${data.version} or higher, but script version is ${version}.`)
 			return
 		}
 

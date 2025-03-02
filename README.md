@@ -12,7 +12,13 @@
 
 ## Installation
 
-1. Download and install the provided ZIP file. Extract the contents into the base game directory.
+1. Make sure you have the following dependencies installed:
+   - Red4Ext
+   - CET
+   - Codeware
+   - ArchiveXL
+   - WolvenKit
+2. Download and install the provided ZIP file. Extract the contents into the base game directory.
 
 ---
 

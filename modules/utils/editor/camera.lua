@@ -70,7 +70,10 @@ function camera.toggle(state)
             setSceneTier(1)
 
             for _, component in pairs(camera.components) do
-                GetPlayer():FindComponentByName(component):Toggle(true)
+                local instance = GetPlayer():FindComponentByName(component)
+                if instance then
+                    instance:Toggle(true)
+                end
             end
 
             camera.components = {}

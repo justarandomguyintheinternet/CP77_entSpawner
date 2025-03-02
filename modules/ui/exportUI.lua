@@ -536,7 +536,15 @@ function exportUI.addGroup(name)
     data.center = utils.fromVector(center)
 end
 
-function exportUI.handleDevice(object, devices, psEntries, childs)
+function exportUI.getSpawnableByNodeRef(nodes, nodeRef)
+    for _, node in pairs(nodes) do
+        if node.ref.spawnable.nodeRef == nodeRef then
+            return node
+        end
+    end
+end
+
+function exportUI.handleDevice(object, devices, psEntries, childs, nodes)
     local hash = utils.nodeRefStringToHashString(object.ref.spawnable.nodeRef)
 
     local childHashes = {}
@@ -544,9 +552,11 @@ function exportUI.handleDevice(object, devices, psEntries, childs)
         table.insert(childHashes, utils.nodeRefStringToHashString(child.nodeRef))
 
         -- Remember what childs exist, so that we can also add those to the devices file which are entityNodes, not deviceNodes
+
+        local childRef = exportUI.getSpawnableByNodeRef(nodes, child.nodeRef)
         table.insert(childs, {
             className = child.deviceClassName,
-            nodePosition = utils.fromVector(object.ref:getPosition()),
+            nodePosition = utils.fromVector(childRef ~= nil and childRef.ref:getPosition() or object.ref:getPosition()),
             ref = child.nodeRef,
             parent = hash
         })
@@ -916,7 +926,7 @@ function exportUI.exportGroup(group)
 
             -- Handle device nodes
             if object.ref.spawnable.node == "worldDeviceNode" then
-                exportUI.handleDevice(object, devices, psEntries, childs)
+                exportUI.handleDevice(object, devices, psEntries, childs, nodes)
             elseif object.ref.spawnable.node == "worldCompiledCommunityAreaNode_Streamable" then
                 table.insert(communities, { data = object.ref.spawnable.entries, node = exported.nodes[#exported.nodes] })
             elseif object.ref.spawnable.node == "worldAISpotNode" then
