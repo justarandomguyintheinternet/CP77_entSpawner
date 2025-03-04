@@ -23,7 +23,7 @@ function staticMarker:new()
     o.spawnDataPath = "data/spawnables/meta/staticMarker/"
     o.modulePath = "meta/staticMarker"
     o.node = "worldStaticMarkerNode"
-    o.description = "Places a static marker node. Useful if you need a NodeRef as a reference point."
+    o.description = "Places a static marker node. Useful if you need a NodeRef as a reference point. Usually best placed in an AlwaysLoaded Sector."
     o.icon = IconGlyphs.MapMarker
 
     o.previewed = true
@@ -34,9 +34,9 @@ function staticMarker:new()
     o.questMarker = false
     o.maxPropertyWidth = nil
 
-    o.streamingMultiplier = 10
-    o.primaryRange = 350
-    o.secondaryRange = 300
+    o.streamingMultiplier = 20
+    o.primaryRange = 500
+    o.secondaryRange = 450
 
     setmetatable(o, { __index = self })
    	return o

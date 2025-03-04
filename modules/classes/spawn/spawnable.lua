@@ -307,7 +307,7 @@ function spawnable:getGroupedProperties()
                 history.addAction(history.getMultiSelectChange(entries))
 
                 for _, entry in ipairs(entries) do
-                    local values = entry.spawnable:calculateStreamingValues(element.groupOperationData["streamingProperties"].multiplier)
+                    local values = entry.spawnable:calculateStreamingValues(element.groupOperationData["streamingProperties"].multiplier * entry.spawnable.streamingMultiplier)
 
                     entry.spawnable.primaryRange = values.primary
                     entry.spawnable.secondaryRange = values.secondary
@@ -454,7 +454,7 @@ function spawnable:calculateStreamingValues(multiplier)
     local scale = self:getSize()
 
     local primary = math.max(math.max(scale.x, scale.y, scale.z) * multiplier * 60, 25)
-    primary = math.min(primary, 200)
+    primary = math.min(primary, 200 * self.streamingMultiplier)
     local secondary = primary * 0.8
 
     return { primary = primary, secondary = secondary, uk10 = self.uk10, uk11 = self.uk11 }
@@ -493,7 +493,7 @@ function spawnable:export(key, length)
         uk11 = self.uk11,
         nodeRef = self.nodeRef,
         type = "worldEntityNode",
-        name = self.dataType .. self.object.name,
+        name = "[" .. self.dataType .. "] " .. self.object.name,
         data = {
             entityTemplate = {
                 DepotPath = {

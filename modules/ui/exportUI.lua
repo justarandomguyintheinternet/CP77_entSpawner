@@ -41,7 +41,7 @@ local function calculateExtents(center, objects)
     for _, point in ipairs(objects) do
         if utils.isA(point.ref, "spawnableElement") and Vector4.Distance(point.ref:getPosition(), Vector4.new(0, 0, 0, 0)) > 25 then
             local pos = point.ref:getPosition()
-            local range = math.min(point.ref.spawnable.primaryRange, 500)
+            local range = math.min(point.ref.spawnable.primaryRange, 250)
 
             local dx = math.abs(pos.x - center.x) + range
             local dy = math.abs(pos.y - center.y) + range
