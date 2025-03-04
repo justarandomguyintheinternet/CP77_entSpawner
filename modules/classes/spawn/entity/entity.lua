@@ -818,8 +818,8 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
         ImGui.Text(key)
         ImGui.SameLine()
         ImGui.SetNextItemWidth(100 * style.viewSize)
-        local value, changed = ImGui.InputFloat("##" .. componentID .. table.concat(path), data["Bits"] / 131072, 0, 0, "%.2f")
-        if changed then
+        local value = ImGui.InputFloat("##" .. componentID .. table.concat(path), data["Bits"] / 131072, 0, 0, "%.2f")
+        if ImGui.IsItemDeactivatedAfterEdit() then
             history.addAction(history.getElementChange(self.object))
             self:updatePropValue(componentID, path, math.floor(value * 131072))
         end

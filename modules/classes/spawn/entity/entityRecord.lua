@@ -81,6 +81,8 @@ function record:spawn()
 end
 
 function record:despawn()
+    if self.spawning then return end
+
     Game.GetDynamicEntitySystem():DeleteEntity(self.entityID)
     self.spawned = false
 end
