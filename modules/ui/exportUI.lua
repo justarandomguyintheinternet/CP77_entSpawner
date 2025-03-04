@@ -554,12 +554,14 @@ function exportUI.handleDevice(object, devices, psEntries, childs, nodes)
         -- Remember what childs exist, so that we can also add those to the devices file which are entityNodes, not deviceNodes
 
         local childRef = exportUI.getSpawnableByNodeRef(nodes, child.nodeRef)
-        table.insert(childs, {
-            className = child.deviceClassName,
-            nodePosition = utils.fromVector(childRef ~= nil and childRef.ref:getPosition() or object.ref:getPosition()),
-            ref = child.nodeRef,
-            parent = hash
-        })
+        if childRef and childRef.ref.spawnable.deviceConnections == nil then
+            table.insert(childs, {
+                className = child.deviceClassName,
+                nodePosition = utils.fromVector(childRef ~= nil and childRef.ref:getPosition() or object.ref:getPosition()),
+                ref = child.nodeRef,
+                parent = hash
+            })
+        end
     end
 
     devices[hash] = {
