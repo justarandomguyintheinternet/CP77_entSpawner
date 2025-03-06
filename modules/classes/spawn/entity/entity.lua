@@ -25,6 +25,7 @@ local preview = require("modules/utils/previewUtils")
 ---@field public propertiesWidth table?
 ---@field protected assetPreviewTimer number
 ---@field protected assetPreviewBackplane mesh?
+---@field protected instanceDataSearch string
 local entity = setmetatable({}, { __index = spawnable })
 
 function entity:new()
@@ -48,6 +49,7 @@ function entity:new()
     o.enumInfo = {}
     o.deviceClassName = ""
     o.propertiesMaxWidth = nil
+    o.instanceDataSearch = ""
 
     o.assetPreviewType = "backdrop"
     o.assetPreviewDelay = 0.15
@@ -995,35 +997,50 @@ function entity:drawInstanceData()
         end
     end
 
+    ImGui.PushItemWidth(200 * style.viewSize)
+    self.instanceDataSearch = ImGui.InputTextWithHint('##searchComponent', 'Search for component...', self.instanceDataSearch, 100)
+    ImGui.PopItemWidth()
+
+    if self.instanceDataSearch ~= "" then
+        ImGui.SameLine()
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.Close) then
+            self.instanceDataSearch = ""
+        end
+        style.pushButtonNoBG(false)
+    end
+
     for key, component in pairs(self.defaultComponentData) do
         local name = component["$type"]
-        local componentName = component.name
-        name = name .. " | " .. (componentName and componentName["$value"] or "Entity")
+        local componentName = (component.name and component.name["$value"] or "Entity")
+        name = name .. " | " .. componentName
 
-        style.pushStyleColor(not self.instanceDataChanges[key], ImGuiCol.Text, style.mutedColor)
+        if self.instanceDataSearch == "" or (componentName:lower():match(self.instanceDataSearch:lower()) or name:lower():match(self.instanceDataSearch:lower())) ~= nil then
+            style.pushStyleColor(not self.instanceDataChanges[key], ImGuiCol.Text, style.mutedColor)
 
-        local expanded = false
-        if ImGui.TreeNodeEx(name, ImGuiTreeNodeFlags.SpanFullWidth) then
-            expanded = true
-            self:drawResetComponent(key)
-            style.popStyleColor(not self.instanceDataChanges[key])
+            local expanded = false
+            if ImGui.TreeNodeEx(name, ImGuiTreeNodeFlags.SpanFullWidth) then
+                expanded = true
+                self:drawResetComponent(key)
+                style.popStyleColor(not self.instanceDataChanges[key])
 
-            local keys, max = self:getSortedKeys(component)
-            for _, propKey in pairs(keys) do
-                local entry = component[propKey]
-                local modified = self.instanceDataChanges[key] and self.instanceDataChanges[key][propKey]
-                if modified then entry = self.instanceDataChanges[key][propKey] end
+                local keys, max = self:getSortedKeys(component)
+                for _, propKey in pairs(keys) do
+                    local entry = component[propKey]
+                    local modified = self.instanceDataChanges[key] and self.instanceDataChanges[key][propKey]
+                    if modified then entry = self.instanceDataChanges[key][propKey] end
 
-                style.pushStyleColor(true, ImGuiCol.Text, style.mutedColor)
-                self:drawInstanceDataProperty(key, propKey, entry, { propKey }, max)
+                    style.pushStyleColor(true, ImGuiCol.Text, style.mutedColor)
+                    self:drawInstanceDataProperty(key, propKey, entry, { propKey }, max)
 
-                style.popStyleColor(true)
+                    style.popStyleColor(true)
+                end
+                ImGui.TreePop()
             end
-            ImGui.TreePop()
-        end
-        if not expanded then
-            self:drawResetComponent(key)
-            style.popStyleColor(not self.instanceDataChanges[key])
+            if not expanded then
+                self:drawResetComponent(key)
+                style.popStyleColor(not self.instanceDataChanges[key])
+            end
         end
     end
 end

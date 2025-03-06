@@ -179,6 +179,11 @@ function positionable:drawCopyPaste(name)
 				self:setRotation(EulerAngles.new(rot.roll, rot.pitch, rot.yaw))
 			end
 		end
+		ImGui.Separator()
+		if ImGui.MenuItem("Copy rotation as Quaternion to clipboard") then
+			local quat = self:getRotation():ToQuat()
+			ImGui.SetClipboardText(string.format("i = %.6f, j = %.6f, k = %.6f, r = %.6f", quat.i, quat.j, quat.k, quat.r))
+		end
         ImGui.EndPopup()
     end
 end
