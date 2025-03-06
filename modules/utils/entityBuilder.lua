@@ -54,7 +54,10 @@ function builder.init()
         if token:IsFailed() or not token:IsFinished() then return end
 
         if builder.resourceCallbacks[tostring(token:GetHash())] then
-            builder.resourceCallbacks[tostring(token:GetHash())](token:GetResource())
+            for _, callback in ipairs(builder.resourceCallbacks[tostring(token:GetHash())]) do
+                callback(token:GetResource())
+            end
+
             builder.resourceCallbacks[tostring(token:GetHash())] = nil
         end
     end)
@@ -89,7 +92,11 @@ function builder.registerLoadResource(path, callback)
 
     if not token:IsFailed() then
         Game.GetScriptableServiceContainer():GetService("EntityBuilder"):RegisterResourceCallback(token)
-        builder.resourceCallbacks[tostring(token:GetHash())] = callback
+        if not builder.resourceCallbacks[tostring(token:GetHash())] then
+            builder.resourceCallbacks[tostring(token:GetHash())] = { callback }
+        else
+            table.insert(builder.resourceCallbacks[tostring(token:GetHash())], callback)
+        end
     end
 end
 
@@ -134,6 +141,7 @@ end
 ---@param callback function Gets a table with the bounding box and a table with the meshes
 function builder.getEntityBBox(entity, callback)
     local entityPath = ResRef.ToString(entity:GetTemplatePath())
+    entityPath = entityPath == "" and tostring(entity:GetTemplatePath():GetHash()) or entityPath
     local components = entity:GetComponents()
     local meshes = {}
     local bBoxPoints = {}
@@ -153,7 +161,7 @@ function builder.getEntityBBox(entity, callback)
                 local offset = builder.getComponentOffset(entity, component)
                 utils.log("[entityBuilder] task for mesh " .. path)
 
-                cache.tryGet(path .. "_bBox_max", path .. "_bBox_min")
+                cache.tryGet(path .. "_bBox_max", path .. "_bBox_min", path .. "_collision")
                 .notFound(function (task)
                     utils.log("[entityBuilder] MISSING: BBOX for mesh " .. path)
 
@@ -161,8 +169,17 @@ function builder.getEntityBBox(entity, callback)
                         local min = resource.boundingBox.Min
                         local max = resource.boundingBox.Max
 
+                        local collision = false
+                        for _, param in pairs(resource.parameters) do
+                            if param:IsA("meshMeshParamPhysics") then
+                                collision = true
+                                break
+                            end
+                        end
+
                         cache.addValue(path .. "_bBox_max", utils.fromVector(max))
                         cache.addValue(path .. "_bBox_min", utils.fromVector(min))
+                        cache.addValue(path .. "_collision", collision)
 
                         utils.log("[entityBuilder] LOADED: BBOX for mesh " .. path)
 
@@ -194,7 +211,11 @@ function builder.getEntityBBox(entity, callback)
                             max = max
                         },
                         path = path,
-                        originalScale = originalScale
+                        originalScale = originalScale,
+                        collision = cache.getValue(path .. "_collision") and (component:IsA("entPhysicalMeshComponent") or component:IsA("entPhysicalDestructionComponent")),
+                        app = component.meshAppearance.value,
+                        globalPosition = component:GetLocalToWorld():GetTranslation(),
+                        globalRotation = component:GetLocalToWorld():GetRotation()
                     })
 
                     utils.log("[entityBuilder] FOUND: BBOX for mesh " .. path)

@@ -109,7 +109,8 @@ local function shouldExclude(args)
         "_infinite",
         "_tiling",
         "_bBox_max",
-        "_bBox_min"
+        "_bBox_min",
+        "_collision"
     }
 
     for _, arg in pairs(args) do
@@ -136,7 +137,7 @@ function cache.tryGet(...)
     for _, key in pairs(arg) do
         local value = cache.getValue(key)
 
-        if not value then
+        if value == nil then
             missing = true
         end
     end

@@ -144,6 +144,7 @@ function camera.update()
 
     Game.GetTeleportationFacility():Teleport(GetPlayer(), camera.cameraTransform.position, camera.cameraTransform.rotation)
     Game.GetStatPoolsSystem():RequestSettingStatPoolValue(GetPlayer():GetEntityID(), gamedataStatPoolType.Health, 100, nil)
+    setSceneTier(4)
 end
 
 function camera.updateXOffset(adjustedCenterX)

@@ -657,6 +657,7 @@ function editor.drawDepthSelect()
                 editor.spawnedUI.unselectAll()
                 hit.element:setSelected(true)
                 editor.depthSelectOpen = false
+                editor.spawnedUI.scrollToSelected = true
             end
         end
 

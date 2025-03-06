@@ -192,6 +192,50 @@ local function setInstanceDataLight(entity, lightData, spawnable)
     end
 end
 
+local componentWhitelist = {
+    "entColliderComponent",
+    "gameVisionModeComponent",
+    "entLocalizationStringComponent",
+    "entMeshComponent",
+    "entPhysicalDestructionComponent",
+    "gameaudioSoundComponent",
+    "gameScanningComponent",
+    "StimBroadcasterComponent",
+    "gameTargetingComponent",
+    "DisassemblableComponent"
+}
+
+---@param spawnable entity
+---@param entity entEntity
+---@return boolean
+function amm.canConvertToMesh(spawnable, entity)
+    if #spawnable.meshes ~= 1 then
+        return false
+    end
+
+    if spawnable.meshes[1].collision then
+        return false
+    end
+
+    if not (entity:IsExactlyA("entEntity") or entity:IsA("gameObject") or entity:IsA("gameItemObject")) then
+        return false
+    end
+
+    if entity:FindComponentByName("amm_prop_slot1") then
+        return true
+    end
+
+    for _, component in pairs(entity:GetComponents()) do
+        for _, name in pairs(componentWhitelist) do
+            if not component:IsA(name) then
+                return false
+            end
+        end
+    end
+
+    return true
+end
+
 function amm.importPreset(data, spawnedUI, importTasks)
     local meshService = require("modules/utils/tasks"):new()
 
@@ -201,6 +245,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
     local lightNodes = generateGroup(spawnedUI, "Light Nodes", lights)
     local lightCustom = generateGroup(spawnedUI, "Customized Light Props", lights)
     local scaledProps = generateGroup(spawnedUI, "Scaled Props", root)
+    local meshes = generateGroup(spawnedUI, "Meshes", root)
 
     for _, prop in pairs(data.props) do
         local propData = extractPropData(prop)
@@ -218,9 +263,10 @@ function amm.importPreset(data, spawnedUI, importTasks)
             o.name = o.spawnable:generateName(propData.name)
             o:setParent(lightNodes)
             amm.progress = amm.progress + 1
-        elseif (isLight and not isAMMLight) or isScaled then
+        else
             if not Game.GetResourceDepot():ResourceExists(propData.path) then
                 print("[AMMImport] Resource for " .. propData.path .. " does not exist, skipping...")
+                amm.progress = amm.progress + 1
             else
                 meshService:addTask(function ()
                     local spawnable = require("modules/classes/spawn/entity/entity"):new()
@@ -228,9 +274,10 @@ function amm.importPreset(data, spawnedUI, importTasks)
                         spawnData = propData.path,
                         app = propData.app
                     }, propData.pos, propData.rot)
-                    spawnable:spawn()
 
                     spawnable:onBBoxLoaded(function (entity)
+                        local canConvert = amm.canConvertToMesh(spawnable, entity)
+
                         if isLight then
                             setInstanceDataLight(entity, isLight, spawnable)
 
@@ -243,7 +290,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
                             spawnable:loadInstanceData(entity, true)
                             print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. utils.tableLength(spawnable.instanceDataChanges) .. " light components.")
                         end
-                        if isScaled then
+                        if isScaled and not canConvert then
                             setInstanceDataMesh(entity, propData, spawnable)
 
                             o.spawnable = spawnable
@@ -253,32 +300,49 @@ function amm.importPreset(data, spawnedUI, importTasks)
                             o.spawnable:loadInstanceData(entity, true)
                             print("[AMMImport] Imported prop " .. propData.name .. " by generating instanceData for " .. utils.tableLength(spawnable.instanceDataChanges) .. " mesh components.")
                         end
+                        if canConvert then
+                            local scale = spawnable.meshes[1].originalScale
+                            scale.x = scale.x * propData.scale.x / 100
+                            scale.y = scale.y * propData.scale.y / 100
+                            scale.z = scale.z * propData.scale.z / 100
+
+                            local mesh = require("modules/classes/spawn/mesh/mesh"):new()
+                            mesh:loadSpawnData({
+                                spawnData = spawnable.meshes[1].path,
+                                app = spawnable.meshes[1].app,
+                                scale = { x = scale.x, y = scale.y, z = scale.z }
+                            }, spawnable.meshes[1].globalPosition, spawnable.meshes[1].globalRotation)
+
+                            o.spawnable = mesh
+                            o.name = o.spawnable:generateName(propData.name)
+                            o:setParent(meshes)
+                            print("[AMMImport] Imported prop " .. propData.name .. " by converting to mesh node.")
+                        elseif not isLight and not isScaled then
+                            o.spawnable = convertProp(propData)
+                            o.name = o.spawnable:generateName(propData.name)
+                            o:setParent(props)
+                            print("[AMMImport] Imported prop " .. propData.name .. " by converting to entity node.")
+                        end
 
                         Game.GetStaticEntitySystem():DespawnEntity(spawnable.entityID)
                         amm.progress = amm.progress + 1
                         meshService:taskCompleted()
                     end)
+
+                    spawnable:spawn()
                 end)
             end
-        else
-            o.spawnable = convertProp(propData)
-            o.name = o.spawnable:generateName(propData.name)
-            o:setParent(props)
-
-            amm.progress = amm.progress + 1
         end
     end
 
     meshService:onFinalize(function ()
         root:save()
         print("[ObjectSpawner] Imported \"" .. data.file_name .. "\" from AMM.")
-        -- os.remove("data/AMMImport/" .. data.file_name)
 
         importTasks:taskCompleted()
     end)
 
-    meshService.taskDelay = 0.1
-    meshService:run(true)
+    meshService:run(false)
 end
 
 function amm.importPresets(savedUI)
