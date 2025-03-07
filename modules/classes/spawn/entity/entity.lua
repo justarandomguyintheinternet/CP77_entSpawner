@@ -93,6 +93,13 @@ function entity:loadInstanceData(entity, forceLoadDefault)
 
     -- Only generate upon change
     if not forceLoadDefault and utils.tableLength(self.instanceDataChanges) == 0 then
+        -- Always load default data for PS controllers, as these must be serialized during attachment, to prevent values being set from PS data
+        for _, component in pairs(entity:GetComponents()) do
+            if component:IsA("gameDeviceComponent") and component.persistentState then
+                self.defaultComponentData[CRUIDToString(component.id)] = red.redDataToJSON(component)
+            end
+        end
+
         return
     end
 
