@@ -352,7 +352,7 @@ end
 ---@param distance number?
 function spawnable:getAssetPreviewPosition(distance)
     if self.assetPreviewType == "backdrop" then
-        return editor.getForward(distance or 1)
+        return editor.getForward((distance or 1) * (68 / GetPlayer():GetFPPCameraComponent():GetFOV()))
     end
     return self.position
 end
