@@ -706,10 +706,26 @@ function entity:drawNumericProp(componentID, key, data, path, type, isFloat, has
     end
 end
 
-function entity:drawResetProp(componentID, path)
+---@param componentID number
+---@param path table
+---@param typeName table?
+function entity:drawResetProp(componentID, path, typeName)
     local modified = self.instanceDataChanges[componentID] ~= nil and utils.getNestedValue(self.instanceDataChanges[componentID], path) ~= nil
 
     if ImGui.BeginPopupContextItem("##resetComponentProperty" .. componentID .. table.concat(path), ImGuiPopupFlags.MouseButtonRight) then
+        if typeName and typeName == "handle:AreaShapeOutline" then
+            -- Do this here, before we trim the path
+            local outline = utils.getClipboardValue("outline")
+            if ImGui.MenuItem("Paste outline" .. (outline and " [" .. #outline.points .. "]" or " [Empty]")) and outline then
+                history.addAction(history.getElementChange(self.object))
+                self:updatePropValue(componentID, path, {
+                    ["$type"] = "AreaShapeOutline",
+                    ["height"] = outline.height,
+                    ["points"] = outline.points
+                })
+            end
+        end
+
         local isArray = type(path[#path]) == "number"
 
         -- Might be array of handles, so check one path index up (.../->index<-/Data)
@@ -728,6 +744,7 @@ function entity:drawResetProp(componentID, path)
                 self:updatePropValue(componentID, path, nil)
             end
         end
+
         ImGui.EndPopup()
     end
 end
@@ -879,7 +896,7 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
 
     local open = false
     if ImGui.TreeNodeEx(name, ImGuiTreeNodeFlags.SpanFullWidth) then
-        self:drawResetProp(componentID, path)
+        self:drawResetProp(componentID, path, info.typeName)
         open = true
         style.popStyleColor(modified)
 
@@ -902,7 +919,7 @@ function entity:drawTableProp(componentID, key, data, path, max, modified)
         ImGui.TreePop()
     end
     if not open then
-        self:drawResetProp(componentID, path)
+        self:drawResetProp(componentID, path, info.typeName)
         style.popStyleColor(modified)
     end
 end
