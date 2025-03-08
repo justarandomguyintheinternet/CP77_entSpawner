@@ -217,17 +217,23 @@ function spawnableElement:setScaleDelta(delta, finished)
 	if self.scaleLocked and delta.y ~= 0 then self.spawnable.scale.x = self.spawnable.scale.y  self.spawnable.scale.z = self.spawnable.scale.y end
 	if self.scaleLocked and delta.z ~= 0 then self.spawnable.scale.y = self.spawnable.scale.z  self.spawnable.scale.x = self.spawnable.scale.z end
 
-	self.spawnable:updateScale(finished)
+	self.spawnable:updateScale(finished, delta)
 end
 
 function spawnableElement:setScale(scale, finished)
 	if not self.hasScale then return end
 
+	local delta = {
+		x = scale.x - self.spawnable.scale.x,
+		y = scale.y - self.spawnable.scale.y,
+		z = scale.z - self.spawnable.scale.z
+	}
+
 	self.spawnable.scale.x = scale.x
 	self.spawnable.scale.y = scale.y
 	self.spawnable.scale.z = scale.z
 
-	self.spawnable:updateScale(finished)
+	self.spawnable:updateScale(finished, delta)
 end
 
 function spawnableElement:dropToSurface(grouped, direction)

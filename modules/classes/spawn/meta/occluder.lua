@@ -135,7 +135,7 @@ function occluder:draw()
     style.mutedText("Occluder Mesh")
     ImGui.SameLine()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
-    local value, changed = style.trackedCombo(self.object, "##occluderMesh", self.occluderMesh - 1, names)
+    local value, changed = style.trackedCombo(self.object, "##occluderMesh", self.occluderMesh - 1, names, 115)
     if changed then
         self.occluderMesh = value + 1
         self:respawn()
@@ -144,7 +144,7 @@ function occluder:draw()
     style.mutedText("Occluder Type")
     ImGui.SameLine()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.occluderType, changed = style.trackedCombo(self.object, "##occluderType", self.occluderType, self.occluderTypes)
+    self.occluderType, changed = style.trackedCombo(self.object, "##occluderType", self.occluderType, self.occluderTypes, 115)
     if changed then
         local entity = self:getEntity()
 

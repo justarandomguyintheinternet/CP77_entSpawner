@@ -41,6 +41,7 @@ function collider:new()
     o.scale = { x = 1, y = 1, z = 1 }
     o.previewed = true
     o.maxPropertyWidth = nil
+    o.currentAxis = 0
 
     setmetatable(o, { __index = self })
    	return o
@@ -75,8 +76,8 @@ function collider:onAssemble(entity)
     elseif self.shape == 1 then
         actor = physicsColliderCapsule.new()
         actor.height = self.scale.z
-        actor.radius = self.scale.y
-        visualizer.addCapsule(entity, self.scale.y, self.scale.z, color)
+        actor.radius = self.scale.x
+        visualizer.addCapsule(entity, self.scale.x, self.scale.z, color)
     elseif self.shape == 2 then
         actor = physicsColliderSphere.new()
         actor.radius = self.scale.x
@@ -177,11 +178,25 @@ function collider:updateFull(changed)
 end
 
 ---@protected
-function collider:updateScale(finished)
+function collider:updateScale(finished, delta)
+    self.scale.x = math.max(self.scale.x, 0)
+    self.scale.y = math.max(self.scale.y, 0)
+    self.scale.z = math.max(self.scale.z, 0)
+
     if self.shape == 1 then
-        local width = math.max(self.scale.x, self.scale.y)
-        self.scale.x = width
-        self.scale.y = width
+        if math.abs(delta.y) > 0 then
+            self.currentAxis = 0
+        elseif math.abs(delta.x) > 0 then
+            self.currentAxis = 1
+        end
+
+        if finished then
+            if self.currentAxis == 0 then
+                self.scale.x = self.scale.y
+            else
+                self.scale.y = self.scale.x
+            end
+        end
     elseif self.shape == 2 then
         local radius = math.max(self.scale.x, self.scale.y, self.scale.z)
         self.scale = { x = radius, y = radius, z = radius }
@@ -200,7 +215,7 @@ function collider:updateScale(finished)
     if self.shape == 0 then
         visualizer.updateScale(entity, self.scale, "box")
     elseif self.shape == 1 then
-        visualizer.updateCapsuleScale(self:getEntity(), self.scale.y, self.scale.z)
+        visualizer.updateCapsuleScale(self:getEntity(), self.currentAxis == 1 and self.scale.x or self.scale.y, self.scale.z)
     elseif self.shape == 2 then
         visualizer.updateScale(entity, self.scale, "sphere")
     end
