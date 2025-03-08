@@ -21,6 +21,7 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@field public hideGenerate boolean
 ---@field private bBoxLoaded boolean
 ---@field private assetStartTime number
+---@field protected maxPropertyWidth number?
 local mesh = setmetatable({}, { __index = spawnable })
 
 function mesh:new()
@@ -42,6 +43,7 @@ function mesh:new()
 
     o.colliderShape = 0
     o.hideGenerate = false
+    o.maxPropertyWidth = nil
 
     o.assetPreviewType = "backdrop"
     o.assetPreviewDelay = 0.1
@@ -276,6 +278,10 @@ end
 function mesh:draw()
     spawnable.draw(self)
 
+    if not self.maxPropertyWidth then
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Appearance", "Collider" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
+
     style.pushGreyedOut(#self.apps == 0)
 
     local list = self.apps
@@ -286,8 +292,7 @@ function mesh:draw()
 
     style.mutedText("Appearance")
     ImGui.SameLine()
-    local x = ImGui.GetCursorPosX()
-
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
     local index, changed = style.trackedCombo(self.object, "##app", self.appIndex, list, 160)
     style.tooltip("Select the mesh appearance")
     if changed and #self.apps > 0 then
@@ -311,7 +316,7 @@ function mesh:draw()
 
     style.mutedText("Collider")
     ImGui.SameLine()
-    ImGui.SetCursorPosX(x)
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
     ImGui.SetNextItemWidth(110 * style.viewSize)
     self.colliderShape, changed = ImGui.Combo("##colliderShape", self.colliderShape, colliderShapes, #colliderShapes)
 

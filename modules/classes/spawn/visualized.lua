@@ -108,7 +108,9 @@ function visualized:drawPreviewCheckbox(text, textX)
     if textX then
         style.mutedText(text)
         ImGui.SameLine()
-        ImGui.SetCursorPosX(textX)
+        if textX ~= -1 then
+            ImGui.SetCursorPosX(textX)
+        end
         text = "##" .. text
     end
 

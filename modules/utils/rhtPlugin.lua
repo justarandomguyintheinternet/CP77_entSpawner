@@ -69,6 +69,16 @@ local typeMap = {
         end,
         category = "AI",
         sub = "AI Spot"
+    },
+    ["worldReflectionProbeNode"] = {
+        dataRetrieval = function (node)
+            local probe = node.nodeInstance:GetNode().probeDataRef
+            if not probe then return "" end
+
+            return ResRef.FromHash(probe.hash):ToString()
+        end,
+        category = "Meta",
+        sub = "Reflection Probe"
     }
 }
 

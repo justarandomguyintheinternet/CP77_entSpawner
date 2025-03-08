@@ -113,7 +113,9 @@ end
 function record:draw()
     entity.draw(self)
 
-    self.spawnOnStart, _ = style.trackedCheckbox(self.object, "Spawn on start", self.spawnOnStart)
+    style.mutedText("Spawn on start")
+    ImGui.SameLine()
+    self.spawnOnStart, _ = style.trackedCheckbox(self.object, "##spawnOnStart", self.spawnOnStart)
 end
 
 function record:export()

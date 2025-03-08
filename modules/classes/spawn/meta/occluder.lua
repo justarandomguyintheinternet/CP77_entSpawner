@@ -16,6 +16,7 @@ local occluderPaths = {
 ---@field public occluderMesh integer
 ---@field private previewed boolean
 ---@field private occluderTypes table
+---@field public maxPropertyWidth number
 local occluder = setmetatable({}, { __index = spawnable })
 
 function occluder:new()
@@ -35,6 +36,7 @@ function occluder:new()
     o.occluderType = 0
     o.occluderMesh = 1
     o.previewed = true
+    o.maxPropertyWidth = nil
 
     o.uk10 = 1120
     o.uk11 = 640
@@ -113,7 +115,14 @@ end
 function occluder:draw()
     spawnable.draw(self)
 
-    self.previewed, changed = style.trackedCheckbox(self.object, "Visualize outline", self.previewed)
+    if not self.maxPropertyWidth then
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Visualize outline", "Occluder Mesh", "Occluder Type" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
+
+    style.mutedText("Visualize outline")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.previewed, changed = style.trackedCheckbox(self.object, "##visualizeOutline", self.previewed)
     if changed then
         visualizer.toggleAll(self:getEntity(), self.previewed)
     end
@@ -123,16 +132,18 @@ function occluder:draw()
         table.insert(names, path.name)
     end
 
-    ImGui.Text("Occluder Mesh")
+    style.mutedText("Occluder Mesh")
     ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
     local value, changed = style.trackedCombo(self.object, "##occluderMesh", self.occluderMesh - 1, names)
     if changed then
         self.occluderMesh = value + 1
         self:respawn()
     end
 
-    ImGui.Text("Occluder Type")
+    style.mutedText("Occluder Type")
     ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
     self.occluderType, changed = style.trackedCombo(self.object, "##occluderType", self.occluderType, self.occluderTypes)
     if changed then
         local entity = self:getEntity()

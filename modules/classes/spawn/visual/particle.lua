@@ -1,10 +1,12 @@
 local visualized = require("modules/classes/spawn/visualized")
 local style = require("modules/ui/style")
+local utils = require("modules/utils/utils")
 
 ---Class for worldStaticParticleNode
 ---@class particle : visualized
 ---@field emissionRate number
 ---@field respawnOnMove boolean
+---@field private maxPropertyWidth number
 local particle = setmetatable({}, { __index = visualized })
 
 function particle:new()
@@ -24,6 +26,8 @@ function particle:new()
 
     o.assetPreviewType = "position"
     o.assetPreviewDelay = 0.1
+
+    o.maxPropertyWidth = nil
 
     setmetatable(o, { __index = self })
    	return o
@@ -75,7 +79,16 @@ end
 function particle:draw()
     visualized.draw(self)
 
-    self.emissionRate, changed = style.trackedDragFloat(self.object, "Emission Rate", self.emissionRate, 0.01, 0, 9999, "%.2f", 80)
+    if not self.maxPropertyWidth then
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Emission Rate", "Respawn on Move" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
+
+    self:drawPreviewCheckbox("Visualize", self.maxPropertyWidth)
+
+    style.mutedText("Emission Rate")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.emissionRate, changed = style.trackedDragFloat(self.object, "##emissionRate", self.emissionRate, 0.01, 0, 9999, "%.2f", 80)
     if changed then
         self.emissionRate = math.max(self.emissionRate, 0)
 
@@ -86,10 +99,11 @@ function particle:draw()
         end
     end
 
-    self.respawnOnMove = style.trackedCheckbox(self.object, "Respawn on Move", self.respawnOnMove)
+    style.mutedText("Respawn on Move")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.respawnOnMove = style.trackedCheckbox(self.object, "##respawnOnMove", self.respawnOnMove)
     style.tooltip("Respawns the particle system when the object is moved. Use this when the particle system does not move, or only parts of it")
-
-    self:drawPreviewCheckbox()
 end
 
 function particle:getProperties()

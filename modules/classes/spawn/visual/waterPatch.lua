@@ -42,7 +42,10 @@ end
 function waterPatch:draw()
     mesh.draw(self)
 
-    self.depth = style.trackedDragFloat(self.object, "Depth", self.depth, 0.01, 0, 9999, "%.2f Depth", 110)
+    style.mutedText("Depth")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.depth = style.trackedDragFloat(self.object, "##depth", self.depth, 0.01, 0, 9999, "%.2f", 110)
 
     ImGui.PopItemWidth()
 end

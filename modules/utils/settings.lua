@@ -38,7 +38,7 @@ local config = require("modules/utils/config")
 ---@field public assetPreviewEnabled table
 local settingsData = {
     spawnPos = 1,
-    spawnDist = 1,
+    spawnDist = 4,
     spawnNewSortAlphabetical = false,
     posSteps = 0.002,
     precisionMultiplier = 0.2,

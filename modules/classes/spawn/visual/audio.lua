@@ -1,5 +1,6 @@
 local visualized = require("modules/classes/spawn/visualized")
 local style = require("modules/ui/style")
+local utils = require("modules/utils/utils")
 
 ---Class for worldStaticSoundEmitterNode
 ---@class sound : visualized
@@ -22,6 +23,8 @@ function sound:new()
     o.radius = 5
     o.previewColor = "mediumvioletred"
     o.emitterMetadataName = ""
+    o.previewed = true
+    o.assetPreviewType = "position"
 
     setmetatable(o, { __index = self })
    	return o
@@ -57,14 +60,24 @@ end
 function sound:draw()
     visualized.draw(self)
 
-    self.radius, change = style.trackedDragFloat(self.object, "Radius", self.radius, 0.01, 0, 9999, "%.2f", 80)
+    if not self.maxPropertyWidth then
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Radius", "Emitter Metadata Name" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
+
+    self:drawPreviewCheckbox("Visualize", self.maxPropertyWidth)
+
+    style.mutedText("Radius")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.radius, change = style.trackedDragFloat(self.object, "##radius", self.radius, 0.01, 0, 9999, "%.2f", 80)
     if change then
         self:updateScale()
     end
 
-    self.emitterMetadataName, change = style.trackedTextField(self.object, "Emitter Metadata Name", self.emitterMetadataName, "", 150)
-
-    self:drawPreviewCheckbox()
+    style.mutedText("Emitter Metadata Name")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.emitterMetadataName, change = style.trackedTextField(self.object, "##emitterMetadataName", self.emitterMetadataName, "", 150)
 end
 
 function sound:getArrowSize()

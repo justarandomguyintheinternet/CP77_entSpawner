@@ -82,12 +82,20 @@ end
 function rotatingMesh:draw()
     mesh.draw(self)
 
-    self.duration = style.trackedDragFloat(self.object, "##duration", self.duration, 0.01, 0.01, 9999, "%.2f Duration")
+    style.mutedText("Duration")
     ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.duration = style.trackedDragFloat(self.object, "##duration", self.duration, 0.01, 0.01, 9999, "%.2f Seconds", 95)
 
-    self.reverse = style.trackedCheckbox(self.object, "Reverse", self.reverse)
+    style.mutedText("Axis")
     ImGui.SameLine()
-    self.axis = style.trackedCombo(self.object, "Axis", self.axis, self.axisTypes)
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.axis = style.trackedCombo(self.object, "##axis", self.axis, self.axisTypes, 95)
+
+    style.mutedText("Reverse")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.reverse = style.trackedCheckbox(self.object, "##reverse", self.reverse)
 end
 
 function rotatingMesh:export()

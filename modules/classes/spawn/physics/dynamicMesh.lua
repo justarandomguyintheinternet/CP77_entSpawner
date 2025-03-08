@@ -2,6 +2,7 @@ local mesh = require("modules/classes/spawn/mesh/mesh")
 local spawnable = require("modules/classes/spawn/spawnable")
 local visualizer = require("modules/utils/visualizer")
 local style = require("modules/ui/style")
+local utils = require("modules/utils/utils")
 
 ---Class for worldDynamicMeshNode
 ---@class dynamicMesh : mesh
@@ -69,11 +70,23 @@ function dynamicMesh:save()
 end
 
 function dynamicMesh:draw()
+    local calculateMaxWidth = not self.maxPropertyWidth
+
     mesh.draw(self)
 
-    self.startAsleep = style.trackedCheckbox(self.object, "Start Asleep", self.startAsleep)
+    if calculateMaxWidth then
+        self.maxPropertyWidth = math.max(self.maxPropertyWidth, utils.getTextMaxWidth({ "Start Asleep", "Auto Hide Distance" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX())
+    end
 
-    self.forceAutoHideDistance = style.trackedDragFloat(self.object, "Auto Hide Distance", self.forceAutoHideDistance, 0.1, 0, 1000, "%.1f")
+    style.mutedText("Start Asleep")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.startAsleep = style.trackedCheckbox(self.object, "##startAsleep", self.startAsleep)
+
+    style.mutedText("Auto Hide Distance")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.forceAutoHideDistance = style.trackedDragFloat(self.object, "##forceAutoHideDistance", self.forceAutoHideDistance, 0.1, 0, 1000, "%.1f")
 end
 
 function dynamicMesh:export()

@@ -18,6 +18,7 @@ local colors = { "red", "green", "blue" }
 ---@field private preset integer
 ---@field private shapeTypes table
 ---@field public previewed boolean
+---@field public maxPropertyWidth number
 local collider = setmetatable({}, { __index = spawnable })
 
 function collider:new()
@@ -39,6 +40,7 @@ function collider:new()
 
     o.scale = { x = 1, y = 1, z = 1 }
     o.previewed = true
+    o.maxPropertyWidth = nil
 
     setmetatable(o, { __index = self })
    	return o
@@ -207,30 +209,37 @@ end
 function collider:draw()
     spawnable.draw(self)
 
-    ImGui.PushItemWidth(150 * style.viewSize)
-
-    ImGui.Text("Collision Shape")
-    ImGui.SameLine()
-    self.shape, changed = style.trackedCombo(self.object, "##type", self.shape, self.shapeTypes)
-    if changed then
-        self:updateScale(true)
+    if not self.maxPropertyWidth then
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Preview Shape", "Collision Shape", "Collision Preset", "Collision Material" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
     end
 
+    style.mutedText("Preview Shape")
     ImGui.SameLine()
-    self.previewed, changed = style.trackedCheckbox(self.object, "Preview shape", self.previewed)
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.previewed, changed = style.trackedCheckbox(self.object, "##collisionPreview", self.previewed)
     if changed then
         visualizer.toggleAll(self:getEntity(), self.previewed)
     end
 
-    ImGui.Text("Collision Preset")
+    style.mutedText("Collision Shape")
     ImGui.SameLine()
-    self.preset, changed = style.trackedCombo(self.object, "##preset", self.preset, presets)
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.shape, changed = style.trackedCombo(self.object, "##type", self.shape, self.shapeTypes, 100)
+    if changed then
+        self:updateScale(true)
+    end
+
+    style.mutedText("Collision Preset")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.preset, changed = style.trackedCombo(self.object, "##preset", self.preset, presets, 100)
     self:updateFull(changed)
     style.tooltip(hints[self.preset + 1])
 
-    ImGui.Text("Collision Material")
+    style.mutedText("Collision Material")
     ImGui.SameLine()
-    self.material, changed = style.trackedCombo(self.object, "##material", self.material, materials)
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.material, changed = style.trackedCombo(self.object, "##material", self.material, materials, 200)
     self:updateFull(changed)
 end
 

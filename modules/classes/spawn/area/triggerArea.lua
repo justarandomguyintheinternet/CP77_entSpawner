@@ -242,6 +242,7 @@ function triggerArea:draw()
 
     style.mutedText("Trigger Type")
     ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
     local value, changed = style.trackedCombo(self.object, "##triggerType", utils.indexValue(triggerNames, self.triggerType) - 1, triggerNames, 120)
     if changed then
         self.triggerType = triggerNames[value + 1]

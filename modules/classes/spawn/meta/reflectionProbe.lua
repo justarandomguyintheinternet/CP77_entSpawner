@@ -121,10 +121,13 @@ function reflection:draw()
     spawnable.draw(self)
 
     if not self.maxPropertyWidth then
-        self.maxPropertyWidth = utils.getTextMaxWidth({ "Ambient Mode", "Neighbor Mode", "Emissive Scale", "Streaming Distance", "Edge Scale", "Priority", "All In Shadow" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Visualize Outline", "Ambient Mode", "Neighbor Mode", "Emissive Scale", "Streaming Distance", "Edge Scale", "Priority", "All In Shadow" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
     end
 
-    self.previewed, changed = style.trackedCheckbox(self.object, "Visualize outline", self.previewed)
+    style.mutedText("Visualize Outline")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.previewed, changed = style.trackedCheckbox(self.object, "##visualizeOutline", self.previewed)
     if changed then
         visualizer.toggleAll(self:getEntity(), self.previewed)
     end

@@ -14,6 +14,7 @@ local utils = require("modules/utils/utils")
 ---@field private autoHideDistance number
 ---@field private scale {x: number, y: number, z: number}
 ---@field private isTiling boolean
+---@field private maxPropertyWidth number
 local decal = setmetatable({}, { __index = spawnable })
 
 function decal:new()
@@ -36,6 +37,8 @@ function decal:new()
     o.assetPreviewType = "backdrop"
     o.assetPreviewDelay = 0.05
     o.isTiling = false
+
+    o.maxPropertyWidth = nil
 
     setmetatable(o, { __index = self })
    	return o
@@ -199,22 +202,32 @@ end
 function decal:draw()
     spawnable.draw(self)
 
-    ImGui.PushItemWidth(150 * style.viewSize)
+    if not self.maxPropertyWidth then
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Alpha", "Vertical Flip", "Horizontal Flip", "Auto Hide Distance" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
 
-    self.alpha, changed, deactivatedAfterEdit = style.trackedDragFloat(self.object, "##alpha", self.alpha, 0.01, 0, 100, "%.2f Alpha")
+    style.mutedText("Alpha")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.alpha, changed, deactivatedAfterEdit = style.trackedDragFloat(self.object, "##alpha", self.alpha, 0.01, 0, 100, "%.2f", 85)
     self:updateFull(deactivatedAfterEdit)
 
+    style.mutedText("Vertical Flip")
     ImGui.SameLine()
-    self.autoHideDistance = style.trackedDragFloat(self.object, "##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.2f Hide Dist.", 100)
-
-    self.verticalFlip, changed = style.trackedCheckbox(self.object, "Vertical Flip", self.verticalFlip)
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.verticalFlip, changed = style.trackedCheckbox(self.object, "##verticalFlip", self.verticalFlip)
     self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
 
+    style.mutedText("Horizontal Flip")
     ImGui.SameLine()
-    self.horizontalFlip, changed = style.trackedCheckbox(self.object, "Horizontal Flip", self.horizontalFlip)
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.horizontalFlip, changed = style.trackedCheckbox(self.object, "##horizontalFlip", self.horizontalFlip)
     self:updateFull(ImGui.IsItemDeactivatedAfterEdit())
 
-    ImGui.PopItemWidth()
+    style.mutedText("Auto Hide Distance")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.autoHideDistance = style.trackedDragFloat(self.object, "##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.2f", 85)
 end
 
 function decal:getProperties()

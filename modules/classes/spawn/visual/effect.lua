@@ -80,7 +80,7 @@ end
 function effect:draw()
     visualized.draw(self)
 
-    self:drawPreviewCheckbox()
+    self:drawPreviewCheckbox("Visualize", -1)
 end
 
 function effect:getProperties()

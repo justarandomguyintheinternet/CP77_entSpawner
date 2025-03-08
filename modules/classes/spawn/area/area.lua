@@ -7,6 +7,7 @@ local utils = require("modules/utils/utils")
 ---@field outlinePath string
 ---@field height number
 ---@field markers table
+---@field protected maxPropertyWidth number
 local area = setmetatable({}, { __index = visualized })
 
 function area:new()
@@ -27,6 +28,8 @@ function area:new()
     -- Only used for saved data, to have easier access to it during export
     o.height = 0
     o.markers = {}
+
+    o.maxPropertyWidth = nil
 
     setmetatable(o, { __index = self })
    	return o
@@ -90,13 +93,22 @@ end
 
 function area:draw()
     visualized.draw(self)
-    self:drawPreviewCheckbox()
+
+    if not self.maxPropertyWidth then
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Visualize", "Outline Path" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
+
+    self:drawPreviewCheckbox("Visualize", self.maxPropertyWidth)
 
     local paths = self:loadOutlinePaths()
     table.insert(paths, 1, "None")
 
     local index = math.max(1, utils.indexValue(paths, self.outlinePath))
-    local idx, changed = style.trackedCombo(self.object, "Outline Path", index - 1, paths, 225)
+
+    style.mutedText("Outline Path")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    local idx, changed = style.trackedCombo(self.object, "##outlinePath", index - 1, paths, 225)
     if changed then
         self.outlinePath = paths[idx + 1]
     end

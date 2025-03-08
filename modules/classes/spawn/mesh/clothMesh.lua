@@ -1,5 +1,6 @@
 local mesh = require("modules/classes/spawn/mesh/mesh")
 local style = require("modules/ui/style")
+local utils = require("modules/utils/utils")
 
 ---Class for worldRotatingMeshNode
 ---@class clothMesh : mesh
@@ -37,11 +38,23 @@ function clothMesh:save()
 end
 
 function clothMesh:draw()
+    local calculateMaxWidth = not self.maxPropertyWidth
+
     mesh.draw(self)
 
-    self.affectedByWind = style.trackedCheckbox(self.object, "Affected By Wind", self.affectedByWind)
+    if calculateMaxWidth then
+        self.maxPropertyWidth = math.max(self.maxPropertyWidth, utils.getTextMaxWidth({ "Affected By Wind", "Collision Mask" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX())
+    end
+
+    style.mutedText("Affected By Wind")
     ImGui.SameLine()
-    self.collisionType = style.trackedCombo(self.object, "Collision Mask", self.collisionType, collisionTypes)
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.affectedByWind = style.trackedCheckbox(self.object, "##affectedByWind", self.affectedByWind)
+
+    style.mutedText("Collision Mask")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.collisionType = style.trackedCombo(self.object, "##collisionMask", self.collisionType, collisionTypes)
 
     ImGui.PopItemWidth()
 end
