@@ -212,7 +212,7 @@ function spawnUI.refresh()
     spawnUI.updateFilter()
 
     if settings.spawnUIOnlyNames then
-        table.sort(spawnUI.filteredList, function(a, b) return utils.getFileName(a.name) < utils.getFileName(b.name) end)
+        table.sort(spawnUI.filteredList, function(a, b) return a.fileName < b.fileName end)
     else
         table.sort(spawnUI.filteredList, function(a, b) return a.name < b.name end)
     end
@@ -313,6 +313,59 @@ function spawnUI.drawDragWindow()
     end
 end
 
+function spawnUI.drawNoMatch()
+    if #spawnUI.filteredList ~= 0 or not spawnUI.getActiveSpawnList().isPaths then return end
+
+    style.mutedText("No match found...")
+    style.mutedText(("Spawn \"%s\" anyways?"):format(spawnUI.filter))
+
+    if ImGui.Button("Spawn") then
+        local class = spawnUI.getActiveSpawnList().class
+        spawnUI.spawnNew({
+            data = { spawnData = spawnUI.filter }, lastSpawned = nil, name = spawnUI.filter, fileName = spawnUI.filter
+        }, class)
+    end
+end
+
+function spawnUI.drawOptions()
+    local activeList = spawnUI.getActiveSpawnList()
+    if activeList.isPaths then
+        ImGui.Text("Strip paths")
+        ImGui.SameLine()
+        settings.spawnUIOnlyNames, changed = ImGui.Checkbox("##strip", settings.spawnUIOnlyNames)
+        if changed then
+            spawnUI.refresh()
+        end
+        style.tooltip("Only show the name of the file, without the full path")
+    end
+
+    if activeList.assetPreviewType ~= "none" then
+        ImGui.Text("Asset Preview")
+        ImGui.SameLine()
+        settings.assetPreviewEnabled[typeNames[spawnUI.selectedType + 1]][variantNames[spawnUI.selectedVariant + 1]], changed = ImGui.Checkbox("##assetPreview", settings.assetPreviewEnabled[typeNames[spawnUI.selectedType + 1]][variantNames[spawnUI.selectedVariant + 1]])
+        if changed then
+            settings.save()
+        end
+        style.tooltip("Preview the asset when hovered. Is Experimental.")
+        if activeList.assetPreviewType == "backdrop" then
+            ImGui.SameLine()
+            style.mutedText(IconGlyphs.Checkerboard)
+            style.tooltip("Asset gets previewed with a backdrop")
+        else
+            ImGui.SameLine()
+            style.mutedText(IconGlyphs.AxisArrowInfo)
+            style.tooltip("Asset gets previewed at the same position it would spawn in")
+        end
+    end
+
+    spawnUI.drawSpawnPosition()
+
+    ImGui.SameLine()
+
+    style.mutedText(IconGlyphs.InformationOutline)
+    style.tooltip("To spawn an object under the cursor, either:\n - Use the Shift-A menu while in editor mode\n - Drag and drop an object from the list to the desired position on the screen.")
+end
+
 function spawnUI.draw()
     spawnUI.updateAssetPreview()
     spawnUI.drawDragWindow()
@@ -348,45 +401,10 @@ function spawnUI.draw()
     tooltip("Automatically place any newly spawned object into the selected group")
 	ImGui.PopItemWidth()
 
-    local activeList = spawnUI.getActiveSpawnList()
-    if activeList.isPaths then
-        ImGui.Text("Strip paths")
-        ImGui.SameLine()
-        settings.spawnUIOnlyNames, changed = ImGui.Checkbox("##strip", settings.spawnUIOnlyNames)
-        if changed then
-            spawnUI.refresh()
-        end
-        style.tooltip("Only show the name of the file, without the full path")
+    if ImGui.TreeNodeEx("Options", ImGuiTreeNodeFlags.SpanFullWidth) then
+        spawnUI.drawOptions()
+        ImGui.TreePop()
     end
-
-    if activeList.assetPreviewType ~= "none" then
-        if activeList.isPaths then
-            ImGui.SameLine()
-        end
-        ImGui.Text("Asset Preview")
-        ImGui.SameLine()
-        settings.assetPreviewEnabled[typeNames[spawnUI.selectedType + 1]][variantNames[spawnUI.selectedVariant + 1]], changed = ImGui.Checkbox("##assetPreview", settings.assetPreviewEnabled[typeNames[spawnUI.selectedType + 1]][variantNames[spawnUI.selectedVariant + 1]])
-        if changed then
-            settings.save()
-        end
-        style.tooltip("Preview the asset when hovered. Is Experimental.")
-        if activeList.assetPreviewType == "backdrop" then
-            ImGui.SameLine()
-            style.mutedText(IconGlyphs.Checkerboard)
-            style.tooltip("Asset gets previewed with a backdrop")
-        else
-            ImGui.SameLine()
-            style.mutedText(IconGlyphs.AxisArrowInfo)
-            style.tooltip("Asset gets previewed at the same position it would spawn in")
-        end
-    end
-
-    spawnUI.drawSpawnPosition()
-
-    ImGui.SameLine()
-
-    style.mutedText(IconGlyphs.InformationOutline)
-    style.tooltip("To spawn an object under the cursor, either:\n - Use the Shift-A menu while in editor mode\n - Drag and drop an object from the list to the desired position on the screen.")
 
     style.spacedSeparator()
 
@@ -434,6 +452,8 @@ function spawnUI.draw()
     clipper:Begin(#spawnUI.filteredList, -1)
 
     local xSpace, _ = ImGui.GetItemRectSize() - 2 * ImGui.GetStyle().WindowPadding.x - (ImGui.GetScrollMaxY() > 0 and ImGui.GetStyle().ScrollbarSize or 0)
+
+    spawnUI.drawNoMatch()
 
     while (clipper:Step()) do
         for i = clipper.DisplayStart + 1, clipper.DisplayEnd, 1 do
@@ -562,7 +582,7 @@ function spawnUI.getSpawnNewPosition()
 
     return pos, rot
 end
-
+ 
 function spawnUI.spawnNew(entry, class)
     spawnUI.lastSpawnedClass = class
     spawnUI.lastSpawnedEntry = entry

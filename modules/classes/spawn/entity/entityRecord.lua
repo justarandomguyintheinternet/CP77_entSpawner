@@ -30,7 +30,10 @@ end
 
 function record:loadSpawnData(data, position, rotation)
     spawnable.loadSpawnData(self, data, position, rotation)
-    local resRef = ResRef.FromHash(TweakDB:GetFlat(self.spawnData .. ".entityTemplatePath").hash)
+
+    local template = TweakDB:GetFlat(self.spawnData .. ".entityTemplatePath")
+    if not template then return end
+    local resRef = ResRef.FromHash(template.hash)
 
     cache.tryGet(self.spawnData .. "_apps")
     .notFound(function (task)

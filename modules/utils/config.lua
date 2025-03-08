@@ -1,3 +1,4 @@
+local utils = require("modules/utils/utils")
 config = {}
 
 function config.fileExists(filename)
@@ -40,7 +41,7 @@ function config.loadFiles(path)
     for _, file in pairs(dir(path)) do
         if file.name:match("^.+(%..+)$") == ".json" then
             local data = config.loadFile(path .. file.name)
-            table.insert(files, {data = data.spawnable, lastSpawned = nil, name = data.name})
+            table.insert(files, {data = data.spawnable, lastSpawned = nil, name = data.name })
         end
     end
 
@@ -56,7 +57,7 @@ function config.loadLists(path)
         if file.name:match("^.+(%..+)$") == ".txt" then
             local data = io.open(path .. file.name)
             for line in data:lines() do
-                table.insert(paths, {data = { spawnData = line }, lastSpawned = nil, name = line})
+                table.insert(paths, {data = { spawnData = line }, lastSpawned = nil, name = line, fileName = utils.getFileName(line) })
             end
 
             data:close()
