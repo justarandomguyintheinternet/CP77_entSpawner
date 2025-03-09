@@ -1,0 +1,39 @@
+{
+    "rotationRelative": false,
+    "scaleLocked": true,
+    "pos": {
+        "y": 0,
+        "w": 0,
+        "z": 0,
+        "x": 0
+    },
+    "hiddenByParent": false,
+    "transformExpanded": true,
+    "propertyHeaderStates": [],
+    "expandable": false,
+    "childs": [],
+    "selected": false,
+    "visible": true,
+    "spawnable": {
+        "rotationRelative": false,
+        "modulePath": "meta/data/spawnables/area/signpostArea",
+        "dataType": "Audio Signpost Area",
+        "enter": "ow_maelstrom_START",
+        "exit": "ow_maelstrom_STOP",
+        "position": {
+            "y": 0,
+            "w": 0,
+            "z": 0,
+            "x": 0
+        },
+        "rotation": {
+            "pitch": 0,
+            "yaw": 0,
+            "roll": 0
+        }
+    },
+    "name": "Audio Signpost Area - Maelstrom Music",
+    "isUsingSpawnables": true,
+    "headerOpen": false,
+    "modulePath": "modules/classes/editor/spawnableElement"
+}
