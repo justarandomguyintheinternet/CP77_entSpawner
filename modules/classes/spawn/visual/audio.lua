@@ -1,6 +1,7 @@
 local visualized = require("modules/classes/spawn/visualized")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
+local cache = require("modules/utils/cache")
 
 ---Class for worldStaticSoundEmitterNode
 ---@class sound : visualized
@@ -28,6 +29,16 @@ function sound:new()
 
     setmetatable(o, { __index = self })
    	return o
+end
+
+function sound:loadSpawnData(data, position, rotation)
+    visualized.loadSpawnData(self, data, position, rotation)
+
+    if self.emitterMetadataName == "" then
+        if cache.staticData.staticMetadata[self.spawnData] then
+            self.emitterMetadataName = cache.staticData.staticMetadata[self.spawnData][1]
+        end
+    end
 end
 
 function sound:onAssemble(entity)
@@ -77,7 +88,7 @@ function sound:draw()
     style.mutedText("Emitter Metadata Name")
     ImGui.SameLine()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.emitterMetadataName, change = style.trackedTextField(self.object, "##emitterMetadataName", self.emitterMetadataName, "", 150)
+    self.emitterMetadataName, change = style.trackedSearchDropdown(self.object, "##emitterMetadataName", "Search...", self.emitterMetadataName, cache.staticData.staticMetadataAll, style.getMaxWidth(250))
 end
 
 function sound:getArrowSize()

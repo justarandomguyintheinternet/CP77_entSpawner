@@ -5,7 +5,12 @@ local settings = require("modules/utils/settings")
 
 local sanitizeSpawnData = false
 local data = {}
-local cache = {}
+
+---@class cache
+---@field staticData {ambientData : table, staticData : table, ambientQuad : table, ambientMetadata : table, staticMetadata : table, ambientMetadataAll : table, staticMetadataAll : table, signposts : table} 
+local cache = {
+    staticData = {}
+}
 
 local version = 9
 
@@ -19,9 +24,12 @@ function cache.load()
         print("[entSpawner] Cache is outdated, resetting cache")
     end
 
+    cache.loadStaticData()
+
     if not sanitizeSpawnData then return end
     cache.generateDevicePSClassList()
     cache.generateRecordsList()
+    cache.generateAudioFiles()
 
     cache.removeDuplicates("data/spawnables/ai/aiSpot/paths_workspot.txt")
     cache.removeDuplicates("data/spawnables/entity/templates/paths_ent.txt")
@@ -30,6 +38,17 @@ function cache.load()
     cache.removeDuplicates("data/spawnables/visual/particles/paths_particle.txt")
     cache.removeDuplicates("data/spawnables/visual/decals/paths_mi.txt")
     cache.removeDuplicates("data/spawnables/visual/effects/paths_effect.txt")
+end
+
+function cache.loadStaticData()
+    cache.staticData.ambientData = config.loadFile("data/audio/ambientDataFull.json")
+    cache.staticData.staticData = config.loadFile("data/audio/staticDataFull.json")
+    cache.staticData.ambientQuad = config.loadFile("data/audio/ambientQuadFull.json")
+    cache.staticData.ambientMetadata = config.loadFile("data/audio/ambientMetadataFull.json")
+    cache.staticData.staticMetadata = config.loadFile("data/audio/staticMetadataFull.json")
+    cache.staticData.ambientMetadataAll = config.loadFile("data/audio/ambientMetadataAll.json")
+    cache.staticData.staticMetadataAll = config.loadFile("data/audio/staticMetadataAll.json")
+    cache.staticData.signposts = config.loadFile("data/audio/signpostsData.json")
 end
 
 function cache.addValue(key, value)
@@ -100,6 +119,87 @@ end
 
 function cache.generateDevicePSClassList()
     config.saveFile("deviceComponentPSClasses.json", utils.getDerivedClasses("gameDeviceComponent"))
+end
+
+local function removeDuplicatesTable(data)
+    local new = {}
+    local hash = {}
+
+    for _, entry in pairs(data) do
+        if not hash[entry] then
+            table.insert(new, entry)
+            hash[entry] = true
+        end
+    end
+
+    return new
+end
+
+local function extractMetadata(metaData)
+    local meta = {}
+    local all = {}
+
+    for _, data in pairs(metaData) do
+        for _, event in pairs(data.events) do
+            if not meta[event] then
+                meta[event] = {}
+            end
+            table.insert(meta[event], data.metadata)
+            table.insert(all, data.metadata)
+        end
+    end
+
+    for key, data in pairs(meta) do
+        meta[key] = removeDuplicatesTable(data)
+    end
+
+    all = removeDuplicatesTable(all)
+    return meta, all
+end
+
+function cache.generateAudioFiles()
+    local ambientData = config.loadFile("data/audio/ambientData.json")
+    local ambientMetadata = config.loadFile("data/audio/ambientMetadata.json")
+    local ambientQuad = config.loadFile("data/audio/ambientQuad.json")
+    local signposts = config.loadFile("data/audio/signposts.json")
+    local staticData = config.loadFile("data/audio/staticData.json")
+    local staticMetadata = config.loadFile("data/audio/staticMetadata.json")
+
+    config.saveFile("data/audio/signpostsData.json", {
+        enter = removeDuplicatesTable(signposts.enter),
+        exit = removeDuplicatesTable(signposts.exit)
+    })
+
+    config.saveFile("data/audio/ambientDataFull.json", {
+        onEnter = removeDuplicatesTable(ambientData.onEnter),
+        onActive = removeDuplicatesTable(ambientData.onActive),
+        onExit = removeDuplicatesTable(ambientData.onExit),
+        parameters = removeDuplicatesTable(ambientData.parameters),
+        reverb = removeDuplicatesTable(ambientData.reverb)
+    })
+
+    config.saveFile("data/audio/staticDataFull.json", {
+        onEnter = removeDuplicatesTable(staticData.onEnter),
+        onActive = removeDuplicatesTable(staticData.onActive),
+        onExit = removeDuplicatesTable(staticData.onExit),
+        parameters = removeDuplicatesTable(staticData.parameters),
+        reverb = removeDuplicatesTable(staticData.reverb)
+    })
+
+    local quads = {}
+    for _, entry in pairs(ambientQuad) do
+        if not quads[entry.events[1]] then
+            quads[entry.events[1]] = entry.events
+        end
+    end
+    config.saveFile("data/audio/ambientQuadFull.json", quads)
+
+    local amb, ambAll = extractMetadata(ambientMetadata)
+    local stat, statAll = extractMetadata(staticMetadata)
+    config.saveFile("data/audio/ambientMetadataFull.json", amb)
+    config.saveFile("data/audio/staticMetadataFull.json", stat)
+    config.saveFile("data/audio/ambientMetadataAll.json", ambAll)
+    config.saveFile("data/audio/staticMetadataAll.json", statAll)
 end
 
 local function shouldExclude(args)

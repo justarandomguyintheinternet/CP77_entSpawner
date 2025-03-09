@@ -298,4 +298,42 @@ function style.getMaxWidth(min)
     return width / style.viewSize
 end
 
+function style.trackedSearchDropdown(element, text, searchHint, value, options, width)
+    local finished = false
+
+    ImGui.SetNextItemWidth(width * style.viewSize)
+    if (ImGui.BeginCombo(text, value)) then
+        local interiorWidth = width - (2 * ImGui.GetStyle().FramePadding.x) - 30
+        value, _, finished = style.trackedTextField(element, "##search", value, searchHint, interiorWidth)
+        local x, _ = ImGui.GetItemRectSize()
+
+        ImGui.SameLine()
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.Close) then
+            history.addAction(history.getElementChange(element))
+            value = ""
+            finished = true
+        end
+        style.pushButtonNoBG(false)
+
+        local xButton, _ = ImGui.GetItemRectSize()
+        if ImGui.BeginChild("##list", x + xButton + ImGui.GetStyle().ItemSpacing.x, 120 * style.viewSize) then
+            for _, option in pairs(options) do
+                if option:lower():match(value:lower()) and ImGui.Selectable(option) then
+                    history.addAction(history.getElementChange(element))
+                    value = option
+                    finished = true
+                    ImGui.CloseCurrentPopup()
+                end
+            end
+
+            ImGui.EndChild()
+        end
+
+        ImGui.EndCombo()
+    end
+
+    return value, finished
+end
+
 return style

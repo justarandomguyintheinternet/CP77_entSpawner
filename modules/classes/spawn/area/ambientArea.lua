@@ -3,6 +3,7 @@ local area = require("modules/classes/spawn/area/area")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
+local cache = require("modules/utils/cache")
 
 local channels = {
     "TC_Default", "TC_Player", "TC_Camera", "TC_Human", "TC_SoundReverbArea", "TC_SoundAmbientArea", "TC_Quest", "TC_Projectiles", "TC_Vehicle", "TC_Environment", "TC_WaterNullArea", "TC_Custom0", "TC_Custom1", "TC_Custom2", "TC_Custom3", "TC_Custom4", "TC_Custom5", "TC_Custom6", "TC_Custom7", "TC_Custom8", "TC_Custom9", "TC_Custom10", "TC_Custom11", "TC_Custom12", "TC_Custom13", "TC_Custom14"
@@ -31,11 +32,23 @@ function ambientArea:new()
    	return o
 end
 
+function ambientArea:loadSpawnData(data, position, rotation)
+    triggerArea.loadSpawnData(self, data, position, rotation)
+
+    if not self.trigger.Settings.Data["MetadataParent"] then
+        self.trigger.Settings.Data["MetadataParent"] = {
+            ["$type"] = "CName",
+            ["$storage"] = "string",
+            ["$value"] = ""
+        }
+    end
+end
+
 function ambientArea:drawEvents(eventKey, default)
     if ImGui.TreeNodeEx(eventKey, ImGuiTreeNodeFlags.SpanFullWidth) then
         for index, event in pairs(self.trigger.Settings.Data[eventKey]) do
             ImGui.PushID(tostring(index) .. eventKey)
-            event["event"]["$value"], _ = style.trackedTextField(self.object, "##event", event["event"]["$value"], default, 250)
+            event["event"]["$value"], _ = style.trackedSearchDropdown(self.object, "##event", default, event["event"]["$value"], cache.staticData.ambientData[eventKey], style.getMaxWidth(250) - 30)
 
             ImGui.SameLine()
             if ImGui.Button(IconGlyphs.Delete) then
@@ -82,6 +95,11 @@ function ambientArea:drawAmbient(changed)
                     },
                     ["verticalOuterDistance"] = 1,
                     ["isMusic"] = false,
+                    ["MetadataParent"] = {
+                        ["$type"] = "CName",
+                        ["$storage"] = "string",
+                        ["$value"] = ""
+                    }
                 }
             }
         }
@@ -89,7 +107,7 @@ function ambientArea:drawAmbient(changed)
         return
     end
 
-    local max = utils.getTextMaxWidth({"Outer Distance", "Priority", "Reverb", "Vertical Outer Distance", "Is Music"}) + 8 * ImGui.GetStyle().ItemSpacing.x
+    local max = utils.getTextMaxWidth({"Outer Distance", "Priority", "Reverb", "Vertical Outer Distance", "Is Music", "Metadata Parent"}) + 8 * ImGui.GetStyle().ItemSpacing.x
 
     style.mutedText("Priority")
     ImGui.SameLine()
@@ -112,7 +130,12 @@ function ambientArea:drawAmbient(changed)
     style.mutedText("Reverb")
     ImGui.SameLine()
     ImGui.SetCursorPosX(max)
-    self.trigger.Settings.Data.Reverb["$value"], _ = style.trackedTextField(self.object, "##reverb", self.trigger.Settings.Data.Reverb["$value"], "revb_interior_room_medium", 225)
+    self.trigger.Settings.Data.Reverb["$value"], _ = style.trackedSearchDropdown(self.object, "##reverb", "Search...", self.trigger.Settings.Data.Reverb["$value"], cache.staticData.ambientData.reverb, style.getMaxWidth(250))
+
+    style.mutedText("Metadata Parent")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(max)
+    self.trigger.Settings.Data.MetadataParent["$value"], _ = style.trackedSearchDropdown(self.object, "##metadataParent", "Search...", self.trigger.Settings.Data.MetadataParent["$value"], cache.staticData.ambientMetadataAll, style.getMaxWidth(250))
 
     style.mutedText("Is Music")
     ImGui.SameLine()
@@ -126,7 +149,7 @@ function ambientArea:drawAmbient(changed)
     if ImGui.TreeNodeEx("Parameters", ImGuiTreeNodeFlags.SpanFullWidth) then
         for index, parameter in pairs(self.trigger.Settings.Data["Parameters"]) do
             ImGui.PushID(tostring(index) .. "parameter")
-            parameter["name"]["$value"], _ = style.trackedTextField(self.object, "##parameter", parameter["name"]["$value"], "amb_interior", 175)
+            parameter["name"]["$value"], _ = style.trackedSearchDropdown(self.object, "##parameter", "Search...", parameter["name"]["$value"], cache.staticData.ambientData.parameters, style.getMaxWidth(250) - 120)
             ImGui.SameLine()
             parameter["value"], _ = style.trackedDragFloat(self.object, "##value", parameter["value"], 0.01, 0, 1, "%.2f", 75)
 

@@ -1,0 +1,506 @@
+{
+    "amb_bl_g_wind_quad_01_FL": [
+        "amb_bl_g_wind_quad_01_FL",
+        "amb_bl_g_wind_quad_01_FR",
+        "amb_bl_g_wind_quad_01_RL",
+        "amb_bl_g_wind_quad_01_RR"
+    ],
+    "amb_ext_ep1_border_crossing_roomtone_quad": [
+        "amb_ext_ep1_border_crossing_roomtone_quad",
+        "None",
+        "None",
+        "None"
+    ],
+    "close": [
+        "close",
+        "close",
+        "close",
+        "close"
+    ],
+    "amb_int_crowd_sys_market_01_quad": [
+        "amb_int_crowd_sys_market_01_quad",
+        "amb_int_crowd_sys_market_01_quad",
+        "amb_int_crowd_sys_market_01_quad",
+        "amb_int_crowd_sys_market_01_quad"
+    ],
+    "amb_ext_street_watson_default_busy_01_quad": [
+        "amb_ext_street_watson_default_busy_01_quad",
+        "amb_ext_street_watson_default_busy_01_quad",
+        "amb_ext_street_watson_default_busy_01_quad",
+        "amb_ext_street_watson_default_busy_01_quad"
+    ],
+    "amb_ext_int_crowd_asian_market_01_quiet_FL": [
+        "amb_ext_int_crowd_asian_market_01_quiet_FL",
+        "amb_ext_int_crowd_asian_market_01_quiet_FR",
+        "amb_ext_int_crowd_asian_market_01_quiet_RR",
+        "amb_ext_int_crowd_asian_market_01_quiet_RL"
+    ],
+    "amb_bl_g_wind_quiet_quad_FL": [
+        "amb_bl_g_wind_quiet_quad_FL",
+        "amb_bl_g_wind_quiet_quad_FR",
+        "amb_bl_g_wind_quiet_quad_RR",
+        "amb_bl_g_wind_quiet_quad_RL"
+    ],
+    "amb_int_crowd_sys_airport_close_01_loud_quad": [
+        "amb_int_crowd_sys_airport_close_01_loud_quad",
+        "amb_int_crowd_sys_airport_close_01_loud_quad",
+        "amb_int_crowd_sys_airport_close_01_loud_quad",
+        "amb_int_crowd_sys_airport_close_01_loud_quad"
+    ],
+    "amb_ext_crowd_asian_market_01_FL": [
+        "amb_ext_crowd_asian_market_01_FL",
+        "amb_ext_crowd_asian_market_01_FR",
+        "amb_ext_crowd_asian_market_01_RL",
+        "amb_ext_crowd_asian_market_01_RR"
+    ],
+    "amb_ext_street_watson_rooftop_messy_01_quad_I": [
+        "amb_ext_street_watson_rooftop_messy_01_quad_I",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_sts_ep1_08_botanic_garden_foliage_01_quad": [
+        "amb_sts_ep1_08_botanic_garden_foliage_01_quad",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_ext_crowd_sys_hobo_03_quad": [
+        "amb_ext_crowd_sys_hobo_03_quad",
+        "amb_ext_crowd_sys_hobo_03_quad",
+        "amb_ext_crowd_sys_hobo_03_quad",
+        "amb_ext_crowd_sys_hobo_03_quad"
+    ],
+    "amb_int_crowd_airport_close_01_quad": [
+        "amb_int_crowd_airport_close_01_quad",
+        "amb_int_crowd_airport_close_01_quad",
+        "amb_int_crowd_airport_close_01_quad",
+        "amb_int_crowd_airport_close_01_quad"
+    ],
+    "amb_bl_int_mine_ambush_quad_fl": [
+        "amb_bl_int_mine_ambush_quad_fl",
+        "amb_bl_int_mine_ambush_quad_fr",
+        "amb_bl_int_mine_ambush_quad_rr",
+        "amb_bl_int_mine_ambush_quad_rl"
+    ],
+    "amb_ext_street_watson_default_empty_quad": [
+        "amb_ext_street_watson_default_empty_quad",
+        "amb_ext_street_watson_default_empty_quad",
+        "amb_ext_street_watson_default_empty_quad",
+        "amb_ext_street_watson_default_empty_quad"
+    ],
+    "q003_steinbeck_exit_av_fake_flyby_quad_L_delayed": [
+        "q003_steinbeck_exit_av_fake_flyby_quad_L_delayed",
+        "q003_steinbeck_exit_av_fake_flyby_quad_R_delayed",
+        "q003_quad_dummy",
+        "q003_quad_dummy"
+    ],
+    "amb_ext_crowd_sys_street_global_01_FL": [
+        "amb_ext_crowd_sys_street_global_01_FL",
+        "amb_ext_crowd_sys_street_global_01_FR",
+        "amb_ext_crowd_sys_street_global_01_RR",
+        "amb_ext_crowd_sys_street_global_01_RL"
+    ],
+    "amb_g_weather_wind_generic_city_01_high_alt_calm": [
+        "amb_g_weather_wind_generic_city_01_high_alt_calm",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_ext_street_industrial_harbour_02_quad": [
+        "amb_ext_street_industrial_harbour_02_quad",
+        "amb_ext_street_industrial_harbour_02_quad",
+        "amb_ext_street_industrial_harbour_02_quad",
+        "amb_ext_street_industrial_harbour_02_quad"
+    ],
+    "amb_q305_outer_bunker_alarm_FL": [
+        "amb_q305_outer_bunker_alarm_FL",
+        "amb_q305_outer_bunker_alarm_FR",
+        "amb_q305_outer_bunker_alarm_RL",
+        "amb_q305_outer_bunker_alarm_RR"
+    ],
+    "amb_ext_crowd_sys_hobo_01_quad": [
+        "amb_ext_crowd_sys_hobo_01_quad",
+        "amb_ext_crowd_sys_hobo_01_quad",
+        "amb_ext_crowd_sys_hobo_01_quad",
+        "amb_ext_crowd_sys_hobo_01_quad"
+    ],
+    "amb_bl_int_gas_station_room_01_FL": [
+        "amb_bl_int_gas_station_room_01_FL",
+        "amb_bl_int_gas_station_room_01_FR",
+        "amb_bl_int_gas_station_room_01_RR",
+        "amb_bl_int_gas_station_room_01_RL"
+    ],
+    "amb_q303_safehouse_roomtone_quad": [
+        "amb_q303_safehouse_roomtone_quad",
+        "None",
+        "None",
+        "None"
+    ],
+    "q305_amb_blackwall_inside_core_start": [
+        "q305_amb_blackwall_inside_core_start",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_ext_crowd_backstreets_poor_01_medium_far_main_ep1_FL": [
+        "amb_ext_crowd_backstreets_poor_01_medium_far_main_ep1_FL",
+        "amb_ext_crowd_backstreets_poor_01_medium_far_main_ep1_FR",
+        "amb_ext_crowd_backstreets_poor_01_medium_far_main_ep1_RR",
+        "amb_ext_crowd_backstreets_poor_01_medium_far_main_ep1_RL"
+    ],
+    "amb_int_crowd_sys_restaurant_default_01_quad": [
+        "amb_int_crowd_sys_restaurant_default_01_quad",
+        "amb_int_crowd_sys_restaurant_default_01_quad",
+        "amb_int_crowd_sys_restaurant_default_01_quad",
+        "amb_int_crowd_sys_restaurant_default_01_quad"
+    ],
+    "amb_ext_crowd_sys_party_small_01": [
+        "amb_ext_crowd_sys_party_small_01",
+        "amb_ext_crowd_sys_party_small_01",
+        "amb_ext_crowd_sys_party_small_01",
+        "amb_ext_crowd_sys_party_small_01"
+    ],
+    "amb_q305_bunker_hangar_main_M": [
+        "amb_q305_bunker_hangar_main_M",
+        "amb_q305_bunker_hangar_main_M",
+        "amb_q305_bunker_hangar_main_M",
+        "amb_q305_bunker_hangar_main_M"
+    ],
+    "amb_ext_street_heywood_default_busy_quad": [
+        "amb_ext_street_heywood_default_busy_quad",
+        "amb_ext_street_heywood_default_busy_quad",
+        "amb_ext_street_heywood_default_busy_quad",
+        "amb_ext_street_heywood_default_busy_quad"
+    ],
+    "amb_ext_crowd_backstreets_poor_01_medium_far_main_FL": [
+        "amb_ext_crowd_backstreets_poor_01_medium_far_main_FL",
+        "amb_ext_crowd_backstreets_poor_01_medium_far_main_FR",
+        "amb_ext_crowd_backstreets_poor_01_medium_far_main_RR",
+        "amb_ext_crowd_backstreets_poor_01_medium_far_main_RL"
+    ],
+    "amb_ext_street_heywood_default_empty_quad": [
+        "amb_ext_street_heywood_default_empty_quad",
+        "amb_ext_street_heywood_default_empty_quad",
+        "amb_ext_street_heywood_default_empty_quad",
+        "amb_ext_street_heywood_default_empty_quad"
+    ],
+    "amb_q303_underwater_quad": [
+        "amb_q303_underwater_quad",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_ext_street_industrial_harbour_01_quad": [
+        "amb_ext_street_industrial_harbour_01_quad",
+        "amb_ext_street_industrial_harbour_01_quad",
+        "amb_ext_street_industrial_harbour_01_quad",
+        "amb_ext_street_industrial_harbour_01_quad"
+    ],
+    "amb_ext_street_watson_megabuilding_busy_base_01_quad_I": [
+        "amb_ext_street_watson_megabuilding_busy_base_01_quad_I",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_q003_meat_factory_line_background_active_loop_FL": [
+        "amb_q003_meat_factory_line_background_active_loop_FL",
+        "amb_q003_meat_factory_line_background_active_loop_FR",
+        "amb_q003_meat_factory_line_background_active_loop_RL",
+        "amb_q003_meat_factory_line_background_active_loop_RR"
+    ],
+    "amb_bl_ext_oilfield_barracks_quad_FL": [
+        "amb_bl_ext_oilfield_barracks_quad_FL",
+        "amb_bl_ext_oilfield_barracks_quad_FR",
+        "amb_bl_ext_oilfield_barracks_quad_RR",
+        "amb_bl_ext_oilfield_barracks_quad_RL"
+    ],
+    "amb_ext_crowd_sys_military_tense_01_Q": [
+        "amb_ext_crowd_sys_military_tense_01_Q",
+        "amb_ext_crowd_sys_military_tense_01_Q",
+        "amb_ext_crowd_sys_military_tense_01_Q",
+        "amb_ext_crowd_sys_military_tense_01_Q"
+    ],
+    "amb_q302_expo_roomtone_quad_intrlv": [
+        "amb_q302_expo_roomtone_quad_intrlv",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_ext_street_westbrook_default_01_quad": [
+        "amb_ext_street_westbrook_default_01_quad",
+        "amb_ext_street_westbrook_default_01_quad",
+        "amb_ext_street_westbrook_default_01_quad",
+        "amb_ext_street_westbrook_default_01_quad"
+    ],
+    "amb_bl_ext_protein_farm_quad_FL": [
+        "amb_bl_ext_protein_farm_quad_FL",
+        "amb_bl_ext_protein_farm_quad_FR",
+        "amb_bl_ext_protein_farm_quad_RR",
+        "amb_bl_ext_protein_farm_quad_RL"
+    ],
+    "amb_mq301_initiation_crowd_bkg": [
+        "amb_mq301_initiation_crowd_bkg",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_q113_arasaka_tower_jungle_FL": [
+        "amb_q113_arasaka_tower_jungle_FL",
+        "amb_q113_arasaka_tower_jungle_FR",
+        "amb_q113_arasaka_tower_jungle_RR",
+        "amb_q113_arasaka_tower_jungle_RL"
+    ],
+    "amb_bl_int_gas_station_room_02_FL": [
+        "amb_bl_int_gas_station_room_02_FL",
+        "amb_bl_int_gas_station_room_02_FR",
+        "amb_bl_int_gas_station_room_02_RR",
+        "amb_bl_int_gas_station_room_02_RL"
+    ],
+    "amb_q305_outer_bunker_partial_FL": [
+        "amb_q305_outer_bunker_partial_FL",
+        "amb_q305_outer_bunker_partial_FR",
+        "amb_q305_outer_bunker_partial_RL",
+        "amb_q305_outer_bunker_partial_RR"
+    ],
+    "amb_bl_g_structures_metal_large_01_FL": [
+        "amb_bl_g_structures_metal_large_01_FL",
+        "amb_bl_g_structures_metal_large_01_FR",
+        "amb_bl_g_structures_metal_large_01_RR",
+        "amb_bl_g_structures_metal_large_01_RL"
+    ],
+    "amb_g_weather_rain_custom_balcony_ext_int_01_quad_FL": [
+        "amb_g_weather_rain_custom_balcony_ext_int_01_quad_FL",
+        "amb_g_weather_rain_custom_balcony_ext_int_01_quad_FR",
+        "amb_g_weather_rain_custom_balcony_ext_int_01_quad_RL",
+        "amb_g_weather_rain_custom_balcony_ext_int_01_quad_RR"
+    ],
+    "ow_courier_amb_dock_works_big_quad": [
+        "ow_courier_amb_dock_works_big_quad",
+        "None",
+        "None",
+        "None"
+    ],
+    "q003_vista_av_flyby_L": [
+        "q003_vista_av_flyby_L",
+        "q003_vista_av_flyby_R",
+        "None",
+        "None"
+    ],
+    "amb_mq304_funeral_crowd": [
+        "amb_mq304_funeral_crowd",
+        "amb_mq304_funeral_crowd",
+        "amb_mq304_funeral_crowd",
+        "amb_mq304_funeral_crowd"
+    ],
+    "amb_bl_int_power_plant_quad_FL": [
+        "amb_bl_int_power_plant_quad_FL",
+        "amb_bl_int_power_plant_quad_FR",
+        "amb_bl_int_power_plant_quad_RR",
+        "amb_bl_int_power_plant_quad_RL"
+    ],
+    "amb_bl_ext_landfill_quad_FL": [
+        "amb_bl_ext_landfill_quad_FL",
+        "amb_bl_ext_landfill_quad_FR",
+        "amb_bl_ext_landfill_quad_RR",
+        "amb_bl_ext_landfill_quad_RL"
+    ],
+    "amb_ext_crowd_sys_asian_market_01_FL": [
+        "amb_ext_crowd_sys_asian_market_01_FL",
+        "amb_ext_crowd_sys_asian_market_01_FR",
+        "amb_ext_crowd_sys_asian_market_01_RL",
+        "amb_ext_crowd_sys_asian_market_01_RR"
+    ],
+    "amb_mq304_funeral_roomtone_quad": [
+        "amb_mq304_funeral_roomtone_quad",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_ext_street_watson_alt_01_dyn_crowd_quad": [
+        "amb_ext_street_watson_alt_01_dyn_crowd_quad",
+        "amb_ext_street_watson_alt_01_dyn_crowd_quad",
+        "amb_ext_street_watson_alt_01_dyn_crowd_quad",
+        "amb_ext_street_watson_alt_01_dyn_crowd_quad"
+    ],
+    "amb_ext_street_industrial_empty_quad_FL_factory_add": [
+        "amb_ext_street_industrial_empty_quad_FL_factory_add",
+        "amb_ext_street_industrial_empty_quad_FR_factory_add",
+        "amb_ext_street_industrial_empty_quad_RR",
+        "amb_ext_street_industrial_empty_quad_RL"
+    ],
+    "amb_ext_street_pacifica_rnd_meta_adv_combat_zone_battle_01_area": [
+        "amb_ext_street_pacifica_rnd_meta_adv_combat_zone_battle_01_area",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_sts_ep1_13_auction_crowd_side": [
+        "amb_sts_ep1_13_auction_crowd_side",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_ext_crowd_q112_parade_L": [
+        "amb_ext_crowd_q112_parade_L",
+        "amb_ext_crowd_q112_parade_R",
+        "amb_ext_crowd_q112_parade_RR",
+        "amb_ext_crowd_q112_parade_RL"
+    ],
+    "amb_q304_servers_fried_quad": [
+        "amb_q304_servers_fried_quad",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_q113_arasaka_tower_jungle_trees_FL": [
+        "amb_q113_arasaka_tower_jungle_trees_FL",
+        "amb_q113_arasaka_tower_jungle_trees_FR",
+        "amb_q113_arasaka_tower_jungle_trees_RR",
+        "amb_q113_arasaka_tower_jungle_trees_RL"
+    ],
+    "amb_ext_crowd_watson_main_01_quad_FL": [
+        "amb_ext_crowd_watson_main_01_quad_FL",
+        "amb_ext_crowd_watson_main_01_quad_FR",
+        "amb_ext_crowd_watson_main_01_quad_RL",
+        "amb_ext_crowd_watson_main_01_quad_RR"
+    ],
+    "amb_q305_outer_bunker_default_FL": [
+        "amb_q305_outer_bunker_default_FL",
+        "amb_q305_outer_bunker_default_FR",
+        "amb_q305_outer_bunker_default_RR",
+        "amb_q305_outer_bunker_default_RL"
+    ],
+    "q003_steinbeck_exit_av_fake_flyby_quad_L_lower": [
+        "q003_steinbeck_exit_av_fake_flyby_quad_L_lower",
+        "q003_steinbeck_exit_av_fake_flyby_quad_R_lower",
+        "None",
+        "None"
+    ],
+    "amb_ext_crowd_sys_hobo_01_quad_tunnel": [
+        "amb_ext_crowd_sys_hobo_01_quad_tunnel",
+        "amb_ext_crowd_sys_hobo_01_quad_tunnel",
+        "amb_ext_crowd_sys_hobo_01_quad_tunnel",
+        "amb_ext_crowd_sys_hobo_01_quad_tunnel"
+    ],
+    "None": [
+        "None",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_ext_street_industrial_harbour_03_quad": [
+        "amb_ext_street_industrial_harbour_03_quad",
+        "amb_ext_street_industrial_harbour_03_quad",
+        "amb_ext_street_industrial_harbour_03_quad",
+        "amb_ext_street_industrial_harbour_03_quad"
+    ],
+    "amb_ext_crowd_mq306_bar": [
+        "amb_ext_crowd_mq306_bar",
+        "amb_ext_crowd_mq306_bar",
+        "amb_ext_crowd_mq306_bar",
+        "amb_ext_crowd_mq306_bar"
+    ],
+    "amb_q306_launchpad_rain_quad": [
+        "amb_q306_launchpad_rain_quad",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_ext_crowd_backstreets_poor_02_dense_close_FL": [
+        "amb_ext_crowd_backstreets_poor_02_dense_close_FL",
+        "amb_ext_crowd_backstreets_poor_02_dense_close_FR",
+        "amb_ext_crowd_backstreets_poor_02_dense_close_RR",
+        "amb_ext_crowd_backstreets_poor_02_dense_close_RL"
+    ],
+    "amb_ext_street_industrial_santo_domingo_02_quad": [
+        "amb_ext_street_industrial_santo_domingo_02_quad",
+        "amb_ext_street_industrial_santo_domingo_02_quad",
+        "amb_ext_street_industrial_santo_domingo_02_quad",
+        "amb_ext_street_industrial_santo_domingo_02_quad"
+    ],
+    "amb_g_weather_rain_generic_city_01_quad_RL": [
+        "amb_g_weather_rain_generic_city_01_quad_RL",
+        "amb_g_weather_rain_generic_city_01_quad_RR",
+        "amb_g_weather_rain_generic_city_01_quad_FL",
+        "amb_g_weather_rain_generic_city_01_quad_FR"
+    ],
+    "amb_ext_street_watson_busy_quad": [
+        "amb_ext_street_watson_busy_quad",
+        "amb_ext_street_watson_busy_quad",
+        "amb_ext_street_watson_busy_quad",
+        "amb_ext_street_watson_busy_quad"
+    ],
+    "ow_courier_amb_dock_works_small_quad": [
+        "ow_courier_amb_dock_works_small_quad",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_ext_crowd_sys_spectator_medium_01": [
+        "amb_ext_crowd_sys_spectator_medium_01",
+        "amb_ext_crowd_sys_spectator_medium_01",
+        "amb_ext_crowd_sys_spectator_medium_01",
+        "amb_ext_crowd_sys_spectator_medium_01"
+    ],
+    "amb_h_int_balcony_01_wind_FL": [
+        "amb_h_int_balcony_01_wind_FL",
+        "amb_h_int_balcony_01_wind_FR",
+        "amb_h_int_balcony_01_wind_RL",
+        "amb_h_int_balcony_01_wind_RR"
+    ],
+    "amb_q113_arasaka_tower_jungle_trees_RL": [
+        "amb_q113_arasaka_tower_jungle_trees_RL",
+        "amb_q113_arasaka_tower_jungle_trees_RR",
+        "amb_q113_arasaka_tower_jungle_trees_FR",
+        "amb_q113_arasaka_tower_jungle_trees_FL"
+    ],
+    "amb_ext_street_industrial_santo_domingo_01_quad": [
+        "amb_ext_street_industrial_santo_domingo_01_quad",
+        "amb_ext_street_industrial_santo_domingo_01_quad",
+        "amb_ext_street_industrial_santo_domingo_01_quad",
+        "amb_ext_street_industrial_santo_domingo_01_quad"
+    ],
+    "amb_ext_crowd_backyard_01_FL": [
+        "amb_ext_crowd_backyard_01_FL",
+        "amb_ext_crowd_backyard_01_FR",
+        "amb_ext_crowd_backyard_01_RR",
+        "amb_ext_crowd_backyard_01_RL"
+    ],
+    "amb_q307_hospital_outside_L_em": [
+        "amb_q307_hospital_outside_L_em",
+        "amb_q307_hospital_outside_R_em",
+        "None",
+        "None"
+    ],
+    "amb_ext_crowd_sys_hobo_02_quad": [
+        "amb_ext_crowd_sys_hobo_02_quad",
+        "amb_ext_crowd_sys_hobo_02_quad",
+        "amb_ext_crowd_sys_hobo_02_quad",
+        "amb_ext_crowd_sys_hobo_02_quad"
+    ],
+    "amb_h_int_balcony_01_debris_FL": [
+        "amb_h_int_balcony_01_debris_FL",
+        "amb_h_int_balcony_01_debris_FR",
+        "amb_h_int_balcony_01_debris_RL",
+        "amb_h_int_balcony_01_debris_RR"
+    ],
+    "amb_int_crowd_airport_close_02_quad_intlvd": [
+        "amb_int_crowd_airport_close_02_quad_intlvd",
+        "None",
+        "None",
+        "None"
+    ],
+    "amb_int_crowd_airport_dist_01_quad": [
+        "amb_int_crowd_airport_dist_01_quad",
+        "amb_int_crowd_airport_dist_01_quad",
+        "amb_int_crowd_airport_dist_01_quad",
+        "amb_int_crowd_airport_dist_01_quad"
+    ],
+    "amb_ext_street_pacifica_default_empty_01_quad": [
+        "amb_ext_street_pacifica_default_empty_01_quad",
+        "amb_ext_street_pacifica_default_empty_01_quad",
+        "amb_ext_street_pacifica_default_empty_01_quad",
+        "amb_ext_street_pacifica_default_empty_01_quad"
+    ]
+}
