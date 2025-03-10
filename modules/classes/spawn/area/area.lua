@@ -135,10 +135,6 @@ function area:export()
 
     if #self.markers == 0 then
         local issues = self.object.sUI.spawner.baseUI.exportUI.exportIssues
-        if not issues.noOutlineMarkers then
-            issues.noOutlineMarkers = {}
-        end
-
         table.insert(issues.noOutlineMarkers, self.object.name)
 
         return data

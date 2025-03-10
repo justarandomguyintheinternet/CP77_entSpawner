@@ -1,25 +1,18 @@
+local connectedMarker = require("modules/classes/spawn/connectedMarker")
 local spawnable = require("modules/classes/spawn/spawnable")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 local history = require("modules/utils/history")
 local visualizer = require("modules/utils/visualizer")
 
-local propertyNames = {
-    "Preview Outline",
-    "Height"
-}
-
 ---Class for outline marker (Not a node, meta class used for area nodes)
----@class outlineMarker : spawnable
----@field private previewMesh string
----@field private intersectionMultiplier number
----@field private previewed boolean
+---@class outlineMarker : connectedMarker
 ---@field private height number
 ---@field private dragBeingEdited boolean
-local outlineMarker = setmetatable({}, { __index = spawnable })
+local outlineMarker = setmetatable({}, { __index = connectedMarker })
 
 function outlineMarker:new()
-	local o = spawnable.new(self)
+	local o = connectedMarker.new(self)
 
     o.spawnListType = "files"
     o.dataType = "Outline Marker"
@@ -29,78 +22,24 @@ function outlineMarker:new()
     o.description = "Places a marker for an outline. Automatically connects with other outline markers in the same group, to form a outline. The parent group can be used to refernce the contained outline, and use it in worldAreaShapeNode's"
     o.icon = IconGlyphs.SelectMarker
 
-    o.previewed = true
-
     o.height = 2
-    o.maxPropertyWidth = nil
     o.dragBeingEdited = false
-
-    o.streamingMultiplier = 10
-    o.primaryRange = 350
-    o.secondaryRange = 300
-    o.noExport = true
+    o.previewText = "Preview Outline"
 
     setmetatable(o, { __index = self })
    	return o
 end
 
-function outlineMarker:onAssemble(entity)
-    spawnable.onAssemble(self, entity)
-
-    local transform = self:getTransform()
-
-    local component = entMeshComponent.new()
-    component.name = "mesh"
-    component.mesh = ResRef.FromString("base\\spawner\\cube_aligned.mesh")
-    component.visualScale = Vector3.new(transform.scale.x, 0.005, transform.scale.z / 2)
-    component.meshAppearance = "blue"
-    component.isEnabled = self.previewed
-
-    local localTransform = WorldTransform.new()
-    localTransform:SetOrientationEuler(EulerAngles.new(0, 0, transform.rotation.yaw))
-    component.localTransform = localTransform
-    entity:AddComponent(component)
-
-    local marker = entMeshComponent.new()
-    marker.name = "marker"
-    marker.mesh = ResRef.FromString("base\\environment\\ld_kit\\marker.mesh")
-    marker.meshAppearance = "blue"
-    marker.visualScale = Vector3.new(0.005, 0.005, 0.005)
-    marker.isEnabled = self.previewed
-    entity:AddComponent(marker)
-
-    visualizer.updateScale(entity, self:getArrowSize(), "arrows")
-
+function outlineMarker:midAssemble()
     self:enforceSameZ()
-
-    for _, neighbor in pairs(self:getNeighbors().neighbors) do
-        neighbor:updateTransform(oldParent)
-    end
-end
-
-function outlineMarker:spawn()
-    self.rotation = EulerAngles.new(0, 0, 0)
-    spawnable.spawn(self)
 end
 
 function outlineMarker:save()
-    local data = spawnable.save(self)
+    local data = connectedMarker.save(self)
 
     data.height = self.height
-    data.previewed = self.previewed
 
     return data
-end
-
-function outlineMarker:onParentChanged(oldParent)
-    if self.object.parent then
-        self:update()
-    end
-
-    local oldNeighbors = self:getNeighbors(oldParent)
-    for _, neighbor in pairs(oldNeighbors.neighbors) do
-        neighbor:updateTransform(neighbor.object.parent)
-    end
 end
 
 function outlineMarker:update()
@@ -168,30 +107,6 @@ function outlineMarker:updateTransform(parent)
     mesh:RefreshAppearance()
 end
 
-function outlineMarker:getSize()
-    return { x = 0.1, y = 0.1, z = 0.6 }
-end
-
-function outlineMarker:getBBox()
-    return {
-        min = { x = -0.075, y = -0.075, z = 0 },
-        max = { x = 0.075, y = 0.075, z = self:getSize().z }
-    }
-end
-
-function outlineMarker:getArrowSize()
-    local max = math.min(math.max(self.height, 0.75) * 0.5, 0.8)
-    return { x = max, y = max, z = max }
-end
-
--- Needed for dropToSurface, uses this and size to get bbox
-function outlineMarker:getCenter()
-    local position = Vector4.new(self.position.x, self.position.y, self.position.z, 1)
-    position.z = position.z + self:getSize().z / 2
-
-    return position
-end
-
 -- Enforce same z for all neighbors
 ---@protected
 function outlineMarker:enforceSameZ()
@@ -215,32 +130,8 @@ function outlineMarker:updateHeight()
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
 end
 
-function outlineMarker:setPreview(state)
-    self.previewed = state
-    local entity = self:getEntity()
-
-    if entity then
-        entity:FindComponentByName("mesh"):Toggle(self.previewed)
-        entity:FindComponentByName("marker"):Toggle(self.previewed)
-    end
-end
-
 function outlineMarker:draw()
-    if not self.maxPropertyWidth then
-        self.maxPropertyWidth = utils.getTextMaxWidth(propertyNames) + 4 * ImGui.GetStyle().ItemSpacing.x
-    end
-
-    style.mutedText("Preview Outline")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.previewed, changed = style.trackedCheckbox(self.object, "##visualize", self.previewed)
-    if changed then
-        self:setPreview(self.previewed)
-
-        for _, neighbor in pairs(self:getNeighbors().neighbors) do
-            neighbor:setPreview(self.previewed)
-        end
-    end
+    connectedMarker.draw(self)
 
     style.mutedText("Height")
     ImGui.SameLine()
@@ -273,69 +164,6 @@ function outlineMarker:draw()
             neighbor:updateHeight()
         end
     end
-end
-
-function outlineMarker:getGroupedProperties()
-    local properties = {}
-
-    properties["visualization"] = {
-		name = "Visualization",
-        id = "outlineMarker",
-		data = {},
-		draw = function(_, entries)
-            ImGui.Text("Outline Marker")
-
-            ImGui.SameLine()
-
-            ImGui.PushID("outlineMarker")
-
-			if ImGui.Button("Off") then
-				for _, entry in ipairs(entries) do
-                    if entry.spawnable.node == self.node then
-                        entry.spawnable.previewed = false
-                        local entity = entry.spawnable:getEntity()
-                        if entity then
-                            entity:FindComponentByName("mesh"):Toggle(false)
-                            entity:FindComponentByName("marker"):Toggle(false)
-                        end
-                    end
-				end
-			end
-
-            ImGui.SameLine()
-
-            if ImGui.Button("On") then
-				for _, entry in ipairs(entries) do
-                    if entry.spawnable.node == self.node then
-                        entry.spawnable.previewed = true
-                        local entity = entry.spawnable:getEntity()
-                        if entity then
-                            entity:FindComponentByName("mesh"):Toggle(true)
-                            entity:FindComponentByName("marker"):Toggle(true)
-                        end
-                    end
-				end
-			end
-
-            ImGui.PopID()
-		end,
-		entries = { self.object }
-	}
-
-    return properties
-end
-
-function outlineMarker:getProperties()
-    local properties = {}
-    table.insert(properties, {
-        id = self.node,
-        name = self.dataType,
-        defaultHeader = true,
-        draw = function()
-            self:draw()
-        end
-    })
-    return properties
 end
 
 return outlineMarker
