@@ -474,17 +474,21 @@ function editor.checkArrow()
     local ray = editor.getScreenToWorldRay()
     local arrowWidth = 0.04 * math.max(selected:getArrowSize().x, selected:getArrowSize().y, selected:getArrowSize().z)
 
-    local xHit = intersection.getBoxIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), ray, selected.position, selected.rotation, {
+    local arrowTransform = selected:getEntity():FindComponentByName("arrows"):GetLocalToWorld()
+    local rotation = arrowTransform:GetRotation()
+    local position = arrowTransform:GetTranslation()
+
+    local xHit = intersection.getBoxIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), ray, position, rotation, {
         min = { x = 0, y = -arrowWidth, z = -arrowWidth },
         max = { x = selected:getArrowSize().x * 2, y = arrowWidth, z = arrowWidth }
     })
 
-    local yHit = intersection.getBoxIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), ray, selected.position, selected.rotation, {
+    local yHit = intersection.getBoxIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), ray, position, rotation, {
         min = { x = -arrowWidth, y = 0, z = -arrowWidth },
         max = { x = arrowWidth, y = selected:getArrowSize().y * 2, z = arrowWidth }
     })
 
-    local zHit = intersection.getBoxIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), ray, selected.position, selected.rotation, {
+    local zHit = intersection.getBoxIntersection(GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), ray, position, rotation, {
         min = { x = -arrowWidth, y = -arrowWidth, z = 0 },
         max = { x = arrowWidth, y = arrowWidth, z = selected:getArrowSize().z * 2 }
     })

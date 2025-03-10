@@ -12,14 +12,17 @@ local previewComponentNames = {
 local function addMesh(entity, name, mesh, scale, app, enabled)
     if app == "green" then app = "lime" end
 
+    -- Ideally use placed component which is root (No parentTransform, no localTransform), alertnatively use first IPlacedComponent
     local parent = nil
     for _, component in pairs(entity:GetComponents()) do
         if component:IsA("entIPlacedComponent") then
-            parent = component
-            break
+            if not component.parentTransform and component.localTransform.Position:ToVector4():IsZero() and component.localTransform:GetOrientation():GetForward().y == 1 then
+                parent = component
+                break
+            end
         end
     end
-    if not parent then parent = entity:GetComponents()[1] end
+    if not backup then backup = entity:GetComponents()[1] end
 
     local component = entMeshComponent.new()
     component.name = name
