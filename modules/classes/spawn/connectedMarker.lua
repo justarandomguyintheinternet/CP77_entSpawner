@@ -143,10 +143,10 @@ end
 
 function connectedMarker:draw()
     if not self.maxPropertyWidth then
-        self.maxPropertyWidth = utils.getTextMaxWidth({previewText}) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        self.maxPropertyWidth = utils.getTextMaxWidth({ self.previewText }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
     end
 
-    style.mutedText(previewText)
+    style.mutedText(self.previewText)
     ImGui.SameLine()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
     self.previewed, changed = style.trackedCheckbox(self.object, "##visualize", self.previewed)

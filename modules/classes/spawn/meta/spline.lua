@@ -2,32 +2,34 @@ local visualized = require("modules/classes/spawn/visualized")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 
----Class for worldAreaShapeNode
----@class area : visualized
----@field outlinePath string
----@field height number
----@field markers table
+---Class for worldSplineNode
+---@class spline : visualized
+---@field splinePath string
+---@field points table
+---@field reverse boolean
+---@field looped boolean
 ---@field protected maxPropertyWidth number
-local area = setmetatable({}, { __index = visualized })
+local spline = setmetatable({}, { __index = visualized })
 
-function area:new()
+function spline:new()
 	local o = visualized.new(self)
 
     o.spawnListType = "files"
-    o.dataType = "Area"
-    o.spawnDataPath = "data/spawnables/area/area/"
-    o.modulePath = "area/area"
-    o.node = "worldAreaShapeNode"
-    o.description = "Base type for all area type nodes. Position is irrelevant, as the actual position is determined by the outline markers."
-    o.icon = IconGlyphs.Select
+    o.dataType = "Spline"
+    o.spawnDataPath = "data/spawnables/meta/Spline/"
+    o.modulePath = "meta/spline"
+    o.node = "worldSplineNode"
+    o.description = "Basic spline with auto-tangents, which can be referenced using its NodeRef."
+    o.icon = IconGlyphs.VectorPolyline
 
     o.previewed = true
-    o.previewColor = "cyan"
-    o.outlinePath = ""
+    o.previewColor = "violet"
+    o.splinePath = ""
 
+    o.reverse = false
+    o.looped = false
     -- Only used for saved data, to have easier access to it during export
-    o.height = 0
-    o.markers = {}
+    o.points = {}
 
     o.maxPropertyWidth = nil
 
@@ -35,40 +37,43 @@ function area:new()
    	return o
 end
 
-function area:spawn()
+function spline:getVisualizerSize()
+    return { x = 0.25, y = 0.25, z = 0.25 }
+end
+
+function spline:spawn()
     self.rotation = EulerAngles.new(0, 0, 0)
     visualized.spawn(self)
 end
 
-function area:update()
+function spline:update()
     self.rotation = EulerAngles.new(0, 0, 0)
     visualized.update(self)
 end
 
-function area:save()
+function spline:save()
     local data = visualized.save(self)
 
-    local markers = {}
-    local height = 0
-    local paths = self:loadOutlinePaths()
+    local points = {}
+    local paths = self:loadSplinePaths()
 
-    if utils.indexValue(paths, self.outlinePath) ~= -1 then
-        for _, child in pairs(self.object.sUI.getElementByPath(self.outlinePath).childs) do
-            if utils.isA(child, "spawnableElement") and child.spawnable.modulePath == "area/outlineMarker" then
-                table.insert(markers, utils.fromVector(child.spawnable.position))
-                height = child.spawnable.height
+    if utils.indexValue(paths, self.splinePath) ~= -1 then
+        for _, child in pairs(self.object.sUI.getElementByPath(self.splinePath).childs) do
+            if utils.isA(child, "spawnableElement") and child.spawnable.modulePath == "meta/splineMarker" then
+                table.insert(points, utils.fromVector(child.spawnable.position))
             end
         end
     end
 
-    data.outlinePath = self.outlinePath
-    data.markers = markers
-    data.height = height
+    data.splinePath = self.splinePath
+    data.points = points
+    data.reverse = self.reverse
+    data.looped = self.looped
 
     return data
 end
 
-function area:loadOutlinePaths()
+function spline:loadSplinePaths()
     local paths = {}
     local ownRoot = self.object:getRootParent()
 
@@ -76,11 +81,11 @@ function area:loadOutlinePaths()
         if container.ref:getRootParent() == ownRoot then
             local nMarkers = 0
             for _, child in pairs(container.ref.childs) do
-                if utils.isA(child, "spawnableElement") and child.spawnable.modulePath == "area/outlineMarker" then
+                if utils.isA(child, "spawnableElement") and child.spawnable.modulePath == "meta/splineMarker" then
                     nMarkers = nMarkers + 1
                 end
 
-                if nMarkers == 3 then
+                if nMarkers == 2 then
                     table.insert(paths, container.path)
                     break
                 end
@@ -91,31 +96,41 @@ function area:loadOutlinePaths()
     return paths
 end
 
-function area:draw()
+function spline:draw()
     visualized.draw(self)
 
     if not self.maxPropertyWidth then
-        self.maxPropertyWidth = utils.getTextMaxWidth({ "Visualize", "Outline Path" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Visualize", "Spline Path", "Reverse", "Looped" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
     end
 
     self:drawPreviewCheckbox("Visualize", self.maxPropertyWidth)
 
-    local paths = self:loadOutlinePaths()
+    local paths = self:loadSplinePaths()
     table.insert(paths, 1, "None")
 
-    local index = math.max(1, utils.indexValue(paths, self.outlinePath))
+    local index = math.max(1, utils.indexValue(paths, self.splinePath))
 
-    style.mutedText("Outline Path")
+    style.mutedText("Spline Path")
     ImGui.SameLine()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
-    local idx, changed = style.trackedCombo(self.object, "##outlinePath", index - 1, paths, 225)
+    local idx, changed = style.trackedCombo(self.object, "##splinePath", index - 1, paths, 225)
     if changed then
-        self.outlinePath = paths[idx + 1]
+        self.splinePath = paths[idx + 1]
     end
-    style.tooltip("Path to the group containing the outline markers.\nMust be contained within the same root group as this area.")
+    style.tooltip("Path to the group containing the spline points.\nMust be contained within the same root group as this spline.")
+
+    style.mutedText("Reverse")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.reverse, _ = style.trackedCheckbox(self.object, "##reverse", self.reverse)
+
+    style.mutedText("Looped")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.looped, _ = style.trackedCheckbox(self.object, "##looped", self.looped)
 end
 
-function area:getProperties()
+function spline:getProperties()
     local properties = visualized.getProperties(self)
     table.insert(properties, {
         id = self.node,
@@ -128,59 +143,46 @@ function area:getProperties()
     return properties
 end
 
-function area:export()
+function spline:export()
     local data = visualized.export(self)
-    data.type = "worldAreaShapeNode"
+    data.type = "worldSplineNode"
     data.data = {}
 
-    if #self.markers == 0 then
+    if #self.points == 0 then
         local issues = self.object.sUI.spawner.baseUI.exportUI.exportIssues
-        if not issues.noOutlineMarkers then
-            issues.noOutlineMarkers = {}
-        end
-
-        table.insert(issues.noOutlineMarkers, self.object.name)
+        table.insert(issues.noSplineMarker, self.object.name)
 
         return data
     end
 
-    if #self.markers > 255 then
-        print(string.format("[entSpawner] Issue during export: Area outline %s has more than 255 markers. Only the first 255 will be utilized.", self.outlinePath))
+    local points = {}
+
+    for _, point in pairs(self.points) do
+        local position = utils.subVector(point, self.position)
+
+        table.insert(points, {
+            ["$type"] = "SplinePoint",
+            ["position"] = {
+                ["$type"] = "Vector3",
+                ["X"] = position.x,
+                ["Y"] = position.y,
+                ["Z"] = position.z
+          }
+        })
     end
 
-    -- Grab center
-    local center = Vector4.new(0, 0, 0, 0)
-	for _, position in pairs(self.markers) do
-		center = utils.addVector(center, ToVector4(position))
-	end
-	local nMarkers = math.max(1, #self.markers)
-	center = Vector4.new(center.x / nMarkers, center.y / nMarkers, center.z / nMarkers, 0)
-    data.position = utils.fromVector(center)
-
-    local buffer = utils.intToHex(math.min(255, #self.markers))
-    buffer = buffer .. "000000"
-
-    for idx, marker in pairs(self.markers) do
-        if idx <= 255 then
-            local diff = utils.subVector(ToVector4(marker), center)
-
-            buffer = buffer .. utils.floatToHex(diff.x)
-            buffer = buffer .. utils.floatToHex(diff.y)
-            buffer = buffer .. utils.floatToHex(diff.z)
-            buffer = buffer .. utils.floatToHex(1)
-        end
-    end
-
-    buffer = buffer .. utils.floatToHex(self.height)
-
-    data.data["outline"] = {
-        ["Data"] = {
-            ["$type"] = "AreaShapeOutline",
-            ["buffer"] = utils.hexToBase64(buffer),
+    data.data = {
+        ["splineData"] = {
+            ["Data"] = {
+                ["$type"] = "Spline",
+                ["points"] = points,
+                ["reversed"] = self.reverse and 1 or 0,
+                ["looped"] = self.looped and 1 or 0
+            }
         }
     }
 
     return data
 end
 
-return area
+return spline

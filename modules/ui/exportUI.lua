@@ -11,7 +11,14 @@ exportUI = {
     templates = {},
     spawner = nil,
     exportHovered = false,
-    exportIssues = {},
+    exportIssues = {
+        nodeRefDuplicated = {},
+        noOutlineMarkers = {},
+        noSplineMarker = {},
+        spotEmptyRef = {},
+        spotReferencingEmpty = {},
+        markingUnresolved = {}
+    },
     sectorPropertiesWidth = nil
 }
 
@@ -296,36 +303,46 @@ function exportUI.drawTemplates()
     end
 end
 
+function exportUI.getCurrentIssue()
+    for key, value in pairs(exportUI.exportIssues) do
+        if #value ~= 0 then
+            return key
+        end
+    end
+end
+
 function exportUI.drawIssues()
-    if exportUI.exportIssues.nodeRefDuplicated then
+    if exportUI.getCurrentIssue() == "nodeRefDuplicated" then
         ImGui.OpenPopup("Duplicated NodeRefs")
         if ImGui.BeginPopupModal("Duplicated NodeRefs", true, ImGuiWindowFlags.AlwaysAutoResize) then
             ImGui.Text("Duplicated nodeRefs found, please fix them before exporting!")
 
             ImGui.Separator()
 
-            style.mutedText("NodeRef:")
-            ImGui.SameLine()
-            ImGui.Text(exportUI.exportIssues.nodeRefDuplicated.nodeRef)
+            for _, duplicate in pairs(exportUI.exportIssues.nodeRefDuplicated) do
+                style.mutedText("NodeRef:")
+                ImGui.SameLine()
+                ImGui.Text(duplicate.nodeRef)
 
-            style.mutedText("Node 1: ")
-            ImGui.SameLine()
-            ImGui.Text(exportUI.exportIssues.nodeRefDuplicated.name1)
+                style.mutedText("Node 1: ")
+                ImGui.SameLine()
+                ImGui.Text(duplicate.name1)
 
-            style.mutedText("Node 2: ")
-            ImGui.SameLine()
-            ImGui.Text(exportUI.exportIssues.nodeRefDuplicated.name2)
+                style.mutedText("Node 2: ")
+                ImGui.SameLine()
+                ImGui.Text(duplicate.name2)
+            end
 
             ImGui.Separator()
 
             if ImGui.Button("OK") then
                 ImGui.CloseCurrentPopup()
-                exportUI.exportIssues.nodeRefDuplicated = nil
+                exportUI.exportIssues.nodeRefDuplicated = {}
             end
             ImGui.EndPopup()
         end
     end
-    if exportUI.exportIssues.noOutlineMarkers and not exportUI.exportIssues.nodeRefDuplicated then
+    if exportUI.getCurrentIssue() == "noOutlineMarkers" then
         ImGui.OpenPopup("Missing Outline Markers")
         if ImGui.BeginPopupModal("Missing Outline Markers", true, ImGuiWindowFlags.AlwaysAutoResize) then
             ImGui.Text("The following area nodes have no outline, possibly due to a broken outline group link!")
@@ -342,12 +359,34 @@ function exportUI.drawIssues()
 
             if ImGui.Button("OK") then
                 ImGui.CloseCurrentPopup()
-                exportUI.exportIssues.noOutlineMarkers = nil
+                exportUI.exportIssues.noOutlineMarkers = {}
             end
             ImGui.EndPopup()
         end
     end
-    if exportUI.exportIssues.spotEmptyRef and not exportUI.exportIssues.nodeRefDuplicated and not exportUI.exportIssues.noOutlineMarkers then
+    if exportUI.getCurrentIssue() == "noSplineMarker" then
+        ImGui.OpenPopup("Missing Spline Points")
+        if ImGui.BeginPopupModal("Missing Spline Points", true, ImGuiWindowFlags.AlwaysAutoResize) then
+            ImGui.Text("The following spline nodes have no points, possibly due to a broken spline group link!")
+
+            ImGui.Separator()
+
+            for _, spline in pairs(exportUI.exportIssues.noSplineMarker) do
+                style.mutedText("Spline Name:")
+                ImGui.SameLine()
+                ImGui.Text(spline)
+
+                ImGui.Separator()
+            end
+
+            if ImGui.Button("OK") then
+                ImGui.CloseCurrentPopup()
+                exportUI.exportIssues.noSplineMarker = {}
+            end
+            ImGui.EndPopup()
+        end
+    end
+    if exportUI.getCurrentIssue() == "spotEmptyRef" then
         ImGui.OpenPopup("Empty AISpot NodeRef")
         if ImGui.BeginPopupModal("Empty AISpot NodeRef", true, ImGuiWindowFlags.AlwaysAutoResize) then
             ImGui.Text("The following AISpot's do not have a NodeRef assigned to them, making them unusable!")
@@ -364,12 +403,12 @@ function exportUI.drawIssues()
 
             if ImGui.Button("OK") then
                 ImGui.CloseCurrentPopup()
-                exportUI.exportIssues.spotEmptyRef = nil
+                exportUI.exportIssues.spotEmptyRef = {}
             end
             ImGui.EndPopup()
         end
     end
-    if exportUI.exportIssues.spotReferencingEmpty and not exportUI.exportIssues.nodeRefDuplicated and not exportUI.exportIssues.noOutlineMarkers and not exportUI.exportIssues.spotEmptyRef then
+    if exportUI.getCurrentIssue() == "spotReferencingEmpty" then
         ImGui.OpenPopup("Community Referencing Missing NodeRef")
         if ImGui.BeginPopupModal("Community Referencing Missing NodeRef", true, ImGuiWindowFlags.AlwaysAutoResize) then
             ImGui.Text("The following Community Entries reference a NodeRef that is not part of this export. (Might still work, if the NodeRef is part of another export)")
@@ -402,12 +441,12 @@ function exportUI.drawIssues()
 
             if ImGui.Button("OK") then
                 ImGui.CloseCurrentPopup()
-                exportUI.exportIssues.spotReferencingEmpty = nil
+                exportUI.exportIssues.spotReferencingEmpty = {}
             end
             ImGui.EndPopup()
         end
     end
-    if exportUI.exportIssues.markingUnresolved and not exportUI.exportIssues.nodeRefDuplicated and not exportUI.exportIssues.noOutlineMarkers and not exportUI.exportIssues.spotEmptyRef and not exportUI.exportIssues.spotReferencingEmpty then
+    if exportUI.getCurrentIssue() == "markingUnresolved" then
         ImGui.OpenPopup("Unresolved Marking")
         if ImGui.BeginPopupModal("Unresolved Marking", true, ImGuiWindowFlags.AlwaysAutoResize) then
             ImGui.Text("The following markings have no AISpots associated with them.")
@@ -440,7 +479,7 @@ function exportUI.drawIssues()
 
             if ImGui.Button("OK") then
                 ImGui.CloseCurrentPopup()
-                exportUI.exportIssues.markingUnresolved = nil
+                exportUI.exportIssues.markingUnresolved = {}
             end
             ImGui.EndPopup()
         end
@@ -636,9 +675,6 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
         })
 
         if node.ref == "" then
-            if not exportUI.exportIssues.spotEmptyRef then
-                exportUI.exportIssues.spotEmptyRef = {}
-            end
             table.insert(exportUI.exportIssues.spotEmptyRef, node.name)
         end
     end
@@ -701,9 +737,6 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
                             utils.combine(spotRefs, refs)
 
                             if #spotRefs == 0 then
-                                if not exportUI.exportIssues.markingUnresolved then
-                                    exportUI.exportIssues.markingUnresolved = {}
-                                end
                                 table.insert(exportUI.exportIssues.markingUnresolved, {
                                     name = community.node.name,
                                     entry = entry.entryName,
@@ -721,9 +754,6 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
                                 ["$value"] = ref
                             })
                             if not nodeRefs[ref] then
-                                if not exportUI.exportIssues.spotReferencingEmpty then
-                                    exportUI.exportIssues.spotReferencingEmpty = {}
-                                end
                                 table.insert(exportUI.exportIssues.spotReferencingEmpty, {
                                     name = community.node.name,
                                     entry = entry.entryName,
@@ -981,11 +1011,11 @@ function exportUI.export()
                 if not nodeRefs[node.nodeRef] then
                     nodeRefs[node.nodeRef] = node.name
                 elseif node.nodeRef ~= "" then
-                    exportUI.exportIssues.nodeRefDuplicated = {
+                    table.insert(exportUI.exportIssues.nodeRefDuplicated, {
                         nodeRef = node.nodeRef,
                         name1 = nodeRefs[node.nodeRef],
                         name2 = node.name
-                    }
+                    })
                     break
                 end
             end
