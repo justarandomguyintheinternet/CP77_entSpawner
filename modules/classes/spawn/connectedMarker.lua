@@ -5,16 +5,17 @@ local visualizer = require("modules/utils/visualizer")
 
 ---Class for connected markers (Not a node, meta class used for area outlines and splines)
 ---@class connectedMarker : spawnable
----@field private intersectionMultiplier number
 ---@field protected previewed boolean
----@field private height number
----@field private dragBeingEdited boolean
+---@field protected connectorApp string
+---@field protected markerApp string
+---@field protected previewText string
 local connectedMarker = setmetatable({}, { __index = spawnable })
 
 function connectedMarker:new()
 	local o = spawnable.new(self)
 
     o.previewed = true
+    o.previewText = ""
     o.connectorApp = "blue"
     o.markerApp = "blue"
 
@@ -36,7 +37,7 @@ function connectedMarker:onAssemble(entity)
     component.name = "mesh"
     component.mesh = ResRef.FromString("base\\spawner\\cube_aligned.mesh")
     component.visualScale = Vector3.new(transform.scale.x, 0.005, transform.scale.z / 2)
-    component.meshAppearance = "blue"
+    component.meshAppearance = self.connectorApp
     component.isEnabled = self.previewed
 
     local localTransform = WorldTransform.new()
@@ -47,7 +48,7 @@ function connectedMarker:onAssemble(entity)
     local marker = entMeshComponent.new()
     marker.name = "marker"
     marker.mesh = ResRef.FromString("base\\environment\\ld_kit\\marker.mesh")
-    marker.meshAppearance = "blue"
+    marker.meshAppearance = self.markerApp
     marker.visualScale = Vector3.new(0.005, 0.005, 0.005)
     marker.isEnabled = self.previewed
     entity:AddComponent(marker)
@@ -142,10 +143,10 @@ end
 
 function connectedMarker:draw()
     if not self.maxPropertyWidth then
-        self.maxPropertyWidth = utils.getTextMaxWidth({"Preview Outline"}) + 4 * ImGui.GetStyle().ItemSpacing.x
+        self.maxPropertyWidth = utils.getTextMaxWidth({previewText}) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
     end
 
-    style.mutedText("Preview Outline")
+    style.mutedText(previewText)
     ImGui.SameLine()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
     self.previewed, changed = style.trackedCheckbox(self.object, "##visualize", self.previewed)
