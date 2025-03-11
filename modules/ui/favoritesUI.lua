@@ -1,5 +1,6 @@
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
+local settings = require("modules/utils/settings")
 
 ---@class favoritesUI
 ---@field spawnUI spawnUI?
@@ -15,6 +16,7 @@ local utils = require("modules/utils/utils")
 local favoritesUI = {
     spawnUI = nil,
     filter = "",
+
     tagAddFilter = "",
     tagFilterFilter = "",
     newTag = "",
@@ -85,7 +87,11 @@ function favoritesUI.drawTagSelect(selected, canAdd, filter)
             ImGui.SameLine()
             style.pushButtonNoBG(true)
             if ImGui.Button(IconGlyphs.TagPlusOutline) then
-                selected[favoritesUI.newTag] = true
+                if not selected[favoritesUI.newTag] then
+                    selected[favoritesUI.newTag] = true
+                    settings.filterTags[favoritesUI.newTag] = true
+                    settings.save()
+                end
                 favoritesUI.newTag = ""
                 changed = true
             end
@@ -205,9 +211,25 @@ function favoritesUI.drawEditFavoritePopup()
     end
 end
 
-local f = {}
+function favoritesUI.removeUnusedTags()
+    local tags = favoritesUI.getAllTags("")
+    local changed = false
+
+    for tag, _ in pairs(settings.filterTags) do
+        if not utils.has_value(tags, tag) then
+            settings.filterTags[tag] = nil
+            changed = true
+        end
+    end
+
+    if changed then
+        settings.save()
+    end
+end
 
 function favoritesUI.draw()
+    favoritesUI.removeUnusedTags()
+
     ImGui.SetNextItemWidth(300 * style.viewSize)
     favoritesUI.filter, changed = ImGui.InputTextWithHint("##filter", "Search by name... (Supports pattern matching)", favoritesUI.filter, 100)
 
@@ -229,7 +251,11 @@ function favoritesUI.draw()
 
     if ImGui.TreeNodeEx("Search Tags", ImGuiTreeNodeFlags.SpanFullWidth) then
         if ImGui.BeginChild("##searchTags", -1, math.min(favoritesUI.tagFilterSize.y, 300 * style.viewSize), false) then
-            f, changed, favoritesUI.tagFilterSize, favoritesUI.tagFilterFilter = favoritesUI.drawTagSelect(f, false, favoritesUI.tagFilterFilter)
+            settings.filterTags, changed, favoritesUI.tagFilterSize, favoritesUI.tagFilterFilter = favoritesUI.drawTagSelect(settings.filterTags, false, favoritesUI.tagFilterFilter)
+            if changed then
+                settings.save()
+            end
+
             ImGui.EndChild()
         end
         ImGui.TreePop()
