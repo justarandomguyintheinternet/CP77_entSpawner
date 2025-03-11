@@ -187,6 +187,10 @@ function style.toggleButton(text, state)
     return state, false
 end
 
+function style.setNextItemWidth(width)
+    ImGui.SetNextItemWidth(width * style.viewSize)
+end
+
 function style.trackedCheckbox(element, text, state, disabled)
     ImGui.BeginDisabled(disabled == true)
     local newState, changed = ImGui.Checkbox(text, state)

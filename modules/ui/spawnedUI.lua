@@ -321,6 +321,14 @@ function spawnedUI.registerHotkeys()
         spawnedUI.spawner.baseUI.spawnUI.selectedGroup = idx
     end)
 
+    input.registerImGuiHotkey({ ImGuiKey.F, ImGuiKey.LeftCtrl }, function ()
+        if #spawnedUI.selectedPaths ~= 1 then
+            return
+        end
+
+        spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(spawnedUI.selectedPaths[1].ref:serialize())
+    end)
+
     -- Open context menu for selected from editor mode
     input.registerMouseAction(ImGuiMouseButton.Right, function()
         if #spawnedUI.selectedPaths == 0 or editor.grab or editor.rotate or editor.scale then return end
@@ -657,6 +665,10 @@ function spawnedUI.drawContextMenu(element, path)
                 end
                 spawnedUI.spawner.baseUI.spawnUI.selectedGroup = idx
             end
+        end
+        if ImGui.MenuItem(not element.expandable and "Make Favorite" or "Make Prefab", "CTRL-F") then
+            config.saveFile("test.json", element:serialize())
+            spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(element:serialize())
         end
 
         ImGui.EndPopup()

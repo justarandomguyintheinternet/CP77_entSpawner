@@ -113,6 +113,7 @@ end
 ---@field previewInstance spawnable?
 ---@field previewTimer number?
 ---@field hoveredEntry table?
+---@field favoritesUI favoritesUI
 spawnUI = {
     filter = "",
     popupFilter = "",
@@ -134,7 +135,8 @@ spawnUI = {
     lastSpawnedEntry = nil,
     previewInstance = nil,
     previewTimer = nil,
-    hoveredEntry = nil
+    hoveredEntry = nil,
+    favoritesUI = require("modules/ui/favoritesUI")
 }
 
 ---Loads the spawn data (Either list of e.g. paths, or exported object files) for each data variant
@@ -299,6 +301,11 @@ function spawnUI.drawSpawnPosition()
         style.tooltip("Spawn position is relative to the camera position and orientation.")
     end
 
+    ImGui.SameLine()
+
+    style.mutedText(IconGlyphs.InformationOutline)
+    style.tooltip("To spawn an object under the cursor, either:\n - Use the Shift-A menu while in editor mode\n - Drag and drop an object from the list to the desired position on the screen.")
+
     return x
 end
 
@@ -361,14 +368,27 @@ function spawnUI.drawOptions()
     end
 
     spawnUI.drawSpawnPosition()
-
-    ImGui.SameLine()
-
-    style.mutedText(IconGlyphs.InformationOutline)
-    style.tooltip("To spawn an object under the cursor, either:\n - Use the Shift-A menu while in editor mode\n - Drag and drop an object from the list to the desired position on the screen.")
 end
 
-function spawnUI.draw()
+function spawnUI.drawTargetGroupSelector()
+    local groups = { "Root" }
+	for _, group in pairs(spawnUI.spawnedUI.containerPaths) do
+		table.insert(groups, group.path)
+	end
+
+    if spawnUI.selectedGroup >= #groups then
+        spawnUI.selectedGroup = 0
+    end
+
+	ImGui.PushItemWidth(150 * style.viewSize)
+    ImGui.Text("Target group")
+    ImGui.SameLine()
+	spawnUI.selectedGroup = ImGui.Combo("##newSpawnGroup", spawnUI.selectedGroup, groups, #groups)
+    tooltip("Automatically place any newly spawned object into the selected group")
+	ImGui.PopItemWidth()
+end
+
+function spawnUI.drawAll()
     spawnUI.updateAssetPreview()
     spawnUI.drawDragWindow()
 
@@ -389,19 +409,7 @@ function spawnUI.draw()
         style.pushButtonNoBG(false)
     end
 
-    local groups = { "Root" }
-	for _, group in pairs(spawnUI.spawnedUI.containerPaths) do
-		table.insert(groups, group.path)
-	end
-
-    if spawnUI.selectedGroup >= #groups then
-        spawnUI.selectedGroup = 0
-    end
-
-	ImGui.PushItemWidth(150 * style.viewSize)
-	spawnUI.selectedGroup = ImGui.Combo("Put new object into group", spawnUI.selectedGroup, groups, #groups)
-    tooltip("Automatically place any newly spawned object into the selected group")
-	ImGui.PopItemWidth()
+    spawnUI.drawTargetGroupSelector()
 
     if ImGui.TreeNodeEx("Options", ImGuiTreeNodeFlags.SpanFullWidth) then
         spawnUI.drawOptions()
@@ -542,7 +550,29 @@ function spawnUI.draw()
         end
     end
 
+    if #spawnUI.filteredList == 0 then
+        if spawnUI.previewTimer then
+            Cron.Halt(spawnUI.previewTimer)
+        else
+            spawnUI.previewInstance:assetPreview(false)
+        end
+    end
+
     ImGui.EndChild()
+end
+
+function spawnUI.draw()
+    if ImGui.BeginTabBar("##spawnUITabbar", ImGuiTabItemFlags.NoTooltip) then
+        if ImGui.BeginTabItem("All") then
+            spawnUI.drawAll()
+            ImGui.EndTabItem()
+        end
+        if ImGui.BeginTabItem("Favorites") then
+            spawnUI.favoritesUI.draw()
+            ImGui.EndTabItem()
+        end
+        ImGui.EndTabBar()
+    end
 end
 
 function spawnUI.hidden()
@@ -584,7 +614,7 @@ function spawnUI.getSpawnNewPosition()
 
     return pos, rot
 end
- 
+
 function spawnUI.spawnNew(entry, class)
     spawnUI.lastSpawnedClass = class
     spawnUI.lastSpawnedEntry = entry
@@ -801,6 +831,8 @@ function spawnUI.drawPopup()
 
         ImGui.OpenPopup("##spawnNew")
     end
+
+    spawnUI.favoritesUI.drawEditFavoritePopup()
 end
 
 return spawnUI

@@ -67,6 +67,7 @@ function spawner:new()
         self.baseUI.savedUI.filter = settings.savedUIFilter
         self.baseUI.spawnUI.filter = settings.spawnUIFilter
         self.baseUI.spawnUI.loadSpawnData(self)
+        self.baseUI.spawnUI.favoritesUI.init(self)
 
         self.baseUI.spawnedUI.spawner = self
         self.baseUI.spawnedUI.cachePaths()
@@ -137,6 +138,53 @@ function spawner:new()
         --     x = collectgarbage("count")
         --     ImGui.End()
         -- end
+
+        local tags = {
+            "tree",
+            "bush",
+            "rock",
+            "building",
+            "small",
+            "medium",
+            "large",
+            "vehicle",
+            "npc",
+            "prop",
+            "decoration",
+            "furniture",
+            "water",
+            "road",
+            "sidewalk",
+            "grass",
+            "dirt",
+            "AAAAAAAAAAAAA"
+        }
+        
+        local columns = 3
+        table.sort(tags)
+
+        if ImGui.Begin("Test", ImGuiWindowFlags.AlwaysAutoResize) then
+            ImGui.Text("Some Info")
+            ImGui.Separator()
+
+            if ImGui.BeginTable("##test", columns, ImGuiTableFlags.SizingFixedSame) then
+                for row = 1, math.ceil(#tags / columns) do
+                    ImGui.TableNextRow()
+                    for col = 1, columns do
+                        ImGui.TableSetColumnIndex(col - 1)
+
+                        if tags[(row - 1) * columns + col] then
+                            local checkboxState = false
+                            ImGui.Checkbox(tags[(row - 1) * columns + col], checkboxState)
+                        end
+                    end
+                end
+    
+                ImGui.EndTable()
+            end
+
+            ImGui.End()
+        end
     end)
 
     registerForEvent("onOverlayOpen", function()
