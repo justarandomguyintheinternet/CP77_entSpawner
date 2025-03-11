@@ -340,4 +340,22 @@ function style.trackedSearchDropdown(element, text, searchHint, value, options, 
     return value, finished
 end
 
+function style.drawNoBGConditionalButton(condition, text, greyed)
+    local push = false
+    local greyed = greyed ~= nil and greyed or false
+
+    if condition then
+        ImGui.SameLine()
+        style.pushButtonNoBG(true)
+        style.pushGreyedOut(greyed)
+        if ImGui.Button(text) then
+            push = true
+        end
+        style.popGreyedOut(greyed)
+        style.pushButtonNoBG(false)
+    end
+
+    return push
+end
+
 return style
