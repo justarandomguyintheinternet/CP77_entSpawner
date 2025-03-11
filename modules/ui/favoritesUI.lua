@@ -4,13 +4,9 @@ local settings = require("modules/utils/settings")
 
 ---@class favoritesUI
 ---@field spawnUI spawnUI?
----@field filter string
----@field newCategoryName string
----@field newCategoryIcon string
----@field newCategoryIconSearch string
----@field selectCategorySearch string
----@field tagAddFilter string
----@field tagFilterFilter string
+---@field filter string Main search filter
+---@field tagAddFilter string Tag filter for adding new tags
+---@field tagFilterFilter string Tag filter for filtering tags
 ---@field newTag string
 ---@field tagAddSize table | {x: number, y: number}
 ---@field tagFilterSize table | {x: number, y: number}
@@ -85,6 +81,7 @@ end
 function favoritesUI.drawTagSelect(selected, canAdd, filter)
     local x, y = 0, 0
 
+    -- Search in existing tags
     ImGui.SetNextItemWidth(175 * style.viewSize)
     filter, _ = ImGui.InputTextWithHint("##tagFilter", "Search for tag...", filter, 100)
 
@@ -95,6 +92,7 @@ function favoritesUI.drawTagSelect(selected, canAdd, filter)
     local tags = favoritesUI.getAllTags(filter)
     local edited = false
 
+    -- Add new tag
     if canAdd then
         ImGui.SetNextItemWidth(175 * style.viewSize)
         favoritesUI.newTag, _ = ImGui.InputTextWithHint("##newTag", "New tag...", favoritesUI.newTag, 15)
@@ -110,6 +108,7 @@ function favoritesUI.drawTagSelect(selected, canAdd, filter)
         end
     end
 
+    -- Select/Unselect all
     style.pushButtonNoBG(true)
     if ImGui.Button(IconGlyphs.CollapseAllOutline) then
         selected = {}
@@ -122,6 +121,7 @@ function favoritesUI.drawTagSelect(selected, canAdd, filter)
     end
     style.pushButtonNoBG(false)
 
+    -- Draw table of tags
     local nColumns = 3
     if ImGui.BeginTable("##tagSelect", nColumns, ImGuiTableFlags.SizingFixedSame) then
         for row = 1, math.ceil(#tags / nColumns) do
