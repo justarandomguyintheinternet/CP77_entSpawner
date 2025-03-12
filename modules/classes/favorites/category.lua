@@ -1,6 +1,7 @@
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local config = require("modules/utils/config")
+local settings = require("modules/utils/settings")
 
 ---@class category
 ---@field name string
@@ -12,8 +13,18 @@ local config = require("modules/utils/config")
 ---@field fileName string
 ---@field openPopup boolean
 ---@field editName string
+---@field changeIconSearch string
+---@field isVirtualGroup boolean
+---@field virtualGroupTags string[]
+---@field virtualGroups category[]
+---@field virtualGroupsPS {}
+---@field virtualGroupPath string
+---@field numFavoritesFiltered number
+---@field root category?
 local category = {}
 
+---@param fUI favoritesUI
+---@return category
 function category:new(fUI)
 	local o = {}
 
@@ -27,6 +38,15 @@ function category:new(fUI)
 	o.fileName = ""
 	o.openPopup = false
 	o.editName = ""
+	o.changeIconSearch = ""
+
+	o.isVirtualGroup = false
+	o.virtualGroupPath = ""
+	o.virtualGroupTags = {}
+	o.virtualGroups = {}
+	o.virtualGroupsPS = {}
+	o.numFavoritesFiltered = 0
+	o.root = nil
 
 	self.__index = self
    	return setmetatable(o, self)
@@ -40,10 +60,34 @@ function category:load(data, fileName)
 	self.fileName = fileName
 	self.grouped = data.grouped
 
-	for _, favoriteData in pairs(data.favorites) do
-		local favorite = require("modules/classes/favorites/favorite"):new(self.favoritesUI)
-		favorite:load(favoriteData)
-		self:addFavorite(favorite)
+	self.isVirtualGroup = data.isVirtualGroup or false
+	self.virtualGroupPath = data.virtualGroupPath or ""
+	self.virtualGroupTags = data.virtualGroupTags or {}
+	self.virtualGroupsPS = data.virtualGroupsPS or {}
+	self.virtualGroups = {}
+	self.root = data.root
+
+	if self.isVirtualGroup then
+		self.favorites = data.favorites
+		if not self.virtualGroupsPS[self.virtualGroupPath] then
+			self.virtualGroupsPS[self.virtualGroupPath] = {
+				headerOpen = false,
+				grouped = false
+			}
+			self:save()
+		end
+		self.headerOpen = self.virtualGroupsPS[self.virtualGroupPath].headerOpen
+		self.grouped = self.virtualGroupsPS[self.virtualGroupPath].grouped
+	else
+		for _, favoriteData in pairs(data.favorites) do
+			local favorite = require("modules/classes/favorites/favorite"):new(self.favoritesUI)
+			favorite:load(favoriteData)
+			self:addFavorite(favorite)
+		end
+	end
+
+	if self.grouped then
+		self:loadVirtualGroups()
 	end
 end
 
@@ -58,9 +102,13 @@ end
 
 function category:addFavorite(favorite)
 	table.insert(self.favorites, favorite)
-	favorite:setCategory(self)
+	favorite:setCategory(self.root or self)
 
 	self:save()
+
+	if self.grouped then
+		self:loadVirtualGroups()
+	end
 end
 
 function category:removeFavorite(favorite)
@@ -72,6 +120,10 @@ function category:removeFavorite(favorite)
 	end
 
 	self:save()
+
+	if self.grouped then
+		self:loadVirtualGroups()
+	end
 end
 
 function category:isNameDuplicate(name)
@@ -91,6 +143,13 @@ end
 
 function category:drawEditPopup()
 	if ImGui.BeginPopupContextItem("##editCategory" .. self.fileName) then
+		self.icon, self.changeIconSearch, changed = self.favoritesUI.drawSelectIcon(self.icon, self.changeIconSearch)
+		if changed then
+			self:save()
+		end
+
+		ImGui.SameLine()
+
         -- Edit name
         style.setNextItemWidth(200)
         if self.openPopup then
@@ -112,6 +171,8 @@ function category:drawEditPopup()
             style.styledText(IconGlyphs.AlertOutline, 0xFF0000FF)
             style.tooltip("Category with this name already exists.")
 		end
+
+		-- merge option
 
 		ImGui.Separator()
 
@@ -153,6 +214,7 @@ function category:drawSideButtons()
     -- Right side buttons
     local settingsX, _ = ImGui.CalcTextSize(IconGlyphs.FileTreeOutline)
     local groupX, _ = ImGui.CalcTextSize(IconGlyphs.CogOutline)
+	if self.isVirtualGroup then settingsX = 0 end
 	local totalX = settingsX + groupX + ImGui.GetStyle().ItemSpacing.x
     local scrollBarAddition = ImGui.GetScrollMaxY() > 0 and ImGui.GetStyle().ScrollbarSize or 0
     local cursorX = ImGui.GetWindowWidth() - totalX - ImGui.GetStyle().CellPadding.x / 2 - scrollBarAddition + ImGui.GetScrollX()
@@ -163,10 +225,13 @@ function category:drawSideButtons()
 	ImGui.SetNextItemAllowOverlap()
 	if ImGui.Button(IconGlyphs.FileTreeOutline) then
 		self.grouped = not self.grouped
+		self:loadVirtualGroups()
 		self:save()
 	end
 	style.popStyleColor(not grouped)
 	style.tooltip("Group by tags")
+
+	if self.isVirtualGroup then return end
 
 	ImGui.SameLine()
 	ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 2 * (ImGui.GetFontSize() / 15))
@@ -177,16 +242,116 @@ function category:drawSideButtons()
 	end
 end
 
+function category:drawEntries(context, entries)
+	if self.headerOpen then
+		context.depth = context.depth + 1
+		for _, entry in pairs(entries) do
+			entry:draw(context)
+		end
+		context.depth = context.depth - 1
+	end
+end
+
+function category:loadVirtualGroups()
+	self.virtualGroups = {}
+	local tags = {}
+
+	local anyTag = false
+	for _, favorite in pairs(self.favorites) do
+		for tag, _ in pairs(favorite.tags) do
+			if not self.virtualGroupTags[tag] then
+				if not tags[tag] then
+					tags[tag] = {}
+				end
+
+				table.insert(tags[tag], favorite)
+				anyTag = true
+			end
+		end
+	end
+
+	if not anyTag then
+		self.grouped = false
+		return
+	end
+
+	for tag, group in pairs(tags) do
+		local cat = require("modules/classes/favorites/category"):new(self.favoritesUI)
+		local virtualGroupTags = utils.deepcopy(self.virtualGroupTags)
+		virtualGroupTags[tag] = true
+
+		cat:load({
+			name = tag,
+			headerOpen = false,
+			grouped = false,
+			favorites = group,
+			isVirtualGroup = true,
+			virtualGroupTags = virtualGroupTags,
+			virtualGroupPath = self.virtualGroupPath .. "/" .. tag,
+			virtualGroupsPS = self.virtualGroupsPS,
+			root = self.root or self
+		}, self.fileName)
+
+		table.insert(self.virtualGroups, cat)
+	end
+end
+
+function category:getFilteredFavorites()
+	local entries = {}
+
+	for _, favorite in pairs(self.favorites) do
+		if favorite:isMatch(settings.favoritesFilter, settings.filterTags) then
+			table.insert(entries, favorite)
+		end
+	end
+
+	table.sort(entries, function(a, b) return a.name < b.name end)
+
+	return entries
+end
+
+function category:getFilteredEntries()
+	local entries = {}
+
+	if not self.grouped then
+		entries = self:getFilteredFavorites()
+	else
+		entries = self.virtualGroups
+
+		for _, group in pairs(self.virtualGroups) do
+			group.numFavoritesFiltered = #group:getFilteredFavorites()
+		end
+
+		table.sort(entries, function(a, b)
+			if a.numFavoritesFiltered == b.numFavoritesFiltered then
+				return a.name < b.name
+			end
+
+			return a.numFavoritesFiltered > b.numFavoritesFiltered
+		end)
+	end
+
+	return entries
+end
+
 ---@param context {padding: number, row: number, depth: number}
 function category:draw(context)
+	local filtered = self:getFilteredEntries()
+
+	if #filtered == 0 and not (#self.favorites == 0) then
+		return
+	end
+
 	self.favoritesUI.pushRow(context)
 
 	ImGui.PushID(context.row)
 
+	ImGui.SetCursorPosX((context.depth) * 17 * style.viewSize)
 	ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, 4 * style.viewSize, context.padding * 2 + style.viewSize)
 
-    self.headerOpen, changed = ImGui.Selectable("##category" .. context.row, self.headerOpen, ImGuiSelectableFlags.SpanAllColumns + ImGuiSelectableFlags.AllowOverlap)
-	if changed then
+    local newState = ImGui.Selectable("##category" .. context.row, self.headerOpen, ImGuiSelectableFlags.SpanAllColumns + ImGuiSelectableFlags.AllowOverlap)
+	if self.headerOpen ~= newState then
+		self.headerOpen = newState
 		self:save()
 	end
 	context.row = context.row + 1
@@ -212,7 +377,7 @@ function category:draw(context)
 	ImGui.SameLine()
 	ImGui.AlignTextToFramePadding()
 	ImGui.SetNextItemAllowOverlap()
-	ImGui.Text(self.name)
+	ImGui.Text(self.name .. ((self.isVirtualGroup and not self.grouped) and (" (" .. #filtered .. ")") or ""))
 
 	ImGui.SameLine()
 	self:drawSideButtons()
@@ -222,7 +387,11 @@ function category:draw(context)
 
 	ImGui.PopID()
 
-	self:drawEditPopup()
+	if not self.isVirtualGroup then
+		self:drawEditPopup()
+	end
+
+	self:drawEntries(context, filtered)
 end
 
 function category:serialize()
@@ -231,6 +400,7 @@ function category:serialize()
 		icon = self.icon,
 		headerOpen = self.headerOpen,
 		grouped = self.grouped,
+		virtualGroupsPS = self.virtualGroupsPS,
 		favorites = {}
 	}
 
@@ -242,12 +412,23 @@ function category:serialize()
 end
 
 function category:save()
+	if self.isVirtualGroup then
+		self.virtualGroupsPS[self.virtualGroupPath] = {
+			headerOpen = self.headerOpen,
+			grouped = self.grouped
+		}
+		self.root:save()
+		return
+	end
+
 	local data = self:serialize()
 
 	config.saveFile("data/favorite/" .. self.fileName, data)
 end
 
 function category:delete()
+	if self.isVirtualGroup then return end
+
 	os.remove("data/favorite/" .. self.fileName)
 	self.favoritesUI.categories[self.name] = nil
 end

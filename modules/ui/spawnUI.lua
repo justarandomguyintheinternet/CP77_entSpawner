@@ -558,7 +558,7 @@ function spawnUI.drawAll()
                         spawnable = data
                     })
 
-                    spawnUI.favoritesUI.addNewItem(new:serialize(), new.name)
+                    spawnUI.favoritesUI.addNewItem(new:serialize(), new.name, new.icon)
                 end
 
                 ImGui.EndPopup()

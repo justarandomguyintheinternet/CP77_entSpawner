@@ -37,6 +37,8 @@ local config = require("modules/utils/config")
 ---@field public cacheExlusions table
 ---@field public assetPreviewEnabled table
 ---@field public filterTags table
+---@field public favoritesFilter string
+---@field public favoritesTagsAND boolean
 local settingsData = {
     spawnPos = 1,
     spawnDist = 4,
@@ -74,6 +76,8 @@ local settingsData = {
     assetPreviewEnabled = {},
 
     filterTags = {},
+    favoritesFilter = "",
+    favoritesTagsAND = false,
 
     tabSizes = {}
 }

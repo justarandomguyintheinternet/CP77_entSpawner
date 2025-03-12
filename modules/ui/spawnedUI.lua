@@ -326,7 +326,11 @@ function spawnedUI.registerHotkeys()
             return
         end
 
-        spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(spawnedUI.selectedPaths[1].ref:serialize(), spawnedUI.selectedPaths[1].ref.name)
+        local icon = spawnedUI.selectedPaths[1].ref.icon
+        if icon == "" then
+            icon = IconGlyphs.Group
+        end
+        spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(spawnedUI.selectedPaths[1].ref:serialize(), spawnedUI.selectedPaths[1].ref.name, icon)
     end)
 
     -- Open context menu for selected from editor mode
@@ -667,8 +671,12 @@ function spawnedUI.drawContextMenu(element, path)
             end
         end
         if ImGui.MenuItem(not element.expandable and "Make Favorite" or "Make Prefab", "CTRL-F") then
-            config.saveFile("test.json", element:serialize())
-            spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(element:serialize())
+            local icon = spawnedUI.selectedPaths[1].ref.icon
+            if icon == "" then
+                icon = IconGlyphs.Group
+            end
+
+            spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(element:serialize(), spawnedUI.selectedPaths[1].ref.name, icon)
         end
 
         ImGui.EndPopup()

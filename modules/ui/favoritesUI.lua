@@ -4,7 +4,6 @@ local settings = require("modules/utils/settings")
 
 ---@class favoritesUI
 ---@field spawnUI spawnUI?
----@field filter string Main search filter
 ---@field tagAddFilter string Tag filter for adding new tags
 ---@field tagFilterFilter string Tag filter for filtering tags
 ---@field newTag string
@@ -15,7 +14,6 @@ local settings = require("modules/utils/settings")
 ---@field categories category[]
 local favoritesUI = {
     spawnUI = nil,
-    filter = "",
 
     newCategoryName = "New Category",
     newCategoryIcon = "EmoticonOutline",
@@ -83,7 +81,7 @@ function favoritesUI.getAllTags(filter)
     return tags
 end
 
-function favoritesUI.drawTagSelect(selected, canAdd, filter)
+function favoritesUI.drawTagSelect(selected, canAdd, filter, showANDFilter)
     local x, y = 0, 0
 
     -- Search in existing tags
@@ -105,8 +103,10 @@ function favoritesUI.drawTagSelect(selected, canAdd, filter)
         if style.drawNoBGConditionalButton(favoritesUI.newTag ~= "", IconGlyphs.TagPlusOutline) then
             if not selected[favoritesUI.newTag] then
                 selected[favoritesUI.newTag] = true
-                settings.filterTags[favoritesUI.newTag] = true
-                settings.save()
+                if not settings.favoritesTagsAND then
+                    settings.filterTags[favoritesUI.newTag] = true
+                    settings.save()
+                end
             end
             favoritesUI.newTag = ""
             edited = true
@@ -117,14 +117,29 @@ function favoritesUI.drawTagSelect(selected, canAdd, filter)
     style.pushButtonNoBG(true)
     if ImGui.Button(IconGlyphs.CollapseAllOutline) then
         selected = {}
+        edited = true
     end
     ImGui.SameLine()
     if ImGui.Button(IconGlyphs.ExpandAllOutline) then
         for _, tag in pairs(tags) do
             selected[tag] = true
         end
+        edited = true
     end
     style.pushButtonNoBG(false)
+    if showANDFilter then
+        ImGui.SameLine()
+        local AND = not settings.favoritesTagsAND
+        style.pushButtonNoBG(true)
+        style.pushStyleColor(AND, ImGuiCol.Text, style.mutedColor)
+        if ImGui.Button(IconGlyphs.SetCenter) then
+            settings.favoritesTagsAND = not settings.favoritesTagsAND
+            settings.save()
+        end
+        style.popStyleColor(AND)
+        style.pushButtonNoBG(false)
+        style.tooltip("AND filter mode (Leave off for OR filter)")
+    end
 
     -- Draw table of tags
     local nColumns = 3
@@ -163,12 +178,21 @@ function favoritesUI.drawTagSelect(selected, canAdd, filter)
     return selected, edited, { x = x, y = y }, filter
 end
 
-function favoritesUI.addNewItem(serialized, name)
+function favoritesUI.addNewItem(serialized, name, icon)
     favoritesUI.openPopup = true
+
+    -- Null transforms, to make deep comparing for merging possible
+    if serialized.modulePath == "modules/classes/editor/spawnableElement" then
+        serialized.spawnable.position = { x = 0, y = 0, z = 0, w = 0 }
+        serialized.spawnable.rotation = { roll = 0, pitch = 0, yaw = 0 }
+    end
 
     local favorite = require("modules/classes/favorites/favorite"):new(favoritesUI)
     favorite.data = serialized
     favorite.name = name
+    local iconKey = utils.indexValue(IconGlyphs, icon)
+    if iconKey == -1 then iconKey = "" end
+    favorite.icon = iconKey
     favoritesUI.popupItem = favorite
 end
 
@@ -198,8 +222,11 @@ function favoritesUI.drawEditFavoritePopup()
         -- Select tag
         if ImGui.TreeNodeEx("Tags", ImGuiTreeNodeFlags.SpanFullWidth) then
             if ImGui.BeginChild("##tags", favoritesUI.tagAddSize.x, math.min(favoritesUI.tagAddSize.y, 400 * style.viewSize), false) then
-                favoritesUI.popupItem.tags, changed, favoritesUI.tagAddSize, favoritesUI.tagAddFilter = favoritesUI.drawTagSelect(favoritesUI.popupItem.tags, true, favoritesUI.tagAddFilter)
+                favoritesUI.popupItem.tags, changed, favoritesUI.tagAddSize, favoritesUI.tagAddFilter = favoritesUI.drawTagSelect(favoritesUI.popupItem.tags, true, favoritesUI.tagAddFilter, false)
                 if changed and not noCategory then
+                    if favoritesUI.popupItem.category.grouped then
+                        favoritesUI.popupItem.category:loadVirtualGroups()
+                    end
                     favoritesUI.popupItem.category:save()
                 end
 
@@ -268,27 +295,29 @@ function favoritesUI.removeUnusedTags()
     end
 end
 
-function favoritesUI.drawAddCategory()
-    style.setNextItemWidth(42)
+function favoritesUI.drawSelectIcon(current, search)
+    local changed = false
 
-    if (ImGui.BeginCombo("##icon", IconGlyphs[favoritesUI.newCategoryIcon])) then
+    style.setNextItemWidth(42)
+    if (ImGui.BeginCombo("##icon", IconGlyphs[current])) then
         local interiorWidth = 250 - (2 * ImGui.GetStyle().FramePadding.x) - 30
         style.setNextItemWidth(interiorWidth)
-        favoritesUI.newCategoryIconSearch, _ = ImGui.InputTextWithHint("##newCategoryIconSearch", "Category Icon...", favoritesUI.newCategoryIconSearch, 100)
+        search, _ = ImGui.InputTextWithHint("##iconSearch", "Icon...", search, 100)
         local x, _ = ImGui.GetItemRectSize()
 
         ImGui.SameLine()
         style.pushButtonNoBG(true)
         if ImGui.Button(IconGlyphs.Close) then
-            favoritesUI.newCategoryIconSearch = ""
+            search = ""
         end
         style.pushButtonNoBG(false)
 
         local xButton, _ = ImGui.GetItemRectSize()
         if ImGui.BeginChild("##list", x + xButton + ImGui.GetStyle().ItemSpacing.x, 120 * style.viewSize) then
             for _, key in pairs(iconKeys) do
-                if key:lower():match(favoritesUI.newCategoryIconSearch:lower()) and ImGui.Selectable(IconGlyphs[key] .. "|" .. key) then
-                    favoritesUI.newCategoryIcon = key
+                if key:lower():match(search:lower()) and ImGui.Selectable(IconGlyphs[key] .. "|" .. key) then
+                    current = key
+                    changed = true
                     ImGui.CloseCurrentPopup()
                 end
             end
@@ -298,6 +327,12 @@ function favoritesUI.drawAddCategory()
 
         ImGui.EndCombo()
     end
+
+    return current, search, changed
+end
+
+function favoritesUI.drawAddCategory()
+    favoritesUI.newCategoryIcon, favoritesUI.newCategoryIconSearch, _ = favoritesUI.drawSelectIcon(favoritesUI.newCategoryIcon, favoritesUI.newCategoryIconSearch)
 
     ImGui.SameLine()
 
@@ -328,7 +363,7 @@ function favoritesUI.drawSelectCategory(categoryName)
 
     style.setNextItemWidth(200)
 
-    if (ImGui.BeginCombo("##selectCategory", categoryName)) then
+    if (ImGui.BeginCombo("##selectCategory", (favoritesUI.categories[categoryName] and (IconGlyphs[favoritesUI.categories[categoryName].icon] .. " ") or "") .. categoryName)) then
         local interiorWidth = 225 - (2 * ImGui.GetStyle().FramePadding.x) - 30
         style.setNextItemWidth(interiorWidth)
         favoritesUI.selectCategorySearch, _ = ImGui.InputTextWithHint("##selectCategorySearch", "Category Name...", favoritesUI.selectCategorySearch, 100)
@@ -347,7 +382,7 @@ function favoritesUI.drawSelectCategory(categoryName)
         local xButton, _ = ImGui.GetItemRectSize()
         if ImGui.BeginChild("##list", x + xButton + ImGui.GetStyle().ItemSpacing.x, 120 * style.viewSize) then
             for _, key in pairs(categories) do
-                if key:lower():match(favoritesUI.selectCategorySearch:lower()) and ImGui.Selectable(IconGlyphs[favoritesUI.categories[key].icon] .. key) then
+                if key:lower():match(favoritesUI.selectCategorySearch:lower()) and ImGui.Selectable(IconGlyphs[favoritesUI.categories[key].icon] .. " " .. key) then
                     categoryName = key
                     ImGui.CloseCurrentPopup()
                     changed = true
@@ -413,10 +448,14 @@ function favoritesUI.draw()
     favoritesUI.removeUnusedTags()
 
     style.setNextItemWidth(250)
-    favoritesUI.filter, changed = ImGui.InputTextWithHint("##filter", "Search by name... (Supports pattern matching)", favoritesUI.filter, 100)
+    settings.favoritesFilter, changed = ImGui.InputTextWithHint("##filter", "Search by name... (Supports pattern matching)", settings.favoritesFilter, 100)
+    if changed then
+        settings.save()
+    end
 
-    if style.drawNoBGConditionalButton(favoritesUI.filter ~= "", IconGlyphs.Close) then
-        favoritesUI.filter = ""
+    if style.drawNoBGConditionalButton(settings.favoritesFilter ~= "", IconGlyphs.Close) then
+        settings.favoritesFilter = ""
+        settings.save()
     end
 
     if ImGui.TreeNodeEx("Spawn Options", ImGuiTreeNodeFlags.SpanFullWidth) then
@@ -434,7 +473,7 @@ function favoritesUI.draw()
 
     if ImGui.TreeNodeEx("Search Tags", ImGuiTreeNodeFlags.SpanFullWidth) then
         if ImGui.BeginChild("##searchTags", -1, math.min(favoritesUI.tagFilterSize.y, 300 * style.viewSize), false) then
-            settings.filterTags, changed, favoritesUI.tagFilterSize, favoritesUI.tagFilterFilter = favoritesUI.drawTagSelect(settings.filterTags, false, favoritesUI.tagFilterFilter)
+            settings.filterTags, changed, favoritesUI.tagFilterSize, favoritesUI.tagFilterFilter = favoritesUI.drawTagSelect(settings.filterTags, false, favoritesUI.tagFilterFilter, true)
             if changed then
                 settings.save()
             end
