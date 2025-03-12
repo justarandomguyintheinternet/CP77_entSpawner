@@ -326,7 +326,7 @@ function spawnedUI.registerHotkeys()
             return
         end
 
-        spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(spawnedUI.selectedPaths[1].ref:serialize())
+        spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(spawnedUI.selectedPaths[1].ref:serialize(), spawnedUI.selectedPaths[1].ref.name)
     end)
 
     -- Open context menu for selected from editor mode

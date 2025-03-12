@@ -51,6 +51,11 @@ function favoritesUI.init(spawner)
     end
 end
 
+function favoritesUI.updateCategoryName(oldName, newName)
+    favoritesUI.categories[newName] = favoritesUI.categories[oldName]
+    favoritesUI.categories[oldName] = nil
+end
+
 function favoritesUI.getAllTags(filter)
     local tags = {}
 
@@ -158,11 +163,12 @@ function favoritesUI.drawTagSelect(selected, canAdd, filter)
     return selected, edited, { x = x, y = y }, filter
 end
 
-function favoritesUI.addNewItem(serialized)
+function favoritesUI.addNewItem(serialized, name)
     favoritesUI.openPopup = true
 
     local favorite = require("modules/classes/favorites/favorite"):new(favoritesUI)
     favorite.data = serialized
+    favorite.name = name
     favoritesUI.popupItem = favorite
 end
 
@@ -170,14 +176,18 @@ function favoritesUI.drawEditFavoritePopup()
     if ImGui.BeginPopupContextItem("##addFavorite") then
         local noCategory = favoritesUI.popupItem.category == nil
 
+        -- Edit name
         style.setNextItemWidth(200)
         if favoritesUI.openPopup then
             favoritesUI.openPopup = false
             ImGui.SetKeyboardFocusHere()
         end
         favoritesUI.popupItem.name, changed = ImGui.InputTextWithHint("##name", "Name...", favoritesUI.popupItem.name, 100)
-        if changed and not noCategory then
-            favoritesUI.popupItem.category:save()
+        if changed then
+            favoritesUI.popupItem.data.name = favoritesUI.popupItem.name
+            if not noCategory then
+                favoritesUI.popupItem.category:save()
+            end
         end
         if not noCategory and favoritesUI.popupItem.category:isNameDuplicate(favoritesUI.popupItem.name) then
             ImGui.SameLine()
@@ -185,6 +195,7 @@ function favoritesUI.drawEditFavoritePopup()
             style.tooltip("Name already exists in this category.")
         end
 
+        -- Select tag
         if ImGui.TreeNodeEx("Tags", ImGuiTreeNodeFlags.SpanFullWidth) then
             if ImGui.BeginChild("##tags", favoritesUI.tagAddSize.x, math.min(favoritesUI.tagAddSize.y, 400 * style.viewSize), false) then
                 favoritesUI.popupItem.tags, changed, favoritesUI.tagAddSize, favoritesUI.tagAddFilter = favoritesUI.drawTagSelect(favoritesUI.popupItem.tags, true, favoritesUI.tagAddFilter)
@@ -197,6 +208,7 @@ function favoritesUI.drawEditFavoritePopup()
             ImGui.TreePop()
         end
 
+        -- Select category
         local categoryName, changed = favoritesUI.drawSelectCategory(favoritesUI.popupItem.category and favoritesUI.popupItem.category.name or "No Category")
         if changed then
             if favoritesUI.popupItem.category then
@@ -207,6 +219,7 @@ function favoritesUI.drawEditFavoritePopup()
 
         ImGui.Separator()
 
+        -- Confirm / delete
         style.pushButtonNoBG(true)
         style.pushGreyedOut(noCategory)
         if ImGui.Button(IconGlyphs.CheckCircleOutline) and not noCategory then
@@ -296,7 +309,7 @@ function favoritesUI.drawAddCategory()
     local categoryExists = favoritesUI.categories[favoritesUI.newCategoryName] ~= nil
     if style.drawNoBGConditionalButton(favoritesUI.newCategoryName ~= "", IconGlyphs.Plus, categoryExists) and not categoryExists then
         local category = require("modules/classes/favorites/category"):new(favoritesUI)
-        category.name = favoritesUI.newCategoryName
+        category:setName(favoritesUI.newCategoryName)
         category.icon = favoritesUI.newCategoryIcon
         category:generateFileName()
         category:save()
@@ -350,6 +363,52 @@ function favoritesUI.drawSelectCategory(categoryName)
     return categoryName, changed
 end
 
+function favoritesUI.pushRow(context)
+    ImGui.TableNextRow(ImGuiTableRowFlags.None, ImGui.GetFrameHeight() + context.padding * 2 - style.viewSize * 2)
+    if context.row % 2 == 0 then
+        ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, 0.2, 0.2, 0.2, 0.3)
+    else
+        ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, 0.3, 0.3, 0.3, 0.3)
+    end
+
+    ImGui.TableNextColumn()
+end
+
+function favoritesUI.drawMain()
+    local cellPadding = 3 * style.viewSize
+    local _, y = ImGui.GetContentRegionAvail()
+    y = math.max(y, 300 * style.viewSize)
+    local nRows = math.floor(y / (ImGui.GetFrameHeight() + cellPadding * 2 - style.viewSize * 2))
+
+    local context = {
+        row = 0,
+        depth = 0,
+        padding = cellPadding
+    }
+
+    if ImGui.BeginChild("##favoritesList", -1, y, false) then
+        if ImGui.BeginTable("##favoritesListTable", 1, ImGuiTableFlags.ScrollX or ImGuiTableFlags.NoHostExtendX) then
+            local keys = utils.getKeys(favoritesUI.categories)
+            table.sort(keys)
+
+            for _, key in pairs(keys) do
+                context.depth = 0
+                favoritesUI.categories[key]:draw(context)
+            end
+
+            if context.row < nRows then
+                for i = context.row, nRows - 1 do
+                    favoritesUI.pushRow(context)
+                    context.row = context.row + 1
+                end
+            end
+
+            ImGui.EndTable()
+        end
+        ImGui.EndChild()
+    end
+end
+
 function favoritesUI.draw()
     favoritesUI.removeUnusedTags()
 
@@ -386,6 +445,8 @@ function favoritesUI.draw()
     end
 
     style.spacedSeparator()
+
+    favoritesUI.drawMain()
 end
 
 return favoritesUI

@@ -544,6 +544,26 @@ function spawnUI.drawAll()
                 style.tooltip(entry.name)
             end
 
+            if ImGui.BeginPopupContextItem("##spawnNewContext", ImGuiPopupFlags.MouseButtonRight) then
+                if ImGui.MenuItem("Make Favorite") then
+                    local new = require("modules/classes/editor/spawnableElement"):new(spawnUI.spawnedUI)
+                    local data = utils.deepcopy(entry.data)
+                    data.modulePath = spawnUI.getActiveSpawnList().class:new().modulePath
+                    data.position = { x = 0, y = 0, z = 0, w = 0 }
+                    data.rotation = { roll = 0, pitch = 0, yaw = 0 }
+
+                    new:load({
+                        name = utils.getFileName(entry.name),
+                        modulePath = new.modulePath,
+                        spawnable = data
+                    })
+
+                    spawnUI.favoritesUI.addNewItem(new:serialize(), new.name)
+                end
+
+                ImGui.EndPopup()
+            end
+
             if isSpawned then ImGui.PopStyleColor(2) end
 
             ImGui.PopID()
