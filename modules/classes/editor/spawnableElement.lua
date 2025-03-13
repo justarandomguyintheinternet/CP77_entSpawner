@@ -84,7 +84,7 @@ end
 function spawnableElement:setParent(parent, index)
 	local oldParent = self.parent
 	positionable.setParent(self, parent, index)
-	
+
 	self.spawnable:onParentChanged(oldParent)
 end
 

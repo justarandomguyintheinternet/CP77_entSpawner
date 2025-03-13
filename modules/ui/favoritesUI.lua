@@ -221,6 +221,7 @@ function favoritesUI.addNewItem(serialized, name, icon)
         serialized.spawnable.nodeRef = ""
     end
     serialized.visible = true
+    serialized.headerOpen = false
 
     local favorite = require("modules/classes/favorites/favorite"):new(favoritesUI)
     favorite.data = serialized
@@ -237,6 +238,7 @@ function favoritesUI.addNewItem(serialized, name, icon)
 end
 
 function favoritesUI.drawEditFavoritePopup()
+    -- TODO: Add popups to general context
     if ImGui.BeginPopupContextItem("##addFavorite") then
         local noCategory = favoritesUI.popupItem.category == nil
 

@@ -1,6 +1,7 @@
 local utils = require("modules/utils/utils")
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
+local editor = require("modules/utils/editor/editor")
 
 ---@class favorite
 ---@field name string
@@ -82,7 +83,22 @@ function favorite:draw(context)
 
     if ImGui.Selectable("##favorite" .. context.row, false, ImGuiSelectableFlags.SpanAllColumns + ImGuiSelectableFlags.AllowOverlap) then
         self.favoritesUI.spawnUI.spawnNew({ data = self.data }, require(self.data.modulePath), true)
+    elseif ImGui.IsMouseDragging(0, 0.6) and not self.favoritesUI.spawnUI.dragging and ImGui.IsItemHovered() then
+        self.favoritesUI.spawnUI.dragging = true
+        self.favoritesUI.spawnUI.dragData = { data = self.data, name = self.name }
+    elseif not ImGui.IsMouseDragging(0, 0.6) and self.favoritesUI.spawnUI.dragging then
+        if not ImGui.IsItemHovered() then
+            local ray = editor.getScreenToWorldRay()
+            self.favoritesUI.spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+
+            spawnUI.dragData.lastSpawned = spawnUI.spawnNew(self.favoritesUI.spawnUI.dragData, require(self.data.modulePath), true)
+        end
+
+        self.favoritesUI.spawnUI.dragging = false
+        self.favoritesUI.spawnUI.dragData = nil
+        self.favoritesUI.spawnUI.popupSpawnHit = nil
     end
+
 	context.row = context.row + 1
 
 	ImGui.SameLine()

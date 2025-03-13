@@ -376,6 +376,14 @@ function element:setHiddenByParent(state)
 	end
 end
 
+function element:setSilent(state)
+	self.silent = state
+
+	for _, child in pairs(self.childs) do
+		child:setSilent(state)
+	end
+end
+
 function element:expandAllParents()
 	if self.parent ~= nil then
 		self.parent.headerOpen = true

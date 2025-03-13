@@ -110,6 +110,7 @@ end
 ---@field dragData table?
 ---@field lastSpawnedClass table?
 ---@field lastSpawnedEntry table?
+---@field lastSpawnedIsFavorite boolean
 ---@field previewInstance spawnable?
 ---@field previewTimer number?
 ---@field hoveredEntry table?
@@ -133,6 +134,7 @@ spawnUI = {
     dragData = nil,
     lastSpawnedClass = nil,
     lastSpawnedEntry = nil,
+    lastSpawnedIsFavorite = false,
     previewInstance = nil,
     previewTimer = nil,
     hoveredEntry = nil,
@@ -332,7 +334,7 @@ function spawnUI.drawNoMatch()
         local class = spawnUI.getActiveSpawnList().class
         spawnUI.spawnNew({
             data = { spawnData = spawnUI.filter }, lastSpawned = nil, name = spawnUI.filter, fileName = spawnUI.filter
-        }, class)
+        }, class, false)
     end
 end
 
@@ -390,7 +392,6 @@ end
 
 function spawnUI.drawAll()
     spawnUI.updateAssetPreview()
-    spawnUI.drawDragWindow()
 
     ImGui.SetNextItemWidth(300 * style.viewSize)
     spawnUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search by name... (Supports pattern matching)', spawnUI.filter, 100)
@@ -502,7 +503,7 @@ function spawnUI.drawAll()
 
             if ImGui.Button(utils.shortenPath(buttonText, xSpace - ImGui.GetCursorPosX(), true)) and not ImGui.IsMouseDragging(0, 0.6) then
                 local class = spawnUI.getActiveSpawnList().class
-                entry.lastSpawned = spawnUI.spawnNew(entry, class)
+                entry.lastSpawned = spawnUI.spawnNew(entry, class, false)
 
                 -- Despawn the preview
                 if spawnUI.previewTimer then
@@ -520,7 +521,7 @@ function spawnUI.drawAll()
                     spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
 
                     local class = spawnUI.getActiveSpawnList().class
-                    spawnUI.dragData.lastSpawned = spawnUI.spawnNew(spawnUI.dragData, class)
+                    spawnUI.dragData.lastSpawned = spawnUI.spawnNew(spawnUI.dragData, class, false)
                 end
 
                 spawnUI.dragging = false
@@ -582,6 +583,8 @@ function spawnUI.drawAll()
 end
 
 function spawnUI.draw()
+    spawnUI.drawDragWindow()
+
     if ImGui.BeginTabBar("##spawnUITabbar", ImGuiTabItemFlags.NoTooltip) then
         if ImGui.BeginTabItem("All") then
             spawnUI.drawAll()
@@ -623,7 +626,7 @@ function spawnUI.getSpawnNewPosition()
     pos.y = pos.y + forward.y * settings.spawnDist
 
     if settings.spawnPos == 1 then
-        if #spawnUI.spawnedUI.selectedPaths == 1 and utils.isA(spawnUI.spawnedUI.selectedPaths[1].ref, "positionable") then
+        if #spawnUI.spawnedUI.selectedPaths == 1 and utils.isA(spawnUI.spawnedUI.selectedPaths[1].ref, "spawnableElement") then
             pos = spawnUI.spawnedUI.selectedPaths[1].ref:getPosition()
             rot = spawnUI.spawnedUI.selectedPaths[1].ref:getRotation()
         elseif #spawnUI.spawnedUI.selectedPaths > 1 then
@@ -638,6 +641,7 @@ end
 function spawnUI.spawnNew(entry, class, isFavorite)
     spawnUI.lastSpawnedClass = class
     spawnUI.lastSpawnedEntry = entry
+    spawnUI.lastSpawnedIsFavorite = isFavorite
 
     local parent = spawnUI.spawnedUI.root
     if spawnUI.selectedGroup ~= 0 and spawnUI.spawnedUI.containerPaths[spawnUI.selectedGroup] then
@@ -673,10 +677,16 @@ function spawnUI.spawnNew(entry, class, isFavorite)
         ---@type positionable
         new = require(entry.data.modulePath):new(spawnUI.spawnedUI)
         data.visible = false
-        new:load(data)
+
+        new:load(data, true) -- Load without spawning
         new:setPosition(pos)
         new:setRotation(rot)
-        new:setVisible(true, true)
+        new:setSilent(false)
+        new:setVisible(true, true) -- Now spawn, but dont record in history
+
+        if new.modulePath == "modules/classes/editor/positionableGroup" then
+            new.yaw = 0
+        end
     else
         new:load({
             name = utils.getFileName(entry.name),
@@ -724,7 +734,7 @@ function spawnUI.repeatLastSpawn()
     local ray = editor.getScreenToWorldRay()
     spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
 
-    spawnUI.spawnNew(spawnUI.lastSpawnedEntry, spawnUI.lastSpawnedClass)
+    spawnUI.spawnNew(spawnUI.lastSpawnedEntry, spawnUI.lastSpawnedClass, spawnUI.lastSpawnedIsFavorite)
     spawnUI.spawnedUI.cachePaths()
     spawnUI.popupSpawnHit = nil
 end
@@ -783,7 +793,7 @@ function spawnUI.drawPopupVariant(typeName, variantName)
                     if ImGui.Button(utils.shortenPath(spawnUI.popupData[i].name, xSpace - ImGui.GetStyle().ItemSpacing.x * 3, true)) then
                         if not settings.spawnAtCursor then spawnUI.popupSpawnHit = nil end
                         local class = spawnData[typeName][variantName].class
-                        spawnUI.popupData[i].lastSpawned = spawnUI.spawnNew(spawnUI.popupData[i], class)
+                        spawnUI.popupData[i].lastSpawned = spawnUI.spawnNew(spawnUI.popupData[i], class, false)
                         ImGui.CloseCurrentPopup()
                     end
                     if ImGui.IsItemClicked(ImGuiMouseButton.Middle) then
