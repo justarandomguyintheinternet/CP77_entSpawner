@@ -178,13 +178,14 @@ function favoritesUI.drawTagSelect(selected, canAdd, filter, showANDFilter)
 
     -- Draw table of tags
     local nColumns = 3
+    local nRows = math.ceil(#tags / nColumns)
     if ImGui.BeginTable("##tagSelect", nColumns, ImGuiTableFlags.SizingFixedSame) then
         for row = 1, math.ceil(#tags / nColumns) do
             ImGui.TableNextRow()
             for col = 1, nColumns do
                 ImGui.TableSetColumnIndex(col - 1)
 
-                local tagName = tags[(row - 1) * nColumns + col]
+                local tagName = tags[(col - 1) * nRows + row]
                 if tagName then
                     local state, changed = ImGui.Checkbox(tagName, selected[tagName] ~= nil)
                     if changed then
