@@ -59,6 +59,18 @@ function favorite:isMatch(stringFilter, tagFilter)
     return settings.favoritesTagsAND
 end
 
+function favorite:checkIsDuplicate()
+    if not self.category then return false end
+
+    for _, fav in pairs(self.category.favorites) do
+        if fav ~= self and utils.canMergeFavorites(fav.data, self.data) then
+            return true
+        end
+	end
+
+    return false
+end
+
 function favorite:drawSideButtons()
 	ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 2 * (ImGui.GetFontSize() / 15))
 
@@ -73,6 +85,7 @@ function favorite:drawSideButtons()
 	if ImGui.Button(IconGlyphs.CogOutline) then
 		self.favoritesUI.openPopup = true
         self.favoritesUI.popupItem = self
+        self.favoritesUI.popupItemConflict = self:checkIsDuplicate()
 	end
 end
 

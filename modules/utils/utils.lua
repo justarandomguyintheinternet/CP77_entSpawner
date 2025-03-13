@@ -399,6 +399,26 @@ function miscUtils.deepcompareExclusions(t1,t2,ignore_mt,exclusions)
     return true
 end
 
+function miscUtils.canMergeFavorites(a, b)
+    local exclusions = {
+		"name",
+		"hiddenByParent",
+		"propertyHeaderStates",
+		"visible",
+		"rotationRelative",
+		"scaleLocked",
+		"transformExpanded",
+		"primaryRange",
+		"secondaryRange",
+		"position",
+		"pos",
+		"selected",
+		"headerOpen"
+	}
+
+    return miscUtils.deepcompareExclusions(a, b, false, exclusions)
+end
+
 function miscUtils.sendOutlineEvent(entity, color)
     if not entity then return end
 

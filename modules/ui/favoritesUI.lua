@@ -17,6 +17,7 @@ local input = require("modules/utils/input")
 ---@field tagMergeSize table | {x: number, y: number}
 ---@field openPopup boolean
 ---@field popupItem favorite?
+---@field popupItemConflict boolean
 ---@field categories category[]
 local favoritesUI = {
     spawnUI = nil,
@@ -39,7 +40,8 @@ local favoritesUI = {
     categories = {},
 
     openPopup = false,
-    popupItem = nil
+    popupItem = nil,
+    popupItemConflict = false
 }
 local iconKeys = {}
 
@@ -241,6 +243,7 @@ function favoritesUI.addNewItem(serialized, name, icon)
     if iconKey == -1 then iconKey = "" end
     favorite.icon = iconKey
     favoritesUI.popupItem = favorite
+    favoritesUI.popupItemConflict = favorite:checkIsDuplicate()
 end
 
 function favoritesUI.drawEditFavoritePopup()
@@ -297,6 +300,13 @@ function favoritesUI.drawEditFavoritePopup()
                 favoritesUI.popupItem.category:removeFavorite(favoritesUI.popupItem)
             end
             favoritesUI.categories[categoryName]:addFavorite(favoritesUI.popupItem)
+            favoritesUI.popupItemConflict = favoritesUI.popupItem:checkIsDuplicate()
+        end
+
+        if favoritesUI.popupItemConflict then
+            ImGui.SameLine()
+            style.styledText(IconGlyphs.AlertOutline, 0xFF0000FF)
+            style.tooltip("Duplicate Favorite")
         end
 
         ImGui.Separator()
@@ -395,8 +405,6 @@ function favoritesUI.drawAddCategory()
 
     style.setNextItemWidth(200)
     favoritesUI.newCategoryName, _ = ImGui.InputTextWithHint("##newCategoryName", "Category Name...", favoritesUI.newCategoryName, 100)
-
-    ImGui.SameLine()
 
     local categoryExists = favoritesUI.categories[favoritesUI.newCategoryName] ~= nil
     if style.drawNoBGConditionalButton(favoritesUI.newCategoryName ~= "", IconGlyphs.Plus, categoryExists) and not categoryExists then

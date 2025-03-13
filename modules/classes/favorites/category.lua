@@ -164,26 +164,13 @@ function category:merge(toMerge)
 	config.saveFile("data/favorite/preMerge/" .. self.fileName, self:serialize())
 	config.saveFile("data/favorite/preMerge/" .. toMerge.fileName, toMerge:serialize())
 
-	local exclusions = {
-		"name",
-		"hiddenByParent",
-		"propertyHeaderStates",
-		"visible",
-		"rotationRelative",
-		"scaleLocked",
-		"transformExpanded",
-		"primaryRange",
-		"secondaryRange",
-		"position",
-		"pos"
-	}
 	local merges = 0
 
 	for _, favorite in pairs(toMerge.favorites) do
 		local wasMerged = false
 
 		for _, ownFavorite in pairs(self.favorites) do
-			if favorite.data.modulePath == "modules/classes/editor/spawnableElement" and utils.deepcompareExclusions(favorite.data, ownFavorite.data, false, exclusions) then
+			if favorite.data.modulePath == "modules/classes/editor/spawnableElement" and utils.canMergeFavorites(favorite.data, ownFavorite.data) then
 				for tag, _ in pairs(favorite.tags) do
 					ownFavorite.tags[tag] = true
 				end

@@ -671,12 +671,12 @@ function spawnedUI.drawContextMenu(element, path)
             end
         end
         if ImGui.MenuItem(not element.expandable and "Make Favorite" or "Make Prefab", "CTRL-F") then
-            local icon = spawnedUI.selectedPaths[1].ref.icon
+            local icon = element.icon
             if icon == "" then
                 icon = IconGlyphs.Group
             end
 
-            spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(element:serialize(), spawnedUI.selectedPaths[1].ref.name, icon)
+            spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(element:serialize(), element.name, icon)
         end
 
         ImGui.EndPopup()
