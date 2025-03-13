@@ -269,7 +269,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
                 amm.progress = amm.progress + 1
             else
                 meshService:addTask(function ()
-                    local spawnable = require("modules/classes/spawn/entity/entity"):new()
+                    local spawnable = require("modules/classes/spawn/entity/entityTemplate"):new()
                     spawnable:loadSpawnData({
                         spawnData = propData.path,
                         app = propData.app

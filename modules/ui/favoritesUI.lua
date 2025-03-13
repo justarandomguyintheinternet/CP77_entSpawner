@@ -220,6 +220,11 @@ function favoritesUI.addNewItem(serialized, name, icon)
         serialized.spawnable.position = { x = 0, y = 0, z = 0, w = 0 }
         serialized.spawnable.rotation = { roll = 0, pitch = 0, yaw = 0 }
         serialized.spawnable.nodeRef = ""
+
+        -- Do this to account for old bug where during AMM import things would get converted to base entity class
+        if serialized.spawnable.modulePath == "entity/entity" then
+            serialized.spawnable.modulePath = "entity/entityTemplate"
+        end
     end
     serialized.visible = true
     serialized.headerOpen = false
@@ -350,6 +355,8 @@ function favoritesUI.drawSelectIcon(current, search)
 
     style.setNextItemWidth(42)
     if (ImGui.BeginCombo("##icon", IconGlyphs[current])) then
+        input.updateContext("main")
+
         local interiorWidth = 250 - (2 * ImGui.GetStyle().FramePadding.x) - 30
         style.setNextItemWidth(interiorWidth)
         search, _ = ImGui.InputTextWithHint("##iconSearch", "Icon...", search, 100)
@@ -414,6 +421,8 @@ function favoritesUI.drawSelectCategory(categoryName)
     style.setNextItemWidth(200)
 
     if (ImGui.BeginCombo("##selectCategory", (favoritesUI.categories[categoryName] and (IconGlyphs[favoritesUI.categories[categoryName].icon] .. " ") or "") .. categoryName)) then
+        input.updateContext("main")
+
         local interiorWidth = 225 - (2 * ImGui.GetStyle().FramePadding.x) - 30
         style.setNextItemWidth(interiorWidth)
         favoritesUI.selectCategorySearch, _ = ImGui.InputTextWithHint("##selectCategorySearch", "Category Name...", favoritesUI.selectCategorySearch, 100)

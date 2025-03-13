@@ -285,9 +285,8 @@ function spawnUI.handleAssetPreviewHovered(entry, isFavorite)
 
             local data = utils.deepcopy(entry.data)
             if isFavorite then
-                local new = require(entry.data.modulePath):new(spawnUI.spawnedUI)
-                new:load(data, true)
-                spawnUI.previewInstance = new.spawnable
+                spawnUI.previewInstance = require("modules/classes/spawn/" .. data.spawnable.modulePath):new()
+                data = data.spawnable
             else
                 spawnUI.previewInstance = spawnUI.getActiveSpawnList().class:new()
                 data.modulePath = spawnUI.previewInstance.modulePath
