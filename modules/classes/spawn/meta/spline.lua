@@ -149,8 +149,7 @@ function spline:export()
     data.data = {}
 
     if #self.points == 0 then
-        local issues = self.object.sUI.spawner.baseUI.exportUI.exportIssues
-        table.insert(issues.noSplineMarker, self.object.name)
+        table.insert(self.object.sUI.spawner.baseUI.exportUI.exportIssues.noSplineMarker, self.object.name)
 
         return data
     end

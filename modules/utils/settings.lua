@@ -36,6 +36,9 @@ local config = require("modules/utils/config")
 ---@field public nodeRefPrefix string
 ---@field public cacheExlusions table
 ---@field public assetPreviewEnabled table
+---@field public filterTags table
+---@field public favoritesFilter string
+---@field public favoritesTagsAND boolean
 local settingsData = {
     spawnPos = 1,
     spawnDist = 4,
@@ -71,6 +74,10 @@ local settingsData = {
     nodeRefPrefix = "mod",
     cacheExlusions = {},
     assetPreviewEnabled = {},
+
+    filterTags = {},
+    favoritesFilter = "",
+    favoritesTagsAND = false,
 
     tabSizes = {}
 }

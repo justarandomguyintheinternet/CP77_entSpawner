@@ -81,6 +81,11 @@ function style.setCursorRelative(x, y)
     ImGui.SetNextWindowPos(xC + x * style.viewSize, yC + y * style.viewSize, ImGuiCond.Always)
 end
 
+function style.setCursorRelativeAppearing(x, y)
+    local xC, yC = ImGui.GetMousePos()
+    ImGui.SetNextWindowPos(xC + x * style.viewSize, yC + y * style.viewSize, ImGuiCond.Appearing)
+end
+
 function style.lightToolTip(text)
     if ImGui.IsItemHovered() then
         local x, y = ImGui.GetMousePos()
@@ -185,6 +190,10 @@ function style.toggleButton(text, state)
 		return not state, true
 	end
     return state, false
+end
+
+function style.setNextItemWidth(width)
+    ImGui.SetNextItemWidth(width * style.viewSize)
 end
 
 function style.trackedCheckbox(element, text, state, disabled)
@@ -334,6 +343,24 @@ function style.trackedSearchDropdown(element, text, searchHint, value, options, 
     end
 
     return value, finished
+end
+
+function style.drawNoBGConditionalButton(condition, text, greyed)
+    local push = false
+    local greyed = greyed ~= nil and greyed or false
+
+    if condition then
+        ImGui.SameLine()
+        style.pushButtonNoBG(true)
+        style.pushGreyedOut(greyed)
+        if ImGui.Button(text) then
+            push = true
+        end
+        style.popGreyedOut(greyed)
+        style.pushButtonNoBG(false)
+    end
+
+    return push
 end
 
 return style
