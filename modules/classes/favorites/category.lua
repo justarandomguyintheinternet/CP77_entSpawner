@@ -14,6 +14,7 @@ local settings = require("modules/utils/settings")
 ---@field openPopup boolean
 ---@field editName string
 ---@field changeIconSearch string
+---@field mergeCategorySearch string
 ---@field isVirtualGroup boolean
 ---@field virtualGroupTags string[]
 ---@field virtualGroups category[]
@@ -39,6 +40,7 @@ function category:new(fUI)
 	o.openPopup = false
 	o.editName = ""
 	o.changeIconSearch = ""
+	o.mergeCategorySearch = "Merge Target"
 
 	o.isVirtualGroup = false
 	o.virtualGroupPath = ""
@@ -141,6 +143,72 @@ function category:isNameDuplicate(name)
 	return false
 end
 
+function category:renameTags(tags, newName)
+	for _, favorite in pairs(self.favorites) do
+		for tag, _ in pairs(favorite.tags) do
+			if tags[tag] then
+				favorite.tags[newName] = true
+				favorite.tags[tag] = nil
+			end
+		end
+	end
+
+	if self.grouped then
+		self:loadVirtualGroups()
+	end
+end
+
+---@param toMerge category
+function category:merge(toMerge)
+	print(self.fileName, toMerge.fileName)
+	config.saveFile("data/favorite/preMerge/" .. self.fileName, self:serialize())
+	config.saveFile("data/favorite/preMerge/" .. toMerge.fileName, toMerge:serialize())
+
+	local exclusions = {
+		"name",
+		"hiddenByParent",
+		"propertyHeaderStates",
+		"visible",
+		"rotationRelative",
+		"scaleLocked",
+		"transformExpanded",
+		"primaryRange",
+		"secondaryRange",
+		"position",
+		"pos"
+	}
+	local merges = 0
+
+	for _, favorite in pairs(toMerge.favorites) do
+		local wasMerged = false
+
+		for _, ownFavorite in pairs(self.favorites) do
+			if favorite.data.modulePath == "modules/classes/editor/spawnableElement" and utils.deepcompareExclusions(favorite.data, ownFavorite.data, false, exclusions) then
+				for tag, _ in pairs(favorite.tags) do
+					ownFavorite.tags[tag] = true
+				end
+				wasMerged = true
+				merges = merges + 1
+			end
+		end
+
+		if not wasMerged then
+			table.insert(self.favorites, favorite)
+			favorite:setCategory(self)
+		end
+	end
+
+	if self.grouped then
+		self:loadVirtualGroups()
+	end
+
+	self:save()
+
+	toMerge:delete()
+
+	print(string.format("[ObjectSpawner] Merged %s into %s, resulting in the merging of %d favorites.", toMerge.name, self.name, merges))
+end
+
 function category:drawEditPopup()
 	if ImGui.BeginPopupContextItem("##editCategory" .. self.fileName) then
 		self.icon, self.changeIconSearch, changed = self.favoritesUI.drawSelectIcon(self.icon, self.changeIconSearch)
@@ -172,7 +240,20 @@ function category:drawEditPopup()
             style.tooltip("Category with this name already exists.")
 		end
 
-		-- merge option
+		style.mutedText("Merge into:")
+		ImGui.SameLine()
+		self.mergeCategorySearch, _ = self.favoritesUI.drawSelectCategory(self.mergeCategorySearch)
+		ImGui.SameLine()
+
+		local invalidTarget = self.mergeCategorySearch == self.name or not self.favoritesUI.categories[self.mergeCategorySearch]
+		if invalidTarget then
+			style.styledText(IconGlyphs.AlertOutline, 0xFF0000FF)
+			style.tooltip("Invalid merge target category name.")
+		else
+			if ImGui.Button("Merge") then
+				self.favoritesUI.categories[self.mergeCategorySearch]:merge(self)
+			end
+		end
 
 		ImGui.Separator()
 
@@ -255,6 +336,8 @@ end
 function category:loadVirtualGroups()
 	self.virtualGroups = {}
 	local tags = {}
+	local noTag = {}
+	local groupTagKeys = utils.getKeys(self.virtualGroupTags)
 
 	local anyTag = false
 	for _, favorite in pairs(self.favorites) do
@@ -268,11 +351,18 @@ function category:loadVirtualGroups()
 				anyTag = true
 			end
 		end
+		if utils.deepcompare(utils.getKeys(favorite.tags), groupTagKeys, false) then
+			table.insert(noTag, favorite)
+		end
 	end
 
 	if not anyTag then
 		self.grouped = false
 		return
+	end
+
+	if #noTag > 0 then
+		tags["No Tag"] = noTag
 	end
 
 	for tag, group in pairs(tags) do

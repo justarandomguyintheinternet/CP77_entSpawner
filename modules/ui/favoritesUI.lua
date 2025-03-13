@@ -6,9 +6,13 @@ local settings = require("modules/utils/settings")
 ---@field spawnUI spawnUI?
 ---@field tagAddFilter string Tag filter for adding new tags
 ---@field tagFilterFilter string Tag filter for filtering tags
+---@field tagMergeFilter string
+---@field tagMergeTags table
 ---@field newTag string
+---@field newMergeTag string
 ---@field tagAddSize table | {x: number, y: number}
 ---@field tagFilterSize table | {x: number, y: number}
+---@field tagMergeSize table | {x: number, y: number}
 ---@field openPopup boolean
 ---@field popupItem favorite?
 ---@field categories category[]
@@ -21,9 +25,13 @@ local favoritesUI = {
     selectCategorySearch = "",
     tagAddFilter = "",
     tagFilterFilter = "",
+    tagMergeFilter = "",
+    tagMergeTags = {},
     newTag = "",
+    newMergeTag = "",
     tagAddSize = { x = 0, y = 0 },
     tagFilterSize = { x = 0, y = 0 },
+    tagMergeSize = { x = 0, y = 0 },
 
     categories = {},
 
@@ -41,10 +49,24 @@ function favoritesUI.init(spawner)
 
     for _, file in pairs(dir("data/favorite")) do
         if file.name:match("^.+(%..+)$") == ".json" then
-            -- merge duplicates
             local category = require("modules/classes/favorites/category"):new(favoritesUI)
             category:load(config.loadFile("data/favorite/" .. file.name), file.name)
-            favoritesUI.categories[category.name] = category
+
+            if favoritesUI.categories[category.name] then
+                local target = favoritesUI.categories[category.name]
+                local origin = category
+
+                if #target.favorites < #origin.favorites then
+                    target = origin
+                    origin = favoritesUI.categories[category.name]
+                end
+                target:merge(origin)
+
+                -- Merging will remove category.name from the list, so we have to re-add it (Due to identical names)
+                favoritesUI.categories[target.name] = target
+            else
+                favoritesUI.categories[category.name] = category
+            end
         end
     end
 end
@@ -81,6 +103,14 @@ function favoritesUI.getAllTags(filter)
     return tags
 end
 
+---@param selected table Hashtable of selected tags
+---@param canAdd boolean Whether new tags can be added
+---@param filter string Filter for tags
+---@param showANDFilter boolean
+---@return table selected
+---@return boolean changed
+---@return table size
+---@return string filter
 function favoritesUI.drawTagSelect(selected, canAdd, filter, showANDFilter)
     local x, y = 0, 0
 
@@ -183,8 +213,10 @@ function favoritesUI.addNewItem(serialized, name, icon)
 
     -- Null transforms, to make deep comparing for merging possible
     if serialized.modulePath == "modules/classes/editor/spawnableElement" then
+        serialized.pos = { x = 0, y = 0, z = 0, w = 0 }
         serialized.spawnable.position = { x = 0, y = 0, z = 0, w = 0 }
         serialized.spawnable.rotation = { roll = 0, pitch = 0, yaw = 0 }
+        serialized.spawnable.nodeRef = ""
     end
 
     local favorite = require("modules/classes/favorites/favorite"):new(favoritesUI)
@@ -444,6 +476,36 @@ function favoritesUI.drawMain()
     end
 end
 
+function favoritesUI.drawMergeTags()
+    if ImGui.TreeNodeEx("Tags to rename / merge", ImGuiTreeNodeFlags.SpanFullWidth) then
+        if ImGui.BeginChild("##mergeTags", -1, math.min(favoritesUI.tagMergeSize.y, 300 * style.viewSize), false) then
+            favoritesUI.tagMergeTags, _, favoritesUI.tagMergeSize, favoritesUI.tagMergeFilter = favoritesUI.drawTagSelect(favoritesUI.tagMergeTags, false, favoritesUI.tagMergeFilter, false)
+            ImGui.EndChild()
+        end
+        ImGui.TreePop()
+    end
+
+    style.mutedText("New tag name")
+    ImGui.SameLine()
+    style.setNextItemWidth(200)
+    favoritesUI.newMergeTag, _ = ImGui.InputTextWithHint("##newMergeTag", "New tag name...", favoritesUI.newMergeTag, 15)
+
+    local newTagNotEmpty = favoritesUI.newMergeTag ~= ""
+    if newTagNotEmpty then
+        ImGui.SameLine()
+        style.pushButtonNoBG(true)
+    end
+    if favoritesUI.newMergeTag ~= "" and ImGui.Button(IconGlyphs.CheckCircleOutline) then
+        for _, category in pairs(favoritesUI.categories) do
+            category:renameTags(favoritesUI.tagMergeTags, favoritesUI.newMergeTag)
+        end
+
+        favoritesUI.newMergeTag = ""
+        favoritesUI.tagMergeTags = {}
+    end
+    style.pushButtonNoBG(newTagNotEmpty and false or true)
+end
+
 function favoritesUI.draw()
     favoritesUI.removeUnusedTags()
 
@@ -467,6 +529,12 @@ function favoritesUI.draw()
 
     if ImGui.TreeNodeEx("Add Category", ImGuiTreeNodeFlags.SpanFullWidth) then
         favoritesUI.drawAddCategory()
+
+        ImGui.TreePop()
+    end
+
+    if ImGui.TreeNodeEx("Rename Tags", ImGuiTreeNodeFlags.SpanFullWidth) then
+        favoritesUI.drawMergeTags()
 
         ImGui.TreePop()
     end

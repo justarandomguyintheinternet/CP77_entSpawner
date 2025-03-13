@@ -23,6 +23,7 @@ d4.txt
 data/backupManual/*
 data/favorites/*.json
 data/favorite/*.json
+data/favorite/preMerge/*.json
 data/objects/*.json
 data/oldFormat/*.json
 data/spawnables/entity/amm/*.json
