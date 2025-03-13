@@ -80,7 +80,9 @@ function favorite:draw(context)
 	ImGui.SetCursorPosX((context.depth) * 17 * style.viewSize)
 	ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, 4 * style.viewSize, context.padding * 2 + style.viewSize)
 
-    ImGui.Selectable("##favorite" .. context.row, false, ImGuiSelectableFlags.SpanAllColumns + ImGuiSelectableFlags.AllowOverlap)
+    if ImGui.Selectable("##favorite" .. context.row, false, ImGuiSelectableFlags.SpanAllColumns + ImGuiSelectableFlags.AllowOverlap) then
+        self.favoritesUI.spawnUI.spawnNew({ data = self.data }, require(self.data.modulePath), true)
+    end
 	context.row = context.row + 1
 
 	ImGui.SameLine()

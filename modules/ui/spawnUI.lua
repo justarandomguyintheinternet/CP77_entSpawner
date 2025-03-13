@@ -635,7 +635,7 @@ function spawnUI.getSpawnNewPosition()
     return pos, rot
 end
 
-function spawnUI.spawnNew(entry, class)
+function spawnUI.spawnNew(entry, class, isFavorite)
     spawnUI.lastSpawnedClass = class
     spawnUI.lastSpawnedEntry = entry
 
@@ -663,17 +663,29 @@ function spawnUI.spawnNew(entry, class)
     end
 
     local data = utils.deepcopy(entry.data)
-    data.modulePath = class:new().modulePath
-    data.position = { x = pos.x, y = pos.y, z = pos.z, w = 0 }
-    data.rotation = { roll = rot.roll, pitch = rot.pitch, yaw = rot.yaw }
+    if not isFavorite then
+        data.modulePath = class:new().modulePath
+        data.position = { x = pos.x, y = pos.y, z = pos.z, w = 0 }
+        data.rotation = { roll = rot.roll, pitch = rot.pitch, yaw = rot.yaw }
+    end
 
-    new:load({
-        name = utils.getFileName(entry.name),
-        modulePath = new.modulePath,
-        spawnable = data
-    })
+    if isFavorite then
+        ---@type positionable
+        new = require(entry.data.modulePath):new(spawnUI.spawnedUI)
+        data.visible = false
+        new:load(data)
+        new:setPosition(pos)
+        new:setRotation(rot)
+        new:setVisible(true, true)
+    else
+        new:load({
+            name = utils.getFileName(entry.name),
+            modulePath = new.modulePath,
+            spawnable = data
+        })
+    end
 
-    if new.spawnable.bBoxLoaded == nil and snap then -- Bbox is immediately available
+    if utils.isA(new, "spawnableElement") and new.spawnable.bBoxLoaded == nil and snap then -- Bbox is immediately available
         local adjustedPos = utils.addVector(spawnUI.popupSpawnHit.result.position, utils.multVector(spawnUI.popupSpawnHit.result.normal, math.abs(new.spawnable:getBBox().min.z)))
         Cron.After(0.1, function ()
             new:setPosition(adjustedPos)
@@ -684,7 +696,7 @@ function spawnUI.spawnNew(entry, class)
     new.selected = true
     spawnUI.spawnedUI.unselectAll()
 
-    if snap and new.spawnable.bBoxLoaded ~= nil then
+    if utils.isA(new, "spawnableElement") and snap and new.spawnable.bBoxLoaded ~= nil then
         local position = spawnUI.popupSpawnHit.result.position
         local normal = spawnUI.popupSpawnHit.result.normal
 

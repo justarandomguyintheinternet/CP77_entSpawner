@@ -160,7 +160,6 @@ end
 
 ---@param toMerge category
 function category:merge(toMerge)
-	print(self.fileName, toMerge.fileName)
 	config.saveFile("data/favorite/preMerge/" .. self.fileName, self:serialize())
 	config.saveFile("data/favorite/preMerge/" .. toMerge.fileName, toMerge:serialize())
 

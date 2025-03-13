@@ -4,6 +4,7 @@ local settings = require("modules/utils/settings")
 
 ---@class favoritesUI
 ---@field spawnUI spawnUI?
+---@field newItemCategory string
 ---@field tagAddFilter string Tag filter for adding new tags
 ---@field tagFilterFilter string Tag filter for filtering tags
 ---@field tagMergeFilter string
@@ -19,6 +20,7 @@ local settings = require("modules/utils/settings")
 local favoritesUI = {
     spawnUI = nil,
 
+    newItemCategory = "",
     newCategoryName = "New Category",
     newCategoryIcon = "EmoticonOutline",
     newCategoryIconSearch = "",
@@ -218,10 +220,16 @@ function favoritesUI.addNewItem(serialized, name, icon)
         serialized.spawnable.rotation = { roll = 0, pitch = 0, yaw = 0 }
         serialized.spawnable.nodeRef = ""
     end
+    serialized.visible = true
 
     local favorite = require("modules/classes/favorites/favorite"):new(favoritesUI)
     favorite.data = serialized
     favorite.name = name
+    favorite.category = favoritesUI.categories[favoritesUI.newItemCategory]
+    if favorite.category then
+        favorite.category:addFavorite(favorite)
+    end
+
     local iconKey = utils.indexValue(IconGlyphs, icon)
     if iconKey == -1 then iconKey = "" end
     favorite.icon = iconKey
@@ -270,6 +278,7 @@ function favoritesUI.drawEditFavoritePopup()
         -- Select category
         local categoryName, changed = favoritesUI.drawSelectCategory(favoritesUI.popupItem.category and favoritesUI.popupItem.category.name or "No Category")
         if changed then
+            favoritesUI.newItemCategory = categoryName -- Just use the last selected category
             if favoritesUI.popupItem.category then
                 favoritesUI.popupItem.category:removeFavorite(favoritesUI.popupItem)
             end
