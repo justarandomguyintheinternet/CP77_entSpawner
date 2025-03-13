@@ -26,6 +26,7 @@ local preview = require("modules/utils/previewUtils")
 ---@field protected assetPreviewTimer number
 ---@field protected assetPreviewBackplane mesh?
 ---@field protected instanceDataSearch string
+---@field protected psControllerID string
 local entity = setmetatable({}, { __index = spawnable })
 
 function entity:new()
@@ -50,6 +51,7 @@ function entity:new()
     o.deviceClassName = ""
     o.propertiesMaxWidth = nil
     o.instanceDataSearch = ""
+    o.psControllerID = ""
 
     o.assetPreviewType = "backdrop"
     o.assetPreviewDelay = 0.15
@@ -89,18 +91,26 @@ local function CRUIDToString(id)
 end
 
 function entity:loadInstanceData(entity, forceLoadDefault)
-    self.defaultComponentData = {}
-
     -- Only generate upon change
-    if not forceLoadDefault and utils.tableLength(self.instanceDataChanges) == 0 then
+    if not forceLoadDefault then -- Called during assemble
+        self.defaultComponentData = {}
         -- Always load default data for PS controllers, as these must be serialized during attachment, to prevent values being set from PS data
         for _, component in pairs(entity:GetComponents()) do
             if component:IsA("gameDeviceComponent") and component.persistentState then
                 self.defaultComponentData[CRUIDToString(component.id)] = red.redDataToJSON(component)
+                self.psControllerID = CRUIDToString(component.id)
             end
         end
 
-        return
+        if utils.tableLength(self.instanceDataChanges) == 0 then
+            return
+        end
+    end
+
+    for key, _ in pairs(self.defaultComponentData) do
+        if key ~= self.psControllerID then
+            self.defaultComponentData[key] = nil
+        end
     end
 
     -- Gotta go through all components, even such with identicaly IDs, due to AMM props using the same ID for all components
@@ -116,7 +126,7 @@ function entity:loadInstanceData(entity, forceLoadDefault)
         ignore = ignore or CRUIDToString(component.id) == "0"
 
         if not ignore then
-            if not component.name.value:match("amm_prop_slot") then
+            if not component.name.value:match("amm_prop_slot") and not CRUIDToString(component.id) == self.psControllerID then
                 self.defaultComponentData[CRUIDToString(component.id)] = red.redDataToJSON(component)
             elseif not self.defaultComponentData[CRUIDToString(component.id)] then
                 self.defaultComponentData[CRUIDToString(component.id)] = red.redDataToJSON(component)
@@ -1010,11 +1020,14 @@ function entity:drawInstanceDataProperty(componentID, key, data, path, max)
 end
 
 function entity:drawInstanceData()
-    if utils.tableLength(self.defaultComponentData) == 0 then
+    local nDefaultData = utils.tableLength(self.defaultComponentData)
+    if nDefaultData <= 1 then
         local entity = self:getEntity()
 
         if entity then
-            self:loadInstanceData(entity, true)
+            if nDefaultData == 0 or (nDefaultData == 1 and self.defaultComponentData[self.psControllerID] ~= nil) then -- Load default data if either not loaded, or only for the PS controller
+                self:loadInstanceData(entity, true)
+            end
         else
             ImGui.Text("Entity not spawned")
             return
