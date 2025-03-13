@@ -1,6 +1,7 @@
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 local settings = require("modules/utils/settings")
+local input = require("modules/utils/input")
 
 ---@class favoritesUI
 ---@field spawnUI spawnUI?
@@ -238,8 +239,14 @@ function favoritesUI.addNewItem(serialized, name, icon)
 end
 
 function favoritesUI.drawEditFavoritePopup()
-    -- TODO: Add popups to general context
+    -- Do this to make sure cursor is over the popup, so if edit mode is active Shift-A doesnt activate the menu
+    if ImGui.IsPopupOpen("##addFavorite") then
+        style.setCursorRelativeAppearing(-5, -5)
+    end
+
     if ImGui.BeginPopupContextItem("##addFavorite") then
+        input.updateContext("main")
+
         local noCategory = favoritesUI.popupItem.category == nil
 
         -- Edit name

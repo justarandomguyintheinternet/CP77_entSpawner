@@ -2,6 +2,7 @@ local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local config = require("modules/utils/config")
 local settings = require("modules/utils/settings")
+local input = require("modules/utils/input")
 
 ---@class category
 ---@field name string
@@ -209,7 +210,13 @@ function category:merge(toMerge)
 end
 
 function category:drawEditPopup()
+	if ImGui.IsPopupOpen("##editCategory" .. self.fileName) then
+        style.setCursorRelativeAppearing(-5, -5)
+    end
+
 	if ImGui.BeginPopupContextItem("##editCategory" .. self.fileName) then
+        input.updateContext("main")
+
 		self.icon, self.changeIconSearch, changed = self.favoritesUI.drawSelectIcon(self.icon, self.changeIconSearch)
 		if changed then
 			self:save()

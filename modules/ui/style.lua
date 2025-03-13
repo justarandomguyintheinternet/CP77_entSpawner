@@ -81,6 +81,11 @@ function style.setCursorRelative(x, y)
     ImGui.SetNextWindowPos(xC + x * style.viewSize, yC + y * style.viewSize, ImGuiCond.Always)
 end
 
+function style.setCursorRelativeAppearing(x, y)
+    local xC, yC = ImGui.GetMousePos()
+    ImGui.SetNextWindowPos(xC + x * style.viewSize, yC + y * style.viewSize, ImGuiCond.Appearing)
+end
+
 function style.lightToolTip(text)
     if ImGui.IsItemHovered() then
         local x, y = ImGui.GetMousePos()
