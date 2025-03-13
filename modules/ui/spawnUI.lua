@@ -83,6 +83,7 @@ local types = {
 local spawnData = {}
 local typeNames = {}
 local variantNames = {}
+local modulePathToSpawnList = {}
 local AMM = nil
 
 local function tooltip(text)
@@ -105,7 +106,6 @@ end
 ---@field currentPopupVariant string
 ---@field popupSpawnHit table?
 ---@field popupData table
----@field spawnNewBBoxCron? number
 ---@field dragging boolean
 ---@field dragData table?
 ---@field lastSpawnedClass table?
@@ -129,7 +129,6 @@ spawnUI = {
     currentPopupVariant = "",
     popupData = {},
     popupSpawnHit = nil,
-    spawnNewBBoxCron = nil,
     dragging = false,
     dragData = nil,
     lastSpawnedClass = nil,
@@ -147,6 +146,7 @@ function spawnUI.loadSpawnData(spawner)
     typeNames = {}
     variantNames = {}
     spawnData = {}
+    modulePathToSpawnList = {}
 
     AMM = GetMod("AppearanceMenuMod")
     spawnUI.spawnedUI = spawner.baseUI.spawnedUI
@@ -159,14 +159,14 @@ function spawnUI.loadSpawnData(spawner)
             local variantInstance = variant.class:new()
             local info = { node = variantInstance.node, description = variantInstance.description, previewNote = variantInstance.previewNote }
             if variantInstance.spawnListType == "list" then
-                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = true, assetPreviewDelay = variantInstance.assetPreviewDelay, assetPreviewType = variantInstance.assetPreviewType }
+                spawnData[dataName][variantName] = { data = config.loadLists(variantInstance.spawnDataPath), class = variant.class, modulePath = variantInstance.modulePath, info = info, isPaths = true, assetPreviewDelay = variantInstance.assetPreviewDelay, assetPreviewType = variantInstance.assetPreviewType }
             else
-                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant.class, info = info, isPaths = false, assetPreviewDelay = variantInstance.assetPreviewDelay, assetPreviewType = variantInstance.assetPreviewType }
+                spawnData[dataName][variantName] = { data = config.loadFiles(variantInstance.spawnDataPath), class = variant.class, modulePath = variantInstance.modulePath, info = info, isPaths = false, assetPreviewDelay = variantInstance.assetPreviewDelay, assetPreviewType = variantInstance.assetPreviewType }
             end
+            modulePathToSpawnList[variantInstance.modulePath] = spawnData[dataName][variantName]
 
-            if not settings.assetPreviewEnabled[dataName] then settings.assetPreviewEnabled[dataName] = {} end
-            if settings.assetPreviewEnabled[dataName][variantName] == nil then
-                settings.assetPreviewEnabled[dataName][variantName] = true
+            if settings.assetPreviewEnabled[variantInstance.modulePath] == nil then
+                settings.assetPreviewEnabled[variantInstance.modulePath] = true
                 settings.save()
             end
         end
@@ -251,7 +251,9 @@ function spawnUI.updateVariant()
     spawnUI.refresh()
 end
 
-function spawnUI.handleAssetPreviewHovered(entry)
+---@param entry table|favorite
+---@param isFavorite boolean
+function spawnUI.handleAssetPreviewHovered(entry, isFavorite)
     if spawnUI.hoveredEntry ~= entry then
         if spawnUI.previewInstance then
             spawnUI.previewInstance:assetPreview(false)
@@ -262,20 +264,39 @@ function spawnUI.handleAssetPreviewHovered(entry)
         if spawnUI.previewTimer then
             Cron.Halt(spawnUI.previewTimer)
         end
-        spawnUI.previewTimer = Cron.After(spawnUI.getActiveSpawnList().assetPreviewDelay, function ()
+
+        local assetPreviewType = spawnUI.getActiveSpawnList().assetPreviewType
+        local assetPreviewDelay = spawnUI.getActiveSpawnList().assetPreviewDelay
+        if isFavorite then
+            -- If its favorite, then entry is just the favorite instance
+            if entry.data.modulePath ~= "modules/classes/editor/spawnableElement" then
+                assetPreviewType = "none"
+            else
+                assetPreviewDelay = modulePathToSpawnList[entry.data.spawnable.modulePath].assetPreviewDelay
+                assetPreviewType = modulePathToSpawnList[entry.data.spawnable.modulePath].assetPreviewType
+            end
+        end
+
+        if assetPreviewType == "none" then return end
+
+        spawnUI.previewTimer = Cron.After(assetPreviewDelay, function ()
             spawnUI.previewTimer = nil
             if not spawnUI.hoveredEntry then return end
 
-            spawnUI.previewInstance = spawnUI.getActiveSpawnList().class:new()
-
             local data = utils.deepcopy(entry.data)
-            data.modulePath = spawnUI.previewInstance.modulePath
-            local pos, _ = spawnUI.getSpawnNewPosition()
+            if isFavorite then
+                local new = require(entry.data.modulePath):new(spawnUI.spawnedUI)
+                new:load(data, true)
+                spawnUI.previewInstance = new.spawnable
+            else
+                spawnUI.previewInstance = spawnUI.getActiveSpawnList().class:new()
+                data.modulePath = spawnUI.previewInstance.modulePath
+            end
 
+            local pos, _ = spawnUI.getSpawnNewPosition()
             rot = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetRotation()
             rot.yaw = rot.yaw - 180
             rot.pitch = -rot.pitch
-
             spawnUI.previewInstance:loadSpawnData(data, pos, rot)
 
             spawnUI.previewInstance:assetPreview(true)
@@ -353,7 +374,7 @@ function spawnUI.drawOptions()
     if activeList.assetPreviewType ~= "none" then
         ImGui.Text("Asset Preview")
         ImGui.SameLine()
-        settings.assetPreviewEnabled[typeNames[spawnUI.selectedType + 1]][variantNames[spawnUI.selectedVariant + 1]], changed = ImGui.Checkbox("##assetPreview", settings.assetPreviewEnabled[typeNames[spawnUI.selectedType + 1]][variantNames[spawnUI.selectedVariant + 1]])
+        settings.assetPreviewEnabled[activeList.modulePath], changed = ImGui.Checkbox("##assetPreview", settings.assetPreviewEnabled[activeList.modulePath])
         if changed then
             settings.save()
         end
@@ -391,8 +412,6 @@ function spawnUI.drawTargetGroupSelector()
 end
 
 function spawnUI.drawAll()
-    spawnUI.updateAssetPreview()
-
     ImGui.SetNextItemWidth(300 * style.viewSize)
     spawnUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search by name... (Supports pattern matching)', spawnUI.filter, 100)
     if changed then
@@ -504,14 +523,6 @@ function spawnUI.drawAll()
             if ImGui.Button(utils.shortenPath(buttonText, xSpace - ImGui.GetCursorPosX(), true)) and not ImGui.IsMouseDragging(0, 0.6) then
                 local class = spawnUI.getActiveSpawnList().class
                 entry.lastSpawned = spawnUI.spawnNew(entry, class, false)
-
-                -- Despawn the preview
-                if spawnUI.previewTimer then
-                    Cron.Halt(spawnUI.previewTimer)
-                end
-                if spawnUI.previewInstance then
-                    spawnUI.previewInstance:assetPreview(false)
-                end
             elseif ImGui.IsMouseDragging(0, 0.6) and not spawnUI.dragging and ImGui.IsItemHovered() then
                 spawnUI.dragging = true
                 spawnUI.dragData = entry
@@ -531,9 +542,9 @@ function spawnUI.drawAll()
             if ImGui.IsItemClicked(ImGuiMouseButton.Middle) then
                 ImGui.SetClipboardText(ImGui.SetClipboardText(entry.name))
             end
-            if ImGui.IsItemHovered() and settings.assetPreviewEnabled[typeNames[spawnUI.selectedType + 1]][variantNames[spawnUI.selectedVariant + 1]] then
-                spawnUI.handleAssetPreviewHovered(entry)
-            elseif spawnUI.hoveredEntry == entry then
+            if ImGui.IsItemHovered() and settings.assetPreviewEnabled[spawnUI.getActiveSpawnList().modulePath] then
+                spawnUI.handleAssetPreviewHovered(entry, false)
+            elseif spawnUI.hoveredEntry == entry and spawnUI.previewInstance then
                 spawnUI.hoveredEntry = nil
                 if spawnUI.previewTimer then
                     Cron.Halt(spawnUI.previewTimer)
@@ -584,6 +595,7 @@ end
 
 function spawnUI.draw()
     spawnUI.drawDragWindow()
+    spawnUI.updateAssetPreview()
 
     if ImGui.BeginTabBar("##spawnUITabbar", ImGuiTabItemFlags.NoTooltip) then
         if ImGui.BeginTabItem("All") then
@@ -642,6 +654,14 @@ function spawnUI.spawnNew(entry, class, isFavorite)
     spawnUI.lastSpawnedClass = class
     spawnUI.lastSpawnedEntry = entry
     spawnUI.lastSpawnedIsFavorite = isFavorite
+
+    -- Cleanup preview
+    if spawnUI.previewTimer then
+        Cron.Halt(spawnUI.previewTimer)
+    end
+    if spawnUI.previewInstance then
+        spawnUI.previewInstance:assetPreview(false)
+    end
 
     local parent = spawnUI.spawnedUI.root
     if spawnUI.selectedGroup ~= 0 and spawnUI.spawnedUI.containerPaths[spawnUI.selectedGroup] then
@@ -710,7 +730,7 @@ function spawnUI.spawnNew(entry, class, isFavorite)
         local position = spawnUI.popupSpawnHit.result.position
         local normal = spawnUI.popupSpawnHit.result.normal
 
-        spawnUI.spawnNewBBoxCron = Cron.Every(0.05, function ()
+        Cron.Every(0.05, function (timer)
             if new.spawnable.bBoxLoaded and new.spawnable:getEntity() then
                 Cron.After(0.1, function ()
                     local adjustedPos = utils.addVector(position, utils.multVector(normal, math.abs(new.spawnable:getBBox().min.z)))
@@ -718,7 +738,7 @@ function spawnUI.spawnNew(entry, class, isFavorite)
                     history.addAction(history.getInsert({ new }))
                 end)
 
-                Cron.Halt(spawnUI.spawnNewBBoxCron)
+                timer:Halt()
             end
         end)
     else

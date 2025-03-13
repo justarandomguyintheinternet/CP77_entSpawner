@@ -2,6 +2,7 @@ local utils = require("modules/utils/utils")
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
 local editor = require("modules/utils/editor/editor")
+local Cron = require("modules/utils/Cron")
 
 ---@class favorite
 ---@field name string
@@ -10,6 +11,7 @@ local editor = require("modules/utils/editor/editor")
 ---@field category category?
 ---@field icon string
 ---@field favoritesUI favoritesUI
+---@field spawnUI spawnUI
 local favorite = {}
 
 ---@param fUI favoritesUI
@@ -24,6 +26,7 @@ function favorite:new(fUI)
     o.icon = ""
 
     o.favoritesUI = fUI
+    o.spawnUI = fUI.spawnUI
 
 	self.__index = self
    	return setmetatable(o, self)
@@ -82,21 +85,33 @@ function favorite:draw(context)
 	ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, 4 * style.viewSize, context.padding * 2 + style.viewSize)
 
     if ImGui.Selectable("##favorite" .. context.row, false, ImGuiSelectableFlags.SpanAllColumns + ImGuiSelectableFlags.AllowOverlap) then
-        self.favoritesUI.spawnUI.spawnNew({ data = self.data }, require(self.data.modulePath), true)
-    elseif ImGui.IsMouseDragging(0, 0.6) and not self.favoritesUI.spawnUI.dragging and ImGui.IsItemHovered() then
-        self.favoritesUI.spawnUI.dragging = true
-        self.favoritesUI.spawnUI.dragData = { data = self.data, name = self.name }
-    elseif not ImGui.IsMouseDragging(0, 0.6) and self.favoritesUI.spawnUI.dragging then
+        self.spawnUI.spawnNew({ data = self.data }, require(self.data.modulePath), true)
+    elseif ImGui.IsMouseDragging(0, 0.6) and not self.spawnUI.dragging and ImGui.IsItemHovered() then
+        self.spawnUI.dragging = true
+        self.spawnUI.dragData = { data = self.data, name = self.name }
+    elseif not ImGui.IsMouseDragging(0, 0.6) and self.spawnUI.dragging then
         if not ImGui.IsItemHovered() then
             local ray = editor.getScreenToWorldRay()
-            self.favoritesUI.spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+            self.spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
 
-            spawnUI.dragData.lastSpawned = spawnUI.spawnNew(self.favoritesUI.spawnUI.dragData, require(self.data.modulePath), true)
+            spawnUI.dragData.lastSpawned = spawnUI.spawnNew(self.spawnUI.dragData, require(self.data.modulePath), true)
         end
 
-        self.favoritesUI.spawnUI.dragging = false
-        self.favoritesUI.spawnUI.dragData = nil
-        self.favoritesUI.spawnUI.popupSpawnHit = nil
+        self.spawnUI.dragging = false
+        self.spawnUI.dragData = nil
+        self.spawnUI.popupSpawnHit = nil
+    end
+
+    -- Asset preview
+    if self.data.modulePath == "modules/classes/editor/spawnableElement" and ImGui.IsItemHovered() and settings.assetPreviewEnabled[self.data.spawnable.modulePath] then
+        self.spawnUI.handleAssetPreviewHovered(self, true)
+    elseif self.spawnUI.hoveredEntry == self and self.spawnUI.previewInstance then
+        self.spawnUI.hoveredEntry = nil
+        if self.spawnUI.previewTimer then
+            Cron.Halt(self.spawnUI.previewTimer)
+        else
+            self.spawnUI.previewInstance:assetPreview(false)
+        end
     end
 
 	context.row = context.row + 1
