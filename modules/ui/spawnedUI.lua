@@ -894,6 +894,8 @@ function spawnedUI.drawElement(element, dummy)
         style.popStyleColor(isGettingDragged)
 
         ImGui.PopID()
+    elseif not dummy then
+        element:setHovered(false)
     end
 
     spawnedUI.clipperIndex = spawnedUI.clipperIndex + 1

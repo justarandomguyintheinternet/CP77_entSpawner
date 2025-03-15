@@ -113,7 +113,7 @@ function positionable:setSelected(state)
 end
 
 function positionable:setHovered(state)
-	if (not self.selected or (not settings.gizmoOnSelected and not editor.active)) and state ~= self.hovered then
+	if state ~= self.hovered and (not self.selected or (not settings.gizmoOnSelected and not editor.active)) then
 		self:setVisualizerState(state)
 		self:setVisualizerDirection("none")
 	end

@@ -78,7 +78,7 @@ local function drawMenuButton()
     ImGui.SameLine()
 
     local iconWidth, _ = ImGui.CalcTextSize(IconGlyphs.DotsHorizontal)
-    ImGui.SetCursorPos(ImGui.GetWindowWidth() - iconWidth - ImGui.GetStyle().WindowPadding.x - 5, ImGui.GetFrameHeight() + ImGui.GetStyle().WindowPadding.y)
+    ImGui.SetCursorPos(ImGui.GetWindowWidth() - iconWidth - ImGui.GetStyle().WindowPadding.x - 5, (editor.active and 0 or ImGui.GetFrameHeight()) + ImGui.GetStyle().WindowPadding.y)
 
     style.pushStyleColor(menuButtonHovered, ImGuiCol.Text, style.mutedColor)
     ImGui.SetItemAllowOverlap()

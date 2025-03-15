@@ -16,6 +16,13 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@field public apps table
 ---@field public appIndex integer
 ---@field public scale {x: number, y: number, z: number}
+---@field protected castLocalShadows integer
+---@field protected castRayTracedGlobalShadows integer
+---@field protected castRayTracedLocalShadows integer
+---@field protected castShadows integer
+---@field protected shadowCastingModeEnum table
+---@field protected shadowHeaderState boolean
+---@field protected maxShadowPropertiesWidth number?
 ---@field public bBox table {min: Vector4, max: Vector4}
 ---@field public colliderShape integer
 ---@field public hideGenerate boolean
@@ -38,6 +45,15 @@ function mesh:new()
     o.apps = {}
     o.appIndex = 0
     o.scale = { x = 1, y = 1, z = 1 }
+
+    o.castLocalShadows = 0
+    o.castRayTracedGlobalShadows = 0
+    o.castRayTracedLocalShadows = 0
+    o.castShadows = 0
+    o.shadowCastingModeEnum = utils.enumTable("shadowsShadowCastingMode")
+    o.shadowHeaderState = false
+    o.maxShadowPropertiesWidth = nil
+
     o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
     o.bBoxLoaded = false
 
@@ -101,6 +117,10 @@ function mesh:onAssemble(entity)
     component.mesh = ResRef.FromString(self.spawnData)
     component.visualScale = Vector3.new(self.scale.x, self.scale.y, self.scale.z)
     component.meshAppearance = self.app
+    component.castLocalShadows = Enum.new("shadowsShadowCastingMode", self.castLocalShadows)
+    component.castRayTracedGlobalShadows = Enum.new("shadowsShadowCastingMode", self.castRayTracedGlobalShadows)
+    component.castRayTracedLocalShadows = Enum.new("shadowsShadowCastingMode", self.castRayTracedLocalShadows)
+    component.castShadows = Enum.new("shadowsShadowCastingMode", self.castShadows)
     entity:AddComponent(component)
 
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
@@ -195,7 +215,12 @@ end
 
 function mesh:save()
     local data = spawnable.save(self)
+
     data.scale = { x = self.scale.x, y = self.scale.y, z = self.scale.z }
+    data.castLocalShadows = self.castLocalShadows
+    data.castRayTracedGlobalShadows = self.castRayTracedGlobalShadows
+    data.castRayTracedLocalShadows = self.castRayTracedLocalShadows
+    data.castShadows = self.castShadows
 
     return data
 end
@@ -215,14 +240,31 @@ function mesh:updateScale()
     self:setOutline(self.outline)
 end
 
+---@protected
+function mesh:updateShadowSettings(changed)
+    if not changed then return end
+
+    local entity = self:getEntity()
+    if not entity then return end
+
+    local component = entity:FindComponentByName("mesh")
+    component.castLocalShadows = Enum.new("shadowsShadowCastingMode", self.castLocalShadows)
+    component.castRayTracedGlobalShadows = Enum.new("shadowsShadowCastingMode", self.castRayTracedGlobalShadows)
+    component.castRayTracedLocalShadows = Enum.new("shadowsShadowCastingMode", self.castRayTracedLocalShadows)
+    component.castShadows = Enum.new("shadowsShadowCastingMode", self.castShadows)
+
+    component:Toggle(false)
+    component:Toggle(true)
+end
+
 function mesh:getSize()
     return { x = (self.bBox.max.x - self.bBox.min.x) * math.abs(self.scale.x), y = (self.bBox.max.y - self.bBox.min.y) * math.abs(self.scale.y), z = (self.bBox.max.z - self.bBox.min.z) * math.abs(self.scale.z) }
 end
 
 function mesh:getBBox()
     return {
-        min = {  x = self.bBox.min.x * math.abs(self.scale.x), y = self.bBox.min.y * math.abs(self.scale.y), z = self.bBox.min.z * math.abs(self.scale.z) },
-        max = {  x = self.bBox.max.x * math.abs(self.scale.x), y = self.bBox.max.y * math.abs(self.scale.y), z = self.bBox.max.z * math.abs(self.scale.z) }
+        min = { x = self.bBox.min.x * math.abs(self.scale.x), y = self.bBox.min.y * math.abs(self.scale.y), z = self.bBox.min.z * math.abs(self.scale.z) },
+        max = { x = self.bBox.max.x * math.abs(self.scale.x), y = self.bBox.max.y * math.abs(self.scale.y), z = self.bBox.max.z * math.abs(self.scale.z) }
     }
 end
 
@@ -310,20 +352,52 @@ function mesh:draw()
     end
     style.popGreyedOut(#self.apps == 0)
 
-    if self.hideGenerate then
-        return
+    if not self.hideGenerate then
+        style.mutedText("Collider")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxPropertyWidth)
+        ImGui.SetNextItemWidth(110 * style.viewSize)
+        self.colliderShape, changed = ImGui.Combo("##colliderShape", self.colliderShape, colliderShapes, #colliderShapes)
+
+        ImGui.SameLine()
+
+        if ImGui.Button("Generate") then
+            self:generateCollider()
+        end
     end
 
-    style.mutedText("Collider")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    ImGui.SetNextItemWidth(110 * style.viewSize)
-    self.colliderShape, changed = ImGui.Combo("##colliderShape", self.colliderShape, colliderShapes, #colliderShapes)
+    self.shadowHeaderState = ImGui.TreeNodeEx("Shadow Settings")
 
-    ImGui.SameLine()
+    if self.shadowHeaderState then
+        if not self.maxShadowPropertiesWidth then
+            self.maxShadowPropertiesWidth = utils.getTextMaxWidth({ "Cast Local Shadows", "Cast RT Global Shadows", "Cast RT Local Shadows", "Cast Shadows" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        end
 
-    if ImGui.Button("Generate") then
-        self:generateCollider()
+        style.mutedText("Cast Local Shadows")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.castLocalShadows, changed = style.trackedCombo(self.object, "##castLocalShadows", self.castLocalShadows, self.shadowCastingModeEnum)
+        self:updateShadowSettings(changed)
+
+        style.mutedText("Cast RT Global Shadows")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.castRayTracedGlobalShadows, changed = style.trackedCombo(self.object, "##castRayTracedGlobalShadows", self.castRayTracedGlobalShadows, self.shadowCastingModeEnum)
+        self:updateShadowSettings(changed)
+
+        style.mutedText("Cast RT Local Shadows")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.castRayTracedLocalShadows, changed = style.trackedCombo(self.object, "##castRayTracedLocalShadows", self.castRayTracedLocalShadows, self.shadowCastingModeEnum)
+        self:updateShadowSettings(changed)
+
+        style.mutedText("Cast Shadows")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.castShadows, changed = style.trackedCombo(self.object, "##castShadows", self.castShadows, self.shadowCastingModeEnum)
+        self:updateShadowSettings(changed)
+
+        ImGui.TreePop()
     end
 end
 
@@ -433,7 +507,11 @@ function mesh:export()
         meshAppearance = {
             ["$storage"] = "string",
             ["$value"] = app
-        }
+        },
+        castLocalShadows = self.shadowCastingModeEnum[self.castLocalShadows + 1],
+        castRayTracedGlobalShadows = self.shadowCastingModeEnum[self.castRayTracedGlobalShadows + 1],
+        castRayTracedLocalShadows = self.shadowCastingModeEnum[self.castRayTracedLocalShadows + 1],
+        castShadows = self.shadowCastingModeEnum[self.castShadows + 1]
     }
 
     return data
