@@ -45,7 +45,7 @@ function intersection.getResourcePathScalingFactor(path, initalScale)
         return Vector4.new(0.175, 0.175, 0.7, 0), false
     end
 
-    if string.match(path, "base\\environment\\vegetation\\") or string.match(path, "[^s]tree") then
+    if (string.match(path, "base\\environment\\vegetation\\") or string.match(path, "[^s]tree")) and not (string.match(path, "base\\environment\\vegetation\\debris") or string.match(path, "base\\environment\\vegetation\\grass\\lawn")) then
         return Vector4.new(0.35, 0.35, 0.7, 0), false
     end
 

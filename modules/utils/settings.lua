@@ -3,17 +3,13 @@ local config = require("modules/utils/config")
 ---@class settingsData
 ---@field public spawnPos integer
 ---@field public spawnDist number
----@field public spawnNewSortAlphabetical boolean
 ---@field public posSteps number
 ---@field public precisionMultiplier number
 ---@field public rotSteps number
 ---@field public despawnOnReload boolean
----@field public groupRot boolean
 ---@field public headerState boolean
 ---@field public deleteConfirm boolean
 ---@field public moveCloneToParent integer
----@field public groupExport boolean
----@field public autoSpawnRange number
 ---@field public spawnUIOnlyNames boolean
 ---@field public editor {color: integer}
 ---@field public colliderColor integer
@@ -42,7 +38,6 @@ local config = require("modules/utils/config")
 local settingsData = {
     spawnPos = 1,
     spawnDist = 4,
-    spawnNewSortAlphabetical = false,
     posSteps = 0.002,
     precisionMultiplier = 0.2,
     rotSteps = 0.050,
@@ -50,7 +45,6 @@ local settingsData = {
     headerState = true,
     deleteConfirm = true,
     moveCloneToParent = 1,
-    autoSpawnRange = 1000,
     spawnUIOnlyNames = false,
     editor = {
         color = 1
