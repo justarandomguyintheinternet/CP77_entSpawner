@@ -26,7 +26,7 @@ local menuButtonHovered = false
 local tabs = {
     {
         id = "spawn",
-        name = "Spawn new",
+        name = "Spawn New",
         flags = ImGuiWindowFlags.None,
         defaultSize = { 750, 1000 },
         draw = function ()

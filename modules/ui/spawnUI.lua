@@ -205,7 +205,7 @@ function spawnUI.updateFilter()
     for _, data in pairs(spawnUI.getActiveSpawnList().data) do
         local name = data.name
         if spawnUI.getActiveSpawnList().isPaths and settings.spawnUIOnlyNames then
-            name = utils.getFileName(data.name)
+            name = data.fileName
         end
         if (name:lower():match(spawnUI.filter:lower())) ~= nil then
             table.insert(spawnUI.filteredList, data)
