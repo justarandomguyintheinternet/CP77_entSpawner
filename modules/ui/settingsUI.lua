@@ -1,13 +1,16 @@
 local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
 local cache = require("modules/utils/cache")
+local utils = require("modules/utils/utils")
 
 local colliderColors = { "Red", "Green", "Blue" }
 local outlineColors = { "Green", "Red", "Blue", "Orange", "Yellow", "Light Blue", "White", "Black" }
+local windowNames = { "World Builder", "Object Spawner", "Entity Spawner", "World Additor", "World Editing Toolkit", "World Editor", "WheezeKit", "Buildy McBuildface", "Keanus Editing Kit (Kek)", "Redkit at home" }
 
 settingsUI = {}
 
-function settingsUI.draw()
+---@param spawner spawner
+function settingsUI.draw(spawner)
     style.sectionHeaderStart("SPAWNING")
 
     ImGui.PushItemWidth(120 * style.viewSize)
@@ -143,6 +146,14 @@ function settingsUI.draw()
 
     settings.despawnOnReload, changed = ImGui.Checkbox("Despawn everything on \"Reload all mods\"", settings.despawnOnReload)
     if changed then settings.save() end
+
+    local index, changed = ImGui.Combo("Main Window Name", math.max(0, utils.indexValue(windowNames, settings.mainWindowName) - 1), windowNames, #windowNames)
+    if changed then
+        settings.mainWindowName = windowNames[index + 1]
+        spawner.baseUI.restoreWindowPosition = true
+        spawner.baseUI.loadTabSize = true
+        settings.save()
+    end
 
     ImGui.PopItemWidth()
     style.sectionHeaderEnd(true)

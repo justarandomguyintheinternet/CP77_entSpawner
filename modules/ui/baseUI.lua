@@ -1,5 +1,6 @@
 local CodewareVersion = "1.14.1"
 local ArchiveXLVersion = "1.20.0"
+local ModVersion = "1.0.0"
 
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
@@ -132,8 +133,8 @@ end
 
 function baseUI.draw(spawner)
     if #baseUI.requirementsIssues > 0 then
-        if ImGui.Begin("Object Spawner Error", ImGuiWindowFlags.AlwaysAutoResize) then
-            style.mutedText("The following issues are preventing Object Spawner from running:")
+        if ImGui.Begin(string.format("%s Error", settings.mainWindowName .. " " .. ModVersion), ImGuiWindowFlags.AlwaysAutoResize) then
+            style.mutedText(string.format("The following issues are preventing %s from running:", settings.mainWindowName))
 
             for _, issue in pairs(baseUI.requirementsIssues) do
                 ImGui.Text(issue)
@@ -176,7 +177,7 @@ function baseUI.draw(spawner)
         flags = flags + ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.NoTitleBar
     end
 
-    if ImGui.Begin("Object Spawner 2.0", flags) then
+    if ImGui.Begin(settings.mainWindowName .. " " .. ModVersion, flags) then
         input.updateContext("main")
 
         if not editorActive then

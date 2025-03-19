@@ -1,6 +1,6 @@
 local utils = require("modules/utils/utils")
-local red = require("modules/utils/redConverter")
 local entityBuilder = require("modules/utils/entityBuilder")
+local settings = require("modules/utils/settings")
 
 local amm = {
     importing = false,
@@ -337,7 +337,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
 
     meshService:onFinalize(function ()
         root:save()
-        print("[ObjectSpawner] Imported \"" .. data.file_name .. "\" from AMM.")
+        print("[" .. settings.mainWindowName .. "] Imported \"" .. data.file_name .. "\" from AMM.")
 
         importTasks:taskCompleted()
     end)

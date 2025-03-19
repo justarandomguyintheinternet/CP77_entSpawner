@@ -14,7 +14,7 @@ function splineMarker:new()
     o.spawnDataPath = "data/spawnables/meta/splineMarker/"
     o.modulePath = "meta/splineMarker"
     o.node = "---"
-    o.description = "Places a point of a spline. Automatically connects with other spline points in the same group, to form a path. The parent group can be used to refernce the contained spline, and use it in worldSplineNode's"
+    o.description = "Places a point of a spline. Automatically connects with other spline points in the same group, to form a path. The parent group can be used to reference the contained spline, and use it in worldSplineNode's"
     o.icon = IconGlyphs.MapMarkerPath
 
     o.connectorApp = "violet"

@@ -35,6 +35,7 @@ local config = require("modules/utils/config")
 ---@field public filterTags table
 ---@field public favoritesFilter string
 ---@field public favoritesTagsAND boolean
+---@field public mainWindowName string
 local settingsData = {
     spawnPos = 1,
     spawnDist = 4,
@@ -68,6 +69,7 @@ local settingsData = {
     nodeRefPrefix = "mod",
     cacheExlusions = {},
     assetPreviewEnabled = {},
+    mainWindowName = "World Builder",
 
     filterTags = {},
     favoritesFilter = "",

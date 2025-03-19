@@ -63,14 +63,14 @@ function savedUI.backwardComp()
 
                 local new = savedUI.convertObject(data, true)
                 config.saveFile("data/objects/" .. file.name, new)
-                print("[ObjectSpawner] Converted \"" .. file.name .. "\" to the new file format.")
+                print("[" .. settings.mainWindowName .. "] Converted \"" .. file.name .. "\" to the new file format.")
             elseif data.type == "group" and not data.isUsingSpawnables then
                 config.saveFile("data/oldFormat/" .. file.name, data)
 
                 data = savedUI.convertGroup(data)
                 data.isUsingSpawnables = true
                 config.saveFile("data/objects/" .. file.name, data)
-                print("[ObjectSpawner] Converted \"" .. file.name .. "\" to the new file format.")
+                print("[" .. settings.mainWindowName .. "] Converted \"" .. file.name .. "\" to the new file format.")
             end
         end
     end

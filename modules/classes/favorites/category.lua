@@ -193,7 +193,7 @@ function category:merge(toMerge)
 
 	toMerge:delete()
 
-	print(string.format("[ObjectSpawner] Merged %s into %s, resulting in the merging of %d favorites.", toMerge.name, self.name, merges))
+	print(string.format("[%s] Merged %s into %s, resulting in the merging of %d favorites.", settings.mainWindowName, toMerge.name, self.name, merges))
 end
 
 function category:drawEditPopup()
