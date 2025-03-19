@@ -176,7 +176,7 @@ end
 function collider:updateFull(changed)
     if changed and self:isSpawned() then self:respawn() end
 end
---TODO:Fix error when switching from box to capsule
+
 ---@protected
 function collider:updateScale(finished, delta)
     self.scale.x = math.max(self.scale.x, 0)
@@ -241,7 +241,7 @@ function collider:draw()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
     self.shape, changed = style.trackedCombo(self.object, "##type", self.shape, self.shapeTypes, 100)
     if changed then
-        self:updateScale(true)
+        self:updateScale(true, { x = 0, y = 0, z = 0 })
     end
 
     style.mutedText("Collision Preset")
