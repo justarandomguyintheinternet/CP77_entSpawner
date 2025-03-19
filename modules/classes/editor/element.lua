@@ -204,9 +204,10 @@ end
 
 ---Base condition ensuring the target is not contained in a source
 ---@param paths {path : string, ref : element}[]
+---@param hasToBeExpandable boolean Whether the element has to be expandable or not
 ---@return boolean
-function element:isValidDropTarget(paths)
-	if self.expandable then
+function element:isValidDropTarget(paths, hasToBeExpandable)
+	if not hasToBeExpandable or self.expandable then
 		local ownPath = self:getPath()
 
 		for _, path in pairs(paths) do

@@ -413,6 +413,28 @@ end
 
 ---@protected
 ---@param element element
+function spawnedUI.handleReorder(element)
+    local _, mouseY = ImGui.GetMousePos()
+    local _, itemY = ImGui.GetItemRectMin()
+    local _ , sizeY = ImGui.GetItemRectSize()
+    local shift = ((mouseY - itemY) < sizeY / 2) and 0 or 1
+
+    local adjust = 0
+
+    local roots = spawnedUI.getRoots(spawnedUI.selectedPaths)
+    local remove = history.getRemove(roots)
+    for _, entry in pairs(roots) do
+        if entry.ref.parent == element.parent and utils.indexValue(element.parent.childs, element) > utils.indexValue(element.parent.childs, entry.ref) then
+            adjust = 1
+        end
+        entry.ref:setParent(element.parent, utils.indexValue(element.parent.childs, element) + shift - adjust)
+    end
+    local insert = history.getInsert(roots)
+    history.addAction(history.getMove(remove, insert))
+end
+
+---@protected
+---@param element element
 function spawnedUI.handleDrag(element)
     if ImGui.IsItemHovered() and ImGui.IsMouseDragging(0, spawnedUI.draggingThreshold) and not spawnedUI.draggingSelected then -- Start dragging
         if not element.selected then
@@ -423,19 +445,23 @@ function spawnedUI.handleDrag(element)
     elseif not ImGui.IsMouseDragging(0, spawnedUI.draggingThreshold) and ImGui.IsItemHovered() and spawnedUI.draggingSelected then -- Drop on element
         spawnedUI.draggingSelected = false
 
-        if element:isValidDropTarget(spawnedUI.selectedPaths) and not element.selected then
-            local roots = spawnedUI.getRoots(spawnedUI.selectedPaths)
-            local remove = history.getRemove(roots)
-            for _, entry in pairs(roots) do
-                entry.ref:setParent(element)
+        if not element.selected then
+            if ImGui.IsKeyDown(ImGuiKey.LeftShift) and element:isValidDropTarget(spawnedUI.selectedPaths, false) then
+                spawnedUI.handleReorder(element)
+            elseif element:isValidDropTarget(spawnedUI.selectedPaths, true) then
+                local roots = spawnedUI.getRoots(spawnedUI.selectedPaths)
+                local remove = history.getRemove(roots)
+                for _, entry in pairs(roots) do
+                    entry.ref:setParent(element)
+                end
+                local insert = history.getInsert(roots)
+                history.addAction(history.getMove(remove, insert))
             end
-            local insert = history.getInsert(roots)
-            history.addAction(history.getMove(remove, insert))
         end
     elseif ImGui.IsItemHovered() and spawnedUI.draggingSelected then
         if element.selected then
             ImGui.SetMouseCursor(ImGuiMouseCursor.NotAllowed)
-        elseif not element:isValidDropTarget(spawnedUI.selectedPaths) then
+        elseif not element:isValidDropTarget(spawnedUI.selectedPaths, true) then
             ImGui.SetMouseCursor(ImGuiMouseCursor.NotAllowed)
         else
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand)
@@ -600,6 +626,7 @@ function spawnedUI.drawDragWindow()
         ImGui.SetNextWindowPos(x + 10 * style.viewSize, y + 10 * style.viewSize, ImGuiCond.Always)
         if ImGui.Begin("##drag", ImGuiWindowFlags.NoResize + ImGuiWindowFlags.NoMove + ImGuiWindowFlags.NoTitleBar + ImGuiWindowFlags.NoBackground + ImGuiWindowFlags.AlwaysAutoResize) then
             local text = #spawnedUI.selectedPaths == 1 and spawnedUI.selectedPaths[1].ref.name or (#spawnedUI.selectedPaths .. " elements")
+            text = (ImGui.IsKeyDown(ImGuiKey.LeftShift) and "Reorder " or "") .. text
             ImGui.Text(text)
             ImGui.End()
         end

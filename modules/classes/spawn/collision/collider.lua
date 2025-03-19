@@ -176,7 +176,7 @@ end
 function collider:updateFull(changed)
     if changed and self:isSpawned() then self:respawn() end
 end
-
+--TODO:Fix error when switching from box to capsule
 ---@protected
 function collider:updateScale(finished, delta)
     self.scale.x = math.max(self.scale.x, 0)
