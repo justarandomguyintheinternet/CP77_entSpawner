@@ -145,11 +145,11 @@ function aiSpot:onAssemble(entity)
 end
 
 function aiSpot:spawn()
-    local worspot = self.spawnData
+    local workspot = self.spawnData
     self.spawnData = "base\\spawner\\workspot_device.ent"
 
     visualized.spawn(self)
-    self.spawnData = worspot
+    self.spawnData = workspot
 
     cache.tryGet(self.spawnData .. "_rigs", self.spawnData .. "_infinite")
     .notFound(function (task)

@@ -33,8 +33,8 @@ function collider:new()
     o.icon = IconGlyphs.TextureBox
 
     o.shape = 0
-    o.material = 0
-    o.preset = 0
+    o.material = 31
+    o.preset = 33
 
     o.shapeTypes = { "Box", "Capsule", "Sphere" }
 
