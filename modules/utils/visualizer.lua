@@ -22,7 +22,7 @@ local function addMesh(entity, name, mesh, scale, app, enabled)
             end
         end
     end
-    if not backup then backup = entity:GetComponents()[1] end
+    if not parent then parent = entity:GetComponents()[1] end
 
     local component = entMeshComponent.new()
     component.name = name
