@@ -381,7 +381,7 @@ function favoritesUI.drawSelectIcon(current, search)
         style.pushButtonNoBG(false)
 
         local xButton, _ = ImGui.GetItemRectSize()
-        if ImGui.BeginChild("##list", x + xButton + ImGui.GetStyle().ItemSpacing.x, 120 * style.viewSize) then
+        if ImGui.BeginChild("##list", x + xButton + ImGui.GetStyle().ItemSpacing.x, 115 * style.viewSize) then
             for _, key in pairs(iconKeys) do
                 if key:lower():match(search:lower()) and ImGui.Selectable(IconGlyphs[key] .. "|" .. key) then
                     current = key
@@ -448,7 +448,7 @@ function favoritesUI.drawSelectCategory(categoryName)
         table.sort(categories)
 
         local xButton, _ = ImGui.GetItemRectSize()
-        if ImGui.BeginChild("##list", x + xButton + ImGui.GetStyle().ItemSpacing.x, 120 * style.viewSize) then
+        if ImGui.BeginChild("##list", x + xButton + ImGui.GetStyle().ItemSpacing.x, 115 * style.viewSize) then
             for _, key in pairs(categories) do
                 if key:lower():match(favoritesUI.selectCategorySearch:lower()) and ImGui.Selectable(IconGlyphs[favoritesUI.categories[key].icon] .. " " .. key) then
                     categoryName = key
