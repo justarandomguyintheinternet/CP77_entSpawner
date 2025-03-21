@@ -703,7 +703,7 @@ function spawnUI.spawnNew(entry, class, isFavorite)
         new:setSilent(false)
         new:setVisible(true, true) -- Now spawn, but dont record in history
 
-        if new.modulePath == "modules/classes/editor/positionableGroup" then
+        if new.modulePath == "modules/classes/editor/positionableGroup" or new.modulePath == "modules/classes/editor/randomizedGroup" then
             new.yaw = 0
         end
     else

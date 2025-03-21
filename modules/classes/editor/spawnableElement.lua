@@ -5,12 +5,14 @@ local editor = require("modules/utils/editor/editor")
 local Cron = require("modules/utils/Cron")
 local intersection = require("modules/utils/editor/intersection")
 local history = require("modules/utils/history")
+local style = require("modules/ui/style")
 
 local positionable = require("modules/classes/editor/positionable")
 
 ---Class for an element holding a spawnable
 ---@class spawnableElement : positionable
 ---@field spawnable spawnable
+---@field parent positionableGroup|randomizedGroup
 ---@field silent boolean
 local spawnableElement = setmetatable({}, { __index = positionable })
 
@@ -23,8 +25,13 @@ function spawnableElement:new(sUI)
 	o.spawnable = nil
 	o.class = utils.combine(o.class, { "spawnableElement" })
 	o.expandable = false
-
 	o.silent = false
+
+	o.randomizationSettings = utils.combineHashTable(o.randomizationSettings, {
+		randomizeRotation = false,
+		randomizeRotationAxis = 2,
+		randomizeAppearance = false
+	})
 
 	setmetatable(o, { __index = self })
    	return o
@@ -287,6 +294,64 @@ function spawnableElement:remove()
 	if self.spawnable then
 		self.spawnable:despawn()
 		self.spawnable:onParentChanged(oldParent)
+	end
+end
+
+function spawnableElement:drawEntryRandomization()
+	positionable.drawEntryRandomization(self)
+
+	style.mutedText("Randomize Rotation")
+	ImGui.SameLine()
+	self.randomizationSettings.randomizeRotation, changed = style.trackedCheckbox(self, "##randomizeRotation", self.randomizationSettings.randomizeRotation)
+	if changed then
+		self.parent:applyRandomization(true)
+	end
+
+	style.mutedText("Rotation Axis")
+	ImGui.SameLine()
+	self.randomizationSettings.randomizeRotationAxis, changed = style.trackedCombo(self, "##randomizeRotationAxis", self.randomizationSettings.randomizeRotationAxis, { "Roll", "Pitch", "Yaw" })
+	if changed then
+		self.parent:applyRandomization(true)
+	end
+
+	if not self.spawnable.appIndex then return end
+
+	style.mutedText("Randomize Appearance")
+	ImGui.SameLine()
+	self.randomizationSettings.randomizeAppearance, changed = style.trackedCheckbox(self, "##randomizeAppearance", self.randomizationSettings.randomizeAppearance)
+	if changed then
+		self.parent:applyRandomization(true)
+	end
+end
+
+function spawnableElement:updateRandomization()
+	if self.randomizationSettings.randomizeRotation then
+		local angle = math.random() * 360
+		local euler = EulerAngles.new(0, 0, 0)
+		if self.randomizationSettings.randomizeRotationAxis == 0 then
+			euler = EulerAngles.new(angle, 0, 0)
+		elseif self.randomizationSettings.randomizeRotationAxis == 1 then
+			euler = EulerAngles.new(0, angle, 0)
+		elseif self.randomizationSettings.randomizeRotationAxis == 2 then
+			euler = EulerAngles.new(0, 0, angle)
+		end
+
+		self:setRotation(euler)
+	end
+
+	if self.randomizationSettings.randomizeAppearance then
+		self.spawnable.appIndex = math.random(0, #self.spawnable.apps - 1)
+		self.spawnable.app = self.spawnable.apps[self.spawnable.appIndex + 1] or "default"
+
+		if not self.spawnable.spawning then
+			self.spawnable:respawn()
+		end
+	end
+
+	if self.randomizationSettings.randomizeAppearance or self.randomizationSettings.randomizeRotation then
+		if self.spawnable.spawning then
+			self.spawnable.queueRespawn = true
+		end
 	end
 end
 

@@ -23,6 +23,8 @@ local preview = require("modules/utils/previewUtils")
 ---@field protected entity entEntity?
 ---@field protected spawned boolean
 ---@field protected spawning boolean
+---@field protected despawning boolean
+---@field protected queueRespawn boolean
 ---@field public primaryRange number
 ---@field public secondaryRange number
 ---@field public uk10 integer
@@ -68,6 +70,8 @@ function spawnable:new()
     o.entity = nil
     o.spawned = false
     o.spawning = false
+    o.despawning = false
+    o.queueRespawn = false
     o.spawnedAndCachedCallback = {}
     o.worldNodePropertyWidth = nil
 
@@ -105,6 +109,16 @@ function spawnable:onAttached(entity)
 
     for _, callback in ipairs(self.spawnedAndCachedCallback) do
         callback(entity)
+    end
+
+    if self.despawning then
+        self.despawning = false
+        self:despawn()
+    end
+
+    if self.queueRespawn then
+        self.queueRespawn = false
+        self:respawn()
     end
 end
 
@@ -147,6 +161,10 @@ function spawnable:despawn()
     end
     self.spawned = false
     self.entity = nil
+
+    if self.spawning then
+        self.despawning = true
+    end
 end
 
 function spawnable:respawn()

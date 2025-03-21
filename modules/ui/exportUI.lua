@@ -919,7 +919,7 @@ function exportUI.exportGroup(group)
         for _, node in pairs(g.childs) do
             if node.name == groupName then
                 for _, entry in pairs(node:getPathsRecursive(false)) do
-                    if utils.isA(entry.ref, "spawnableElement") and not entry.ref.spawnable.noExport then
+                    if utils.isA(entry.ref, "spawnableElement") and not entry.ref.spawnable.noExport and not (utils.isA(node.parent, "randomizedGroup") and not node.visible) then
                         table.insert(variantNodes[variant.name], entry)
                     end
                 end
@@ -928,7 +928,7 @@ function exportUI.exportGroup(group)
     end
 
     for _, node in pairs(g.childs) do
-        if utils.isA(node, "spawnableElement") and not node.spawnable.noExport then
+        if utils.isA(node, "spawnableElement") and not node.spawnable.noExport and not (utils.isA(node.parent, "randomizedGroup") and not node.visible) then
             table.insert(variantNodes["default"], { ref = node })
         end
     end
@@ -953,7 +953,7 @@ function exportUI.exportGroup(group)
     end
 
     for key, object in pairs(nodes) do
-        if utils.isA(object.ref, "spawnableElement") and not object.ref.spawnable.noExport then
+        if utils.isA(object.ref, "spawnableElement") and not object.ref.spawnable.noExport and not (utils.isA(object.ref.parent, "randomizedGroup") and not object.ref.visible) then
             table.insert(exported.nodes, object.ref.spawnable:export(key, #objects))
 
             -- Handle device nodes

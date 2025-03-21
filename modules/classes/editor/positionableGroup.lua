@@ -7,6 +7,7 @@ local positionable = require("modules/classes/editor/positionable")
 ---Class for organizing multiple objects and or groups, with position and rotation
 ---@class positionableGroup : positionable
 ---@field yaw number
+---@field supportsSaving boolean
 local positionableGroup = setmetatable({}, { __index = positionable })
 
 function positionableGroup:new(sUI)
@@ -25,6 +26,7 @@ function positionableGroup:new(sUI)
 			end
 		}
 	}
+	o.supportsSaving = true
 
 	setmetatable(o, { __index = self })
    	return o
