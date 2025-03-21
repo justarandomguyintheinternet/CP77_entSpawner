@@ -15,6 +15,7 @@ local element = require("modules/classes/editor/element")
 ---@field visualizerState boolean
 ---@field visualizerDirection string
 ---@field controlsHovered boolean
+---@field randomizationSettings table
 local positionable = setmetatable({}, { __index = element })
 
 function positionable:new(sUI)
@@ -31,6 +32,10 @@ function positionable:new(sUI)
 	o.visualizerDirection = "none"
 	o.controlsHovered = false
 
+	o.randomizationSettings = {
+		probability = 0.5
+	}
+
 	o.class = utils.combine(o.class, { "positionable" })
 
 	setmetatable(o, { __index = self })
@@ -42,6 +47,11 @@ function positionable:load(data, silent)
 	self.transformExpanded = data.transformExpanded
 	self.rotationRelative = data.rotationRelative
 	self.scaleLocked = data.scaleLocked
+
+	for key, setting in pairs(data.randomizationSettings or {}) do
+		self.randomizationSettings[key] = setting
+	end
+
 	if self.scaleLocked == nil then self.scaleLocked = true end
 	if self.transformExpanded == nil then self.transformExpanded = true end
 	if self.rotationRelative == nil then self.rotationRelative = false end
@@ -77,6 +87,17 @@ function positionable:getProperties()
 			self:drawTransform()
 		end
 	})
+
+	if self.parent and utils.isA(self.parent, "randomizedGroup") then
+		table.insert(properties, {
+			id = "randomizationSelf",
+			name = "Entry Randomization",
+			defaultHeader = false,
+			draw = function ()
+				self:drawEntryRandomization()
+			end
+		})
+	end
 
 	return properties
 end
@@ -326,6 +347,13 @@ function positionable:drawScale(scale)
 	ImGui.PopItemWidth()
 end
 
+function positionable:drawEntryRandomization()
+	style.mutedText("Spawning Probability")
+	ImGui.SameLine()
+	self.randomizationSettings.probability, _, finished = style.trackedDragFloat(self, "##probability", self.randomizationSettings.probability, 0.01, 0, 1, "%.2f")
+	style.tooltip("The base probability of this element being spawned, also depends on randomization mode of parent group.")
+end
+
 function positionable:setPosition(position)
 end
 
@@ -382,6 +410,7 @@ function positionable:serialize()
 	data.transformExpanded = self.transformExpanded
 	data.rotationRelative = self.rotationRelative
 	data.scaleLocked = self.scaleLocked
+	data.randomizationSettings = utils.deepcopy(self.randomizationSettings)
 	data.pos = utils.fromVector(self:getPosition()) -- For savedUI
 
 	return data

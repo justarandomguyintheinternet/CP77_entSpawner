@@ -326,6 +326,14 @@ function miscUtils.combine(target, data)
     return target
 end
 
+function miscUtils.combineHashTable(target, data)
+    for k, v in pairs(data) do
+        target[k] = v
+    end
+
+    return target
+end
+
 function miscUtils.isA(object, class)
     return miscUtils.has_value(object.class, class)
 end

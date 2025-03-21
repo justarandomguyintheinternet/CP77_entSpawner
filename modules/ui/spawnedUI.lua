@@ -10,6 +10,7 @@ local registry = require("modules/utils/nodeRefRegistry")
 ---@field root element
 ---@field filter string
 ---@field newGroupName string
+---@field newGroupRandomized boolean
 ---@field spawner spawner?
 ---@field paths {path : string, ref : element}[]
 ---@field containerPaths {path : string, ref : element}[]
@@ -34,6 +35,7 @@ spawnedUI = {
     multiSelectGroup = require("modules/classes/editor/positionableGroup"):new(spawnedUI),
     filter = "",
     newGroupName = "New Group",
+    newGroupRandomized = false,
     spawner = nil,
 
     paths = {},
@@ -213,7 +215,7 @@ function spawnedUI.registerHotkeys()
     end, hotkeyRunConditionGlobal)
     input.registerImGuiHotkey({ ImGuiKey.S, ImGuiKey.LeftCtrl }, function()
         for _, entry in pairs(spawnedUI.paths) do
-            if utils.isA(entry.ref, "positionableGroup") and entry.ref.parent ~= nil and entry.ref.parent:isRoot(true) then
+            if utils.isA(entry.ref, "positionableGroup") and entry.ref.supportsSaving and entry.ref.parent ~= nil and entry.ref.parent:isRoot(true) then
                 entry.ref:save()
             end
         end
@@ -1077,10 +1079,18 @@ function spawnedUI.drawTop()
     ImGui.SameLine()
     if ImGui.Button("Add group") then
         local group = require("modules/classes/editor/positionableGroup"):new(spawnedUI)
+
+        if spawnedUI.newGroupRandomized then
+            group = require("modules/classes/editor/randomizedGroup"):new(spawnedUI)
+        end
+
         group.name = spawnedUI.newGroupName
         spawnedUI.addRootElement(group)
         history.addAction(history.getInsert({ group }))
     end
+    ImGui.SameLine()
+    spawnedUI.newGroupRandomized = style.toggleButton(IconGlyphs.Dice5Outline, spawnedUI.newGroupRandomized)
+    style.tooltip("Make new group randomized")
 
     style.pushButtonNoBG(true)
 
@@ -1098,7 +1108,7 @@ function spawnedUI.drawTop()
     ImGui.SameLine()
     if ImGui.Button(IconGlyphs.ContentSaveAllOutline) then
         for _, entry in pairs(spawnedUI.paths) do
-            if utils.isA(entry.ref, "positionableGroup") and entry.ref.parent ~= nil and entry.ref.parent:isRoot(true) then
+            if utils.isA(entry.ref, "positionableGroup") and entry.ref.supportsSaving and entry.ref.parent ~= nil and entry.ref.parent:isRoot(true) then
                 entry.ref:save()
             end
         end

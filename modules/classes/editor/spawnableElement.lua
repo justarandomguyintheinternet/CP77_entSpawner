@@ -5,6 +5,7 @@ local editor = require("modules/utils/editor/editor")
 local Cron = require("modules/utils/Cron")
 local intersection = require("modules/utils/editor/intersection")
 local history = require("modules/utils/history")
+local style = require("modules/ui/style")
 
 local positionable = require("modules/classes/editor/positionable")
 
@@ -23,8 +24,13 @@ function spawnableElement:new(sUI)
 	o.spawnable = nil
 	o.class = utils.combine(o.class, { "spawnableElement" })
 	o.expandable = false
-
 	o.silent = false
+
+	o.randomizationSettings = utils.combineHashTable(o.randomizationSettings, {
+		randomizeRotation = false,
+		randomizeRotationAxis = 2,
+		randomizeAppearance = false
+	})
 
 	setmetatable(o, { __index = self })
    	return o
@@ -288,6 +294,24 @@ function spawnableElement:remove()
 		self.spawnable:despawn()
 		self.spawnable:onParentChanged(oldParent)
 	end
+end
+
+function spawnableElement:drawEntryRandomization()
+	positionable.drawEntryRandomization(self)
+
+	style.mutedText("Randomize Rotation")
+	ImGui.SameLine()
+	self.randomizationSettings.randomizeRotation, changed = style.trackedCheckbox(self, "##randomizeRotation", self.randomizationSettings.randomizeRotation)
+
+	style.mutedText("Rotation Axis")
+	ImGui.SameLine()
+	self.randomizationSettings.randomizeRotationAxis, changed = style.trackedCombo(self, "##randomizeRotationAxis", self.randomizationSettings.randomizeRotationAxis, { "Roll", "Pitch", "Yaw" })
+
+	if not self.spawnable.appIndex then return end
+
+	style.mutedText("Randomize Appearance")
+	ImGui.SameLine()
+	self.randomizationSettings.randomizeAppearance, changed = style.trackedCheckbox(self, "##randomizeAppearance", self.randomizationSettings.randomizeAppearance)
 end
 
 function spawnableElement:serialize()
