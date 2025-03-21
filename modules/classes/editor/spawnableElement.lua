@@ -117,10 +117,8 @@ function spawnableElement:setVisible(state, fromRecursive)
 
 	if self.visible == false or self.hiddenByParent then
 		self.spawnable:despawn()
-		print(self.name, "despawn")
 	else
 		self.spawnable:spawn()
-		print(self.name, "spawn")
 	end
 end
 
@@ -334,6 +332,7 @@ function spawnableElement:serialize()
 end
 
 function spawnableElement:export(key, length)
+	print(utils.isA(self.parent, "randomizedGroup"), self.visible)
 	return self.spawnable:export(key, length)
 end
 

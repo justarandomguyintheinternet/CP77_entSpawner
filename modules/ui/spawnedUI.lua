@@ -513,6 +513,11 @@ function spawnedUI.paste(elements, element)
 
     for _, entry in pairs(elements) do
         local new = require(entry.modulePath):new(spawnedUI)
+
+        if entry.modulePath == "modules/classes/editor/randomizedGroup" then
+            entry.seed = -1
+        end
+
         new:load(entry)
         new:setParent(parent, index)
         new:setSelected(true)

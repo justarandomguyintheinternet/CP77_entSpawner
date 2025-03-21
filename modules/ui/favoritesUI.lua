@@ -228,6 +228,8 @@ function favoritesUI.addNewItem(serialized, name, icon)
         if serialized.spawnable.modulePath == "entity/entity" then
             serialized.spawnable.modulePath = "entity/entityTemplate"
         end
+    elseif serialized.modulePath == "modules/classes/editor/randomizedGroup" then
+        serialized.seed = -1
     end
     serialized.visible = true
     serialized.headerOpen = false

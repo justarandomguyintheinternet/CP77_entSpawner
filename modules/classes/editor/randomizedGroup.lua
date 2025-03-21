@@ -43,7 +43,7 @@ end
 
 function randomizedGroup:load(data, silent)
 	self.blockRandomization = true
-	positionableGroup.load(self, data, silent) -- here true maybe idk later
+	positionableGroup.load(self, data, silent)
 	self.blockRandomization = false
 
 	self.seed = data.seed
@@ -52,9 +52,17 @@ function randomizedGroup:load(data, silent)
 	self.fixedAmountPercentage = data.fixedAmountPercentage
 	self.fixedAmountTotal = data.fixedAmountTotal
 
-	-- if not silent then
-	-- 	self:applyRandomization()
-	-- end
+	if self.seed == -1 then
+		self:reSeed()
+	end
+end
+
+--https://stackoverflow.com/questions/35572435/how-do-you-do-the-fisher-yates-shuffle-in-lua
+local function shuffle(t)
+    for i = #t, 2, -1 do
+        local j = math.random(i)
+        t[i], t[j] = t[j], t[i]
+    end
 end
 
 function randomizedGroup:showNChildren(amount)
@@ -74,6 +82,9 @@ function randomizedGroup:showNChildren(amount)
 			})
 		end
 	end
+
+	shuffle(shown)
+	shuffle(hidden)
 
 	table.sort(shown, function (a, b)
 		return a.probability > b.probability
@@ -154,6 +165,17 @@ function randomizedGroup:getProperties()
 	return properties
 end
 
+function randomizedGroup:reSeed()
+	self.seed = math.random(0, 999999999)
+	self:applyRandomization(true)
+
+	for _, child in pairs(self.childs) do
+		if utils.isA(child, "randomizedGroup") then
+			child:reSeed()
+		end
+	end
+end
+
 function randomizedGroup:drawGroupRandomization()
 	if not self.maxPropertyWidth then
 		self.maxPropertyWidth = utils.getTextMaxWidth({ "Seed", "Randomization Rule", "Fixed Amount Rule", "Fixed Amount %", "Fixed Amount Total" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
@@ -169,8 +191,7 @@ function randomizedGroup:drawGroupRandomization()
 	style.pushButtonNoBG(true)
 	if ImGui.Button(IconGlyphs.Reload) then
 		history.addAction(history.getElementChange(self))
-		self.seed = math.random(0, 999999999)
-		self:applyRandomization(true)
+		self:reSeed()
 	end
 	style.pushButtonNoBG(false)
 
