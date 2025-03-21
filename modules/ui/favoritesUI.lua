@@ -253,7 +253,7 @@ function favoritesUI.drawEditFavoritePopup()
         style.setCursorRelativeAppearing(-5, -5)
     end
 
-    if ImGui.BeginPopupContextItem("##addFavorite") then
+    if ImGui.BeginPopup("##addFavorite") then
         input.updateContext("main")
 
         local noCategory = favoritesUI.popupItem.category == nil

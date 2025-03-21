@@ -831,7 +831,7 @@ function spawnUI.drawPopup()
     local x, y = ImGui.GetMousePos()
     ImGui.SetNextWindowPos(x + 10 * style.viewSize, y - 4 * ImGui.GetFrameHeight(), ImGuiCond.Appearing)
 
-    if ImGui.BeginPopupContextItem("##spawnNew") then
+    if ImGui.BeginPopup("##spawnNew") then
         local x, _ = ImGui.CalcTextSize("Reset search") + ImGui.GetStyle().ItemSpacing.x
 
         if not settings.spawnAtCursor then

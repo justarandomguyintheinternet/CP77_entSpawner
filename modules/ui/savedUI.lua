@@ -154,8 +154,6 @@ function savedUI.drawGroup(group, spawner)
 
         if group.newName == nil then group.newName = group.name end
 
-        style.pushGreyedOut(utils.hasIndex(savedUI.spawned, group.name))
-
         style.mutedText("File name:")
         ImGui.SameLine()
         ImGui.SetCursorPosX(savedUI.maxTextWidth)
@@ -170,8 +168,6 @@ function savedUI.drawGroup(group, spawner)
             config.saveFile("data/objects/" .. group.name .. ".json", group)
             savedUI.files[group.name .. ".json"] = group
         end
-
-        style.popGreyedOut(utils.hasIndex(savedUI.spawned, group.name))
 
         style.mutedText("Position:")
         ImGui.SameLine()
@@ -212,8 +208,6 @@ function savedUI.drawObject(obj, spawner)
 
         if obj.newName == nil then obj.newName = obj.name end
 
-        style.pushGreyedOut(utils.hasIndex(savedUI.spawned, obj.name))
-
         ImGui.SetNextItemWidth(180 * style.viewSize)
         obj.newName = ImGui.InputTextWithHint('##Name', 'Name...', obj.newName, 100)
         ImGui.PopItemWidth()
@@ -225,8 +219,6 @@ function savedUI.drawObject(obj, spawner)
             config.saveFile("data/objects/" .. obj.name .. ".json", obj)
             savedUI.files[obj.name .. ".json"] = obj
         end
-
-        style.popGreyedOut(utils.hasIndex(savedUI.spawned, obj.name))
 
         style.mutedText("Position:")
         ImGui.SameLine()

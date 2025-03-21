@@ -201,7 +201,7 @@ function category:drawEditPopup()
         style.setCursorRelativeAppearing(-5, -5)
     end
 
-	if ImGui.BeginPopupContextItem("##editCategory" .. self.fileName) then
+	if ImGui.BeginPopup("##editCategory" .. self.fileName) then
         input.updateContext("main")
 
 		self.icon, self.changeIconSearch, changed = self.favoritesUI.drawSelectIcon(self.icon, self.changeIconSearch)
