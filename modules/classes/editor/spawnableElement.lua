@@ -340,7 +340,7 @@ function spawnableElement:updateRandomization()
 	end
 
 	if self.randomizationSettings.randomizeAppearance then
-		self.spawnable.appIndex = math.min(#self.spawnable.apps, math.random(1, #self.spawnable.apps))
+		self.spawnable.appIndex = math.random(0, #self.spawnable.apps - 1)
 		self.spawnable.app = self.spawnable.apps[self.spawnable.appIndex + 1] or "default"
 
 		if not self.spawnable.spawning then

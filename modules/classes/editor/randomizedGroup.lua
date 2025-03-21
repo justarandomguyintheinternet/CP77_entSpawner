@@ -120,6 +120,9 @@ function randomizedGroup:applyRandomization(apply)
 		if self.randomizationRule == 0 then
 			for _, child in pairs(self.childs) do
 				if math.random() < child.randomizationSettings.probability then
+					if utils.isA(child, "spawnableElement") then
+						child:updateRandomization()
+					end
 					child:setVisible(true, true)
 				else
 					child:setVisible(false, true)
