@@ -1,6 +1,7 @@
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
+local Cron = require("modules/utils/Cron")
 
 local positionableGroup = require("modules/classes/editor/positionableGroup")
 
@@ -11,6 +12,9 @@ local positionableGroup = require("modules/classes/editor/positionableGroup")
 ---@field fixedAmountRule number
 ---@field fixedAmountPercentage number
 ---@field fixedAmountTotal number
+---@field maxPropertyWidth number?
+---@field blockRandomization boolean
+---@field queueRandomize boolean
 local randomizedGroup = setmetatable({}, { __index = positionableGroup })
 
 function randomizedGroup:new(sUI)
@@ -23,24 +27,116 @@ function randomizedGroup:new(sUI)
 	o.icon = IconGlyphs.Dice5Outline
 	o.supportsSaving = false
 
-	o.seed = 0
+	o.seed = 1
 	o.randomizationRule = 0
 	o.fixedAmountRule = 0
 	o.fixedAmountPercentage = 0.5
 	o.fixedAmountTotal = 1
+
+	o.maxPropertyWidth = nil
+	o.blockRandomization = false
+	o.queueRandomize = false
 
 	setmetatable(o, { __index = self })
    	return o
 end
 
 function randomizedGroup:load(data, silent)
-	positionableGroup.load(self, data, true)
+	self.blockRandomization = true
+	positionableGroup.load(self, data, silent) -- here true maybe idk later
+	self.blockRandomization = false
 
 	self.seed = data.seed
 	self.randomizationRule = data.randomizationRule
 	self.fixedAmountRule = data.fixedAmountRule
 	self.fixedAmountPercentage = data.fixedAmountPercentage
 	self.fixedAmountTotal = data.fixedAmountTotal
+
+	-- if not silent then
+	-- 	self:applyRandomization()
+	-- end
+end
+
+function randomizedGroup:showNChildren(amount)
+	local shown = {}
+	local hidden = {}
+
+	for _, child in pairs(self.childs) do
+		if math.random() < child.randomizationSettings.probability then
+			table.insert(shown, {
+				child = child,
+				probability = child.randomizationSettings.probability
+			})
+		else
+			table.insert(hidden, {
+				child = child,
+				probability = child.randomizationSettings.probability
+			})
+		end
+	end
+
+	table.sort(shown, function (a, b)
+		return a.probability > b.probability
+	end)
+	table.sort(hidden, function (a, b)
+		return a.probability > b.probability
+	end)
+
+	utils.combine(shown, hidden)
+
+	for _, entry in ipairs(shown) do
+		if amount > 0 then
+			entry.child:setVisible(true, true)
+			amount = amount - 1
+		else
+			entry.child:setVisible(false, true)
+		end
+	end
+end
+
+function randomizedGroup:applyRandomization(apply)
+	if self.blockRandomization or self.queueRandomize or not apply then return end
+
+	self.queueRandomize = true
+
+	Cron.NextTick(function ()
+		self.queueRandomize = false
+		math.randomseed(self.seed)
+
+		if self.randomizationRule == 0 then
+			for _, child in pairs(self.childs) do
+				if math.random() < child.randomizationSettings.probability then
+					child:setVisible(true, true)
+				else
+					child:setVisible(false, true)
+				end
+			end
+		else
+			if self.fixedAmountRule == 0 then
+				self:showNChildren(math.floor(self.fixedAmountPercentage * #self.childs))
+			else
+				self:showNChildren(self.fixedAmountTotal)
+			end
+		end
+	end)
+end
+
+function randomizedGroup:remove()
+	self.blockRandomization = true
+
+	positionableGroup.remove(self)
+end
+
+function randomizedGroup:addChild(new, index)
+	positionableGroup.addChild(self, new, index)
+
+	self:applyRandomization(true)
+end
+
+function randomizedGroup:removeChild(child)
+	positionableGroup.removeChild(self, child)
+
+	self:applyRandomization(true)
 end
 
 function randomizedGroup:getProperties()
@@ -59,39 +155,55 @@ function randomizedGroup:getProperties()
 end
 
 function randomizedGroup:drawGroupRandomization()
+	if not self.maxPropertyWidth then
+		self.maxPropertyWidth = utils.getTextMaxWidth({ "Seed", "Randomization Rule", "Fixed Amount Rule", "Fixed Amount %", "Fixed Amount Total" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+	end
+
 	style.mutedText("Seed")
 	ImGui.SameLine()
+	ImGui.SetCursorPosX(self.maxPropertyWidth)
 	self.seed, _, finished = style.trackedIntInput(self, "##seed", self.seed, 0, 9999999999)
+	self:applyRandomization(finished)
+
 	ImGui.SameLine()
 	style.pushButtonNoBG(true)
 	if ImGui.Button(IconGlyphs.Reload) then
 		history.addAction(history.getElementChange(self))
 		self.seed = math.random(0, 999999999)
+		self:applyRandomization(true)
 	end
 	style.pushButtonNoBG(false)
 
 	style.mutedText("Randomization Rule")
 	ImGui.SameLine()
+	ImGui.SetCursorPosX(self.maxPropertyWidth)
 	self.randomizationRule, changed = style.trackedCombo(self, "##randomizationRule", self.randomizationRule, { "Per Object", "Fixed" })
+	self:applyRandomization(changed)
 	style.tooltip("Per Object: For each object, use the probability defined per object.\nFixed: Spawn a fixed amount, taking per object probabilies into account.")
 
 	if self.randomizationRule == 1 then
 		style.mutedText("Fixed Amount Rule")
 		ImGui.SameLine()
+		ImGui.SetCursorPosX(self.maxPropertyWidth)
 		self.fixedAmountRule, changed = style.trackedCombo(self, "##randomizationRuleFixed", self.fixedAmountRule, { "Percentage", "Total" })
+		self:applyRandomization(changed)
 		style.tooltip("Percentage: Spawn a fixed percantage of the objects.\nTotal: Spawn a fixed total amount of objects.")
 
 		if self.fixedAmountRule == 0 then
-			style.mutedText("Fixed Amount Percentage")
+			style.mutedText("Fixed Amount %")
 			ImGui.SameLine()
+			ImGui.SetCursorPosX(self.maxPropertyWidth)
 			local value, changed, finished = style.trackedDragFloat(self, "##fixedAmountPercentage", self.fixedAmountPercentage * 100, 0.1, 0, 100, "%.2f%%")
+			self:applyRandomization(finished)
 			if changed then
 				self.fixedAmountPercentage = value / 100
 			end
 		else
 			style.mutedText("Fixed Amount Total")
 			ImGui.SameLine()
+			ImGui.SetCursorPosX(self.maxPropertyWidth)
 			self.fixedAmountTotal, _, finished = style.trackedIntInput(self, "##fixedAmountTotal", self.fixedAmountTotal, 0, 9999999999)
+			self:applyRandomization(finished)
 		end
 	end
 end

@@ -12,6 +12,7 @@ local positionable = require("modules/classes/editor/positionable")
 ---Class for an element holding a spawnable
 ---@class spawnableElement : positionable
 ---@field spawnable spawnable
+---@field parent positionableGroup|randomizedGroup
 ---@field silent boolean
 local spawnableElement = setmetatable({}, { __index = positionable })
 
@@ -116,8 +117,10 @@ function spawnableElement:setVisible(state, fromRecursive)
 
 	if self.visible == false or self.hiddenByParent then
 		self.spawnable:despawn()
+		print(self.name, "despawn")
 	else
 		self.spawnable:spawn()
+		print(self.name, "spawn")
 	end
 end
 
@@ -302,16 +305,25 @@ function spawnableElement:drawEntryRandomization()
 	style.mutedText("Randomize Rotation")
 	ImGui.SameLine()
 	self.randomizationSettings.randomizeRotation, changed = style.trackedCheckbox(self, "##randomizeRotation", self.randomizationSettings.randomizeRotation)
+	if changed then
+		self.parent:applyRandomization(true)
+	end
 
 	style.mutedText("Rotation Axis")
 	ImGui.SameLine()
 	self.randomizationSettings.randomizeRotationAxis, changed = style.trackedCombo(self, "##randomizeRotationAxis", self.randomizationSettings.randomizeRotationAxis, { "Roll", "Pitch", "Yaw" })
+	if changed then
+		self.parent:applyRandomization(true)
+	end
 
 	if not self.spawnable.appIndex then return end
 
 	style.mutedText("Randomize Appearance")
 	ImGui.SameLine()
 	self.randomizationSettings.randomizeAppearance, changed = style.trackedCheckbox(self, "##randomizeAppearance", self.randomizationSettings.randomizeAppearance)
+	if changed then
+		self.parent:applyRandomization(true)
+	end
 end
 
 function spawnableElement:serialize()

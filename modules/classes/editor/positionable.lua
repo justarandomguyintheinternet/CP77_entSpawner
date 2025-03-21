@@ -35,6 +35,7 @@ function positionable:new(sUI)
 	o.randomizationSettings = {
 		probability = 0.5
 	}
+	o.hiddenByRandomization = false
 
 	o.class = utils.combine(o.class, { "positionable" })
 
@@ -351,6 +352,9 @@ function positionable:drawEntryRandomization()
 	style.mutedText("Spawning Probability")
 	ImGui.SameLine()
 	self.randomizationSettings.probability, _, finished = style.trackedDragFloat(self, "##probability", self.randomizationSettings.probability, 0.01, 0, 1, "%.2f")
+	if finished then
+		self.parent:applyRandomization(true)
+	end
 	style.tooltip("The base probability of this element being spawned, also depends on randomization mode of parent group.")
 end
 
