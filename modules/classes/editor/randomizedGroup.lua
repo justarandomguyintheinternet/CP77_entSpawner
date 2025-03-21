@@ -97,6 +97,9 @@ function randomizedGroup:showNChildren(amount)
 
 	for _, entry in ipairs(shown) do
 		if amount > 0 then
+			if utils.isA(entry.child, "spawnableElement") then
+				entry.child:updateRandomization()
+			end
 			entry.child:setVisible(true, true)
 			amount = amount - 1
 		else

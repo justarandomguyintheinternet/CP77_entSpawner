@@ -121,6 +121,7 @@ function mesh:onAssemble(entity)
     component.castRayTracedGlobalShadows = Enum.new("shadowsShadowCastingMode", self.castRayTracedGlobalShadows)
     component.castRayTracedLocalShadows = Enum.new("shadowsShadowCastingMode", self.castRayTracedLocalShadows)
     component.castShadows = Enum.new("shadowsShadowCastingMode", self.castShadows)
+
     entity:AddComponent(component)
 
     visualizer.updateScale(entity, self:getArrowSize(), "arrows")
