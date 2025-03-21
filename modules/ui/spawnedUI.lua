@@ -461,7 +461,7 @@ function spawnedUI.handleDrag(element)
     elseif ImGui.IsItemHovered() and spawnedUI.draggingSelected then
         if element.selected then
             ImGui.SetMouseCursor(ImGuiMouseCursor.NotAllowed)
-        elseif not element:isValidDropTarget(spawnedUI.selectedPaths, true) then
+        elseif not ImGui.IsKeyDown(ImGuiKey.LeftShift) and not element:isValidDropTarget(spawnedUI.selectedPaths, true) then
             ImGui.SetMouseCursor(ImGuiMouseCursor.NotAllowed)
         else
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand)
@@ -866,6 +866,8 @@ function spawnedUI.drawElement(element, dummy)
         ImGui.PushStyleVar(ImGuiStyleVar.ButtonTextAlign, 0.5, 0.5)
         style.pushStyleColor(isGettingDragged, ImGuiCol.Text, style.extraMutedColor)
 
+        local leftOffset = 25 * style.viewSize -- Accounts for icon
+
         -- Icon or expand button
         if not element.expandable and element.icon ~= "" then
             ImGui.AlignTextToFramePadding()
@@ -881,12 +883,20 @@ function spawnedUI.drawElement(element, dummy)
                     element.headerOpen = not element.headerOpen
                 end
             end
+
+            if element.icon ~= "" then
+                ImGui.SameLine()
+                ImGui.AlignTextToFramePadding()
+                ImGui.Text(element.icon)
+                leftOffset = 45 * style.viewSize
+            end
+
             ImGui.PopID()
         end
 
         ImGui.SameLine()
 
-        ImGui.SetCursorPosX((spawnedUI.depth) * 17 * style.viewSize + 25 * style.viewSize)
+        ImGui.SetCursorPosX((spawnedUI.depth) * 17 * style.viewSize + leftOffset)
         ImGui.AlignTextToFramePadding()
         if element.editName then
             input.windowHovered = false
