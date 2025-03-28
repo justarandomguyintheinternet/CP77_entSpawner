@@ -128,7 +128,7 @@ function rht.init(spawner)
             if isWorldNode(node) then
                 return {
                     type = "button",
-                    label = "[OS] Send to search",
+                    label = "[WB] Send to search",
                     callback = rht.sendToSearch
                 }
             end

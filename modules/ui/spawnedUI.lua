@@ -1120,7 +1120,9 @@ function spawnedUI.drawTop()
     end
     ImGui.SameLine()
     if ImGui.Button(IconGlyphs.CollapseAllOutline) then
-        spawnedUI.root:setHeaderStateRecursive(false)
+        for _, child in pairs(spawnedUI.root.childs) do
+            child:setHeaderStateRecursive(false)
+        end
     end
     ImGui.SameLine()
     if ImGui.Button(IconGlyphs.ExpandAllOutline) then

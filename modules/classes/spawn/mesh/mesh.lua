@@ -16,6 +16,9 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@field public apps table
 ---@field public appIndex integer
 ---@field public scale {x: number, y: number, z: number}
+---@field protected occluderType integer
+---@field protected occluderTypes table
+---@field protected hasOccluder boolean|table
 ---@field protected castLocalShadows integer
 ---@field protected castRayTracedGlobalShadows integer
 ---@field protected castRayTracedLocalShadows integer
@@ -46,6 +49,10 @@ function mesh:new()
     o.appIndex = 0
     o.scale = { x = 1, y = 1, z = 1 }
 
+    o.occluderType = 0
+    o.occluderTypes = utils.enumTable("visWorldOccluderType")
+    o.hasOccluder = false
+
     o.castLocalShadows = 0
     o.castRayTracedGlobalShadows = 0
     o.castRayTracedLocalShadows = 0
@@ -74,7 +81,7 @@ end
 function mesh:loadSpawnData(data, position, rotation)
     spawnable.loadSpawnData(self, data, position, rotation)
 
-    cache.tryGet(self.spawnData .. "_apps", self.spawnData .. "_bBox_max", self.spawnData .. "_bBox_min")
+    cache.tryGet(self.spawnData .. "_apps", self.spawnData .. "_bBox_max", self.spawnData .. "_bBox_min", self.spawnData .. "_occluder")
     .notFound(function (task)
         self.bBox.max = Vector4.new(0.5, 0.5, 0.5, 0) -- Temp values, so that onAssemble//updateScale can work
         self.bBox.min = Vector4.new(-0.5, -0.5, -0.5, 0)
@@ -89,10 +96,19 @@ function mesh:loadSpawnData(data, position, rotation)
             self.bBox.max = resource.boundingBox.Max
             visualizer.updateScale(entity, self:getArrowSize(), "arrows")
 
+            local occluder = false
+            for _, param in pairs(resource.parameters) do
+                if param:IsA("meshMeshParamOccluderData") then
+                    occluder = true
+                    break
+                end
+            end
+
             -- Save to cache
             cache.addValue(self.spawnData .. "_apps", self.apps)
             cache.addValue(self.spawnData .. "_bBox_max", utils.fromVector(self.bBox.max))
             cache.addValue(self.spawnData .. "_bBox_min", utils.fromVector(self.bBox.min))
+            cache.addValue(self.spawnData .. "_occluder", occluder)
 
             task:taskCompleted()
 
@@ -106,6 +122,7 @@ function mesh:loadSpawnData(data, position, rotation)
         self.bBox.max = cache.getValue(self.spawnData .. "_bBox_max")
         self.bBox.min = cache.getValue(self.spawnData .. "_bBox_min")
         self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
+        self.hasOccluder = cache.getValue(self.spawnData .. "_occluder")
         self.bBoxLoaded = true
     end)
 end
@@ -222,6 +239,7 @@ function mesh:save()
     data.castRayTracedGlobalShadows = self.castRayTracedGlobalShadows
     data.castRayTracedLocalShadows = self.castRayTracedLocalShadows
     data.castShadows = self.castShadows
+    data.occluderType = self.occluderType
 
     return data
 end
@@ -322,7 +340,7 @@ function mesh:draw()
     spawnable.draw(self)
 
     if not self.maxPropertyWidth then
-        self.maxPropertyWidth = utils.getTextMaxWidth({ "Appearance", "Collider" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Appearance", "Collider", "Occluder" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
     end
 
     style.pushGreyedOut(#self.apps == 0)
@@ -365,6 +383,13 @@ function mesh:draw()
         if ImGui.Button("Generate") then
             self:generateCollider()
         end
+    end
+
+    if self.hasOccluder then
+        style.mutedText("Occluder")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxPropertyWidth)
+        self.occluderType, _ = style.trackedCombo(self.object, "##occluderType", self.occluderType, self.occluderTypes, 110)
     end
 
     self.shadowHeaderState = ImGui.TreeNodeEx("Shadow Settings")
@@ -512,7 +537,8 @@ function mesh:export()
         castLocalShadows = self.shadowCastingModeEnum[self.castLocalShadows + 1],
         castRayTracedGlobalShadows = self.shadowCastingModeEnum[self.castRayTracedGlobalShadows + 1],
         castRayTracedLocalShadows = self.shadowCastingModeEnum[self.castRayTracedLocalShadows + 1],
-        castShadows = self.shadowCastingModeEnum[self.castShadows + 1]
+        castShadows = self.shadowCastingModeEnum[self.castShadows + 1],
+        occluderType = self.occluderTypes[self.occluderType + 1]
     }
 
     return data
