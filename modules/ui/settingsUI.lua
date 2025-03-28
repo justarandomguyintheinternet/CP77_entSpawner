@@ -56,6 +56,10 @@ function settingsUI.draw(spawner)
     if changed then settings.save() end
     style.tooltip("When holding shift, the step size will be multiplied by this value")
 
+    settings.draggingThreshold, changed = ImGui.InputFloat("Dragging Threshold", settings.draggingThreshold, 0, 100, "%.1f")
+    if changed then settings.save() end
+    style.tooltip("A threshold for all dragging operations, such as the ones in the scene hierarchy.")
+
     settings.nodeRefPrefix, changed = ImGui.InputTextWithHint("NodeRef Prefix", "", settings.nodeRefPrefix, 128)
     if changed then settings.save() end
     style.tooltip("Prefix to add when auto generating NodeRef")

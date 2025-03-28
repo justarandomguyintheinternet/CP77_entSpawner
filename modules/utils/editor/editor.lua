@@ -464,7 +464,7 @@ function editor.checkArrow()
         return
     end
 
-    if ImGui.IsMouseDragging(0, 0.5) then
+    if ImGui.IsMouseDragging(0, style.draggingThreshold) then
         return
     end
 
@@ -522,7 +522,7 @@ function editor.getScreenRelativeToPoint(position)
 end
 
 function editor.updateDrag()
-    local dragging = ImGui.IsMouseDragging(0, 0.5) and not (editor.grab or editor.rotate or editor.scale)
+    local dragging = ImGui.IsMouseDragging(0, style.draggingThreshold) and not (editor.grab or editor.rotate or editor.scale)
     if dragging then
         if editor.hoveredArrow ~= "none" then
             editor.currentAxis = editor.hoveredArrow
@@ -695,11 +695,11 @@ function editor.handleBoxSelect()
     if not editor.active then return end
 
     local x, y = ImGui.GetMousePos()
-    if ImGui.IsKeyDown(ImGuiKey.LeftCtrl) and ImGui.IsMouseDragging(0, 0.6) and not editor.boxSelectActive and input.context.viewport.hovered then
+    if ImGui.IsKeyDown(ImGuiKey.LeftCtrl) and ImGui.IsMouseDragging(0, style.draggingThreshold) and not editor.boxSelectActive and input.context.viewport.hovered then
         editor.boxSelectActive = true
         editor.boxSelectStart = { x = x, y = y }
         editor.spawnedUI.unselectAll()
-    elseif not ImGui.IsMouseDragging(0, 0.6) and editor.boxSelectActive then
+    elseif not ImGui.IsMouseDragging(0, style.draggingThreshold) and editor.boxSelectActive then
         editor.boxSelectActive = false
 
         local width, height = GetDisplayResolution()

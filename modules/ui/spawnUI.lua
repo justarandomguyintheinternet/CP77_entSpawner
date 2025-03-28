@@ -519,13 +519,13 @@ function spawnUI.drawAll()
                 buttonText = utils.getFileName(entry.name)
             end
 
-            if ImGui.Button(utils.shortenPath(buttonText, xSpace - ImGui.GetCursorPosX(), true)) and not ImGui.IsMouseDragging(0, 0.6) then
+            if ImGui.Button(utils.shortenPath(buttonText, xSpace - ImGui.GetCursorPosX(), true)) and not ImGui.IsMouseDragging(0, style.draggingThreshold) then
                 local class = spawnUI.getActiveSpawnList().class
                 entry.lastSpawned = spawnUI.spawnNew(entry, class, false)
-            elseif ImGui.IsMouseDragging(0, 0.6) and not spawnUI.dragging and ImGui.IsItemHovered() then
+            elseif ImGui.IsMouseDragging(0, style.draggingThreshold) and not spawnUI.dragging and ImGui.IsItemHovered() then
                 spawnUI.dragging = true
                 spawnUI.dragData = entry
-            elseif not ImGui.IsMouseDragging(0, 0.6) and spawnUI.dragging then
+            elseif not ImGui.IsMouseDragging(0, style.draggingThreshold) and spawnUI.dragging then
                 if not ImGui.IsItemHovered() then
                     local ray = editor.getScreenToWorldRay()
                     spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)

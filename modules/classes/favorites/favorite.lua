@@ -99,10 +99,10 @@ function favorite:draw(context)
 
     if ImGui.Selectable("##favorite" .. context.row, false, ImGuiSelectableFlags.SpanAllColumns + ImGuiSelectableFlags.AllowOverlap) then
         self.spawnUI.spawnNew({ data = self.data }, require(self.data.modulePath), true)
-    elseif ImGui.IsMouseDragging(0, 0.6) and not self.spawnUI.dragging and ImGui.IsItemHovered() then
+    elseif ImGui.IsMouseDragging(0, style.draggingThreshold) and not self.spawnUI.dragging and ImGui.IsItemHovered() then
         self.spawnUI.dragging = true
         self.spawnUI.dragData = { data = self.data, name = self.name }
-    elseif not ImGui.IsMouseDragging(0, 0.6) and self.spawnUI.dragging then
+    elseif not ImGui.IsMouseDragging(0, style.draggingThreshold) and self.spawnUI.dragging then
         if not ImGui.IsItemHovered() then
             local ray = editor.getScreenToWorldRay()
             self.spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)

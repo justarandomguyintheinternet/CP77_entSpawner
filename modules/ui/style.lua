@@ -1,6 +1,7 @@
 -- Most of the colors and style has been taken from https://github.com/psiberx/cp2077-red-hot-tools
 
 local history = require("modules/utils/history")
+local settings = require("modules/utils/settings")
 local dragBeingEdited = false
 
 local style = {
@@ -20,6 +21,11 @@ function style.initialize()
     -- TODO: Enable this once done
     style.viewSize = ImGui.GetFontSize() / 15
     initialized = true
+
+    local _, height = GetDisplayResolution()
+    local factor = height / 1440
+
+    style.draggingThreshold = settings.draggingThreshold * factor
 end
 
 function style.pushGreyedOut(state)

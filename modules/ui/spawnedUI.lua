@@ -25,7 +25,6 @@ local registry = require("modules/utils/nodeRefRegistry")
 ---@field dividerDragging boolean
 ---@field filteredWidestName number
 ---@field draggingSelected boolean
----@field draggingThreshold number
 ---@field infoWindowSize table
 ---@field nameBeingEdited boolean
 ---@field clipper any
@@ -57,7 +56,6 @@ spawnedUI = {
     dividerDragging = false,
     filteredWidestName = 0,
     draggingSelected = false,
-    draggingThreshold = 0.6,
     infoWindowSize = { x = 0, y = 0 },
 
     clipper = nil,
@@ -438,13 +436,13 @@ end
 ---@protected
 ---@param element element
 function spawnedUI.handleDrag(element)
-    if ImGui.IsItemHovered() and ImGui.IsMouseDragging(0, spawnedUI.draggingThreshold) and not spawnedUI.draggingSelected then -- Start dragging
+    if ImGui.IsItemHovered() and ImGui.IsMouseDragging(0, style.draggingThreshold) and not spawnedUI.draggingSelected then -- Start dragging
         if not element.selected then
             spawnedUI.unselectAll()
             element:setSelected(true)
         end
         spawnedUI.draggingSelected = true
-    elseif not ImGui.IsMouseDragging(0, spawnedUI.draggingThreshold) and ImGui.IsItemHovered() and spawnedUI.draggingSelected then -- Drop on element
+    elseif not ImGui.IsMouseDragging(0, style.draggingThreshold) and ImGui.IsItemHovered() and spawnedUI.draggingSelected then -- Drop on element
         spawnedUI.draggingSelected = false
 
         if not element.selected then
@@ -1272,7 +1270,7 @@ function spawnedUI.draw()
     spawnedUI.drawProperties()
 
     -- Dropped on not a valid target
-    if spawnedUI.draggingSelected and not ImGui.IsMouseDragging(0, spawnedUI.draggingThreshold) then
+    if spawnedUI.draggingSelected and not ImGui.IsMouseDragging(0, style.draggingThreshold) then
         spawnedUI.draggingSelected = false
     end
 end
