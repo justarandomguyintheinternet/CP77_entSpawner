@@ -584,7 +584,7 @@ function spawnUI.drawAll()
     if #spawnUI.filteredList == 0 then
         if spawnUI.previewTimer then
             Cron.Halt(spawnUI.previewTimer)
-        else
+        elseif spawnUI.previewInstance then
             spawnUI.previewInstance:assetPreview(false)
         end
     end
