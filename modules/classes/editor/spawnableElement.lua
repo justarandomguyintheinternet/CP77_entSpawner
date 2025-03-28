@@ -329,11 +329,11 @@ function spawnableElement:updateRandomization()
 		local angle = math.random() * 360
 		local euler = EulerAngles.new(0, 0, 0)
 		if self.randomizationSettings.randomizeRotationAxis == 0 then
-			euler = EulerAngles.new(angle, 0, 0)
+			euler.roll = angle
 		elseif self.randomizationSettings.randomizeRotationAxis == 1 then
-			euler = EulerAngles.new(0, angle, 0)
+			euler.pitch = angle
 		elseif self.randomizationSettings.randomizeRotationAxis == 2 then
-			euler = EulerAngles.new(0, 0, angle)
+			euler.yaw = angle
 		end
 
 		self:setRotation(euler)

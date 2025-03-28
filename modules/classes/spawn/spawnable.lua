@@ -472,7 +472,7 @@ function spawnable:calculateStreamingValues(multiplier)
     local scale = self:getSize()
 
     local primary = math.max(math.max(scale.x, scale.y, scale.z) * multiplier * 60, 25)
-    primary = math.min(primary, 200 * self.streamingMultiplier)
+    primary = math.min(primary, 200 * multiplier)
     local secondary = primary * 0.8
 
     return { primary = primary, secondary = secondary, uk10 = self.uk10, uk11 = self.uk11 }

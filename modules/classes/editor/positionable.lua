@@ -12,6 +12,7 @@ local element = require("modules/classes/editor/element")
 ---@field rotationRelative boolean
 ---@field hasScale boolean
 ---@field scaleLocked boolean
+---@field relativeOffset table
 ---@field visualizerState boolean
 ---@field visualizerDirection string
 ---@field controlsHovered boolean
@@ -27,6 +28,11 @@ function positionable:new(sUI)
 	o.rotationRelative = false
 	o.hasScale = false
 	o.scaleLocked = true
+	o.relativeOffset = {
+		x = 0,
+		y = 0,
+		z = 0
+	}
 
 	o.visualizerState = false
 	o.visualizerDirection = "none"
@@ -35,7 +41,6 @@ function positionable:new(sUI)
 	o.randomizationSettings = {
 		probability = 0.5
 	}
-	o.hiddenByRandomization = false
 
 	o.class = utils.combine(o.class, { "positionable" })
 
@@ -227,7 +232,9 @@ function positionable:drawProp(prop, name, axis)
 	end
 
 	local finished = ImGui.IsItemDeactivatedAfterEdit()
+
 	if finished then
+		self.relativeOffset = { x = 0, y = 0, z = 0 }
 		history.propBeingEdited = false
 		self:onEdited()
 	end
@@ -242,15 +249,20 @@ function positionable:drawProp(prop, name, axis)
 			self:setPositionDelta(Vector4.new(0, newValue - prop, 0, 0))
 		elseif axis == "z" then
 			self:setPositionDelta(Vector4.new(0, 0, newValue - prop, 0))
-		elseif axis == "relX" then
-			local v = self:getDirection("right")
-			self:setPositionDelta(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
-		elseif axis == "relY" then
-			local v = self:getDirection("forward")
-			self:setPositionDelta(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
-		elseif axis == "relZ" then
-			local v = self:getDirection("up")
-			self:setPositionDelta(Vector4.new((v.x * newValue), (v.y * newValue), (v.z * newValue), 0))
+		elseif axis == "relX" or axis == "relY" or axis == "relZ" then
+			local v
+			if axis == "relX" then
+				v = self:getDirection("right")
+				self.relativeOffset.x = newValue
+			elseif axis == "relY" then
+				v = self:getDirection("forward")
+				self.relativeOffset.y = newValue
+			elseif axis == "relZ" then
+				v = self:getDirection("up")
+				self.relativeOffset.z = newValue
+			end
+
+			self:setPositionDelta(Vector4.new((v.x * (newValue - self.relativeOffset.x)), (v.y * (newValue - self.relativeOffset.y)), (v.z * (newValue - self.relativeOffset.z)), 0))
 		elseif axis == "roll" then
 			self:setRotationDelta(EulerAngles.new(newValue - prop, 0, 0))
 		elseif axis == "pitch" then
@@ -305,11 +317,11 @@ end
 function positionable:drawRelativePosition()
     ImGui.PushItemWidth(80 * style.viewSize)
 	style.pushGreyedOut(not self.visible or self.hiddenByParent)
-    self:drawProp(0, "Rel X", "relX")
+    self:drawProp(self.relativeOffset.x, "Rel X", "relX")
 	ImGui.SameLine()
-    self:drawProp(0, "Rel Y", "relY")
+    self:drawProp(self.relativeOffset.y, "Rel Y", "relY")
 	ImGui.SameLine()
-    self:drawProp(0, "Rel Z", "relZ")
+    self:drawProp(self.relativeOffset.z, "Rel Z", "relZ")
 	style.popGreyedOut(not self.visible or self.hiddenByParent)
     ImGui.PopItemWidth()
 end

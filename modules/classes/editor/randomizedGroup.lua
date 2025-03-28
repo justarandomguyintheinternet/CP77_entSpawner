@@ -248,15 +248,3 @@ function randomizedGroup:serialize()
 end
 
 return randomizedGroup
-
--- spawnableElement controls:
-	-- randomize app (what apps)
-	-- randmize rotation (axis)
-	-- randmoized position offset (axis)
-	-- probability of spawning
--- group controls:
-	-- seed
-	-- distributaion type:
-		-- fixed amount of things that shall spawn, or range
-			-- either as total amount, or percentage
-		-- default, each element is determined by its probability
