@@ -234,7 +234,6 @@ function positionable:drawProp(prop, name, axis)
 	local finished = ImGui.IsItemDeactivatedAfterEdit()
 
 	if finished then
-		self.relativeOffset = { x = 0, y = 0, z = 0 }
 		history.propBeingEdited = false
 		self:onEdited()
 	end
@@ -250,19 +249,23 @@ function positionable:drawProp(prop, name, axis)
 		elseif axis == "z" then
 			self:setPositionDelta(Vector4.new(0, 0, newValue - prop, 0))
 		elseif axis == "relX" or axis == "relY" or axis == "relZ" then
-			local v
 			if axis == "relX" then
-				v = self:getDirection("right")
+				local v = self:getDirection("right")
+				self:setPositionDelta(Vector4.new((v.x * (newValue - self.relativeOffset.x)), (v.y * (newValue - self.relativeOffset.x)), (v.z * (newValue - self.relativeOffset.x)), 0))
 				self.relativeOffset.x = newValue
 			elseif axis == "relY" then
 				v = self:getDirection("forward")
+				self:setPositionDelta(Vector4.new((v.x * (newValue - self.relativeOffset.y)), (v.y * (newValue - self.relativeOffset.y)), (v.z * (newValue - self.relativeOffset.y)), 0))
 				self.relativeOffset.y = newValue
 			elseif axis == "relZ" then
 				v = self:getDirection("up")
+				self:setPositionDelta(Vector4.new((v.x * (newValue - self.relativeOffset.z)), (v.y * (newValue - self.relativeOffset.z)), (v.z * (newValue - self.relativeOffset.z)), 0))
 				self.relativeOffset.z = newValue
 			end
 
-			self:setPositionDelta(Vector4.new((v.x * (newValue - self.relativeOffset.x)), (v.y * (newValue - self.relativeOffset.y)), (v.z * (newValue - self.relativeOffset.z)), 0))
+			if finished then
+				self.relativeOffset = { x = 0, y = 0, z = 0 }
+			end
 		elseif axis == "roll" then
 			self:setRotationDelta(EulerAngles.new(newValue - prop, 0, 0))
 		elseif axis == "pitch" then
