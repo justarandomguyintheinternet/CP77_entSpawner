@@ -71,7 +71,7 @@ local settingsData = {
     cacheExlusions = {},
     assetPreviewEnabled = {},
     mainWindowName = "World Builder",
-    draggingThreshold = 1,
+    draggingThreshold = 5,
 
     filterTags = {},
     favoritesFilter = "",

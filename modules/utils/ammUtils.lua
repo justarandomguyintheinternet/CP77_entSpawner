@@ -1,6 +1,7 @@
 local utils = require("modules/utils/utils")
 local entityBuilder = require("modules/utils/entityBuilder")
 local settings = require("modules/utils/settings")
+local config = require("modules/utils/config")
 
 local amm = {
     importing = false,
@@ -238,6 +239,10 @@ end
 
 function amm.importPreset(data, spawnedUI, importTasks)
     local meshService = require("modules/utils/tasks"):new()
+    local vehicles = {}
+    for _, vehicle in pairs(config.loadFile("data/static/vehicles.json")) do
+        vehicles[vehicle] = true
+    end
 
     local root = generateGroup(spawnedUI, data.file_name:gsub(".json", ""), nil)
     local props = generateGroup(spawnedUI, "Props", root)
@@ -256,6 +261,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
         local isLight = getAMMLightByID(data.lights, propData.uid)
         local isAMMLight = propData.path:match(area) or propData.path:match(point) or propData.path:match(spot)
         local isScaled = propData.scale.x ~= 100 or propData.scale.y ~= 100 or propData.scale.z ~= 100
+        local isVehicle = vehicles[propData.path]
 
         if isLight and isAMMLight then
             -- Light Node
@@ -263,7 +269,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
             o.name = o.spawnable:generateName(propData.name)
             o:setParent(lightNodes)
             amm.progress = amm.progress + 1
-        else
+        elseif not isVehicle then
             if not Game.GetResourceDepot():ResourceExists(propData.path) then
                 print("[AMMImport] Resource for " .. propData.path .. " does not exist, skipping...")
                 amm.progress = amm.progress + 1
@@ -332,6 +338,8 @@ function amm.importPreset(data, spawnedUI, importTasks)
                     spawnable:spawn()
                 end)
             end
+        else
+            print("[AMMImport] Skipped " .. propData.name .. " as it is a vehicle, must be spawned via Entity Record.")
         end
     end
 
