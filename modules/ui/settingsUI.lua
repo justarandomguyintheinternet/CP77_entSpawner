@@ -58,7 +58,7 @@ function settingsUI.draw(spawner)
 
     settings.draggingThreshold, changed = ImGui.InputFloat("Dragging Threshold", settings.draggingThreshold, 0, 100, "%.1f")
     if changed then
-        style.initialize()
+        style.initialize(true)
         settings.save()
     end
     style.tooltip("A threshold for all dragging operations, such as the ones in the scene hierarchy.")

@@ -127,8 +127,9 @@ function spawnable:registerSpawnedAndAttachedCallback(callback)
 end
 
 ---Spawns the spawnable if not spawned already, must register a callback for entityAssemble which calls onAssemble
-function spawnable:spawn()
-    if self:isSpawned() or self.spawning then return end
+---@param ignoreSpawning boolean? If true, spawn call will be issued even if already spawning
+function spawnable:spawn(ignoreSpawning)
+    if self:isSpawned() or (self.spawning and not ignoreSpawning) then return end
 
     local spec = StaticEntitySpec.new()
     spec.templatePath = self.spawnData

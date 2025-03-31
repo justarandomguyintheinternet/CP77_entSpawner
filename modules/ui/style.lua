@@ -16,9 +16,8 @@ local style = {
 
 local initialized = false
 
-function style.initialize()
-    -- if initialized then return end
-    -- TODO: Enable this once done
+function style.initialize(force)
+    if not force and initialized then return end
     style.viewSize = ImGui.GetFontSize() / 15
     initialized = true
 

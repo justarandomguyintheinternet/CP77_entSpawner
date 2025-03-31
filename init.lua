@@ -122,7 +122,7 @@ function spawner:new()
     end)
 
     registerForEvent("onDraw", function()
-        style.initialize()
+        style.initialize(true)
         self.editor.suspend(self.runtimeData.cetOpen)
 
         if self.runtimeData.cetOpen then

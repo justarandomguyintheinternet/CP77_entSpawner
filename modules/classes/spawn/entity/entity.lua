@@ -14,6 +14,7 @@ local preview = require("modules/utils/previewUtils")
 ---Class for base entity handling
 ---@class entity : spawnable
 ---@field public apps table
+---@field public appsLoaded boolean
 ---@field public appIndex integer
 ---@field private bBoxCallback function
 ---@field public bBox table {min: Vector4, max: Vector4}
@@ -38,6 +39,7 @@ function entity:new()
     o.icon = IconGlyphs.AlphaEBoxOutline
 
     o.apps = {}
+    o.appsLoaded = false
     o.appIndex = 0
     o.bBoxCallback = nil
     o.bBox = { min = Vector4.new(-0.5, -0.5, -0.5, 0), max = Vector4.new( 0.5, 0.5, 0.5, 0) }
@@ -83,7 +85,24 @@ function entity:loadSpawnData(data, position, rotation)
     .found(function ()
         self.apps = cache.getValue(self.spawnData .. "_apps")
         self.appIndex = math.max(utils.indexValue(self.apps, self.app) - 1, 0)
+        self.appsLoaded = true
+
+        if utils.indexValue(self.apps, self.app) - 1 < 0 then
+            self.app = self.apps[1] or "default"
+        end
+
+        if self.spawning then
+            self:spawn(true)
+        end
     end)
+end
+
+function entity:spawn(ignoreSpawning)
+    if not self.appsLoaded then -- Delay spawning until list of apps is loaded, so we dont spawn with random/default appearance
+        self.spawning = true
+    else
+        spawnable.spawn(self, ignoreSpawning)
+    end
 end
 
 local function CRUIDToString(id)
