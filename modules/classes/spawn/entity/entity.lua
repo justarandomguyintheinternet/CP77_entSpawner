@@ -202,6 +202,12 @@ function entity:onAttached(entRef)
     spawnable.onAttached(self, entRef)
 
     Cron.AfterTicks(10, function ()
+        local success = pcall(function ()
+            entRef:GetTemplatePath()
+        end)
+
+        if not success then return end
+
         builder.getEntityBBox(entRef, function (data)
             utils.log("[Entity] Loaded initial BBOX for entity " .. self.spawnData .. " with " .. #data.meshes .. " meshes.")
             self.bBox = data.bBox
