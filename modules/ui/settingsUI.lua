@@ -7,7 +7,7 @@ local colliderColors = { "Red", "Green", "Blue" }
 local outlineColors = { "Green", "Red", "Blue", "Orange", "Yellow", "Light Blue", "White", "Black" }
 local windowNames = { "World Builder", "Object Spawner", "Entity Spawner", "World Additor", "World Editing Toolkit", "World Editor", "WheezeKit", "Buildy McBuildface", "Keanus Editing Kit (Kek)", "Redkit at home" }
 
-settingsUI = {}
+local settingsUI = {}
 
 ---@param spawner spawner
 function settingsUI.draw(spawner)
@@ -57,7 +57,10 @@ function settingsUI.draw(spawner)
     style.tooltip("When holding shift, the step size will be multiplied by this value")
 
     settings.draggingThreshold, changed = ImGui.InputFloat("Dragging Threshold", settings.draggingThreshold, 0, 100, "%.1f")
-    if changed then settings.save() end
+    if changed then
+        style.initialize()
+        settings.save()
+    end
     style.tooltip("A threshold for all dragging operations, such as the ones in the scene hierarchy.")
 
     settings.nodeRefPrefix, changed = ImGui.InputTextWithHint("NodeRef Prefix", "", settings.nodeRefPrefix, 128)
