@@ -186,12 +186,14 @@ function spawnableElement:setPositionDelta(delta)
 end
 
 function spawnableElement:setRotation(rotation)
+	if self.rotationLocked then return end
+
 	self.spawnable.rotation = rotation
 	self.spawnable:update()
 end
 
 function spawnableElement:setRotationDelta(delta)
-	if delta.roll == 0 and delta.pitch == 0 and delta.yaw == 0 then return end
+	if delta.roll == 0 and delta.pitch == 0 and delta.yaw == 0 or self.rotationLocked then return end
 
 	if self.rotationRelative then
 		self.spawnable.rotation = utils.addEulerRelative(self.spawnable.rotation, delta)

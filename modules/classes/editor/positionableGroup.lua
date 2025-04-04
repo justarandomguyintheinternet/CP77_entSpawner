@@ -88,19 +88,24 @@ function positionableGroup:setPositionDelta(delta)
 end
 
 function positionableGroup:drawRotation(rotation)
+	local locked = self.rotationLocked
+
 	ImGui.PushItemWidth(80 * style.viewSize)
 	style.pushGreyedOut(true)
     self:drawProp(rotation.roll, "Roll", "roll")
     ImGui.SameLine()
     self:drawProp(rotation.pitch, "Pitch", "pitch")
-	style.popGreyedOut(true)
+	style.popGreyedOut(not locked)
     ImGui.SameLine()
 	self:drawProp(rotation.yaw, "Yaw", "yaw")
+	style.popGreyedOut(locked)
 end
 
 -- TODO: Track rotation of group independently, use that for rotation axis for objects (In global space, convert group axis to local space (unit vector - (group axis - object axis)))
 
 function positionableGroup:setRotation(rotation)
+	if self.rotationLocked then return end
+
 	self:setRotationDelta(EulerAngles.new(0, 0, rotation.yaw - self.yaw))
 	self.yaw = rotation.yaw
 end
@@ -110,7 +115,7 @@ function positionableGroup:getRotation()
 end
 
 function positionableGroup:setRotationDelta(delta)
-	if delta.roll ~= 0 or delta.pitch ~= 0 or delta.yaw == 0 then return end
+	if delta.roll ~= 0 or delta.pitch ~= 0 or delta.yaw == 0 or self.rotationLocked then return end
 
 	local pos = self:getPosition()
 	local leafs = self:getPositionableLeafs()

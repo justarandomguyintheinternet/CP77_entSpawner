@@ -166,7 +166,7 @@ function spline:export()
                 ["X"] = position.x,
                 ["Y"] = position.y,
                 ["Z"] = position.z
-          }
+            }
         })
     end
 

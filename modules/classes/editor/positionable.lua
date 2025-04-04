@@ -12,6 +12,7 @@ local element = require("modules/classes/editor/element")
 ---@field rotationRelative boolean
 ---@field hasScale boolean
 ---@field scaleLocked boolean
+---@field rotationLocked boolean
 ---@field relativeOffset table
 ---@field visualizerState boolean
 ---@field visualizerDirection string
@@ -28,6 +29,7 @@ function positionable:new(sUI)
 	o.rotationRelative = false
 	o.hasScale = false
 	o.scaleLocked = true
+	o.rotationLocked = false
 	o.relativeOffset = {
 		x = 0,
 		y = 0,
@@ -53,6 +55,8 @@ function positionable:load(data, silent)
 	self.transformExpanded = data.transformExpanded
 	self.rotationRelative = data.rotationRelative
 	self.scaleLocked = data.scaleLocked
+	self.rotationLocked = data.rotationLocked
+	if self.rotationLocked == nil then self.rotationLocked = false end
 
 	for key, setting in pairs(data.randomizationSettings or {}) do
 		self.randomizationSettings[key] = setting
@@ -207,6 +211,16 @@ function positionable:drawCopyPaste(name)
 			end
 		end
 		ImGui.Separator()
+		if ImGui.MenuItem(string.format("%s Rotation", self.rotationLocked and "Unlock" or "Lock")) then
+			history.addAction(history.getElementChange(self))
+			self.rotationLocked = not self.rotationLocked
+		end
+		if ImGui.MenuItem(string.format("%s Rotation and Set Zero", self.rotationLocked and "Unlock" or "Lock")) then
+			history.addAction(history.getElementChange(self))
+			self:setRotation(EulerAngles.new(0, 0, 0))
+			self.rotationLocked = not self.rotationLocked
+		end
+		ImGui.Separator()
 		if ImGui.MenuItem("Copy rotation as Quaternion to clipboard") then
 			local quat = self:getRotation():ToQuat()
 			ImGui.SetClipboardText(string.format("i = %.6f, j = %.6f, k = %.6f, r = %.6f", quat.i, quat.j, quat.k, quat.r))
@@ -332,11 +346,14 @@ end
 ---@protected
 function positionable:drawRotation(rotation)
     ImGui.PushItemWidth(80 * style.viewSize)
+	local locked = self.rotationLocked
+	style.pushGreyedOut(locked)
     self:drawProp(rotation.roll, "Roll", "roll")
     ImGui.SameLine()
     self:drawProp(rotation.pitch, "Pitch", "pitch")
     ImGui.SameLine()
 	self:drawProp(rotation.yaw, "Yaw", "yaw")
+	style.popGreyedOut(locked)
     ImGui.SameLine()
 
 	self.rotationRelative, _ = style.toggleButton(IconGlyphs.HorizontalRotateClockwise, self.rotationRelative)
@@ -429,6 +446,7 @@ function positionable:serialize()
 	data.transformExpanded = self.transformExpanded
 	data.rotationRelative = self.rotationRelative
 	data.scaleLocked = self.scaleLocked
+	data.rotationLocked = self.rotationLocked
 	data.randomizationSettings = utils.deepcopy(self.randomizationSettings)
 	data.pos = utils.fromVector(self:getPosition()) -- For savedUI
 

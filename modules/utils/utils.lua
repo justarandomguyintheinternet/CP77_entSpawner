@@ -295,7 +295,7 @@ function miscUtils.generateCopyName(name)
 end
 
 function miscUtils.log(...)
-    if false then return end
+    if true then return end
 
     local args = {...}
     local str = ""
