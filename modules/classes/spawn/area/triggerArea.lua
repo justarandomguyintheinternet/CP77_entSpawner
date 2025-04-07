@@ -14,6 +14,7 @@ local channels = {
 ---@field channels table
 ---@field private preventionActivationTable table
 ---@field private preventionNotifierTable table
+---@field private maxTriggerPropertyWidth number
 local triggerArea = setmetatable({}, { __index = area })
 
 function triggerArea:new()
@@ -34,6 +35,8 @@ function triggerArea:new()
 
     o.preventionActivationTable = utils.enumTable("worldQuestPreventionNotifierActivation")
     o.preventionNotifierTable = utils.enumTable("worldQuestPreventionNotifierType")
+
+    o.maxTriggerPropertyWidth = nil
 
     setmetatable(o, { __index = self })
    	return o
@@ -214,6 +217,67 @@ function triggerArea:drawContentBlock(changed)
     self.trigger.resetTokenSpawnTimer, _ = style.trackedCheckbox(self.object, "##resetTokenSpawnTimer", self.trigger.resetTokenSpawnTimer)
 end
 
+function triggerArea:drawEnvTrigger(changed)
+    if changed then
+        self.trigger = {
+            ["$type"] = "worldEnvAreaNotifier",
+            blendTimeIn = 3,
+            blendTimeOut = 3,
+            env = {
+                ["DepotPath"] = {
+                    ["$type"] = "ResourcePath",
+                    ["$storage"] = "string",
+                    ["$value"] = ""
+                },
+                ["Flags"] = "Default"
+            },
+            horizontalFadeDistance = 0,
+            verticalFadeDistance = 0,
+            priority = 5,
+            resourceVersion = 1,
+            weatherStateNames = {},
+            weatherStateValues = {}
+        }
+
+        return
+    end
+
+    if not self.maxTriggerPropertyWidth then
+        self.maxTriggerPropertyWidth = utils.getTextMaxWidth( {"Blend Time In", "Blend Time Out", "Env Param Path", "Horizontal Fade Distance", "Vertical Fade Distance", "Priority"} ) + 4 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
+
+    style.mutedText("Blend Time In")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxTriggerPropertyWidth)
+    self.trigger.blendTimeIn, _ = style.trackedDragFloat(self.object, "##blendTimeIn", self.trigger.blendTimeIn, 0.1, 0, 9999, "%.1f", 70)
+
+    style.mutedText("Blend Time Out")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxTriggerPropertyWidth)
+    self.trigger.blendTimeOut, _ = style.trackedDragFloat(self.object, "##blendTimeOut", self.trigger.blendTimeOut, 0.1, 0, 9999, "%.1f", 70)
+
+    style.mutedText("Env Param Path")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxTriggerPropertyWidth)
+    self.trigger.env.DepotPath["$value"], _ = style.trackedTextField(self.object, "##envParamPath", self.trigger.env.DepotPath["$value"], "base\\gameplay\\focus_mode.envparam", 220)
+    style.tooltip("Env param path. Search for \".envparam\" in WolvenKit.")
+
+    style.mutedText("Horizontal Fade Distance")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxTriggerPropertyWidth)
+    self.trigger.horizontalFadeDistance, _ = style.trackedDragFloat(self.object, "##horizontalFadeDistance", self.trigger.horizontalFadeDistance, 0.1, 0, 9999, "%.1f", 70)
+
+    style.mutedText("Vertical Fade Distance")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxTriggerPropertyWidth)
+    self.trigger.verticalFadeDistance, _ = style.trackedDragFloat(self.object, "##verticalFadeDistance", self.trigger.verticalFadeDistance, 0.1, 0, 9999, "%.1f", 70)
+
+    style.mutedText("Priority")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxTriggerPropertyWidth)
+    self.trigger.priority, _, _ = style.trackedIntInput(self.object, "##priority", self.trigger.priority, 0, 255, 50)
+end
+
 function triggerArea:getAvailableTriggers()
     return {
         ["Interior"] = triggerArea.drawInterior,
@@ -221,7 +285,8 @@ function triggerArea:getAvailableTriggers()
         ["Quest Notifier"] = triggerArea.drawQuestNotifier,
         ["Prevention"] = triggerArea.drawPrevention,
         ["Vehicle Forbidden"] = triggerArea.drawVehicleForbidden,
-        ["Content Block"] = triggerArea.drawContentBlock
+        ["Content Block"] = triggerArea.drawContentBlock,
+        ["Env Trigger"] = triggerArea.drawEnvTrigger
     }
 end
 
@@ -247,6 +312,7 @@ function triggerArea:draw()
     if changed then
         self.triggerType = triggerNames[value + 1]
         triggers[self.triggerType](self, true)
+        self.maxTriggerPropertyWidth = nil
     end
 
     if ImGui.TreeNodeEx(self.triggerType, ImGuiTreeNodeFlags.SpanFullWidth) then
