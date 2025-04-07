@@ -338,6 +338,15 @@ function spawnable:getGroupedProperties()
             ImGui.SetNextItemWidth(80 * style.viewSize)
             element.groupOperationData["streamingProperties"].multiplier, _ = ImGui.DragFloat("Multiplier", element.groupOperationData["streamingProperties"].multiplier, 0.01, 0, 50, "%.2f")
             style.tooltip("Multiplier for streaming values, when using \"Calculate Streaming Distances\"")
+
+            if ImGui.Button("Auto-Generate NodeRef's") then
+                history.addAction(history.getMultiSelectChange(entries))
+
+                for _, entry in ipairs(entries) do
+                    local generated = registry.generate(entry.spawnable.object)
+                    entry.spawnable.nodeRef = generated
+                end
+            end
 		end,
 		entries = { self.object }
 	}

@@ -128,6 +128,14 @@ function positionableGroup:setRotationDelta(delta)
 	end
 end
 
+function positionableGroup:onEdited()
+	local leafs = self:getPositionableLeafs()
+
+	for _, entry in pairs(leafs) do
+		entry:onEdited()
+	end
+end
+
 function positionableGroup:dropToSurface(_, direction)
 	local leafs = self:getPositionableLeafs()
 	table.sort(leafs, function (a, b)

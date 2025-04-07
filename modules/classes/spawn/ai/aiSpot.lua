@@ -419,6 +419,8 @@ function aiSpot:getGroupedProperties()
                         table.insert(entry.spawnable.markings, element.groupOperationData["aiSpotGrouped"].marking)
                     end
                 end
+
+                element.groupOperationData["aiSpotGrouped"].marking = ""
             end
             style.tooltip("Adds the specified marking to the markings list of all selected AISpot's.")
         end,
