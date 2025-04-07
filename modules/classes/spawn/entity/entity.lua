@@ -169,6 +169,11 @@ local function fixInstanceData(data, parent)
                 value["Bits"] = math.floor(value["Bits"])
             elseif value["Flags"] and not value["DepotPath"] then
                 data[key] = nil
+            elseif value["$type"] == "Color" then
+                value.Red = math.min(value.Red, 255)
+                value.Green = math.min(value.Green, 255)
+                value.Blue = math.min(value.Blue, 255)
+                value.Alpha = math.min(value.Alpha, 255)
             end
 
             if data ~= nil then
