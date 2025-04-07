@@ -176,10 +176,10 @@ local function setInstanceDataLight(entity, lightData, spawnable)
             local change = {
                 color = {
                     ["$type"] = "Color",
-                    Red = math.floor(color[1] * 255),
-                    Green = math.floor(color[2] * 255),
-                    Blue = math.floor(color[3] * 255),
-                    Alpha = math.floor(color[4] * 255)
+                    Red = math.min(255, math.floor(color[1] * 255)),
+                    Green = math.min(255, math.floor(color[2] * 255)),
+                    Blue = math.min(255, math.floor(color[3] * 255)),
+                    Alpha = math.min(255, math.floor(color[4] * 255))
                 },
                 intensity = lightData.intensity,
                 innerAngle = angles.inner,
