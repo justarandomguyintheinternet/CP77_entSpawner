@@ -19,6 +19,7 @@ local colliderShapes = { "Box", "Capsule", "Sphere" }
 ---@field protected occluderType integer
 ---@field protected occluderTypes table
 ---@field protected hasOccluder boolean|table
+---@field protected windImpulseEnabled boolean
 ---@field protected castLocalShadows integer
 ---@field protected castRayTracedGlobalShadows integer
 ---@field protected castRayTracedLocalShadows integer
@@ -52,6 +53,7 @@ function mesh:new()
     o.occluderType = 0
     o.occluderTypes = utils.enumTable("visWorldOccluderType")
     o.hasOccluder = false
+    o.windImpulseEnabled = true
 
     o.castLocalShadows = 0
     o.castRayTracedGlobalShadows = 0
@@ -240,6 +242,7 @@ function mesh:save()
     data.castRayTracedLocalShadows = self.castRayTracedLocalShadows
     data.castShadows = self.castShadows
     data.occluderType = self.occluderType
+    data.windImpulseEnabled = self.windImpulseEnabled
 
     return data
 end
@@ -340,7 +343,7 @@ function mesh:draw()
     spawnable.draw(self)
 
     if not self.maxPropertyWidth then
-        self.maxPropertyWidth = utils.getTextMaxWidth({ "Appearance", "Collider", "Occluder" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Appearance", "Collider", "Occluder", "Enable Wind Impulse" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
     end
 
     style.pushGreyedOut(#self.apps == 0)
@@ -391,6 +394,12 @@ function mesh:draw()
         ImGui.SetCursorPosX(self.maxPropertyWidth)
         self.occluderType, _ = style.trackedCombo(self.object, "##occluderType", self.occluderType, self.occluderTypes, 110)
     end
+
+    style.mutedText("Enable Wind Impulse")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.windImpulseEnabled, _ = style.trackedCheckbox(self.object, "##windImpulseEnabled", self.windImpulseEnabled)
+    style.tooltip("Enable wind impulse for this mesh, not previewed.")
 
     self.shadowHeaderState = ImGui.TreeNodeEx("Shadow Settings")
 
@@ -538,7 +547,8 @@ function mesh:export()
         castRayTracedGlobalShadows = self.shadowCastingModeEnum[self.castRayTracedGlobalShadows + 1],
         castRayTracedLocalShadows = self.shadowCastingModeEnum[self.castRayTracedLocalShadows + 1],
         castShadows = self.shadowCastingModeEnum[self.castShadows + 1],
-        occluderType = self.occluderTypes[self.occluderType + 1]
+        occluderType = self.occluderTypes[self.occluderType + 1],
+        windImpulseEnabled = self.windImpulseEnabled and 1 or 0
     }
 
     return data
