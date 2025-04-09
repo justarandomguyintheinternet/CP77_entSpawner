@@ -67,7 +67,8 @@ local types = {
             ["Water Null"] = { class = require("modules/classes/spawn/area/waterNull"), index = 6 },
             ["Trigger Area"] = { class = require("modules/classes/spawn/area/triggerArea"), index = 2 },
             ["Ambient Area"] = { class = require("modules/classes/spawn/area/ambientArea"), index = 3 },
-            ["Dummy Area"] = { class = require("modules/classes/spawn/area/dummyArea"), index = 7 }
+            ["Dummy Area"] = { class = require("modules/classes/spawn/area/dummyArea"), index = 8 },
+            ["Conversation Area"] = { class = require("modules/classes/spawn/area/conversationArea"), index = 7 }
         },
         index = 7
     },
