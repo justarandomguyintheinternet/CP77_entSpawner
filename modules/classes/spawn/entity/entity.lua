@@ -308,6 +308,12 @@ function entity:assetPreviewAssemble(entRef)
             mesh.parentTransform = component.parentTransform
             entRef:AddComponent(mesh)
         end
+        if component:IsA("gameStaticAreaShapeComponent") or component:IsA("entDynamicActorRepellingComponent") then
+            component:Toggle(false)
+        end
+        if component:IsA("entSimpleColliderComponent") then
+            component:SetLocalPosition(Vector4.new(0, 0, -150, 0))
+        end
     end
 
     preview.elements["previewFirstLine"]:SetVisible(true)
