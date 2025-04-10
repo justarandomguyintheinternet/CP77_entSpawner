@@ -509,6 +509,10 @@ function spawnedUI.paste(elements, element)
         end
     end
 
+    if settings.moveCloneToParent == 2 then
+        parent = parent.parent or parent
+    end
+
     for _, entry in pairs(elements) do
         local new = require(entry.modulePath):new(spawnedUI)
 

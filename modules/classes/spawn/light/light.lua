@@ -242,7 +242,7 @@ function light:draw()
         self.useInTransparents, changed = style.trackedCheckbox(self.object, "Use in transparents", self.useInTransparents)
         self:updateFull(changed)
         ImGui.SameLine()
-        self.scaleVolFog, _, finished = style.trackedDragFloat(self.object, "##scaleVolFog", self.scaleVolFog, 0.01, 0, 9999, "%.2f Scale Vol. Fog", 120)
+        self.scaleVolFog, _, finished = style.trackedDragFloat(self.object, "##scaleVolFog", self.scaleVolFog, 1, 0, 255, "%.1f Scale Vol. Fog", 120)
         self:updateFull(finished)
 
         self.autoHideDistance, _, finished = style.trackedDragFloat(self.object, "##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.1f Hide Dist.", 90)
