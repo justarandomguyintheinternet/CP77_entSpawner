@@ -776,7 +776,7 @@ function spawnedUI.drawSideButtons(element)
     style.pushStyleColor(not visible, ImGuiCol.Text, style.mutedColor)
 
     ImGui.SetNextItemAllowOverlap()
-    if ImGui.Button(IconGlyphs.EyeOutline) then
+    if ImGui.Button(visible and IconGlyphs.EyeOutline or IconGlyphs.EyeOff) then
         if spawnedUI.multiSelectActive() then
             element:setVisibleRecursive(not element.visible)
         else
