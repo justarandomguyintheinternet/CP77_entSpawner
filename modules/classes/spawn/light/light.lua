@@ -1,5 +1,4 @@
 local visualized = require("modules/classes/spawn/visualized")
-local builder = require("modules/utils/entityBuilder")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 
@@ -26,9 +25,17 @@ local utils = require("modules/utils/utils")
 ---@field private shadowFadeDistance number
 ---@field private shadowFadeRange number
 ---@field private contactShadows number
----@field private shadowHeaderState boolean
----@field private miscHeaderState boolean
 ---@field private contactShadowsTypes table
+---@field private maxShadowPropertiesWidth number
+---@field private maxBasePropertiesWidth number
+---@field private maxFlickerPropertiesWidth number
+---@field private maxMiscPropertiesWidth number
+---@field private spotCapsule boolean
+---@field private softness number
+---@field private attenuation number
+---@field private clampAttenuation boolean
+---@field private attenuationTypes table
+---@field private sceneSpecularScale number
 local light = setmetatable({}, { __index = visualized })
 
 function light:new()
@@ -64,9 +71,18 @@ function light:new()
     o.shadowFadeRange = 5
     o.contactShadows = 0
     o.contactShadowsTypes = utils.enumTable("rendContactShadowReciever")
+    o.spotCapsule = false
+    o.softness = 2
+    o.attenuation = 0
+    o.attenuationTypes = utils.enumTable("rendLightAttenuation")
+    o.sceneSpecularScale = 100
+    o.clampAttenuation = false
 
-    o.shadowHeaderState = false
-    o.miscHeaderState = false
+    o.maxBasePropertiesWidth = nil
+    o.maxShadowPropertiesWidth = nil
+    o.maxFlickerPropertiesWidth = nil
+    o.maxMiscPropertiesWidth = nil
+
     o.previewColor = "yellow"
 
     setmetatable(o, { __index = self })
@@ -97,12 +113,18 @@ function light:onAssemble(entity)
     component.shadowFadeDistance = self.shadowFadeDistance
     component.shadowFadeRange = self.shadowFadeRange
     component.contactShadows = Enum.new("rendContactShadowReciever", self.contactShadows)
+    component.spotCapsule = self.spotCapsule
+    component.softness = self.softness
+    component.attenuation = Enum.new("rendLightAttenuation", self.attenuation)
+    component.clampAttenuation = self.clampAttenuation
+    component.sceneSpecularScale = self.sceneSpecularScale
 
     entity:AddComponent(component)
 end
 
 function light:save()
     local data = visualized.save(self)
+
     data.color = { self.color[1], self.color[2], self.color[3] }
     data.intensity = self.intensity
     data.innerAngle = self.innerAngle
@@ -122,6 +144,11 @@ function light:save()
     data.shadowFadeDistance = self.shadowFadeDistance
     data.shadowFadeRange = self.shadowFadeRange
     data.contactShadows = self.contactShadows
+    data.spotCapsule = self.spotCapsule
+    data.softness = self.softness
+    data.attenuation = self.attenuation
+    data.clampAttenuation = self.clampAttenuation
+    data.sceneSpecularScale = self.sceneSpecularScale
 
     return data
 end
@@ -151,104 +178,203 @@ end
 function light:draw()
     visualized.draw(self)
 
-    ImGui.Text("Light Type")
+    if not self.maxBasePropertiesWidth then
+        self.maxBasePropertiesWidth = utils.getTextMaxWidth({ "Visualize Position", "Light Type", "Intensity", "EV", "Color", "Angles", "Radius", "Spot Capsule", "Softness" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
+
+    self:drawPreviewCheckbox("Visualize Position", self.maxBasePropertiesWidth)
+
+    style.mutedText("Light Type")
     ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxBasePropertiesWidth)
     self.lightType, changed = style.trackedCombo(self.object, "##type", self.lightType, self.lightTypes)
     self:updateFull(changed)
 
-    self.intensity, changed = style.trackedDragFloat(self.object, "##intensity", self.intensity, 0.1, 0, 9999, "%.1f Intensity", 90)
+    style.mutedText("Intensity")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxBasePropertiesWidth)
+    self.intensity, changed = style.trackedDragFloat(self.object, "##intensity", self.intensity, 0.1, 0, 9999, "%.1f", 50)
     if changed then
         self:updateParameters()
     end
+
+    style.mutedText("EV")
     ImGui.SameLine()
-    self.ev, _, finished = style.trackedDragFloat(self.object, "##ev", self.ev, 0.1, 0, 9999, "%.1f EV", 90)
+    ImGui.SetCursorPosX(self.maxBasePropertiesWidth)
+    self.ev, _, finished = style.trackedDragFloat(self.object, "##ev", self.ev, 0.1, 0, 9999, "%.1f", 50)
     self:updateFull(finished)
 
+    style.mutedText("Color")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxBasePropertiesWidth)
     self.color, changed = style.trackedColor(self.object, "##color", self.color, 60)
     if changed then
         self:updateParameters()
     end
 
-    ImGui.PushItemWidth(150 * style.viewSize)
-    if self.lightType == 1 then
-        self.innerAngle, changed = style.trackedDragFloat(self.object, "##inner", self.innerAngle, 0.1, 0, 9999, "%.1f Inner Angle", 105)
+    if self.lightType == 1 or (self.lightType == 2 and self.spotCapsule) then
+        style.mutedText("Angles")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxBasePropertiesWidth)
+        self.innerAngle, changed, finished = style.trackedDragFloat(self.object, "##inner", self.innerAngle, 0.1, 0, 9999, "%.1f Inner", 105)
         if changed then
             self:updateParameters()
         end
+        if self.lightType == 2 then
+            self:updateFull(finished)
+        end
+
         ImGui.SameLine()
-        self.outerAngle, changed = style.trackedDragFloat(self.object, "##outer", self.outerAngle, 0.1, 0, 9999, "%.1f Outer Angle", 105)
+        self.outerAngle, changed, finished = style.trackedDragFloat(self.object, "##outer", self.outerAngle, 0.1, 0, 9999, "%.1f Outer", 105)
         if changed then
             self:updateParameters()
         end
-        ImGui.SameLine()
-    end
-    if self.lightType == 1 or self.lightType == 2 then
-        self.radius, changed = style.trackedDragFloat(self.object, "##radius", self.radius, 0.25, 0, 9999, "%.1f Radius", 90)
-        if changed then
-            self:updateParameters()
+        if self.lightType == 2 then
+            self:updateFull(finished)
         end
-    end
-    if self.lightType == 2 then
+
+        style.mutedText("Softness")
         ImGui.SameLine()
-        self.capsuleLength, _, finished = style.trackedDragFloat(self.object, "##capsuleLength", self.capsuleLength, 0.05, 0, 9999, "%.2f Length", 90)
+        ImGui.SetCursorPosX(self.maxBasePropertiesWidth)
+        self.softness, _, finished = style.trackedDragFloat(self.object, "##softness", self.softness, 0.05, 0, 9999, "%.2f", 90)
         self:updateFull(finished)
     end
+    if self.lightType == 1 or self.lightType == 2 then
+        style.mutedText("Radius")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxBasePropertiesWidth)
+        self.radius, changed = style.trackedDragFloat(self.object, "##radius", self.radius, 0.25, 0, 9999, "%.1f", 90)
+        if changed then
+            self:updateParameters()
+        end
+        style.tooltip("How far the light source emitts light")
+    end
+    if self.lightType == 2 then
+        style.mutedText("Capsule Length")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxBasePropertiesWidth)
+        self.capsuleLength, _, finished = style.trackedDragFloat(self.object, "##capsuleLength", self.capsuleLength, 0.05, 0, 9999, "%.2f", 90)
+        self:updateFull(finished)
 
-    self.shadowHeaderState = ImGui.TreeNodeEx("Shadow Settings")
+        style.mutedText("Spot Capsule")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxBasePropertiesWidth)
+        self.spotCapsule, changed = style.trackedCheckbox(self.object, "##spotCapsule", self.spotCapsule)
+        self:updateFull(changed)
+    end
 
-    if self.shadowHeaderState then
+    if ImGui.TreeNodeEx("Shadow Settings") then
+        if not self.maxShadowPropertiesWidth then
+            self.maxShadowPropertiesWidth = utils.getTextMaxWidth({ "Contact Shadows", "Local Shadows", "Shadow Fade Distance", "Shadow Fade Range" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        end
+
+        style.mutedText("Contact Shadows")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
         self.contactShadows, changed = style.trackedCombo(self.object, "##contactShadows", self.contactShadows, self.contactShadowsTypes)
         self:updateFull(changed)
 
         if self.lightType == 1 or lightType == 2 then
+            style.mutedText("Local Shadows")
             ImGui.SameLine()
-            self.localShadows, changed = style.trackedCheckbox(self.object, "Local Shadows", self.localShadows)
+            ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+            self.localShadows, changed = style.trackedCheckbox(self.object, "##localShadows", self.localShadows)
             self:updateFull(changed)
         end
 
-        self.shadowFadeDistance, _, finished = style.trackedDragFloat(self.object, "##shadowFadeDistance", self.shadowFadeDistance, 0.01, 0, 9999, "%.1f Shadow Fade Dist.", 140)
-        self:updateFull(finished)
+        style.mutedText("Shadow Fade Distance")
         ImGui.SameLine()
-        self.shadowFadeRange, _, finished = style.trackedDragFloat(self.object, "##shadowFadeRange", self.shadowFadeRange, 0.01, 0, 9999, "%.1f Shadow Fade Range", 140)
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.shadowFadeDistance, _, finished = style.trackedDragFloat(self.object, "##shadowFadeDistance", self.shadowFadeDistance, 0.01, 0, 9999, "%.1f", 75)
+        self:updateFull(finished)
+
+        style.mutedText("Shadow Fade Range")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.shadowFadeRange, _, finished = style.trackedDragFloat(self.object, "##shadowFadeRange", self.shadowFadeRange, 0.01, 0, 9999, "%.1f", 75)
         self:updateFull(finished)
 
         ImGui.TreePop()
     end
 
-    self.miscHeaderState = ImGui.TreeNodeEx("Misc. Settings")
+    if ImGui.TreeNodeEx("Flicker Settings") then
+        if not self.maxFlickerPropertiesWidth then
+            self.maxFlickerPropertiesWidth = utils.getTextMaxWidth({ "Flicker Period", "Flicker Strength", "Flicker Offset" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        end
 
-    if self.miscHeaderState then
-        ImGui.Text("Flicker Settings")
-        style.tooltip("Controll light flickering, turn up strength to see effect")
+        style.mutedText("Flicker Period")
         ImGui.SameLine()
-        self.flickerPeriod, changed = style.trackedDragFloat(self.object, "##flickerPeriod", self.flickerPeriod, 0.01, 0.05, 9999, "%.2f Period", 85)
-        if changed then
-            self:updateParameters()
-        end
-        ImGui.SameLine()
-        self.flickerStrength, changed = style.trackedDragFloat(self.object, "##flickerStrength", self.flickerStrength, 0.01, 0, 9999, "%.2f Strength", 85)
-        if changed then
-            self:updateParameters()
-        end
-        ImGui.SameLine()
-        self.flickerOffset, changed = style.trackedDragFloat(self.object, "##flickerOffset", self.flickerOffset, 0.01, 0, 9999, "%.2f Offset", 85)
+        ImGui.SetCursorPosX(self.maxFlickerPropertiesWidth)
+        self.flickerPeriod, changed = style.trackedDragFloat(self.object, "##flickerPeriod", self.flickerPeriod, 0.01, 0.05, 9999, "%.2f", 85)
         if changed then
             self:updateParameters()
         end
 
-        self.useInParticles, changed = style.trackedCheckbox(self.object, "Use in particles", self.useInParticles)
-        self:updateFull(changed)
+        style.mutedText("Flicker Strength")
         ImGui.SameLine()
-        self.useInTransparents, changed = style.trackedCheckbox(self.object, "Use in transparents", self.useInTransparents)
-        self:updateFull(changed)
+        ImGui.SetCursorPosX(self.maxFlickerPropertiesWidth)
+        self.flickerStrength, changed = style.trackedDragFloat(self.object, "##flickerStrength", self.flickerStrength, 0.01, 0, 9999, "%.2f", 85)
+        if changed then
+            self:updateParameters()
+        end
+
+        style.mutedText("Flicker Offset")
         ImGui.SameLine()
-        self.scaleVolFog, _, finished = style.trackedDragFloat(self.object, "##scaleVolFog", self.scaleVolFog, 1, 0, 255, "%.1f Scale Vol. Fog", 120)
+        ImGui.SetCursorPosX(self.maxFlickerPropertiesWidth)
+        self.flickerOffset, changed = style.trackedDragFloat(self.object, "##flickerOffset", self.flickerOffset, 0.01, 0, 9999, "%.2f", 85)
+        if changed then
+            self:updateParameters()
+        end
+
+        ImGui.TreePop()
+    end
+
+    if ImGui.TreeNodeEx("Misc. Settings") then
+        if not self.maxShadowPropertiesWidth then
+            self.maxShadowPropertiesWidth = utils.getTextMaxWidth({ "Use in particles", "Use in transparents", "Scale Vol. Fog", "Auto Hide Distance", "Attenuation Mode", "Clamp Attenuation", "Specular Scale" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        end
+
+        style.mutedText("Use in particles")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.useInParticles, changed = style.trackedCheckbox(self.object, "##useInParticles", self.useInParticles)
+        self:updateFull(changed)
+
+        style.mutedText("Use in transparents")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.useInTransparents, changed = style.trackedCheckbox(self.object, "##useInTransparents", self.useInTransparents)
+        self:updateFull(changed)
+
+        style.mutedText("Scale Vol. Fog")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.scaleVolFog, _, finished = style.trackedDragFloat(self.object, "##scaleVolFog", self.scaleVolFog, 1, 0, 255, "%.1f", 110)
         self:updateFull(finished)
 
-        self.autoHideDistance, _, finished = style.trackedDragFloat(self.object, "##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.1f Hide Dist.", 90)
+        style.mutedText("Specular Scale")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.sceneSpecularScale, _, finished = style.trackedDragFloat(self.object, "##sceneSpecularScale", self.sceneSpecularScale, 1, 0, 255, "%.1f", 110)
         self:updateFull(finished)
 
-        self:drawPreviewCheckbox()
+        style.mutedText("Auto Hide Distance")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.autoHideDistance, _, finished = style.trackedDragFloat(self.object, "##autoHideDistance", self.autoHideDistance, 0.05, 0, 9999, "%.1f", 110)
+        self:updateFull(finished)
+
+        style.mutedText("Attenuation Mode")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.attenuation, changed = style.trackedCombo(self.object, "##attenuation", self.attenuation, self.attenuationTypes, 110)
+        self:updateFull(changed)
+
+        style.mutedText("Clamp Attenuation")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.clampAttenuation, changed = style.trackedCheckbox(self.object, "##clampAttenuation", self.clampAttenuation)
+        self:updateFull(changed)
 
         ImGui.TreePop()
     end
@@ -271,6 +397,17 @@ end
 
 function light:getVisualizerSize()
     return { x = 0.05, y = 0.05, z = 0.05 }
+end
+
+function light:getSize()
+    return { x = 0.02, y = 0.2, z = 0.2 }
+end
+
+function light:getBBox()
+    return {
+        min = { x = -0.01, y = -0.01, z = -0.1 },
+        max = { x = 0.01, y = 0.01, z = 0.1 }
+    }
 end
 
 function light:export()
@@ -304,7 +441,12 @@ function light:export()
         EV = self.ev,
         shadowFadeDistance = self.shadowFadeDistance,
         shadowFadeRange = self.shadowFadeRange,
-        contactShadows = self.contactShadowsTypes[self.contactShadows + 1]
+        contactShadows = self.contactShadowsTypes[self.contactShadows + 1],
+        spotCapsule = self.spotCapsule and 1 or 0,
+        softness = self.softness,
+        attenuation = self.attenuationTypes[self.attenuation + 1],
+        clampAttenuation = self.clampAttenuation and 1 or 0,
+        sceneSpecularScale = self.sceneSpecularScale
     }
 
     return data

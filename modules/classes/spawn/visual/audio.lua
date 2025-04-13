@@ -24,6 +24,8 @@ function sound:new()
     o.radius = 5
     o.previewColor = "mediumvioletred"
     o.emitterMetadataName = ""
+    o.useDoppler = true
+    o.usePhysicsObstruction = true
     o.previewed = true
     o.assetPreviewType = "position"
 
@@ -62,8 +64,11 @@ end
 
 function sound:save()
     local data = visualized.save(self)
+
     data.radius = self.radius
     data.emitterMetadataName = self.emitterMetadataName
+    data.useDoppler = self.useDoppler
+    data.usePhysicsObstruction = self.usePhysicsObstruction
 
     return data
 end
@@ -72,7 +77,7 @@ function sound:draw()
     visualized.draw(self)
 
     if not self.maxPropertyWidth then
-        self.maxPropertyWidth = utils.getTextMaxWidth({ "Radius", "Emitter Metadata Name" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Radius", "Use Doppler", "Use Physics Obstruction", "Emitter Metadata Name" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
     end
 
     self:drawPreviewCheckbox("Visualize", self.maxPropertyWidth)
@@ -84,6 +89,16 @@ function sound:draw()
     if change then
         self:updateScale()
     end
+
+    style.mutedText("Use Doppler")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.useDoppler, _ = style.trackedCheckbox(self.object, "##useDoppler", self.useDoppler)
+
+    style.mutedText("Use Physics Obstruction")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.usePhysicsObstruction, _ = style.trackedCheckbox(self.object, "##usePhysicsObstruction", self.usePhysicsObstruction)
 
     style.mutedText("Emitter Metadata Name")
     ImGui.SameLine()
@@ -121,8 +136,8 @@ function sound:export()
     data.data = {
         occlusionEnabled = 1,
         radius = self.radius,
-        usePhysicsObstruction = 1,
-        useDoppler = 1,
+        usePhysicsObstruction = self.usePhysicsObstruction and 1 or 0,
+        useDoppler = self.useDoppler and 1 or 0,
         Settings = {
             ["Data"] = {
                 ["$type"] = "audioAmbientAreaSettings",

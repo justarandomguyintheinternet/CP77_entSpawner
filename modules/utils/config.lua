@@ -54,7 +54,7 @@ function config.loadLists(path)
     local paths = {}
 
     for _, file in pairs(dir(path)) do
-        if file.name:match("^.+(%..+)$") == ".txt" then
+        if file.name:match("^.+(%..+)$"):lower() == ".txt" then
             local data = io.open(path .. file.name)
             for line in data:lines() do
                 table.insert(paths, {data = { spawnData = line }, lastSpawned = nil, name = line, fileName = utils.getFileName(line) })
