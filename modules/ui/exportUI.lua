@@ -1,6 +1,7 @@
 local config = require("modules/utils/config")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
+local settings = require("modules/utils/settings")
 
 local minScriptVersion = "1.0.3"
 local sectorCategory
@@ -870,6 +871,10 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
     }
 end
 
+local function shouldExportNode(node)
+    return not settings.ignoreHiddenDuringExport and (not utils.isA(node.parent, "randomizedGroup") or node.visible) or node.visible
+end
+
 function exportUI.exportGroup(group)
     if not config.fileExists("data/objects/" .. group.name .. ".json") then return end
 
@@ -919,7 +924,7 @@ function exportUI.exportGroup(group)
         for _, node in pairs(g.childs) do
             if node.name == groupName then
                 for _, entry in pairs(node:getPathsRecursive(false)) do
-                    if utils.isA(entry.ref, "spawnableElement") and not entry.ref.spawnable.noExport and not (utils.isA(node.parent, "randomizedGroup") and not node.visible) then
+                    if utils.isA(entry.ref, "spawnableElement") and not entry.ref.spawnable.noExport and shouldExportNode(node) then
                         table.insert(variantNodes[variant.name], entry)
                     end
                 end
@@ -928,7 +933,7 @@ function exportUI.exportGroup(group)
     end
 
     for _, node in pairs(g.childs) do
-        if utils.isA(node, "spawnableElement") and not node.spawnable.noExport and not (utils.isA(node.parent, "randomizedGroup") and not node.visible) then
+        if utils.isA(node, "spawnableElement") and not node.spawnable.noExport and shouldExportNode(node) then
             table.insert(variantNodes["default"], { ref = node })
         end
     end
@@ -953,7 +958,7 @@ function exportUI.exportGroup(group)
     end
 
     for key, object in pairs(nodes) do
-        if utils.isA(object.ref, "spawnableElement") and not object.ref.spawnable.noExport and not (utils.isA(object.ref.parent, "randomizedGroup") and not object.ref.visible) then
+        if utils.isA(object.ref, "spawnableElement") and not object.ref.spawnable.noExport and shouldExportNode(object.ref) then
             table.insert(exported.nodes, object.ref.spawnable:export(key, #objects))
 
             -- Handle device nodes

@@ -154,6 +154,9 @@ function settingsUI.draw(spawner)
     settings.despawnOnReload, changed = ImGui.Checkbox("Despawn everything on \"Reload all mods\"", settings.despawnOnReload)
     if changed then settings.save() end
 
+    settings.ignoreHiddenDuringExport, changed = ImGui.Checkbox("Ignore hidden elements during export", settings.ignoreHiddenDuringExport)
+    if changed then settings.save() end
+
     local index, changed = ImGui.Combo("Main Window Name", math.max(0, utils.indexValue(windowNames, settings.mainWindowName) - 1), windowNames, #windowNames)
     if changed then
         settings.mainWindowName = windowNames[index + 1]

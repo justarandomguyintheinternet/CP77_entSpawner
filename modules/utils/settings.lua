@@ -37,6 +37,7 @@ local config = require("modules/utils/config")
 ---@field public favoritesTagsAND boolean
 ---@field public mainWindowName string
 ---@field public draggingThreshold number
+---@field public ignoreHiddenDuringExport boolean
 local settingsData = {
     spawnPos = 1,
     spawnDist = 4,
@@ -72,6 +73,7 @@ local settingsData = {
     assetPreviewEnabled = {},
     mainWindowName = "World Builder",
     draggingThreshold = 5,
+    ignoreHiddenDuringExport = false,
 
     filterTags = {},
     favoritesFilter = "",

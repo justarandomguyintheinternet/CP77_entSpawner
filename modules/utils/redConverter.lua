@@ -292,7 +292,11 @@ local function importSimple(value, propType)
     elseif propType == "TweakDBID" then
         propData = TweakDBID.new(value["$value"])
     elseif propType == "NodeRef" then
-        propData = HashToNodeRef(loadstring("return " .. value["$value"] .. "ULL", "")())
+        if value["$storage"] == "string" then
+            propData = CreateNodeRef(value["$value"])
+        else
+            propData = HashToNodeRef(loadstring("return " .. value["$value"] .. "ULL", "")())
+        end
     end
 
     return propData
