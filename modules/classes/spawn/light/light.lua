@@ -36,6 +36,8 @@ local utils = require("modules/utils/utils")
 ---@field private clampAttenuation boolean
 ---@field private attenuationTypes table
 ---@field private sceneSpecularScale number
+---@field private sceneDiffuse boolean
+---@field private roughnessBias number
 local light = setmetatable({}, { __index = visualized })
 
 function light:new()
@@ -77,6 +79,8 @@ function light:new()
     o.attenuationTypes = utils.enumTable("rendLightAttenuation")
     o.sceneSpecularScale = 100
     o.clampAttenuation = false
+    o.sceneDiffuse = true
+    o.roughnessBias = 0
 
     o.maxBasePropertiesWidth = nil
     o.maxShadowPropertiesWidth = nil
@@ -118,6 +122,8 @@ function light:onAssemble(entity)
     component.attenuation = Enum.new("rendLightAttenuation", self.attenuation)
     component.clampAttenuation = self.clampAttenuation
     component.sceneSpecularScale = self.sceneSpecularScale
+    component.sceneDiffuse = self.sceneDiffuse
+    component.roughnessBias = self.roughnessBias
 
     entity:AddComponent(component)
 end
@@ -149,6 +155,8 @@ function light:save()
     data.attenuation = self.attenuation
     data.clampAttenuation = self.clampAttenuation
     data.sceneSpecularScale = self.sceneSpecularScale
+    data.sceneDiffuse = self.sceneDiffuse
+    data.roughnessBias = self.roughnessBias
 
     return data
 end
@@ -195,6 +203,7 @@ function light:draw()
     ImGui.SetCursorPosX(self.maxBasePropertiesWidth)
     self.intensity, changed = style.trackedDragFloat(self.object, "##intensity", self.intensity, 0.1, 0, 9999, "%.1f", 50)
     if changed then
+        self:updateScale()
         self:updateParameters()
     end
 
@@ -253,8 +262,11 @@ function light:draw()
         style.mutedText("Capsule Length")
         ImGui.SameLine()
         ImGui.SetCursorPosX(self.maxBasePropertiesWidth)
-        self.capsuleLength, _, finished = style.trackedDragFloat(self.object, "##capsuleLength", self.capsuleLength, 0.05, 0, 9999, "%.2f", 90)
+        self.capsuleLength, changed, finished = style.trackedDragFloat(self.object, "##capsuleLength", self.capsuleLength, 0.05, 0, 9999, "%.2f", 90)
         self:updateFull(finished)
+        if changed then
+            self:updateScale()
+        end
 
         style.mutedText("Spot Capsule")
         ImGui.SameLine()
@@ -331,7 +343,7 @@ function light:draw()
 
     if ImGui.TreeNodeEx("Misc. Settings") then
         if not self.maxShadowPropertiesWidth then
-            self.maxShadowPropertiesWidth = utils.getTextMaxWidth({ "Use in particles", "Use in transparents", "Scale Vol. Fog", "Auto Hide Distance", "Attenuation Mode", "Clamp Attenuation", "Specular Scale" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+            self.maxShadowPropertiesWidth = utils.getTextMaxWidth({ "Use in particles", "Use in transparents", "Scale Vol. Fog", "Auto Hide Distance", "Attenuation Mode", "Clamp Attenuation", "Specular Scale", "Scene Diffuse", "Roughness Bias" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
         end
 
         style.mutedText("Use in particles")
@@ -352,10 +364,22 @@ function light:draw()
         self.scaleVolFog, _, finished = style.trackedDragFloat(self.object, "##scaleVolFog", self.scaleVolFog, 1, 0, 255, "%.1f", 110)
         self:updateFull(finished)
 
+        style.mutedText("Scene Diffuse")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.sceneDiffuse, changed = style.trackedCheckbox(self.object, "##sceneDiffuse", self.sceneDiffuse)
+        self:updateFull(changed)
+
         style.mutedText("Specular Scale")
         ImGui.SameLine()
         ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
         self.sceneSpecularScale, _, finished = style.trackedDragFloat(self.object, "##sceneSpecularScale", self.sceneSpecularScale, 1, 0, 255, "%.1f", 110)
+        self:updateFull(finished)
+
+        style.mutedText("Roughness Bias")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.roughnessBias, _, finished = style.trackedDragFloat(self.object, "##roughnessBias", self.roughnessBias, 1, 0, 255, "%.1f", 110)
         self:updateFull(finished)
 
         style.mutedText("Auto Hide Distance")
@@ -396,7 +420,8 @@ function light:getProperties()
 end
 
 function light:getVisualizerSize()
-    return { x = 0.05, y = 0.05, z = 0.05 }
+    local size = math.max(math.min(0.35, ((self.intensity / 10000) * (self.lightType == 2 and self.capsuleLength / 2 or 1))), 0.05)
+    return { x = size, y = size, z = size }
 end
 
 function light:getSize()
@@ -446,7 +471,9 @@ function light:export()
         softness = self.softness,
         attenuation = self.attenuationTypes[self.attenuation + 1],
         clampAttenuation = self.clampAttenuation and 1 or 0,
-        sceneSpecularScale = self.sceneSpecularScale
+        sceneSpecularScale = self.sceneSpecularScale,
+        sceneDiffuse = self.sceneDiffuse and 1 or 0,
+        roughnessBias = self.roughnessBias
     }
 
     return data
