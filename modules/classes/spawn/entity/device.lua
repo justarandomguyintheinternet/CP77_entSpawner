@@ -107,7 +107,7 @@ end
 function device:getPSData()
     for _, data in pairs(self.instanceDataChanges) do
         if data.persistentState and data.persistentState.Data then
-            return data.persistentState.Data
+            return self:copyAndPrepareData(data.persistentState.Data)
         end
     end
 end
