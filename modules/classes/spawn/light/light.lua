@@ -93,6 +93,12 @@ function light:new()
    	return o
 end
 
+function light:loadSpawnData(data, position, rotation)
+    visualized.loadSpawnData(self, data, position, rotation)
+
+    self.roughnessBias = math.min(math.max(self.roughnessBias, -127), 127) -- Fix for incorrect clamping before
+end
+
 function light:onAssemble(entity)
     visualized.onAssemble(self, entity)
 
@@ -380,7 +386,7 @@ function light:draw()
         style.mutedText("Roughness Bias")
         ImGui.SameLine()
         ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
-        self.roughnessBias, _, finished = style.trackedDragFloat(self.object, "##roughnessBias", self.roughnessBias, 1, 0, 255, "%.1f", 110)
+        self.roughnessBias, _, finished = style.trackedDragFloat(self.object, "##roughnessBias", self.roughnessBias, 1, -127, 127, "%.1f", 110)
         self:updateFull(finished)
 
         style.mutedText("Auto Hide Distance")
