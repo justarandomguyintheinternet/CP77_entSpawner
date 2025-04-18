@@ -157,6 +157,7 @@ function light:save()
     data.sceneSpecularScale = self.sceneSpecularScale
     data.sceneDiffuse = self.sceneDiffuse
     data.roughnessBias = self.roughnessBias
+    data.localShadows = self.localShadows
 
     return data
 end
