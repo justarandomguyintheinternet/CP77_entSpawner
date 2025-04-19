@@ -219,7 +219,7 @@ function spawnUI.refresh()
     spawnUI.updateFilter()
 
     if settings.spawnUIOnlyNames then
-        table.sort(spawnUI.filteredList, function(a, b) return a.fileName < b.fileName end)
+        table.sort(spawnUI.filteredList, function(a, b) return a.fileName or a.name < b.fileName or b.name end)
     else
         table.sort(spawnUI.filteredList, function(a, b) return a.name < b.name end)
     end
