@@ -112,7 +112,9 @@ function spawner:new()
             Cron.Update(dt)
         end
 
-        self.editor.camera.deltaTime = dt
+        if self.editor.camera then
+            self.editor.camera.deltaTime = dt
+        end
     end)
 
     registerForEvent("onShutdown", function ()
