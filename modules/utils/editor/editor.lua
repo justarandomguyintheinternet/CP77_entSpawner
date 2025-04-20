@@ -739,7 +739,9 @@ function editor.handleBoxSelect()
 end
 
 function editor.onDraw()
-    editor.camera.update()
+    if editor.camera then
+        editor.camera.update()
+    end
 
     if editor.active and input.context.viewport.hovered then
         editor.checkArrow()

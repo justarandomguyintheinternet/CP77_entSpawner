@@ -38,6 +38,7 @@ local utils = require("modules/utils/utils")
 ---@field private sceneSpecularScale number
 ---@field private sceneDiffuse boolean
 ---@field private roughnessBias number
+---@field private sourceRadius number
 local light = setmetatable({}, { __index = visualized })
 
 function light:new()
@@ -81,6 +82,7 @@ function light:new()
     o.clampAttenuation = false
     o.sceneDiffuse = true
     o.roughnessBias = 0
+    o.sourceRadius = 0.05
 
     o.maxBasePropertiesWidth = nil
     o.maxShadowPropertiesWidth = nil
@@ -130,6 +132,7 @@ function light:onAssemble(entity)
     component.sceneSpecularScale = self.sceneSpecularScale
     component.sceneDiffuse = self.sceneDiffuse
     component.roughnessBias = self.roughnessBias
+    component.sourceRadius = self.sourceRadius
 
     entity:AddComponent(component)
 end
@@ -350,7 +353,7 @@ function light:draw()
 
     if ImGui.TreeNodeEx("Misc. Settings") then
         if not self.maxShadowPropertiesWidth then
-            self.maxShadowPropertiesWidth = utils.getTextMaxWidth({ "Use in particles", "Use in transparents", "Scale Vol. Fog", "Auto Hide Distance", "Attenuation Mode", "Clamp Attenuation", "Specular Scale", "Scene Diffuse", "Roughness Bias" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+            self.maxShadowPropertiesWidth = utils.getTextMaxWidth({ "Use in particles", "Use in transparents", "Scale Vol. Fog", "Auto Hide Distance", "Attenuation Mode", "Clamp Attenuation", "Specular Scale", "Scene Diffuse", "Roughness Bias", "Source Radius" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
         end
 
         style.mutedText("Use in particles")
@@ -387,6 +390,12 @@ function light:draw()
         ImGui.SameLine()
         ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
         self.roughnessBias, _, finished = style.trackedDragFloat(self.object, "##roughnessBias", self.roughnessBias, 1, -127, 127, "%.1f", 110)
+        self:updateFull(finished)
+
+        style.mutedText("Source Radius")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.sourceRadius, _, finished = style.trackedDragFloat(self.object, "##sourceRadius", self.sourceRadius, 0.0025, 0, 9999, "%.3f", 110)
         self:updateFull(finished)
 
         style.mutedText("Auto Hide Distance")
@@ -480,7 +489,8 @@ function light:export()
         clampAttenuation = self.clampAttenuation and 1 or 0,
         sceneSpecularScale = self.sceneSpecularScale,
         sceneDiffuse = self.sceneDiffuse and 1 or 0,
-        roughnessBias = self.roughnessBias
+        roughnessBias = self.roughnessBias,
+        sourceRadius = self.sourceRadius
     }
 
     return data
