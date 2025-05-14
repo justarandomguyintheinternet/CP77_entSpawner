@@ -1,6 +1,6 @@
-local CodewareVersion = "1.14.1"
-local ArchiveXLVersion = "1.20.0"
-local ModVersion = "1.0.4"
+local CodewareVersion = "1.15.0"
+local ArchiveXLVersion = "1.22.0"
+local ModVersion = "1.0.5"
 
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
