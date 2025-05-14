@@ -68,6 +68,18 @@ function settingsUI.draw(spawner)
     style.tooltip("Prefix to add when auto generating NodeRef")
 
     style.sectionHeaderEnd()
+    style.sectionHeaderStart("EDITOR MODE")
+
+    settings.cameraMovementSpeed, changed = ImGui.InputFloat("Camera Movement Speed", settings.cameraMovementSpeed, 0, 10, "%.2f")
+    if changed then settings.save() end
+
+    settings.cameraRotateSpeed, changed = ImGui.InputFloat("Camera Rotation Speed", settings.cameraRotateSpeed, 0, 10, "%.2f")
+    if changed then settings.save() end
+
+    settings.cameraZoomSpeed, changed = ImGui.InputFloat("Camera Zoom Speed", settings.cameraZoomSpeed, 0, 10, "%.2f")
+    if changed then settings.save() end
+
+    style.sectionHeaderEnd()
     style.sectionHeaderStart("VISUALIZERS")
 
     settings.gizmoActive, changed = ImGui.Checkbox("Show arrows", settings.gizmoActive)

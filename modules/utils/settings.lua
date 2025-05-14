@@ -38,6 +38,9 @@ local config = require("modules/utils/config")
 ---@field public mainWindowName string
 ---@field public draggingThreshold number
 ---@field public ignoreHiddenDuringExport boolean
+---@field public cameraMovementSpeed number
+---@field public cameraRotateSpeed number
+---@field public cameraZoomSpeed number
 local settingsData = {
     spawnPos = 1,
     spawnDist = 4,
@@ -74,6 +77,9 @@ local settingsData = {
     mainWindowName = "World Builder",
     draggingThreshold = 5,
     ignoreHiddenDuringExport = false,
+    cameraMovementSpeed = 4,
+    cameraRotateSpeed = 0.4,
+    cameraZoomSpeed = 2.75,
 
     filterTags = {},
     favoritesFilter = "",

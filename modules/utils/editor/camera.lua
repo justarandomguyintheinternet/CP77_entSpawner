@@ -1,5 +1,6 @@
 local utils = require("modules/utils/utils")
 local tween = require("modules/tween/tween")
+local settings = require("modules/utils/settings")
 
 ---@class camera
 local camera = {
@@ -11,9 +12,6 @@ local camera = {
     playerTransform = nil,
     cameraTransform = nil,
     preTransitionCameraDistance = 0,
-    translateSpeed = 4,
-    rotateSpeed = 0.4,
-    zoomSpeed = 2.75,
     transitionTween = nil,
     suspendState = false
 }
@@ -127,16 +125,16 @@ function camera.update()
         local distanceMultiplier = math.max(1, (camera.distance / 10))
 
         if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
-            camera.cameraTransform.position = utils.addVector(camera.cameraTransform.position, utils.multVector(camera.cameraTransform.rotation:GetUp(), (y / camera.translateSpeed) * camera.deltaTime  * distanceMultiplier))
-            camera.cameraTransform.position = utils.subVector(camera.cameraTransform.position, utils.multVector(camera.cameraTransform.rotation:GetRight(), (x / camera.translateSpeed) * camera.deltaTime  * distanceMultiplier))
+            camera.cameraTransform.position = utils.addVector(camera.cameraTransform.position, utils.multVector(camera.cameraTransform.rotation:GetUp(), (y / (1 / settings.cameraMovementSpeed * 4)) * camera.deltaTime  * distanceMultiplier))
+            camera.cameraTransform.position = utils.subVector(camera.cameraTransform.position, utils.multVector(camera.cameraTransform.rotation:GetRight(), (x / (1 / settings.cameraMovementSpeed * 4)) * camera.deltaTime  * distanceMultiplier))
         elseif ImGui.IsKeyDown(ImGuiKey.LeftCtrl) then
-            camera.distance = camera.distance + (y / camera.zoomSpeed) * camera.deltaTime * distanceMultiplier
+            camera.distance = camera.distance + (y / (1 / settings.cameraZoomSpeed * 2.75)) * camera.deltaTime * distanceMultiplier
             camera.distance = math.max(0.1, camera.distance)
 
             GetPlayer():GetFPPCameraComponent():SetLocalPosition(Vector4.new(0, - camera.distance, 0, 0))
         else
-            camera.cameraTransform.rotation.yaw = camera.cameraTransform.rotation.yaw - (x / camera.rotateSpeed) * camera.deltaTime
-            camera.cameraTransform.rotation.pitch = camera.cameraTransform.rotation.pitch - (y / camera.rotateSpeed) * camera.deltaTime
+            camera.cameraTransform.rotation.yaw = camera.cameraTransform.rotation.yaw - (x / (1 / settings.cameraRotateSpeed * 0.4)) * camera.deltaTime
+            camera.cameraTransform.rotation.pitch = camera.cameraTransform.rotation.pitch - (y / (1 / settings.cameraRotateSpeed * 0.4)) * camera.deltaTime
             GetPlayer():GetFPPCameraComponent().pitchMax = camera.cameraTransform.rotation.pitch
             GetPlayer():GetFPPCameraComponent().pitchMin = camera.cameraTransform.rotation.pitch
         end
