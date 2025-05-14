@@ -39,6 +39,7 @@ local utils = require("modules/utils/utils")
 ---@field private sceneDiffuse boolean
 ---@field private roughnessBias number
 ---@field private sourceRadius number
+---@field private directional boolean
 local light = setmetatable({}, { __index = visualized })
 
 function light:new()
@@ -83,6 +84,7 @@ function light:new()
     o.sceneDiffuse = true
     o.roughnessBias = 0
     o.sourceRadius = 0.05
+    o.directional = false
 
     o.maxBasePropertiesWidth = nil
     o.maxShadowPropertiesWidth = nil
@@ -135,6 +137,7 @@ function light:onAssemble(entity)
     component.sceneDiffuse = self.sceneDiffuse
     component.roughnessBias = self.roughnessBias
     component.sourceRadius = self.sourceRadius
+    component.directional = self.directional
 
     entity:AddComponent(component)
 end
@@ -169,6 +172,8 @@ function light:save()
     data.sceneDiffuse = self.sceneDiffuse
     data.roughnessBias = self.roughnessBias
     data.localShadows = self.localShadows
+    data.sourceRadius = self.sourceRadius
+    data.directional = self.directional
 
     return data
 end
@@ -355,7 +360,7 @@ function light:draw()
 
     if ImGui.TreeNodeEx("Misc. Settings") then
         if not self.maxShadowPropertiesWidth then
-            self.maxShadowPropertiesWidth = utils.getTextMaxWidth({ "Use in particles", "Use in transparents", "Scale Vol. Fog", "Auto Hide Distance", "Attenuation Mode", "Clamp Attenuation", "Specular Scale", "Scene Diffuse", "Roughness Bias", "Source Radius" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+            self.maxShadowPropertiesWidth = utils.getTextMaxWidth({ "Directional", "Use in particles", "Use in transparents", "Scale Vol. Fog", "Auto Hide Distance", "Attenuation Mode", "Clamp Attenuation", "Specular Scale", "Scene Diffuse", "Roughness Bias", "Source Radius" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
         end
 
         style.mutedText("Use in particles")
@@ -416,6 +421,12 @@ function light:draw()
         ImGui.SameLine()
         ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
         self.clampAttenuation, changed = style.trackedCheckbox(self.object, "##clampAttenuation", self.clampAttenuation)
+        self:updateFull(changed)
+
+        style.mutedText("Directional")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
+        self.directional, changed = style.trackedCheckbox(self.object, "##directional", self.directional)
         self:updateFull(changed)
 
         ImGui.TreePop()
@@ -492,7 +503,8 @@ function light:export()
         sceneSpecularScale = self.sceneSpecularScale,
         sceneDiffuse = self.sceneDiffuse and 1 or 0,
         roughnessBias = self.roughnessBias,
-        sourceRadius = self.sourceRadius
+        sourceRadius = self.sourceRadius,
+        directional = self.directional and 1 or 0
     }
 
     return data

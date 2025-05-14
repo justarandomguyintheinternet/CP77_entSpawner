@@ -108,6 +108,8 @@ function spawner:new()
     end)
 
     registerForEvent("onUpdate", function (dt)
+        if not self.editor then return end
+
         if self.runtimeData.inGame and not self.runtimeData.inMenu then
             Cron.Update(dt)
         end
@@ -124,6 +126,8 @@ function spawner:new()
     end)
 
     registerForEvent("onDraw", function()
+        if not self.editor then return end
+
         style.initialize(true)
         self.editor.suspend(self.runtimeData.cetOpen)
 
