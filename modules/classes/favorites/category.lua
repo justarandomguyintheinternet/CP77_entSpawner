@@ -267,7 +267,7 @@ function category:drawEditPopup()
 				self:delete()
 			end
 			ImGui.SameLine()
-			if ImGui.Button("Cancle") then
+			if ImGui.Button("Cancel") then
 				ImGui.CloseCurrentPopup()
 			end
 			ImGui.EndPopup()

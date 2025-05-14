@@ -54,23 +54,29 @@ function favoritesUI.init(spawner)
 
     for _, file in pairs(dir("data/favorite")) do
         if file.name:match("^.+(%..+)$") == ".json" then
-            local category = require("modules/classes/favorites/category"):new(favoritesUI)
-            category:load(config.loadFile("data/favorite/" .. file.name), file.name)
+            local data = config.loadFile("data/favorite/" .. file.name)
 
-            if favoritesUI.categories[category.name] then
-                local target = favoritesUI.categories[category.name]
-                local origin = category
-
-                if #target.favorites < #origin.favorites then
-                    target = origin
-                    origin = favoritesUI.categories[category.name]
-                end
-                target:merge(origin)
-
-                -- Merging will remove category.name from the list, so we have to re-add it (Due to identical names)
-                favoritesUI.categories[target.name] = target
+            if not data or not data.favorites then
+                os.remove("data/favorite/" .. file.name)
             else
-                favoritesUI.categories[category.name] = category
+                local category = require("modules/classes/favorites/category"):new(favoritesUI)
+                category:load(config.loadFile("data/favorite/" .. file.name), file.name)
+
+                if favoritesUI.categories[category.name] then
+                    local target = favoritesUI.categories[category.name]
+                    local origin = category
+
+                    if #target.favorites < #origin.favorites then
+                        target = origin
+                        origin = favoritesUI.categories[category.name]
+                    end
+                    target:merge(origin)
+
+                    -- Merging will remove category.name from the list, so we have to re-add it (Due to identical names)
+                    favoritesUI.categories[target.name] = target
+                else
+                    favoritesUI.categories[category.name] = category
+                end
             end
         end
     end

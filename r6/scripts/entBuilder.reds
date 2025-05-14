@@ -1,3 +1,4 @@
+@if(ModuleExists("Codeware"))
 public class EntityBuilder extends ScriptableService {
     private func Initialize() {
         GameInstance.GetCallbackSystem().RegisterCallback(n"Entity/Initialize", this, n"OnAssemble");

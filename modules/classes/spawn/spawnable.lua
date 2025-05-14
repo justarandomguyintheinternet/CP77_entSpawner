@@ -417,7 +417,7 @@ function spawnable:assetPreview(state)
             self:setAssetPreviewTextPostition()
         end)
     else
-        if self.assetPreviewType == "backdrop" then
+        if self.assetPreviewType == "backdrop" and preview.elements["previewFirstLine"] then
             preview.elements["previewFirstLine"]:SetVisible(false)
             preview.elements["previewSecondLine"]:SetVisible(false)
             preview.elements["previewThirdLine"]:SetVisible(false)
