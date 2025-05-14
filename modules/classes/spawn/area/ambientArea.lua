@@ -112,7 +112,7 @@ function ambientArea:drawAmbient(changed)
     style.mutedText("Priority")
     ImGui.SameLine()
     ImGui.SetCursorPosX(max)
-    self.trigger.Settings.Data.Priority, changed = style.trackedDragFloat(self.object, "##Priority", self.trigger.Settings.Data.Priority, 1, 0, 9999, "%.0f", 75)
+    self.trigger.Settings.Data.Priority, changed = style.trackedDragInt(self.object, "##Priority", self.trigger.Settings.Data.Priority, 0, 9999, 75)
     if changed then
         self.trigger.Settings.Data.Priority = math.floor(self.trigger.Settings.Data.Priority)
     end

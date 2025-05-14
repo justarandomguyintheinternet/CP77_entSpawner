@@ -190,7 +190,7 @@ function community:drawPeriod(periods, periodKey)
         style.mutedText("Quantity")
         ImGui.SameLine()
         ImGui.SetCursorPosX(max)
-        period.quantity, changed = style.trackedDragFloat(self.object, "##quantity", period.quantity, 1, 0, 9999, "%.0f", 75)
+        period.quantity, changed = style.trackedDragInt(self.object, "##quantity", period.quantity, 0, 9999, 75)
         if changed then
             period.quantity = math.floor(period.quantity)
         end

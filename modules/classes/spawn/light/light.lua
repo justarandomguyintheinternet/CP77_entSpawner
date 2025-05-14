@@ -98,7 +98,9 @@ end
 function light:loadSpawnData(data, position, rotation)
     visualized.loadSpawnData(self, data, position, rotation)
 
-    self.roughnessBias = math.min(math.max(self.roughnessBias, -127), 127) -- Fix for incorrect clamping before
+    self.roughnessBias = math.min(math.max(math.floor(self.roughnessBias), -127), 127) -- Fix for incorrect clamping before
+    self.scaleVolFog = math.floor(self.scaleVolFog)
+    self.sceneSpecularScale = math.floor(self.sceneSpecularScale)
 end
 
 function light:onAssemble(entity)
@@ -371,7 +373,7 @@ function light:draw()
         style.mutedText("Scale Vol. Fog")
         ImGui.SameLine()
         ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
-        self.scaleVolFog, _, finished = style.trackedDragFloat(self.object, "##scaleVolFog", self.scaleVolFog, 1, 0, 255, "%.1f", 110)
+        self.scaleVolFog, _, finished = style.trackedDragInt(self.object, "##scaleVolFog", self.scaleVolFog, 0, 255, 110)
         self:updateFull(finished)
 
         style.mutedText("Scene Diffuse")
@@ -383,13 +385,13 @@ function light:draw()
         style.mutedText("Specular Scale")
         ImGui.SameLine()
         ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
-        self.sceneSpecularScale, _, finished = style.trackedDragFloat(self.object, "##sceneSpecularScale", self.sceneSpecularScale, 1, 0, 255, "%.1f", 110)
+        self.sceneSpecularScale, _, finished = style.trackedDragInt(self.object, "##sceneSpecularScale", self.sceneSpecularScale, 0, 255, 110)
         self:updateFull(finished)
 
         style.mutedText("Roughness Bias")
         ImGui.SameLine()
         ImGui.SetCursorPosX(self.maxShadowPropertiesWidth)
-        self.roughnessBias, _, finished = style.trackedDragFloat(self.object, "##roughnessBias", self.roughnessBias, 1, -127, 127, "%.1f", 110)
+        self.roughnessBias, _, finished = style.trackedDragInt(self.object, "##roughnessBias", self.roughnessBias, -127, 127, 110)
         self:updateFull(finished)
 
         style.mutedText("Source Radius")
