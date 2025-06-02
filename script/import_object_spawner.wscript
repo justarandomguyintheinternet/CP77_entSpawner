@@ -1,6 +1,6 @@
 // Imports an entitySpawner json export
 // @author keanuwheeze
-// @version 1.0.3
+// @version 1.0.4
 
 //////////////// Modify this //////////////////
 
@@ -10,7 +10,7 @@ const inputFilePathInRawFolder = "new_project_exported.json"
 
 import * as Logger from 'Logger.wscript';
 
-const version = "1.0.3"
+const version = "1.0.4"
 const header = {
   "Header": {
     "WolvenKitVersion": "8.14.1",
@@ -89,7 +89,8 @@ const deepCopy = (origin, target) => {
 
 const insertNode = (sector, node) => {
 	let nodeData = getNewWorldNodeData()
-	
+	let streamingRefPoint = node.streamingRefPoint || node.position
+
 	nodeData.NodeIndex = sector.Data.RootChunk.nodes.length
 	
 	// Position
@@ -104,18 +105,18 @@ const insertNode = (sector, node) => {
 	nodeData.Uk11 = node.uk11
 	
 	// Pivot
-	nodeData.Pivot.X = node.position.x
-	nodeData.Pivot.Y = node.position.y
-	nodeData.Pivot.Z = node.position.z
-	
+	nodeData.Pivot.X = streamingRefPoint.x
+	nodeData.Pivot.Y = streamingRefPoint.y
+	nodeData.Pivot.Z = streamingRefPoint.z
+
 	// Bounds
 	nodeData.Bounds.Max.X = node.position.x
 	nodeData.Bounds.Max.Y = node.position.y
 	nodeData.Bounds.Max.Z = node.position.z
 
-	nodeData.Bounds.Min.X = node.position.x
-	nodeData.Bounds.Min.Y = node.position.y
-	nodeData.Bounds.Min.Z = node.position.z
+	nodeData.Bounds.Min.X = streamingRefPoint.x
+	nodeData.Bounds.Min.Y = streamingRefPoint.y
+	nodeData.Bounds.Min.Z = streamingRefPoint.z
 
 	// Scale
 	nodeData.Scale.X = node.scale.x
@@ -374,7 +375,13 @@ export function RunEntitySpawnerImport(filePath = inputFilePathInRawFolder, call
 			]
 		}
 
-		wkit.SaveToResources(`${data.name}.xl`, wkit.JsonToYaml(JSON.stringify(xl)))
+		let xlBlob = JSON.stringify(xl)
+
+		if (data.xlFormat == 1) {
+			xlBlob = wkit.JsonToYaml(xlBlob)
+		}
+
+		wkit.SaveToResources(`${data.name}.xl`, xlBlob)
 		wkit.SaveToProject(`${data.name}/all.streamingblock`, wkit.JsonToCR2W(JSON.stringify(block)))
 
 		Logger.Success("Import finished.")

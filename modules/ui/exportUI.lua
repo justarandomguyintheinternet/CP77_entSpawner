@@ -3,11 +3,12 @@ local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local settings = require("modules/utils/settings")
 
-local minScriptVersion = "1.0.3"
+local minScriptVersion = "1.0.4"
 local sectorCategory
 
 exportUI = {
     projectName = "",
+    xlFormat = 0,
     groups = {},
     templates = {},
     spawner = nil,
@@ -20,7 +21,8 @@ exportUI = {
         spotReferencingEmpty = {},
         markingUnresolved = {}
     },
-    sectorPropertiesWidth = nil
+    sectorPropertiesWidth = nil,
+    mainPropertiesWidth = nil
 }
 
 function exportUI.init(spawner)
@@ -87,7 +89,7 @@ function exportUI.drawGroups()
                 ImGui.PopStyleVar()
 
                 if not exportUI.sectorPropertiesWidth then
-                    exportUI.sectorPropertiesWidth = utils.getTextMaxWidth({"Group file name:", "Sector Category:", "Sector Level:", "Streaming Box Extents:"}) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+                    exportUI.sectorPropertiesWidth = utils.getTextMaxWidth({ "Group file name:", "Sector Category:", "Sector Level:", "Streaming Box Extents:" }) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
                 end
 
                 if ImGui.TreeNodeEx("Variants", ImGuiTreeNodeFlags.SpanFullWidth) then
@@ -253,6 +255,10 @@ function exportUI.loadTemplate(data)
             group.variantData = variants
             table.insert(exportUI.groups, group)
         end
+    end
+
+    if data.xlFormat == nil then
+        data.xlFormat = 0
     end
 
     exportUI.projectName = data.projectName
@@ -502,12 +508,24 @@ function exportUI.draw()
 
     style.sectionHeaderStart("PROPERTIES")
 
+    if not exportUI.mainPropertiesWidth then
+        exportUI.mainPropertiesWidth = utils.getTextMaxWidth({ "Project Name", "XL Format" }) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
+
     style.pushStyleColor(exportUI.projectName == "" and exportUI.exportHovered, ImGuiCol.Text, 0xFF0000FF)
     ImGui.Text("Project Name")
     style.popStyleColor(exportUI.projectName == "" and exportUI.exportHovered)
     ImGui.SameLine()
     ImGui.SetNextItemWidth(200 * style.viewSize)
+    ImGui.SetCursorPosX(exportUI.mainPropertiesWidth)
     exportUI.projectName = ImGui.InputTextWithHint('##name', 'Export name...', exportUI.projectName, 100)
+
+    ImGui.Text("XL Format")
+    ImGui.SameLine()
+    ImGui.SetNextItemWidth(150 * style.viewSize)
+    ImGui.SetCursorPosX(exportUI.mainPropertiesWidth)
+    exportUI.xlFormat, _ = ImGui.Combo("##xlFormat", exportUI.xlFormat, { "JSON", "YAML" }, 2)
+    style.tooltip("Select the format in which the contents of the generated .xl file should be.")
 
     style.sectionHeaderEnd()
     style.sectionHeaderStart("GROUPS")
@@ -528,6 +546,7 @@ function exportUI.draw()
     if ImGui.Button("Save as Template") and #exportUI.groups > 0 then
         local data = {
             projectName = exportUI.projectName,
+            xlFormat = exportUI.xlFormat,
             groups = utils.deepcopy(exportUI.groups)
         }
         exportUI.templates[exportUI.projectName] = data
@@ -984,6 +1003,7 @@ end
 function exportUI.export()
     local project = {
         name = utils.createFileName(exportUI.projectName):lower():gsub(" ", "_"),
+        xlFormat = exportUI.xlFormat,
         sectors = {},
         devices = {},
         psEntries = {},

@@ -171,7 +171,7 @@ function positionable:onEdited() end
 
 ---@protected
 function positionable:drawCopyPaste(name)
-	if ImGui.BeginPopupContextItem("##pasteProperty" .. name, ImGuiPopupFlags.MouseButtonRight) then
+	if not ImGui.IsKeyDown(ImGuiKey.LeftShift) and ImGui.BeginPopupContextItem("##pasteProperty" .. name, ImGuiPopupFlags.MouseButtonRight) then
         if ImGui.MenuItem("Copy position") then
 			local pos = self:getPosition()
 			utils.insertClipboardValue("position", { x = pos.x, y = pos.y, z = pos.z })
@@ -230,7 +230,7 @@ function positionable:drawCopyPaste(name)
 end
 
 ---@protected
-function positionable:drawProp(prop, name, axis)
+function positionable:drawProp(prop, name, axis, disableInput)
 	local steps = (axis == "roll" or axis == "pitch" or axis == "yaw") and settings.rotSteps or settings.posSteps
 	local formatText = "%.2f"
 
@@ -239,7 +239,12 @@ function positionable:drawProp(prop, name, axis)
 		formatText = "%.3f"
 	end
 
-    local newValue, changed = ImGui.DragFloat("##" .. name, prop, steps, -99999, 99999, formatText .. " " .. name, ImGuiSliderFlags.NoRoundToFormat)
+	local flags = ImGuiSliderFlags.NoRoundToFormat
+	if disableInput then
+		flags = flags + ImGuiSliderFlags.NoInput
+	end
+
+    local newValue, changed = ImGui.DragFloat("##" .. name, prop, steps, -99999, 99999, formatText .. " " .. name, flags)
 	self.controlsHovered = (ImGui.IsItemHovered() or ImGui.IsItemActive()) or self.controlsHovered
 	if (ImGui.IsItemHovered() or ImGui.IsItemActive()) and axis ~= self.visualizerDirection then
 		self:setVisualizerDirection(axis)
@@ -296,6 +301,8 @@ function positionable:drawProp(prop, name, axis)
     end
 
 	self:drawCopyPaste(name)
+
+	return finished
 end
 
 ---@protected
@@ -312,7 +319,7 @@ function positionable:drawPosition(position)
     style.pushButtonNoBG(true)
     if ImGui.Button(IconGlyphs.AccountArrowLeftOutline) then
 		history.addAction(history.getElementChange(self))
-		local pos = utils.getPlayerPosition()
+		local pos = utils.getPlayerPosition(editor.active)
 
         self:setPositionDelta(Vector4.new(pos.x - position.x, pos.y - position.y, pos.z - position.z, 0))
     end
@@ -341,16 +348,35 @@ function positionable:drawRelativePosition()
     ImGui.PopItemWidth()
 end
 
+function positionable:handleRightAngleChange(axis, shiftActive)
+	if not shiftActive then return end
+
+	if ImGui.IsItemHovered() and ImGui.IsMouseReleased(ImGuiMouseButton.Left) and shiftActive then
+		history.addAction(history.getElementChange(self))
+		self:setRotationDelta(EulerAngles.new(axis == "roll" and 90 or 0, axis == "pitch" and 90 or 0, axis == "yaw" and 90 or 0))
+	end
+	if ImGui.IsItemHovered() and ImGui.IsMouseReleased(ImGuiMouseButton.Right) and shiftActive then
+		history.addAction(history.getElementChange(self))
+		self:setRotationDelta(EulerAngles.new(axis == "roll" and -90 or 0, axis == "pitch" and -90 or 0, axis == "yaw" and -90 or 0))
+	end
+end
+
 ---@protected
 function positionable:drawRotation(rotation)
     ImGui.PushItemWidth(80 * style.viewSize)
 	local locked = self.rotationLocked
+	local shiftActive = ImGui.IsKeyDown(ImGuiKey.LeftShift) and not ImGui.IsMouseDragging(0, 0)
+
+	local finished = false
 	style.pushGreyedOut(locked)
-    self:drawProp(rotation.roll, "Roll", "roll")
+    finished = self:drawProp(rotation.roll, "Roll", "roll", shiftActive) or finished
+	self:handleRightAngleChange("roll", shiftActive and not finished)
     ImGui.SameLine()
-    self:drawProp(rotation.pitch, "Pitch", "pitch")
+    finished = self:drawProp(rotation.pitch, "Pitch", "pitch", shiftActive) or finished
+	self:handleRightAngleChange("pitch", shiftActive and not finished)
     ImGui.SameLine()
-	self:drawProp(rotation.yaw, "Yaw", "yaw")
+	finished = self:drawProp(rotation.yaw, "Yaw", "yaw", shiftActive) or finished
+	self:handleRightAngleChange("yaw", shiftActive and not finished)
 	style.popGreyedOut(locked)
     ImGui.SameLine()
 

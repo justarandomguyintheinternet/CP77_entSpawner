@@ -48,7 +48,7 @@ local preview = require("modules/utils/previewUtils")
 ---@field public isAssetPreview boolean
 ---@field private assetPreviewLensDistortion boolean
 ---@field public streamingRefPointOverride boolean
----@field public steamingRefPoint Vector4
+---@field public streamingRefPoint Vector4
 local spawnable = {}
 
 function spawnable:new()
@@ -85,7 +85,7 @@ function spawnable:new()
     o.streamingMultiplier = 1
     o.nodeRef = ""
     o.streamingRefPointOverride = false
-    o.steamingRefPoint = Vector4.new(0, 0, 0, 0)
+    o.streamingRefPoint = Vector4.new(0, 0, 0, 0)
 
     o.isHovered = false
     o.arrowDirection = "none"
@@ -238,7 +238,7 @@ function spawnable:save()
         uk11 = self.uk11,
         nodeRef = self.nodeRef,
         streamingRefPointOverride = self.streamingRefPointOverride,
-        steamingRefPoint = utils.fromVector(self.steamingRefPoint)
+        streamingRefPoint = utils.fromVector(self.streamingRefPoint)
     }
 end
 
@@ -253,7 +253,7 @@ function spawnable:getProperties()
         defaultHeader = false,
         draw = function()
             if not self.worldNodePropertyWidth then
-                self.worldNodePropertyWidth = utils.getTextMaxWidth({ "Node Ref", "Primary Range", "Secondary Range", "Override Streaming Ref. Point" }) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+                self.worldNodePropertyWidth = utils.getTextMaxWidth({ "Node Ref", "Primary Range", "Secondary Range", "Override Streaming", "Streaming Ref. Point", "Auto-Set Multiplier" }) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
             end
 
             local entry = self.nodeRef ~= "" and registry.refs[self.object:getRootParent().name] and registry.refs[self.object:getRootParent().name][self.nodeRef]
@@ -287,9 +287,9 @@ function spawnable:getProperties()
             ImGui.SetCursorPosX(self.worldNodePropertyWidth)
             self.primaryRange, _, _ = style.trackedDragFloat(self.object, "##primaryRange", self.primaryRange, 0.1, 0, 9999, "%.2f", 90)
             ImGui.SameLine()
-            local distance = utils.distanceVector(self.position, GetPlayer():GetWorldPosition())
+            local distance = self.streamingRefPointOverride and utils.distanceVector(self.streamingRefPoint, GetPlayer():GetWorldPosition()) or utils.distanceVector(self.position, GetPlayer():GetWorldPosition())
             style.styledText(IconGlyphs.AxisArrowInfo, distance > self.primaryRange and 0xFF0000FF or 0xFF00FF00)
-            style.tooltip("Distance to player: " .. string.format("%.2f", distance))
+            style.tooltip(string.format("Distance to from %s: %.2f", self.streamingRefPointOverride and "reference point" or "node position", distance))
 
             style.mutedText("Secondary Range")
             ImGui.SameLine()
@@ -297,7 +297,16 @@ function spawnable:getProperties()
             self.secondaryRange, _, _ = style.trackedDragFloat(self.object, "##secondaryRange", self.secondaryRange, 0.1, 0, 9999, "%.2f", 90)
             ImGui.SameLine()
             style.styledText(IconGlyphs.AxisArrowInfo, distance > self.secondaryRange and 0xFF0000FF or 0xFF00FF00)
-            style.tooltip("Distance to player: " .. string.format("%.2f", distance))
+            style.tooltip(string.format("Distance to from %s: %.2f", self.streamingRefPointOverride and "reference point" or "node position", distance))
+
+            style.mutedText("Auto-Set Multiplier")
+            ImGui.SameLine()
+            ImGui.SetCursorPosX(self.worldNodePropertyWidth)
+            ImGui.SetNextItemWidth(90 * style.viewSize)
+            self.streamingMultiplier, _ = ImGui.DragFloat("##autoSetMultiplier", self.streamingMultiplier, 0.01, 0, 50, "%.2f")
+            style.tooltip("Multiplier for streaming values, when using \"Auto-Set\"")
+
+            ImGui.SameLine()
 
             if ImGui.Button("Auto-Set") then
                 history.addAction(history.getElementChange(self.object))
@@ -307,32 +316,25 @@ function spawnable:getProperties()
                 self.secondaryRange = values.secondary
             end
 
-            ImGui.SameLine()
-
-            ImGui.SetNextItemWidth(80 * style.viewSize)
-            self.streamingMultiplier, _ = ImGui.DragFloat("Multiplier", self.streamingMultiplier, 0.01, 0, 50, "%.2f")
-            style.tooltip("Multiplier for streaming values, when using \"Auto-Set\"")
-
-            style.mutedText("Override Streaming Ref. Point")
+            style.mutedText("Override Streaming")
             ImGui.SameLine()
             ImGui.SetCursorPosX(self.worldNodePropertyWidth)
             self.streamingRefPointOverride, _ = ImGui.Checkbox("##streamingRefPointOverride", self.streamingRefPointOverride)
             style.tooltip("If enabled, the streaming reference point will be used for streaming distances instead of the node position")
 
             if self.streamingRefPointOverride then
-                ImGui.SameLine()
                 style.mutedText("Streaming Ref. Point")
                 ImGui.SameLine()
                 ImGui.SetCursorPosX(self.worldNodePropertyWidth)
-                self.steamingRefPoint.x, _, _ = style.trackedDragFloat(self.object, "##steamingRefPointX", self.steamingRefPoint.x, 0.05, -99999, 99999, "%.2f X", 60)
+                self.streamingRefPoint.x, _, _ = style.trackedDragFloat(self.object, "##streamingRefPointX", self.streamingRefPoint.x, 0.05, -99999, 99999, "%.2f X", 75)
                 ImGui.SameLine()
-                self.steamingRefPoint.y, _, _ = style.trackedDragFloat(self.object, "##steamingRefPointY", self.steamingRefPoint.y, 0.05, -99999, 99999, "%.2f Y", 60)
+                self.streamingRefPoint.y, _, _ = style.trackedDragFloat(self.object, "##streamingRefPointY", self.streamingRefPoint.y, 0.05, -99999, 99999, "%.2f Y", 75)
                 ImGui.SameLine()
-                self.steamingRefPoint.z, _, _ = style.trackedDragFloat(self.object, "##steamingRefPoinZ", self.steamingRefPoint.z, 0.05, -99999, 99999, "%.2f Z", 60)
+                self.streamingRefPoint.z, _, _ = style.trackedDragFloat(self.object, "##steamingRefPoinZ", self.streamingRefPoint.z, 0.05, -99999, 99999, "%.2f Z", 75)
                 ImGui.SameLine()
                 if style.drawNoBGConditionalButton(true, IconGlyphs.AccountArrowLeftOutline) then
-                    history.addAction(history.getElementChange(self))
-                    self.steamingRefPoint = utils.getPlayerPosition()
+                    history.addAction(history.getElementChange(self.object))
+                    self.streamingRefPoint = utils.getPlayerPosition(editor.active)
                 end
                 style.tooltip("Set the streaming reference point to the player position")
             end
@@ -349,10 +351,22 @@ function spawnable:getGroupedProperties()
 		name = "World Node",
         id = "worldNode",
 		data = {
-            multiplier = 1
+            multiplier = 1,
+            maxPropertyWidth = nil
         },
 		draw = function(element, entries)
-            if ImGui.Button("Calculate Streaming Distances") then
+            if not element.groupOperationData["streamingProperties"].maxPropertyWidth then
+                element.groupOperationData["streamingProperties"].maxPropertyWidth = utils.getTextMaxWidth({ "Streaming Distances", "NodeRef's", "Override Streaming Ref. Point", "Streaming Ref. Point" }) + ImGui.GetStyle().ItemSpacing.x * 2 + ImGui.GetCursorPosX()
+            end
+
+            style.mutedText("Streaming Distances Multiplier")
+            ImGui.SetNextItemWidth(80 * style.viewSize)
+            ImGui.SameLine()
+            ImGui.SetCursorPosX(element.groupOperationData["streamingProperties"].maxPropertyWidth)
+            element.groupOperationData["streamingProperties"].multiplier, _ = ImGui.DragFloat("##groupStreamingDistancesMultiplier", element.groupOperationData["streamingProperties"].multiplier, 0.01, 0, 50, "x%.2f")
+            style.tooltip("Multiplier for streaming values, when using \"Calculate Streaming Distances\"")
+            ImGui.SameLine()
+            if ImGui.Button("Auto-Set") then
                 history.addAction(history.getMultiSelectChange(entries))
 
                 for _, entry in ipairs(entries) do
@@ -361,21 +375,58 @@ function spawnable:getGroupedProperties()
                     entry.spawnable.primaryRange = values.primary
                     entry.spawnable.secondaryRange = values.secondary
                 end
+
+                ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("Auto-Set primary and secondary streaming distance for %s nodes", #entries)))
             end
 
+            style.mutedText("NodeRef's")
             ImGui.SameLine()
-
-            ImGui.SetNextItemWidth(80 * style.viewSize)
-            element.groupOperationData["streamingProperties"].multiplier, _ = ImGui.DragFloat("Multiplier", element.groupOperationData["streamingProperties"].multiplier, 0.01, 0, 50, "%.2f")
-            style.tooltip("Multiplier for streaming values, when using \"Calculate Streaming Distances\"")
-
-            if ImGui.Button("Auto-Generate NodeRef's") then
+            ImGui.SetCursorPosX(element.groupOperationData["streamingProperties"].maxPropertyWidth)
+            if ImGui.Button("Auto-Generate") then
                 history.addAction(history.getMultiSelectChange(entries))
 
                 for _, entry in ipairs(entries) do
                     local generated = registry.generate(entry.spawnable.object)
                     entry.spawnable.nodeRef = generated
                 end
+
+                ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("Auto-Generated NodeRef's for %s nodes", #entries)))
+            end
+
+            style.mutedText("Override Streaming Ref. Point")
+            ImGui.SameLine()
+            ImGui.SetCursorPosX(element.groupOperationData["streamingProperties"].maxPropertyWidth)
+            if ImGui.Button("On") then
+                history.addAction(history.getMultiSelectChange(entries))
+
+                for _, entry in ipairs(entries) do
+                    entry.spawnable.streamingRefPointOverride = true
+                end
+
+                ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("[On] Set Streaming Ref. Point Override %s nodes", #entries)))
+            end
+            ImGui.SameLine()
+            if ImGui.Button("Off") then
+                history.addAction(history.getMultiSelectChange(entries))
+
+                for _, entry in ipairs(entries) do
+                    entry.spawnable.streamingRefPointOverride = false
+                end
+
+                ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("[Off] Set Streaming Ref. Point Override for %s nodes", #entries)))
+            end
+
+            style.mutedText("Streaming Ref. Point")
+            ImGui.SameLine()
+            ImGui.SetCursorPosX(element.groupOperationData["streamingProperties"].maxPropertyWidth)
+            if ImGui.Button("To Player Position") then
+                history.addAction(history.getMultiSelectChange(entries))
+
+                for _, entry in ipairs(entries) do
+                    entry.spawnable.streamingRefPoint = utils.getPlayerPosition(editor.active)
+                end
+
+                ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("Set Streaming Ref. Point to player position for %s nodes", #entries)))
             end
 		end,
 		entries = { self.object }
@@ -536,7 +587,7 @@ function spawnable:loadSpawnData(data, position, rotation)
     self.uk11 = data.uk11 or self.uk11
 
     self.streamingRefPointOverride = data.streamingRefPointOverride or false
-    self.steamingRefPoint = data.steamingRefPoint and utils.getVector(data.steamingRefPoint) or Vector4.new(0, 0, 0, 0)
+    self.streamingRefPoint = data.streamingRefPoint and utils.getVector(data.streamingRefPoint) or Vector4.new(0, 0, 0, 0)
 end
 
 ---Export the spawnable for WScript import, using same structure for `data` as JSON formated node
@@ -546,6 +597,7 @@ end
 function spawnable:export(key, length)
     return {
         position = utils.fromVector(self.position),
+        streamingRefPoint = self.streamingRefPointOverride and utils.fromVector(self.streamingRefPoint) or utils.fromVector(self.position),
         rotation = utils.fromQuaternion(self.rotation:ToQuat()),
         scale = { x = 1, y = 1, z = 1 },
         primaryRange = self.primaryRange,

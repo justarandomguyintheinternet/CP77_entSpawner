@@ -1,5 +1,4 @@
 local settings = require("modules/utils/settings")
-local editor = require("modules/utils/editor/editor")
 
 local miscUtils = {
     data = {}
@@ -623,10 +622,10 @@ function miscUtils.shortenPath(path, width, backwardsSlash)
     return "..." .. path
 end
 
-function miscUtils.getPlayerPosition()
+function miscUtils.getPlayerPosition(editorActive)
     local pos = Game.GetPlayer():GetWorldPosition()
 
-    if editor.active then
+    if editorActive then
         local forward = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetAxisY()
         pos = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
 
