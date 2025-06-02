@@ -364,7 +364,7 @@ function spawnable:getGroupedProperties()
             ImGui.SameLine()
             ImGui.SetCursorPosX(element.groupOperationData["streamingProperties"].maxPropertyWidth)
             element.groupOperationData["streamingProperties"].multiplier, _ = ImGui.DragFloat("##groupStreamingDistancesMultiplier", element.groupOperationData["streamingProperties"].multiplier, 0.01, 0, 50, "x%.2f")
-            style.tooltip("Multiplier for streaming values, when using \"Calculate Streaming Distances\"")
+            style.tooltip("Multiplier for streaming values, when using \"Auto-Set\"")
             ImGui.SameLine()
             if ImGui.Button("Auto-Set") then
                 history.addAction(history.getMultiSelectChange(entries))
@@ -403,7 +403,7 @@ function spawnable:getGroupedProperties()
                     entry.spawnable.streamingRefPointOverride = true
                 end
 
-                ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("[On] Set Streaming Ref. Point Override %s nodes", #entries)))
+                ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("[On] Set Streaming Ref. Point Override for %s nodes", #entries)))
             end
             ImGui.SameLine()
             if ImGui.Button("Off") then

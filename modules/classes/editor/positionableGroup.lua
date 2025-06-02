@@ -89,15 +89,18 @@ end
 
 function positionableGroup:drawRotation(rotation)
 	local locked = self.rotationLocked
+	local shiftActive = ImGui.IsKeyDown(ImGuiKey.LeftShift) and not ImGui.IsMouseDragging(0, 0)
+	local finished = false
 
 	ImGui.PushItemWidth(80 * style.viewSize)
 	style.pushGreyedOut(true)
-    self:drawProp(rotation.roll, "Roll", "roll")
+    finished = self:drawProp(rotation.roll, "Roll", "roll")
     ImGui.SameLine()
-    self:drawProp(rotation.pitch, "Pitch", "pitch")
+    finished = self:drawProp(rotation.pitch, "Pitch", "pitch")
 	style.popGreyedOut(not locked)
     ImGui.SameLine()
-	self:drawProp(rotation.yaw, "Yaw", "yaw")
+	finished = self:drawProp(rotation.yaw, "Yaw", "yaw")
+	self:handleRightAngleChange("yaw", shiftActive and not finished)
 	style.popGreyedOut(locked)
 end
 
