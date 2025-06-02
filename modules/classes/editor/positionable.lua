@@ -312,19 +312,17 @@ function positionable:drawPosition(position)
     style.pushButtonNoBG(true)
     if ImGui.Button(IconGlyphs.AccountArrowLeftOutline) then
 		history.addAction(history.getElementChange(self))
-		local pos = Game.GetPlayer():GetWorldPosition()
-
-		if editor.active then
-			local forward = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetAxisY()
-			pos = GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation()
-
-			pos.z = pos.z + forward.z * settings.spawnDist
-			pos.x = pos.x + forward.x * settings.spawnDist
-			pos.y = pos.y + forward.y * settings.spawnDist
-		end
+		local pos = utils.getPlayerPosition()
 
         self:setPositionDelta(Vector4.new(pos.x - position.x, pos.y - position.y, pos.z - position.z, 0))
     end
+	if ImGui.BeginPopupContextItem("##tpPlayer", ImGuiPopupFlags.MouseButtonRight) then
+        if ImGui.MenuItem("Move player here") then
+			Game.GetTeleportationFacility():Teleport(GetPlayer(), self:getPosition(), GetPlayer():GetWorldOrientation():ToEulerAngles())
+        end
+        ImGui.EndPopup()
+    end
+
     style.pushButtonNoBG(false)
 	if ImGui.IsItemHovered() then style.setCursorRelative(5, 5) end
 	style.tooltip("Set to player position")

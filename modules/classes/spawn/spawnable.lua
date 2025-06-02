@@ -47,6 +47,8 @@ local preview = require("modules/utils/previewUtils")
 ---@field public assetPreviewDelay number
 ---@field public isAssetPreview boolean
 ---@field private assetPreviewLensDistortion boolean
+---@field public streamingRefPointOverride boolean
+---@field public steamingRefPoint Vector4
 local spawnable = {}
 
 function spawnable:new()
@@ -82,6 +84,8 @@ function spawnable:new()
     o.uk11 = 512
     o.streamingMultiplier = 1
     o.nodeRef = ""
+    o.streamingRefPointOverride = false
+    o.steamingRefPoint = Vector4.new(0, 0, 0, 0)
 
     o.isHovered = false
     o.arrowDirection = "none"
@@ -232,7 +236,9 @@ function spawnable:save()
         secondaryRange = self.secondaryRange,
         uk10 = self.uk10,
         uk11 = self.uk11,
-        nodeRef = self.nodeRef
+        nodeRef = self.nodeRef,
+        streamingRefPointOverride = self.streamingRefPointOverride,
+        steamingRefPoint = utils.fromVector(self.steamingRefPoint)
     }
 end
 
@@ -247,7 +253,7 @@ function spawnable:getProperties()
         defaultHeader = false,
         draw = function()
             if not self.worldNodePropertyWidth then
-                self.worldNodePropertyWidth = utils.getTextMaxWidth({ "Node Ref", "Primary Range", "Secondary Range" }) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+                self.worldNodePropertyWidth = utils.getTextMaxWidth({ "Node Ref", "Primary Range", "Secondary Range", "Override Streaming Ref. Point" }) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
             end
 
             local entry = self.nodeRef ~= "" and registry.refs[self.object:getRootParent().name] and registry.refs[self.object:getRootParent().name][self.nodeRef]
@@ -306,6 +312,30 @@ function spawnable:getProperties()
             ImGui.SetNextItemWidth(80 * style.viewSize)
             self.streamingMultiplier, _ = ImGui.DragFloat("Multiplier", self.streamingMultiplier, 0.01, 0, 50, "%.2f")
             style.tooltip("Multiplier for streaming values, when using \"Auto-Set\"")
+
+            style.mutedText("Override Streaming Ref. Point")
+            ImGui.SameLine()
+            ImGui.SetCursorPosX(self.worldNodePropertyWidth)
+            self.streamingRefPointOverride, _ = ImGui.Checkbox("##streamingRefPointOverride", self.streamingRefPointOverride)
+            style.tooltip("If enabled, the streaming reference point will be used for streaming distances instead of the node position")
+
+            if self.streamingRefPointOverride then
+                ImGui.SameLine()
+                style.mutedText("Streaming Ref. Point")
+                ImGui.SameLine()
+                ImGui.SetCursorPosX(self.worldNodePropertyWidth)
+                self.steamingRefPoint.x, _, _ = style.trackedDragFloat(self.object, "##steamingRefPointX", self.steamingRefPoint.x, 0.05, -99999, 99999, "%.2f X", 60)
+                ImGui.SameLine()
+                self.steamingRefPoint.y, _, _ = style.trackedDragFloat(self.object, "##steamingRefPointY", self.steamingRefPoint.y, 0.05, -99999, 99999, "%.2f Y", 60)
+                ImGui.SameLine()
+                self.steamingRefPoint.z, _, _ = style.trackedDragFloat(self.object, "##steamingRefPoinZ", self.steamingRefPoint.z, 0.05, -99999, 99999, "%.2f Z", 60)
+                ImGui.SameLine()
+                if style.drawNoBGConditionalButton(true, IconGlyphs.AccountArrowLeftOutline) then
+                    history.addAction(history.getElementChange(self))
+                    self.steamingRefPoint = utils.getPlayerPosition()
+                end
+                style.tooltip("Set the streaming reference point to the player position")
+            end
         end
     })
 
@@ -504,6 +534,9 @@ function spawnable:loadSpawnData(data, position, rotation)
     self.secondaryRange = data.secondaryRange or 120
     self.uk10 = data.uk10 or self.uk10
     self.uk11 = data.uk11 or self.uk11
+
+    self.streamingRefPointOverride = data.streamingRefPointOverride or false
+    self.steamingRefPoint = data.steamingRefPoint and utils.getVector(data.steamingRefPoint) or Vector4.new(0, 0, 0, 0)
 end
 
 ---Export the spawnable for WScript import, using same structure for `data` as JSON formated node

@@ -1,6 +1,7 @@
-local CodewareVersion = "1.15.0"
-local ArchiveXLVersion = "1.22.0"
-local ModVersion = "1.0.5"
+local CodewareVersion = "1.16.0"
+local ArchiveXLVersion = "1.23.0"
+local ModVersion = "1.0.6"
+local ignoreRequirements = true
 
 local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
@@ -113,6 +114,8 @@ function baseUI.init()
             settings.save()
         end
     end
+
+    if ignoreRequirements then return end
 
     if not ArchiveXL then
         table.insert(baseUI.requirementsIssues, "ArchiveXL is not installed")
