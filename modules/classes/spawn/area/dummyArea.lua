@@ -53,6 +53,8 @@ function dummyArea:draw()
             height = height,
             points = markers
         })
+
+        ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("Copied outline containing %s points to the clipboard", #markers)))
     end
 end
 

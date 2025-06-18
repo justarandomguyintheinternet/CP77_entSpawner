@@ -140,6 +140,9 @@ function reflection:draw()
         self.ambientMode = value + 1
         self:respawn()
     end
+    ImGui.SameLine()
+    ImGui.Text(IconGlyphs.InformationOutline)
+    style.tooltip("Not previewed in the editor.")
 
     style.mutedText("Neighbor Mode")
     ImGui.SameLine()

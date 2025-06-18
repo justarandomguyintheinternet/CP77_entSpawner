@@ -17,9 +17,10 @@ local types = {
         },
         index = 1
     },
-    ["Lights"] = {
+    ["Lighting"] = {
         variants = {
-            ["Light"] = { class = require("modules/classes/spawn/light/light"), index = 1 }
+            ["Static Light"] = { class = require("modules/classes/spawn/light/light"), index = 1 },
+            ["Reflection Probe"] = { class = require("modules/classes/spawn/meta/reflectionProbe"), index = 2 }
         },
         index = 3
     },
@@ -52,7 +53,6 @@ local types = {
     ["Meta"] = {
         variants = {
             ["Occluder"] = { class = require("modules/classes/spawn/meta/occluder"), index = 1 },
-            ["Reflection Probe"] = { class = require("modules/classes/spawn/meta/reflectionProbe"), index = 2 },
             ["Static Marker"] = { class = require("modules/classes/spawn/meta/staticMarker"), index = 3 },
             ["Spline Point"] = { class = require("modules/classes/spawn/meta/splineMarker"), index = 4 },
             ["Spline"] = { class = require("modules/classes/spawn/meta/spline"), index = 5 }
@@ -176,12 +176,12 @@ function spawnUI.loadSpawnData(spawner)
     typeNames = utils.getKeys(types)
     table.sort(typeNames, function(a, b) return types[a].index < types[b].index end)
 
-    spawnUI.selectedType = utils.indexValue(typeNames, settings.selectedType) - 1
+    spawnUI.selectedType = math.max(utils.indexValue(typeNames, settings.selectedType) - 1, 0)
 
     variantNames = utils.getKeys(types[typeNames[spawnUI.selectedType + 1]].variants)
     table.sort(variantNames, function(a, b) return types[typeNames[spawnUI.selectedType + 1]].variants[a].index < types[typeNames[spawnUI.selectedType + 1]].variants[b].index end)
 
-    spawnUI.selectedVariant = utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1
+    spawnUI.selectedVariant = math.max(utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1, 0)
 
     spawnUI.refresh()
 end
@@ -240,7 +240,7 @@ function spawnUI.updateCategory()
     variantNames = utils.getKeys(types[typeNames[spawnUI.selectedType + 1]].variants)
     table.sort(variantNames, function(a, b) return types[typeNames[spawnUI.selectedType + 1]].variants[a].index < types[typeNames[spawnUI.selectedType + 1]].variants[b].index end)
 
-    spawnUI.selectedVariant = utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1
+    spawnUI.selectedVariant = math.max(utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1, 0)
 
     spawnUI.refresh()
 end
