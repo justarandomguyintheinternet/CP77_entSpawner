@@ -3,21 +3,6 @@ local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
 local history = require("modules/utils/history")
 
-local lightChannelEnum = {
-    "LC_Channel1",
-    "LC_Channel2",
-    "LC_Channel3",
-    "LC_Channel4",
-    "LC_Channel5",
-    "LC_Channel6",
-    "LC_Channel7",
-    "LC_Channel8",
-    "LC_ChannelWorld",
-    "LC_Character",
-    "LC_Player",
-    "LC_Automated"
-}
-
 ---Class for worldStaticLightNode
 ---@class light : visualized
 ---@field public color {r: number, g: number, b: number}
@@ -57,7 +42,6 @@ local lightChannelEnum = {
 ---@field private sourceRadius number
 ---@field private directional boolean
 ---@field private lightChannels table
----@field private maxLightChannelsWidth number
 local light = setmetatable({}, { __index = visualized })
 
 function light:new()
@@ -104,7 +88,6 @@ function light:new()
     o.sourceRadius = 0.05
     o.directional = false
     o.lightChannels = { true, true, true, true, true, true, true, true, true, false, false, false }
-    o.x = {1}
 
     o.maxBasePropertiesWidth = nil
     o.maxShadowPropertiesWidth = nil
@@ -119,10 +102,6 @@ function light:new()
 end
 
 function light:loadSpawnData(data, position, rotation)
-    if data.lightChannels then
-        for key, v in pairs(data.lightChannels) do print(v, self.lightChannels[key]) end
-        print("-------")
-    end
     visualized.loadSpawnData(self, data, position, rotation)
 
     self.roughnessBias = math.min(math.max(math.floor(self.roughnessBias), -127), 127) -- Fix for incorrect clamping before
@@ -200,7 +179,6 @@ function light:save()
     data.sourceRadius = self.sourceRadius
     data.directional = self.directional
     data.lightChannels = utils.deepcopy(self.lightChannels)
-    data.x = utils.deepcopy(self.x)
 
     return data
 end
@@ -386,51 +364,7 @@ function light:draw()
     end
 
     if ImGui.TreeNodeEx("Light Channels") then
-        if not self.maxLightChannelsWidth then
-            self.maxLightChannelsWidth = utils.getTextMaxWidth(lightChannelEnum) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
-        end
-
-        style.pushButtonNoBG(true)
-        if ImGui.Button(IconGlyphs.PlusBoxMultipleOutline) then
-            history.addAction(history.getElementChange(self.object))
-            for i = 1, #self.lightChannels do
-                self.lightChannels[i] = true
-            end
-        end
-        style.tooltip("Select all light channels")
-        ImGui.SameLine()
-        if ImGui.Button(IconGlyphs.MinusBoxMultipleOutline) then
-            history.addAction(history.getElementChange(self.object))
-            for i = 1, #self.lightChannels do
-                self.lightChannels[i] = false
-            end
-        end
-        style.tooltip("Deselect all light channels")
-        ImGui.SameLine()
-        if ImGui.Button(IconGlyphs.ContentCopy) then
-            utils.insertClipboardValue("lightChannels", utils.deepcopy(self.lightChannels))
-        end
-        style.tooltip("Copy light channels to clipboard")
-        ImGui.SameLine()
-        local channels = utils.getClipboardValue("lightChannels")
-        style.pushGreyedOut(channels == nil)
-        if ImGui.Button(IconGlyphs.ContentPaste) and channels ~= nil then
-            history.addAction(history.getElementChange(self.object))
-            self.lightChannels = utils.deepcopy(channels)
-        end
-        style.tooltip("Paste light channels from clipboard")
-        style.popGreyedOut(channels == nil)
-        style.pushButtonNoBG(false)
-
-        for key, channel in ipairs(lightChannelEnum) do
-            style.mutedText(channel)
-            ImGui.SameLine()
-            ImGui.SetCursorPosX(self.maxLightChannelsWidth)
-            self.lightChannels[key], _ = style.trackedCheckbox(self.object, "##lightChannel" .. key, self.lightChannels[key])
-        end
-
-        self.x[1], _, _ = style.trackedDragFloat(self.object, "##x", self.x[1], 0.01, 0, 9999, "%.2f", 50)
-
+        self.lightChannels = style.drawLightChannelsSelector(self.object, self.lightChannels)
         ImGui.TreePop()
     end
 
@@ -547,7 +481,7 @@ function light:export()
     local lightChannelsString = ""
     for i, channel in ipairs(self.lightChannels) do
         if channel then
-            lightChannelsString = lightChannelsString .. lightChannelEnum[i]
+            lightChannelsString = lightChannelsString .. style.lightChannelEnum[i]
             if i < #self.lightChannels then
                 lightChannelsString = lightChannelsString .. ", "
             end
