@@ -637,4 +637,20 @@ function miscUtils.getPlayerPosition(editorActive)
     return pos
 end
 
+function miscUtils.buildBitfieldString(bitTable, bitTableNames)
+    local bitfieldString = ""
+
+    for i, channel in ipairs(bitTable) do
+        if channel then
+            bitfieldString = bitfieldString .. bitTableNames[i] .. ","
+        end
+    end
+
+    if bitfieldString ~= "" then
+        bitfieldString = bitfieldString:sub(1, -2)
+    end
+
+    return bitfieldString
+end
+
 return miscUtils

@@ -128,7 +128,7 @@ function area:getProperties()
     return properties
 end
 
-function area:export()
+function area:export(_, _, markersZOffset)
     local data = visualized.export(self)
     data.type = "worldAreaShapeNode"
     data.data = {}
@@ -162,7 +162,7 @@ function area:export()
 
             buffer = buffer .. utils.floatToHex(diff.x)
             buffer = buffer .. utils.floatToHex(diff.y)
-            buffer = buffer .. utils.floatToHex(diff.z)
+            buffer = buffer .. utils.floatToHex(diff.z + (markersZOffset or 0))
             buffer = buffer .. utils.floatToHex(1)
         end
     end

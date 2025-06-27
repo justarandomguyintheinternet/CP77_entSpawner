@@ -189,6 +189,25 @@ function spawnedUI.findCommonParent(elements)
     return spawnedUI.getElementByPath(commonPath)
 end
 
+---Sets the specified element as the new target for spawning
+---@param element element
+function spawnedUI.setElementSpawnNewTarget(element)
+    local elementPath = element:getPath()
+    if not element.expandable then
+        elementPath = element.parent:getPath()
+    end
+
+    local idx = 1
+    for _, entry in pairs(spawnedUI.containerPaths) do
+        if entry.path == elementPath then
+            break
+        end
+        idx = idx + 1
+    end
+
+    spawnedUI.spawner.baseUI.spawnUI.selectedGroup = idx
+end
+
 local function hotkeyRunConditionProperties()
     return input.context.hierarchy.hovered or input.context.hierarchy.focused or (editor.active and (input.context.viewport.hovered or input.context.viewport.focused))
 end
@@ -306,19 +325,7 @@ function spawnedUI.registerHotkeys()
             return
         end
 
-        local elementPath = spawnedUI.selectedPaths[1].ref:getPath()
-        if not spawnedUI.selectedPaths[1].ref.expandable then
-            elementPath = spawnedUI.selectedPaths[1].ref.parent:getPath()
-        end
-
-        local idx = 1
-        for _, entry in pairs(spawnedUI.containerPaths) do
-            if entry.path == elementPath then
-                break
-            end
-            idx = idx + 1
-        end
-        spawnedUI.spawner.baseUI.spawnUI.selectedGroup = idx
+        spawnedUI.setElementSpawnNewTarget(spawnedUI.selectedPaths[1].ref)
     end)
 
     input.registerImGuiHotkey({ ImGuiKey.F, ImGuiKey.LeftCtrl }, function ()

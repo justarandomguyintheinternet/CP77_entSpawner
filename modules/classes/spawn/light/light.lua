@@ -49,7 +49,7 @@ function light:new()
 
     o.spawnListType = "files"
     o.dataType = "Static Light"
-    o.spawnDataPath = "data/spawnables/lights/"
+    o.spawnDataPath = "data/spawnables/lights/staticLights/"
     o.modulePath = "light/light"
     o.node = "worldStaticLightNode"
     o.description = "Places a static light"
@@ -478,16 +478,6 @@ function light:export()
     local data = visualized.export(self)
     data.type = "worldStaticLightNode"
 
-    local lightChannelsString = ""
-    for i, channel in ipairs(self.lightChannels) do
-        if channel then
-            lightChannelsString = lightChannelsString .. style.lightChannelEnum[i]
-            if i < #self.lightChannels then
-                lightChannelsString = lightChannelsString .. ", "
-            end
-        end
-    end
-
     data.data = {
         autoHideDistance = self.autoHideDistance,
         capsuleLength = self.capsuleLength,
@@ -509,7 +499,7 @@ function light:export()
         radius = self.radius,
         type = self.lightTypes[self.lightType + 1],
         allowDistantLight = 0,
-        lightChannel = lightChannelsString,
+        lightChannel = utils.buildBitfieldString(self.lightChannels, style.lightChannelEnum),
         scaleVolFog = self.scaleVolFog,
         useInParticles = self.useInParticles and 1 or 0,
         useInTransparents = self.useInTransparents and 1 or 0,

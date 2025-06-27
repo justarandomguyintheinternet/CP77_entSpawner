@@ -135,6 +135,8 @@ function baseUI.init()
 end
 
 function baseUI.draw(spawner)
+    if not editor.camera then return end
+
     if #baseUI.requirementsIssues > 0 then
         if ImGui.Begin(string.format("%s Error", settings.mainWindowName .. " " .. ModVersion), ImGuiWindowFlags.AlwaysAutoResize) then
             style.mutedText(string.format("The following issues are preventing %s from running:", settings.mainWindowName))
