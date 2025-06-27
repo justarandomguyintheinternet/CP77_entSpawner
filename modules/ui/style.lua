@@ -430,8 +430,10 @@ function style.drawLightChannelsSelector(object, lightChannels)
     ImGui.SameLine()
     if ImGui.Button(IconGlyphs.ContentCopy) then
         utils.insertClipboardValue("lightChannels", utils.deepcopy(lightChannels))
+        ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, "Copied light channels to the clipboard"))
     end
     style.tooltip("Copy light channels to clipboard")
+
     ImGui.SameLine()
     local channels = utils.getClipboardValue("lightChannels")
     style.pushGreyedOut(channels == nil)

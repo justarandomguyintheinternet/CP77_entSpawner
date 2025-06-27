@@ -155,6 +155,7 @@ function settingsUI.draw(spawner)
 
     if ImGui.Button("Clear cache") then
         cache.reset()
+        ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, "Cleared cache"))
     end
     style.tooltip("Clears the cache")
 

@@ -21,7 +21,8 @@ local types = {
         variants = {
             ["Static Light"] = { class = require("modules/classes/spawn/light/light"), index = 1 },
             ["Reflection Probe"] = { class = require("modules/classes/spawn/meta/reflectionProbe"), index = 2 },
-            ["Light Channel Area"] = { class = require("modules/classes/spawn/light/lightChannelArea"), index = 3 }
+            ["Light Channel Area"] = { class = require("modules/classes/spawn/light/lightChannelArea"), index = 3 },
+            ["Fog Volume"] = { class = require("modules/classes/spawn/visual/fog"), index = 4 }
         },
         index = 3
     },
@@ -46,8 +47,7 @@ local types = {
             ["Decals"] = { class = require("modules/classes/spawn/visual/decal"), index = 1 },
             ["Effects"] = { class = require("modules/classes/spawn/visual/effect"), index = 3 },
             ["Static Audio Emitter"] = { class = require("modules/classes/spawn/visual/audio"), index = 4 },
-            ["Water Patch"] = { class = require("modules/classes/spawn/visual/waterPatch"), index = 5 },
-            ["Fog Volume"] = { class = require("modules/classes/spawn/visual/fog"), index = 6 }
+            ["Water Patch"] = { class = require("modules/classes/spawn/visual/waterPatch"), index = 5 }
         },
         index = 4
     },

@@ -25,6 +25,14 @@ function lightChannelArea:new()
    	return o
 end
 
+function lightChannelArea:save()
+    local data = area.save(self)
+
+    data.lightChannels = utils.deepcopy(self.lightChannels)
+
+    return data
+end
+
 function lightChannelArea:export()
     local data = area.export(self, 0, 0, -0.01)
     data.type = "worldLightChannelVolumeNode"

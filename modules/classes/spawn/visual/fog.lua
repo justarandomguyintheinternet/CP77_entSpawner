@@ -21,6 +21,7 @@ local propertyNames = {
 ---@field public densityFactor number
 ---@field public densityFalloff number
 ---@field private maxPropertyWidth number
+---@field public lightChannels boolean[]
 local fog = setmetatable({}, { __index = spawnable })
 
 function fog:new()
@@ -32,7 +33,7 @@ function fog:new()
     o.modulePath = "visual/fog"
     o.node = "worldStaticFogVolumeNode"
     o.description = "Places a fog volume of variable size."
-    o.previewNote = "Might not be properly visible during preview, due to lightChannels."
+    o.previewNote = "Might not be properly visible during preview, due to lightChannels not being previewed."
     o.icon = IconGlyphs.WeatherFog
     o.maxPropertyWidth = nil
 
@@ -42,6 +43,7 @@ function fog:new()
     o.color = { 1, 1, 1 }
     o.densityFactor = 1
     o.densityFalloff = 1
+    o.lightChannels = { true, true, true, true, true, true, true, true, true, false, false, false }
 
     o.previewed = true
 
@@ -89,6 +91,7 @@ function fog:save()
     data.densityFactor = self.densityFactor
     data.densityFalloff = self.densityFalloff
     data.previewed = self.previewed
+    data.lightChannels = utils.deepcopy(self.lightChannels)
 
     return data
 end
@@ -145,6 +148,11 @@ function fog:draw()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
     self.blendFalloff, _, finished = style.trackedDragFloat(self.object, "##blendFalloff", self.blendFalloff, 0.1, 0, 9999, "%.2f", 60)
     self:updateScale(finished)
+
+    if ImGui.TreeNodeEx("Light Channels") then
+        self.lightChannels = style.drawLightChannelsSelector(self.object, self.lightChannels)
+        ImGui.TreePop()
+    end
 end
 
 function fog:getProperties()
@@ -217,7 +225,7 @@ function fog:export()
         blendFalloff = self.blendFalloff,
         densityFactor = self.densityFactor,
         densityFalloff = self.densityFalloff,
-        lightChannels = "LC_Channel1, LC_Channel2, LC_Channel3, LC_Channel4, LC_Channel5, LC_Channel6, LC_Channel7, LC_Channel8, LC_ChannelWorld",
+        lightChannels = utils.buildBitfieldString(self.lightChannels, style.lightChannelEnum),
         priority = 255,
         streamingDistance = self.primaryRange
     }
