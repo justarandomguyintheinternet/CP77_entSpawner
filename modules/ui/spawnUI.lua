@@ -209,7 +209,7 @@ function spawnUI.updateFilter()
         if spawnUI.getActiveSpawnList().isPaths and settings.spawnUIOnlyNames then
             name = data.fileName
         end
-        if (name:lower():match(spawnUI.filter:lower())) ~= nil then
+        if utils.matchSearch(name, spawnUI.filter) then
             table.insert(spawnUI.filteredList, data)
         end
     end
@@ -764,7 +764,7 @@ function spawnUI.loadPopupData(typeName, variantName)
     local data = {}
 
     for _, entry in pairs(spawnData[typeName][variantName].data) do
-        if (entry.name:lower():match(spawnUI.popupFilter:lower())) ~= nil then
+        if utils.matchSearch(entry.name, spawnUI.popupFilter) ~= nil then
             table.insert(data, entry)
         end
     end

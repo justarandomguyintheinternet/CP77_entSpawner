@@ -653,4 +653,48 @@ function miscUtils.buildBitfieldString(bitTable, bitTableNames)
     return bitfieldString
 end
 
+function miscUtils.matchSearch(text, query)
+    if not query or query == "" then
+        return true
+    end
+
+    text = text:lower()
+    query = query:lower()
+
+    if text:match(query) then
+        return true
+    end
+
+    local anyMatch = false
+    local word = ""
+    local operation = "|"
+
+    for i = 1, #query + 1 do
+        local char = i <= #query and query:sub(i, i) or operation
+
+        if char == "|" or char == "!" or char == "&" then
+            if operation == "|" then
+                if not anyMatch and word ~= "" and text:match(word) then
+                    anyMatch = true
+                end
+            elseif operation == "&" then
+                if word ~= "" and not text:match(word) then
+                    return false
+                end
+            else
+                if word ~= "" and text:match(word) then
+                    return false
+                end
+            end
+
+            word = ""
+            operation = char
+        else
+            word = word .. char
+        end
+    end
+
+    return anyMatch
+end
+
 return miscUtils
