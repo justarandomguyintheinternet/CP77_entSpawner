@@ -45,11 +45,10 @@ function area:update()
     visualized.update(self)
 end
 
-function area:save()
-    local data = visualized.save(self)
-
+function area:getMarkersData()
     local markers = {}
     local height = 0
+
     local paths = self:loadOutlinePaths()
 
     if utils.indexValue(paths, self.outlinePath) ~= -1 then
@@ -61,9 +60,14 @@ function area:save()
         end
     end
 
+    return markers, height
+end
+
+function area:save()
+    local data = visualized.save(self)
+
     data.outlinePath = self.outlinePath
-    data.markers = markers
-    data.height = height
+    data.markers, data.height = self:getMarkersData()
 
     return data
 end

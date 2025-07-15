@@ -25,15 +25,6 @@ function lightChannelArea:new()
    	return o
 end
 
-function lightChannelArea:onAssemble(entity)
-    area.onAssemble(self, entity)
-
-    local component = entLightChannelComponent.new()
-    component.name = "area"
-    component.shape = self:calculateAreaShape()
-    entity:AddComponent(component)
-end
-
 function lightChannelArea:calculateAreaShape()
     local shape = GeometryShape.new()
     local vertices = {}
@@ -55,14 +46,6 @@ function lightChannelArea:calculateAreaShape()
         table.insert(indices, i - 1)
         table.insert(indices, indexTwo)
         table.insert(indices, indexThree)
-    end
-
-    for key, vertex in pairs(vertices) do
-        print(key - 1, vertex)
-    end
-
-    for _, index in pairs(indices) do
-        print(index)
     end
 
     shape.indices = indices
