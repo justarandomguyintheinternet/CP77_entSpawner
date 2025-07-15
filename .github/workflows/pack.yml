@@ -7,6 +7,7 @@ on:
       - nodes
       - dev/nodes
       - fix/*
+      - light-channels
   workflow_dispatch:
 
 jobs:
