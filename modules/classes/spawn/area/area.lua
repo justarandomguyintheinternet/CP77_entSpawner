@@ -91,6 +91,17 @@ function area:loadOutlinePaths()
     return paths
 end
 
+function area:getMarkersCenter()
+    local center = Vector4.new(0, 0, 0, 0)
+    local nMarkers = math.max(1, #self.markers)
+
+	for _, position in pairs(self.markers) do
+		center = utils.addVector(center, ToVector4(position))
+	end
+
+    return Vector4.new(center.x / nMarkers, center.y / nMarkers, center.z / nMarkers, 0)
+end
+
 function area:draw()
     visualized.draw(self)
 
@@ -145,12 +156,7 @@ function area:export(_, _, markersZOffset)
     end
 
     -- Grab center
-    local center = Vector4.new(0, 0, 0, 0)
-	for _, position in pairs(self.markers) do
-		center = utils.addVector(center, ToVector4(position))
-	end
-	local nMarkers = math.max(1, #self.markers)
-	center = Vector4.new(center.x / nMarkers, center.y / nMarkers, center.z / nMarkers, 0)
+    local center = self:getMarkersCenter()
     data.position = utils.fromVector(center)
 
     local buffer = utils.intToHex(math.min(255, #self.markers))
