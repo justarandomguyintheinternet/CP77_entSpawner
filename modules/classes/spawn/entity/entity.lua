@@ -538,17 +538,15 @@ function entity:getProperties()
     return properties
 end
 
-function entity:copyAndPrepareData(data)
+function entity:prepareInstanceData(data)
     for key, value in pairs(data) do
         if key == "HandleId" then
             data[key] = nil
         end
         if type(value) == "table" then
-            self:copyAndPrepareData(value)
+            self:prepareInstanceData(value)
         end
     end
-
-    return copy
 end
 
 local function assembleInstanceData(default, instanceData)
@@ -585,7 +583,7 @@ function entity:export(index, length)
             end
         end
 
-        self:copyAndPrepareData(combinedData)
+        self:prepareInstanceData(combinedData)
 
         data.data.instanceData = {
             ["Data"] = {

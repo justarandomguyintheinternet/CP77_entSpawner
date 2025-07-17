@@ -29,6 +29,10 @@ function settingsUI.draw(spawner)
     if changed then settings.save() end
     style.tooltip("Distance from the camera to spawn the object at, used for the fallback for \"At selected\", and always used for \"Screen center\"")
 
+    settings.setLoadedGroupAsSpawnNew, changed = ImGui.Checkbox("Set group as target on load", settings.setLoadedGroupAsSpawnNew)
+    if changed then settings.save() end
+    style.tooltip("Set group as \"Target Group\" when loading it from the \"Saved\" tab")
+
     style.sectionHeaderEnd()
     style.sectionHeaderStart("EDITING")
 
@@ -151,6 +155,7 @@ function settingsUI.draw(spawner)
 
     if ImGui.Button("Clear cache") then
         cache.reset()
+        ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, "Cleared cache"))
     end
     style.tooltip("Clears the cache")
 

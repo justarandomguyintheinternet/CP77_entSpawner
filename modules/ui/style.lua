@@ -2,7 +2,9 @@
 
 local history = require("modules/utils/history")
 local settings = require("modules/utils/settings")
+local utils = require("modules/utils/utils")
 local dragBeingEdited = false
+local maxLightChannelsWidth = nil
 
 local style = {
     mutedColor = 0xFFA5A19B,
@@ -387,6 +389,75 @@ function style.drawNoBGConditionalButton(condition, text, greyed)
     end
 
     return push
+end
+
+style.lightChannelEnum = {
+    "LC_Channel1",
+    "LC_Channel2",
+    "LC_Channel3",
+    "LC_Channel4",
+    "LC_Channel5",
+    "LC_Channel6",
+    "LC_Channel7",
+    "LC_Channel8",
+    "LC_ChannelWorld",
+    "LC_Character",
+    "LC_Player",
+    "LC_Automated"
+}
+
+function style.drawLightChannelsSelector(object, lightChannels)
+    if not maxLightChannelsWidth then
+        maxLightChannelsWidth = utils.getTextMaxWidth(style.lightChannelEnum) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+    end
+
+    style.pushButtonNoBG(true)
+    if ImGui.Button(IconGlyphs.PlusBoxMultipleOutline) then
+        if object then history.addAction(history.getElementChange(object)) end
+        for i = 1, #lightChannels do
+            lightChannels[i] = true
+        end
+    end
+    style.tooltip("Select all light channels")
+    ImGui.SameLine()
+    if ImGui.Button(IconGlyphs.MinusBoxMultipleOutline) then
+        if object then history.addAction(history.getElementChange(object)) end
+        for i = 1, #lightChannels do
+            lightChannels[i] = false
+        end
+    end
+    style.tooltip("Deselect all light channels")
+    ImGui.SameLine()
+    if ImGui.Button(IconGlyphs.ContentCopy) then
+        utils.insertClipboardValue("lightChannels", utils.deepcopy(lightChannels))
+        ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, "Copied light channels to the clipboard"))
+    end
+    style.tooltip("Copy light channels to clipboard")
+
+    ImGui.SameLine()
+    local channels = utils.getClipboardValue("lightChannels")
+    style.pushGreyedOut(channels == nil)
+    if ImGui.Button(IconGlyphs.ContentPaste) and channels ~= nil then
+        if object then history.addAction(history.getElementChange(object)) end
+        lightChannels = utils.deepcopy(channels)
+    end
+    style.tooltip("Paste light channels from clipboard")
+    style.popGreyedOut(channels == nil)
+    style.pushButtonNoBG(false)
+
+    for key, channel in ipairs(style.lightChannelEnum) do
+        style.mutedText(channel)
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(maxLightChannelsWidth)
+
+        if object then
+            lightChannels[key], _ = style.trackedCheckbox(object, "##lightChannel" .. key, lightChannels[key])
+        else
+            lightChannels[key], _ = ImGui.Checkbox("##lightChannel" .. key, lightChannels[key])
+        end
+    end
+
+    return lightChannels
 end
 
 return style

@@ -144,6 +144,8 @@ function savedUI.draw(spawner)
     savedUI.handlePopUp()
 end
 
+---@param group table
+---@param spawner spawner
 function savedUI.drawGroup(group, spawner)
     if ImGui.TreeNodeEx(group.name) then
         local pPos = Vector4.new(0, 0, 0, 0)
@@ -179,6 +181,11 @@ function savedUI.drawGroup(group, spawner)
             g:load(utils.deepcopy(group))
             spawner.baseUI.spawnedUI.addRootElement(g)
             history.addAction(history.getInsert({ g }))
+
+            if settings.setLoadedGroupAsSpawnNew then
+                spawner.baseUI.spawnedUI.cachePaths()
+                spawner.baseUI.spawnedUI.setElementSpawnNewTarget(g)
+            end
         end
         ImGui.SameLine()
         if ImGui.Button("TP to pos") then

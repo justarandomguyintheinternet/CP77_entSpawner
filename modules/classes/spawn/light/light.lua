@@ -1,6 +1,7 @@
 local visualized = require("modules/classes/spawn/visualized")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
+local lcHelper = require("modules/utils/lightChannelHelper")
 
 ---Class for worldStaticLightNode
 ---@class light : visualized
@@ -40,6 +41,7 @@ local utils = require("modules/utils/utils")
 ---@field private roughnessBias number
 ---@field private sourceRadius number
 ---@field private directional boolean
+---@field private lightChannels table
 local light = setmetatable({}, { __index = visualized })
 
 function light:new()
@@ -47,7 +49,7 @@ function light:new()
 
     o.spawnListType = "files"
     o.dataType = "Static Light"
-    o.spawnDataPath = "data/spawnables/lights/"
+    o.spawnDataPath = "data/spawnables/lights/staticLights/"
     o.modulePath = "light/light"
     o.node = "worldStaticLightNode"
     o.description = "Places a static light"
@@ -85,11 +87,13 @@ function light:new()
     o.roughnessBias = 0
     o.sourceRadius = 0.05
     o.directional = false
+    o.lightChannels = { true, true, true, true, true, true, true, true, true, false, false, false }
 
     o.maxBasePropertiesWidth = nil
     o.maxShadowPropertiesWidth = nil
     o.maxFlickerPropertiesWidth = nil
     o.maxMiscPropertiesWidth = nil
+    o.maxLightChannelsWidth = nil
 
     o.previewColor = "yellow"
 
@@ -174,6 +178,7 @@ function light:save()
     data.localShadows = self.localShadows
     data.sourceRadius = self.sourceRadius
     data.directional = self.directional
+    data.lightChannels = utils.deepcopy(self.lightChannels)
 
     return data
 end
@@ -358,6 +363,11 @@ function light:draw()
         ImGui.TreePop()
     end
 
+    if ImGui.TreeNodeEx("Light Channels") then
+        self.lightChannels = style.drawLightChannelsSelector(self.object, self.lightChannels)
+        ImGui.TreePop()
+    end
+
     if ImGui.TreeNodeEx("Misc. Settings") then
         if not self.maxShadowPropertiesWidth then
             self.maxShadowPropertiesWidth = utils.getTextMaxWidth({ "Directional", "Use in particles", "Use in transparents", "Scale Vol. Fog", "Auto Hide Distance", "Attenuation Mode", "Clamp Attenuation", "Specular Scale", "Scene Diffuse", "Roughness Bias", "Source Radius" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
@@ -448,6 +458,14 @@ function light:getProperties()
     return properties
 end
 
+function light:getGroupedProperties()
+    local properties = visualized.getGroupedProperties(self)
+
+    properties["lcGrouped"] = lcHelper.getGroupedProperties(self)
+
+    return properties
+end
+
 function light:getVisualizerSize()
     local size = math.max(math.min(0.35, ((self.intensity / 10000) * (self.lightType == 2 and self.capsuleLength / 2 or 1))), 0.05)
     return { x = size, y = size, z = size }
@@ -467,6 +485,7 @@ end
 function light:export()
     local data = visualized.export(self)
     data.type = "worldStaticLightNode"
+
     data.data = {
         autoHideDistance = self.autoHideDistance,
         capsuleLength = self.capsuleLength,
@@ -488,7 +507,7 @@ function light:export()
         radius = self.radius,
         type = self.lightTypes[self.lightType + 1],
         allowDistantLight = 0,
-        lightChannel = "LC_Channel1, LC_Channel2, LC_Channel3, LC_Channel4, LC_Channel5, LC_Channel6, LC_Channel7, LC_Channel8, LC_ChannelWorld",
+        lightChannel = utils.buildBitfieldString(self.lightChannels, style.lightChannelEnum),
         scaleVolFog = self.scaleVolFog,
         useInParticles = self.useInParticles and 1 or 0,
         useInTransparents = self.useInTransparents and 1 or 0,

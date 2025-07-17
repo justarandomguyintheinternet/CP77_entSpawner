@@ -17,9 +17,12 @@ local types = {
         },
         index = 1
     },
-    ["Lights"] = {
+    ["Lighting"] = {
         variants = {
-            ["Light"] = { class = require("modules/classes/spawn/light/light"), index = 1 }
+            ["Static Light"] = { class = require("modules/classes/spawn/light/light"), index = 1 },
+            ["Reflection Probe"] = { class = require("modules/classes/spawn/meta/reflectionProbe"), index = 2 },
+            ["Light Channel Area"] = { class = require("modules/classes/spawn/light/lightChannelArea"), index = 3 },
+            ["Fog Volume"] = { class = require("modules/classes/spawn/visual/fog"), index = 4 }
         },
         index = 3
     },
@@ -44,15 +47,13 @@ local types = {
             ["Decals"] = { class = require("modules/classes/spawn/visual/decal"), index = 1 },
             ["Effects"] = { class = require("modules/classes/spawn/visual/effect"), index = 3 },
             ["Static Audio Emitter"] = { class = require("modules/classes/spawn/visual/audio"), index = 4 },
-            ["Water Patch"] = { class = require("modules/classes/spawn/visual/waterPatch"), index = 5 },
-            ["Fog Volume"] = { class = require("modules/classes/spawn/visual/fog"), index = 6 }
+            ["Water Patch"] = { class = require("modules/classes/spawn/visual/waterPatch"), index = 5 }
         },
         index = 4
     },
     ["Meta"] = {
         variants = {
             ["Occluder"] = { class = require("modules/classes/spawn/meta/occluder"), index = 1 },
-            ["Reflection Probe"] = { class = require("modules/classes/spawn/meta/reflectionProbe"), index = 2 },
             ["Static Marker"] = { class = require("modules/classes/spawn/meta/staticMarker"), index = 3 },
             ["Spline Point"] = { class = require("modules/classes/spawn/meta/splineMarker"), index = 4 },
             ["Spline"] = { class = require("modules/classes/spawn/meta/spline"), index = 5 }
@@ -176,12 +177,12 @@ function spawnUI.loadSpawnData(spawner)
     typeNames = utils.getKeys(types)
     table.sort(typeNames, function(a, b) return types[a].index < types[b].index end)
 
-    spawnUI.selectedType = utils.indexValue(typeNames, settings.selectedType) - 1
+    spawnUI.selectedType = math.max(utils.indexValue(typeNames, settings.selectedType) - 1, 0)
 
     variantNames = utils.getKeys(types[typeNames[spawnUI.selectedType + 1]].variants)
     table.sort(variantNames, function(a, b) return types[typeNames[spawnUI.selectedType + 1]].variants[a].index < types[typeNames[spawnUI.selectedType + 1]].variants[b].index end)
 
-    spawnUI.selectedVariant = utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1
+    spawnUI.selectedVariant = math.max(utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1, 0)
 
     spawnUI.refresh()
 end
@@ -208,7 +209,7 @@ function spawnUI.updateFilter()
         if spawnUI.getActiveSpawnList().isPaths and settings.spawnUIOnlyNames then
             name = data.fileName
         end
-        if (name:lower():match(spawnUI.filter:lower())) ~= nil then
+        if utils.matchSearch(name, spawnUI.filter) then
             table.insert(spawnUI.filteredList, data)
         end
     end
@@ -240,7 +241,7 @@ function spawnUI.updateCategory()
     variantNames = utils.getKeys(types[typeNames[spawnUI.selectedType + 1]].variants)
     table.sort(variantNames, function(a, b) return types[typeNames[spawnUI.selectedType + 1]].variants[a].index < types[typeNames[spawnUI.selectedType + 1]].variants[b].index end)
 
-    spawnUI.selectedVariant = utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1
+    spawnUI.selectedVariant = math.max(utils.indexValue(variantNames, settings.lastVariants[settings.selectedType]) - 1, 0)
 
     spawnUI.refresh()
 end
@@ -428,6 +429,11 @@ function spawnUI.drawAll()
         end
         style.pushButtonNoBG(false)
     end
+
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(ImGui.GetWindowWidth() - 25 * style.viewSize)
+    style.mutedText(IconGlyphs.InformationOutline)
+    style.tooltip("Supports custom search query syntax:\n- | (OR), includes any terms including the word after the |\n- ! (NOT), excludes any terms including the word after the !\n- & (AND), terms must include the word after the &\n- E.g. table|chair!poor&low to match any terms that include 'table' or 'chair', but not 'poor', and must include 'low'")
 
     spawnUI.drawTargetGroupSelector()
 
@@ -763,7 +769,7 @@ function spawnUI.loadPopupData(typeName, variantName)
     local data = {}
 
     for _, entry in pairs(spawnData[typeName][variantName].data) do
-        if (entry.name:lower():match(spawnUI.popupFilter:lower())) ~= nil then
+        if utils.matchSearch(entry.name, spawnUI.popupFilter) ~= nil then
             table.insert(data, entry)
         end
     end

@@ -1,0 +1,37 @@
+{
+    "rotationRelative": false,
+    "scaleLocked": true,
+    "pos": {
+        "y": 0,
+        "w": 0,
+        "z": 0,
+        "x": 0
+    },
+    "hiddenByParent": false,
+    "transformExpanded": true,
+    "propertyHeaderStates": [],
+    "expandable": false,
+    "childs": [],
+    "selected": false,
+    "visible": true,
+    "spawnable": {
+        "rotationRelative": false,
+        "modulePath": "meta/data/spawnables/light/lightChannelArea",
+        "dataType": "Light Channel Area",
+        "position": {
+            "y": 0,
+            "w": 0,
+            "z": 0,
+            "x": 0
+        },
+        "rotation": {
+            "pitch": 0,
+            "yaw": 0,
+            "roll": 0
+        }
+    },
+    "name": "Light Channel Area - Default",
+    "isUsingSpawnables": true,
+    "headerOpen": false,
+    "modulePath": "modules/classes/editor/spawnableElement"
+}

@@ -637,4 +637,64 @@ function miscUtils.getPlayerPosition(editorActive)
     return pos
 end
 
+function miscUtils.buildBitfieldString(bitTable, bitTableNames)
+    local bitfieldString = ""
+
+    for i, channel in ipairs(bitTable) do
+        if channel then
+            bitfieldString = bitfieldString .. bitTableNames[i] .. ","
+        end
+    end
+
+    if bitfieldString ~= "" then
+        bitfieldString = bitfieldString:sub(1, -2)
+    end
+
+    return bitfieldString
+end
+
+function miscUtils.matchSearch(text, query)
+    if not query or query == "" then
+        return true
+    end
+
+    text = text:lower()
+    query = query:lower()
+
+    if text:match(query) then
+        return true
+    end
+
+    local anyMatch = false
+    local word = ""
+    local operation = "|"
+
+    for i = 1, #query + 1 do
+        local char = i <= #query and query:sub(i, i) or operation
+
+        if char == "|" or char == "!" or char == "&" then
+            if operation == "|" then
+                if not anyMatch and word ~= "" and text:match(word) then
+                    anyMatch = true
+                end
+            elseif operation == "&" then
+                if word ~= "" and not text:match(word) then
+                    return false
+                end
+            else
+                if word ~= "" and text:match(word) then
+                    return false
+                end
+            end
+
+            word = ""
+            operation = char
+        else
+            word = word .. char
+        end
+    end
+
+    return anyMatch
+end
+
 return miscUtils

@@ -2,6 +2,7 @@ local spawnable = require("modules/classes/spawn/spawnable")
 local style = require("modules/ui/style")
 local visualizer = require("modules/utils/visualizer")
 local utils = require("modules/utils/utils")
+local lcHelper = require("modules/utils/lightChannelHelper")
 
 ---Class for worldReflectionProbeNode
 ---@class reflection : spawnable
@@ -17,6 +18,8 @@ local utils = require("modules/utils/utils")
 ---@field public priority number
 ---@field public allInShadow boolean
 ---@field public maxPropertyWidth number
+---@field public lightChannels boolean[]
+---@field public volumeChannels boolean[]
 local reflection = setmetatable({}, { __index = spawnable })
 
 function reflection:new()
@@ -43,6 +46,8 @@ function reflection:new()
     o.streamingDistance = 50
     o.priority = 25
     o.allInShadow = false
+    o.lightChannels = { true, true, true, true, true, true, true, true, true, false, false, false }
+    o.volumeChannels = { true, true, true, true, true, true, true, true, true, false, false, false }
 
     o.maxPropertyWidth = nil
 
@@ -95,6 +100,8 @@ function reflection:save()
     data.previewed = self.previewed
     data.allInShadow = self.allInShadow
     data.priority = self.priority
+    data.lightChannels = utils.deepcopy(self.lightChannels)
+    data.volumeChannels = utils.deepcopy(self.volumeChannels)
 
     return data
 end
@@ -140,6 +147,9 @@ function reflection:draw()
         self.ambientMode = value + 1
         self:respawn()
     end
+    ImGui.SameLine()
+    ImGui.Text(IconGlyphs.InformationOutline)
+    style.tooltip("Not previewed in the editor.")
 
     style.mutedText("Neighbor Mode")
     ImGui.SameLine()
@@ -199,6 +209,16 @@ function reflection:draw()
     if finished then
         self:respawn()
     end
+
+    if ImGui.TreeNodeEx("Light Channels") then
+        self.lightChannels = style.drawLightChannelsSelector(self.object, self.lightChannels)
+        ImGui.TreePop()
+    end
+
+    if ImGui.TreeNodeEx("Volume Channels") then
+        self.volumeChannels = style.drawLightChannelsSelector(self.object, self.volumeChannels)
+        ImGui.TreePop()
+    end
 end
 
 function reflection:getProperties()
@@ -252,6 +272,7 @@ function reflection:getGroupedProperties()
 		end,
 		entries = { self.object }
 	}
+    properties["lcGrouped"] = lcHelper.getGroupedProperties(self)
 
     return properties
 end
@@ -278,7 +299,9 @@ function reflection:export()
         emissiveScale = self.emissiveScale,
         streamingDistance = self.streamingDistance,
         priority = self.priority,
-        allInShadow = self.allInShadow and 1 or 0
+        allInShadow = self.allInShadow and 1 or 0,
+        lightChannels = utils.buildBitfieldString(self.lightChannels, style.lightChannelEnum),
+        volumeChannels = utils.buildBitfieldString(self.volumeChannels, style.lightChannelEnum)
     }
 
     return data

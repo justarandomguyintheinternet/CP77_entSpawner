@@ -41,6 +41,7 @@ local config = require("modules/utils/config")
 ---@field public cameraMovementSpeed number
 ---@field public cameraRotateSpeed number
 ---@field public cameraZoomSpeed number
+---@field public setLoadedGroupAsSpawnNew boolean
 local settingsData = {
     spawnPos = 1,
     spawnDist = 4,
@@ -57,7 +58,7 @@ local settingsData = {
     },
     colliderColor = 0,
     selectedType = "Entity",
-    lastVariants = { Entity = "Template", Lights = "Light", Mesh = "Mesh", Collision = "Collision Shape", ["Deco"] = "Particles", ["Meta"] = "Occluder", ["Area"] = "Outline Marker", ["AI"] = "AI Spot" },
+    lastVariants = { Entity = "Template", Lighting = "Static Light", Mesh = "Mesh", Collision = "Collision Shape", ["Deco"] = "Particles", ["Meta"] = "Occluder", ["Area"] = "Outline Marker", ["AI"] = "AI Spot" },
     spawnUIFilter = "",
     savedUIFilter = "",
     windowStates = {},
@@ -80,6 +81,7 @@ local settingsData = {
     cameraMovementSpeed = 4,
     cameraRotateSpeed = 0.4,
     cameraZoomSpeed = 2.75,
+    setLoadedGroupAsSpawnNew = false,
 
     filterTags = {},
     favoritesFilter = "",

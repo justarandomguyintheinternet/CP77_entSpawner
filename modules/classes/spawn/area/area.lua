@@ -45,11 +45,10 @@ function area:update()
     visualized.update(self)
 end
 
-function area:save()
-    local data = visualized.save(self)
-
+function area:getMarkersData()
     local markers = {}
     local height = 0
+
     local paths = self:loadOutlinePaths()
 
     if utils.indexValue(paths, self.outlinePath) ~= -1 then
@@ -61,9 +60,14 @@ function area:save()
         end
     end
 
+    return markers, height
+end
+
+function area:save()
+    local data = visualized.save(self)
+
     data.outlinePath = self.outlinePath
-    data.markers = markers
-    data.height = height
+    data.markers, data.height = self:getMarkersData()
 
     return data
 end
@@ -89,6 +93,17 @@ function area:loadOutlinePaths()
     end
 
     return paths
+end
+
+function area:getMarkersCenter()
+    local center = Vector4.new(0, 0, 0, 0)
+    local nMarkers = math.max(1, #self.markers)
+
+	for _, position in pairs(self.markers) do
+		center = utils.addVector(center, ToVector4(position))
+	end
+
+    return Vector4.new(center.x / nMarkers, center.y / nMarkers, center.z / nMarkers, 0)
 end
 
 function area:draw()
@@ -128,7 +143,7 @@ function area:getProperties()
     return properties
 end
 
-function area:export()
+function area:export(_, _, markersZOffset)
     local data = visualized.export(self)
     data.type = "worldAreaShapeNode"
     data.data = {}
@@ -145,12 +160,7 @@ function area:export()
     end
 
     -- Grab center
-    local center = Vector4.new(0, 0, 0, 0)
-	for _, position in pairs(self.markers) do
-		center = utils.addVector(center, ToVector4(position))
-	end
-	local nMarkers = math.max(1, #self.markers)
-	center = Vector4.new(center.x / nMarkers, center.y / nMarkers, center.z / nMarkers, 0)
+    local center = self:getMarkersCenter()
     data.position = utils.fromVector(center)
 
     local buffer = utils.intToHex(math.min(255, #self.markers))
@@ -162,7 +172,7 @@ function area:export()
 
             buffer = buffer .. utils.floatToHex(diff.x)
             buffer = buffer .. utils.floatToHex(diff.y)
-            buffer = buffer .. utils.floatToHex(diff.z)
+            buffer = buffer .. utils.floatToHex(diff.z + (markersZOffset or 0))
             buffer = buffer .. utils.floatToHex(1)
         end
     end
