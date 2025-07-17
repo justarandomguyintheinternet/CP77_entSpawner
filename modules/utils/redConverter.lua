@@ -17,7 +17,8 @@ local exportExludes = {
     "meshResource",
     "worldTransform",
     "appearanceName",
-    "blackboard"
+    "blackboard",
+    "stealthRunnerQuest"
 }
 
 -- If this handle is nil, generate a new instance for it
