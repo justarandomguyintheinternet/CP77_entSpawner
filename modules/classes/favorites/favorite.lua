@@ -45,7 +45,7 @@ function favorite:setCategory(category)
 end
 
 function favorite:isMatch(stringFilter, tagFilter)
-    if not self.name:lower():match(stringFilter:lower()) then return false end
+    if not utils.matchSearch(self.name, stringFilter) then return false end
 
     if utils.tableLength(self.tags) == 0 then return not settings.favoritesTagsAND or utils.tableLength(tagFilter) == 0 end
 

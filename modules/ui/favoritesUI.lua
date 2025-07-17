@@ -564,6 +564,16 @@ function favoritesUI.draw()
         settings.save()
     end
 
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(ImGui.GetWindowWidth() - 25 * style.viewSize)
+    style.pushButtonNoBG(true)
+    if ImGui.Button(IconGlyphs.Reload) then
+        favoritesUI.categories = {}
+        favoritesUI.init(favoritesUI.spawnUI.spawner)
+    end
+    style.pushButtonNoBG(false)
+    style.tooltip("Reload favorites from disk")
+
     if ImGui.TreeNodeEx("Spawn Options", ImGuiTreeNodeFlags.SpanFullWidth) then
         favoritesUI.spawnUI.drawTargetGroupSelector()
         favoritesUI.spawnUI.drawSpawnPosition()
