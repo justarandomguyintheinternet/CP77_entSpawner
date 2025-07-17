@@ -2,6 +2,7 @@ local spawnable = require("modules/classes/spawn/spawnable")
 local style = require("modules/ui/style")
 local visualizer = require("modules/utils/visualizer")
 local utils = require("modules/utils/utils")
+local lcHelper = require("modules/utils/lightChannelHelper")
 
 local propertyNames = {
     "Color",
@@ -206,6 +207,8 @@ function fog:getGroupedProperties()
 		end,
 		entries = { self.object }
 	}
+
+    properties["lcGrouped"] = lcHelper.getGroupedProperties(self)
 
     return properties
 end

@@ -413,7 +413,7 @@ function style.drawLightChannelsSelector(object, lightChannels)
 
     style.pushButtonNoBG(true)
     if ImGui.Button(IconGlyphs.PlusBoxMultipleOutline) then
-        history.addAction(history.getElementChange(object))
+        if object then history.addAction(history.getElementChange(object)) end
         for i = 1, #lightChannels do
             lightChannels[i] = true
         end
@@ -421,7 +421,7 @@ function style.drawLightChannelsSelector(object, lightChannels)
     style.tooltip("Select all light channels")
     ImGui.SameLine()
     if ImGui.Button(IconGlyphs.MinusBoxMultipleOutline) then
-        history.addAction(history.getElementChange(object))
+        if object then history.addAction(history.getElementChange(object)) end
         for i = 1, #lightChannels do
             lightChannels[i] = false
         end
@@ -438,7 +438,7 @@ function style.drawLightChannelsSelector(object, lightChannels)
     local channels = utils.getClipboardValue("lightChannels")
     style.pushGreyedOut(channels == nil)
     if ImGui.Button(IconGlyphs.ContentPaste) and channels ~= nil then
-        history.addAction(history.getElementChange(object))
+        if object then history.addAction(history.getElementChange(object)) end
         lightChannels = utils.deepcopy(channels)
     end
     style.tooltip("Paste light channels from clipboard")
@@ -449,7 +449,12 @@ function style.drawLightChannelsSelector(object, lightChannels)
         style.mutedText(channel)
         ImGui.SameLine()
         ImGui.SetCursorPosX(maxLightChannelsWidth)
-        lightChannels[key], _ = style.trackedCheckbox(object, "##lightChannel" .. key, lightChannels[key])
+
+        if object then
+            lightChannels[key], _ = style.trackedCheckbox(object, "##lightChannel" .. key, lightChannels[key])
+        else
+            lightChannels[key], _ = ImGui.Checkbox("##lightChannel" .. key, lightChannels[key])
+        end
     end
 
     return lightChannels

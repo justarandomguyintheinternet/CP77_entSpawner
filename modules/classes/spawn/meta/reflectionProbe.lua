@@ -2,6 +2,7 @@ local spawnable = require("modules/classes/spawn/spawnable")
 local style = require("modules/ui/style")
 local visualizer = require("modules/utils/visualizer")
 local utils = require("modules/utils/utils")
+local lcHelper = require("modules/utils/lightChannelHelper")
 
 ---Class for worldReflectionProbeNode
 ---@class reflection : spawnable
@@ -271,6 +272,7 @@ function reflection:getGroupedProperties()
 		end,
 		entries = { self.object }
 	}
+    properties["lcGrouped"] = lcHelper.getGroupedProperties(self)
 
     return properties
 end

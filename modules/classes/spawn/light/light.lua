@@ -1,7 +1,7 @@
 local visualized = require("modules/classes/spawn/visualized")
 local style = require("modules/ui/style")
 local utils = require("modules/utils/utils")
-local history = require("modules/utils/history")
+local lcHelper = require("modules/utils/lightChannelHelper")
 
 ---Class for worldStaticLightNode
 ---@class light : visualized
@@ -455,6 +455,14 @@ function light:getProperties()
             self:draw()
         end
     })
+    return properties
+end
+
+function light:getGroupedProperties()
+    local properties = visualized.getGroupedProperties(self)
+
+    properties["lcGrouped"] = lcHelper.getGroupedProperties(self)
+
     return properties
 end
 

@@ -1,6 +1,7 @@
 local area = require("modules/classes/spawn/area/area")
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
+local lcHelper = require("modules/utils/lightChannelHelper")
 
 ---Class for worldLightChannelVolumeNode
 ---@class lightChannelArea : area
@@ -60,6 +61,14 @@ function lightChannelArea:save()
     data.lightChannels = utils.deepcopy(self.lightChannels)
 
     return data
+end
+
+function lightChannelArea:getGroupedProperties()
+    local properties = area.getGroupedProperties(self)
+
+    properties["lcGrouped"] = lcHelper.getGroupedProperties(self)
+
+    return properties
 end
 
 function lightChannelArea:export()

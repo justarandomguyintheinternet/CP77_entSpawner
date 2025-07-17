@@ -430,6 +430,11 @@ function spawnUI.drawAll()
         style.pushButtonNoBG(false)
     end
 
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(ImGui.GetWindowWidth() - 25 * style.viewSize)
+    style.mutedText(IconGlyphs.InformationOutline)
+    style.tooltip("Supports custom search query syntax:\n- | (OR), includes any terms including the word after the |\n- ! (NOT), excludes any terms including the word after the !\n- & (AND), terms must include the word after the &\n- E.g. table|chair!poor&low to match any terms that include 'table' or 'chair', but not 'poor', and must include 'low'")
+
     spawnUI.drawTargetGroupSelector()
 
     if ImGui.TreeNodeEx("Options", ImGuiTreeNodeFlags.SpanFullWidth) then
