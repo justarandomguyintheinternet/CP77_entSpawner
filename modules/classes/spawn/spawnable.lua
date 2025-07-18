@@ -442,6 +442,8 @@ end
 
 --Should be called once getAssetPreviewTextAnchor will return the correct position (BBOX loaded)
 function spawnable:setAssetPreviewTextPostition()
+    if not preview.elements["previewFirstLine"] then return end
+
     local x, y = editor.camera.worldToScreen(self:getAssetPreviewTextAnchor())
 
     local width, height = GetDisplayResolution()

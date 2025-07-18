@@ -244,7 +244,7 @@ function amm.importPreset(data, spawnedUI, importTasks)
         vehicles[vehicle] = true
     end
 
-    local root = generateGroup(spawnedUI, data.file_name:gsub(".json", ""), nil)
+    local root = generateGroup(spawnedUI, (data.file_name or "AMM_Preset"):gsub(".json", ""), nil)
     local props = generateGroup(spawnedUI, "Props", root)
     local lights = generateGroup(spawnedUI, "Lights", root)
     local lightNodes = generateGroup(spawnedUI, "Light Nodes", lights)
