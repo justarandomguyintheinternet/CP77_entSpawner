@@ -6,8 +6,6 @@
             "z": 1,
             "x": 1
         },
-        "material": 31,
-        "preset": 33,
         "modulePath": "collision/collider",
         "dataType": "Collision Shape"
     },
