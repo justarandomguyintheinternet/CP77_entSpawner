@@ -80,7 +80,7 @@ function spawnedUI.cachePaths()
         if path.ref.selected then
             table.insert(spawnedUI.selectedPaths, path)
         end
-        if spawnedUI.filter ~= "" and not path.ref.expandable and (path.ref.name:lower():match(spawnedUI.filter:lower())) ~= nil then
+        if spawnedUI.filter ~= "" and not path.ref.expandable and utils.matchSearch(path.ref.name, spawnedUI.filter) then
             table.insert(spawnedUI.filteredPaths, path)
             spawnedUI.filteredWidestName = math.max(spawnedUI.filteredWidestName, ImGui.CalcTextSize(path.ref.name))
         end
