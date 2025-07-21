@@ -316,6 +316,39 @@ function collider:getGroupedProperties()
 		entries = { self.object }
 	}
 
+    properties["collider"] = {
+		name = "Collider",
+        id = "collider",
+		data = {
+            material = settings.defaultColliderMaterial
+        },
+		draw = function(element, entries)
+            style.mutedText("Collision Material")
+            ImGui.SameLine()
+            ImGui.SetNextItemWidth(150 * style.viewSize)
+            element.groupOperationData["collider"].material, _ = ImGui.Combo("##collisionMaterial", element.groupOperationData["collider"].material, materials, #materials)
+
+            ImGui.SameLine()
+
+            if ImGui.Button("Apply") then
+                history.addAction(history.getMultiSelectChange(entries))
+                local nApplied = 0
+
+                for _, entry in ipairs(entries) do
+                    if entry.spawnable.node == self.node then
+                        entry.spawnable.material = element.groupOperationData["collider"].material
+                        entry.spawnable:updateFull(true)
+                        nApplied = nApplied + 1
+                    end
+                end
+
+                ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("Applied collision material to %s nodes", nApplied)))
+            end
+            style.tooltip("Apply the selected collision material to all selected colliders.")
+        end,
+		entries = { self.object }
+	}
+
     return properties
 end
 
