@@ -86,6 +86,7 @@ local settingsData = {
     filterTags = {},
     favoritesFilter = "",
     favoritesTagsAND = false,
+    defaultColliderMaterial = 12,
 
     tabSizes = {}
 }
