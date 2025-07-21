@@ -278,7 +278,7 @@ function collider:getGroupedProperties()
 
     properties["visualization"] = {
 		name = "Visualization",
-        id = "collider",
+        id = "colliderVisualization",
 		data = {},
 		draw = function(_, entries)
             ImGui.Text("Collider")
@@ -318,7 +318,7 @@ function collider:getGroupedProperties()
 
     properties["collider"] = {
 		name = "Collider",
-        id = "collider",
+        id = "colliderMaterial",
 		data = {
             material = settings.defaultColliderMaterial
         },

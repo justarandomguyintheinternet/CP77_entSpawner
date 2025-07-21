@@ -449,6 +449,47 @@ function mesh:getProperties()
     return properties
 end
 
+function mesh:getGroupedProperties()
+    local properties = spawnable.getGroupedProperties(self)
+
+    if self.hideGenerate then return properties end
+
+    properties["mesh"] = {
+		name = "Static Mesh",
+        id = "mesh",
+		data = {
+            shape = 0
+        },
+		draw = function(element, entries)
+            style.mutedText("Collider Shape")
+            ImGui.SameLine()
+            ImGui.SetNextItemWidth(110 * style.viewSize)
+            element.groupOperationData["mesh"].shape, _ = ImGui.Combo("##colliderShape", element.groupOperationData["mesh"].shape, colliderShapes, #colliderShapes)
+
+            ImGui.SameLine()
+
+            if ImGui.Button("Generate") then
+                history.addAction(history.getMultiSelectChange(entries))
+                local nApplied = 0
+
+                for _, entry in ipairs(entries) do
+                    if entry.spawnable.node == self.node then
+                        entry.spawnable.colliderShape = element.groupOperationData["mesh"].shape
+                        entry.spawnable:generateCollider()
+                        nApplied = nApplied + 1
+                    end
+                end
+
+                ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("Generated colliders for %s nodes", nApplied)))
+            end
+            style.tooltip("Generate Colliders for all selected meshes.")
+        end,
+		entries = { self.object }
+	}
+
+    return properties
+end
+
 ---@protected
 function mesh:generateCollider()
     local group = require("modules/classes/editor/positionableGroup"):new(self.object.sUI)
