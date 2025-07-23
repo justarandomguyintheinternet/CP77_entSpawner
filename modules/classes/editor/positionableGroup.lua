@@ -93,11 +93,10 @@ function positionableGroup:drawRotation(rotation)
 	local finished = false
 
 	ImGui.PushItemWidth(80 * style.viewSize)
-	style.pushGreyedOut(true)
+	style.popGreyedOut(not locked)
     finished = self:drawProp(rotation.roll, "Roll", "roll")
     ImGui.SameLine()
     finished = self:drawProp(rotation.pitch, "Pitch", "pitch")
-	style.popGreyedOut(not locked)
     ImGui.SameLine()
 	finished = self:drawProp(rotation.yaw, "Yaw", "yaw")
 	self:handleRightAngleChange("yaw", shiftActive and not finished)
@@ -118,16 +117,35 @@ function positionableGroup:getRotation()
 end
 
 function positionableGroup:setRotationDelta(delta)
-	if delta.roll ~= 0 or delta.pitch ~= 0 or delta.yaw == 0 or self.rotationLocked then return end
+	if self.rotationLocked then return end
 
 	local pos = self:getPosition()
 	local leafs = self:getPositionableLeafs()
 
 	for _, entry in pairs(leafs) do
 		local relativePosition = utils.subVector(entry:getPosition(), pos)
-		relativePosition = utils.subVector(Vector4.RotateAxis(relativePosition, Vector4.new(0, 0, 1, 0), Deg2Rad(delta.yaw)), relativePosition)
-		entry:setPositionDelta(relativePosition)
-		entry:setRotationDelta(delta)
+
+		-- Apply ZXY rotation order
+		if delta.yaw ~= 0 then
+			relativePosition = Vector4.RotateAxis(relativePosition, Vector4.new(0, 0, 1, 0), Deg2Rad(delta.yaw)) -- Z axis (yaw)
+		end
+		if delta.pitch ~= 0 then
+			relativePosition = Vector4.RotateAxis(relativePosition, Vector4.new(1, 0, 0, 0), Deg2Rad(delta.pitch)) -- X axis (pitch)
+		end
+		if delta.roll ~= 0 then
+			relativePosition = Vector4.RotateAxis(relativePosition, Vector4.new(0, 1, 0, 0), Deg2Rad(delta.roll)) -- Y axis (roll)
+		end
+
+		local originalPosition = entry:getPosition()
+		local newPositionDelta = utils.subVector(relativePosition, utils.subVector(originalPosition, pos))
+
+		entry:setPositionDelta(newPositionDelta)
+		
+		local entryEulerAngles = entry:getRotation()
+		local entryQuat = entryEulerAngles:ToQuat()
+		local deltaQuat = delta:ToQuat()
+		local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](deltaQuat, entryQuat):ToEulerAngles()
+		entry:setRotation(newRotation)
 	end
 end
 
