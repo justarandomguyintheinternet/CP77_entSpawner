@@ -18,7 +18,9 @@ local exportExludes = {
     "worldTransform",
     "appearanceName",
     "blackboard",
-    "stealthRunnerQuest"
+    "stealthRunnerQuest",
+    "betterNetrunningBreachedNPCs",
+    "betterNetrunningBreachedCameras"
 }
 
 -- If this handle is nil, generate a new instance for it
