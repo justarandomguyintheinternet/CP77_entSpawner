@@ -174,13 +174,15 @@ local function fixInstanceData(data, parent)
                 value.Green = math.min(value.Green, 255)
                 value.Blue = math.min(value.Blue, 255)
                 value.Alpha = math.min(value.Alpha, 255)
-            elseif key == "stealthRunnerQuest" or key == "betterNetrunningBreachedCameras" or key == "betterNetrunningBreachedNPCs" or key == "betterNetrunningBreachedBasic" or key == "betterNetrunningBreachedTurrets" then
+            elseif key == "stealthRunnerQuest" then
                 data[key] = nil
             end
 
             if data ~= nil then
                 fixInstanceData(value, data)
             end
+        elseif key == "betterNetrunningBreachedCameras" or key == "betterNetrunningBreachedNPCs" or key == "betterNetrunningBreachedBasic" or key == "betterNetrunningBreachedTurrets" then
+            data[key] = nil
         end
     end
 end
