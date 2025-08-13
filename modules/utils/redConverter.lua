@@ -20,7 +20,9 @@ local exportExludes = {
     "blackboard",
     "stealthRunnerQuest",
     "betterNetrunningBreachedNPCs",
-    "betterNetrunningBreachedCameras"
+    "betterNetrunningBreachedCameras",
+    "betterNetrunningBreachedTurrets",
+    "betterNetrunningBreachedBasic"
 }
 
 -- If this handle is nil, generate a new instance for it
