@@ -769,7 +769,7 @@ function spawnUI.loadPopupData(typeName, variantName)
     local data = {}
 
     for _, entry in pairs(spawnData[typeName][variantName].data) do
-        if utils.matchSearch(entry.name, spawnUI.popupFilter) ~= nil then
+        if utils.matchSearch(entry.name, spawnUI.popupFilter) then
             table.insert(data, entry)
         end
     end
@@ -808,7 +808,6 @@ function spawnUI.drawPopupVariant(typeName, variantName)
         local y = #spawnUI.popupData * ImGui.GetFrameHeightWithSpacing()
 
         if ImGui.BeginChild("##list", xSpace, math.max(math.min(y, screenHeight / 2), 1)) then
-
             local clipper = ImGuiListClipper.new()
             clipper:Begin(#spawnUI.popupData, -1)
 

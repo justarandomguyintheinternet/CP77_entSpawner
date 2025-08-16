@@ -707,7 +707,7 @@ function editor.handleBoxSelect()
         local max = { x = math.max(editor.boxSelectStart.x, x), y = math.max(editor.boxSelectStart.y, y) }
 
         for _, element in pairs(editor.spawnedUI.paths) do
-            if element.ref.visible and utils.isA(element.ref, "spawnableElement") then
+            if element.ref.visible and not element.ref.hiddenByParent and utils.isA(element.ref, "spawnableElement") then
                 local inside = true
                 for _, corner in pairs(calculateSpawnableCorners(element.ref.spawnable)) do
                     local xCorner, yCorner = editor.camera.worldToScreen(corner)
