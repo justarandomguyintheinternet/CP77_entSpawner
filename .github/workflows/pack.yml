@@ -8,6 +8,7 @@ on:
       - dev/nodes
       - fix/*
       - light-channels
+      - crowd-null
   workflow_dispatch:
 
 jobs:
