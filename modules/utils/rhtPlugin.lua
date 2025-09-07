@@ -77,7 +77,7 @@ local typeMap = {
 
             return ResRef.FromHash(probe.hash):ToString()
         end,
-        category = "Meta",
+        category = "Lighting",
         sub = "Reflection Probe"
     }
 }
