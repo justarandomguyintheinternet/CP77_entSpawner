@@ -33,7 +33,7 @@ spawnedUI = {
     root = require("modules/classes/editor/element"):new(spawnedUI),
     multiSelectGroup = require("modules/classes/editor/positionableGroup"):new(spawnedUI),
     filter = "",
-    newGroupName = "New Group",
+    newGroupName = "New_Group",
     newGroupRandomized = false,
     spawner = nil,
 
@@ -1087,7 +1087,10 @@ function spawnedUI.drawTop()
     end
 
     ImGui.PushItemWidth(200 * style.viewSize)
-    spawnedUI.newGroupName = ImGui.InputTextWithHint('##newG', 'New group name...', spawnedUI.newGroupName, 100)
+    spawnedUI.newGroupName, changed = ImGui.InputTextWithHint('##newG', 'New group name...', spawnedUI.newGroupName, 100)
+    if changed then
+        spawnedUI.newGroupName = utils.createFileName(spawnedUI.newGroupName)
+    end
     ImGui.PopItemWidth()
 
     ImGui.SameLine()
