@@ -344,7 +344,7 @@ function spawnableElement:updateRandomization()
 			euler.yaw = angle
 		end
 
-		self:setRotation(euler)
+		self:setRotationDelta(euler)
 	end
 
 	if self.randomizationSettings.randomizeAppearance then
