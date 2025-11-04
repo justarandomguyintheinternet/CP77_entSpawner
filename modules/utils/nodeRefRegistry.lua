@@ -60,7 +60,7 @@ function registry.drawNodeRefSelector(width, ref, object, record)
     ImGui.SetNextItemWidth(width * style.viewSize)
     if (ImGui.BeginCombo("##nodeRefSelector", ref)) then
         local interiorWidth = width - (2 * ImGui.GetStyle().FramePadding.x) - 30
-        ref, _, finished = style.trackedTextField(object, "##noderef", ref, "$/#foobar", interiorWidth)
+        ref, _, textFieldFinished = style.trackedTextField(object, "##noderef", ref, "$/#foobar", interiorWidth)
         local x, _ = ImGui.GetItemRectSize()
 
         ImGui.SameLine()
@@ -74,6 +74,7 @@ function registry.drawNodeRefSelector(width, ref, object, record)
         end
         style.pushButtonNoBG(false)
 
+        local entryHovered = false
         local xButton, _ = ImGui.GetItemRectSize()
         if ImGui.BeginChild("##list", x + xButton + ImGui.GetStyle().ItemSpacing.x, 100 * style.viewSize) then
             for _, node in pairs(registry.refs[object:getRootParent().name] or {}) do
@@ -86,12 +87,20 @@ function registry.drawNodeRefSelector(width, ref, object, record)
                     finished = true
                     ImGui.CloseCurrentPopup()
                 end
+                entryHovered = entryHovered or ImGui.IsItemHovered()
             end
 
             ImGui.EndChild()
         end
 
         ImGui.EndCombo()
+
+        -- Make sure that if text input is used as search, and entry is clicked, that we do not count the finish event from text input, but wait for the selectable to be clicked on the next frame
+        if entryHovered and textFieldFinished then
+            finished = false
+        else
+            finished = finished or textFieldFinished
+        end
     end
 
     return ref, finished
