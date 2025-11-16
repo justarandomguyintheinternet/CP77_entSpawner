@@ -4,6 +4,8 @@ local history = require("modules/utils/history")
 local style = require("modules/ui/style")
 local editor = require("modules/utils/editor/editor")
 
+local scatteredConfig = require("modules/classes/editor/scatteredConfig")
+
 local element = require("modules/classes/editor/element")
 
 ---Element with position, rotation and optionally scale, handles the rendering / editing of those. Values have to be provided by the inheriting class
@@ -18,6 +20,7 @@ local element = require("modules/classes/editor/element")
 ---@field visualizerDirection string
 ---@field controlsHovered boolean
 ---@field randomizationSettings table
+---@field scatterConfig scatteredConfig
 local positionable = setmetatable({}, { __index = element })
 
 function positionable:new(sUI)
@@ -44,6 +47,8 @@ function positionable:new(sUI)
 		probability = 0.5
 	}
 
+	o.scatterConfig = scatteredConfig:new()
+
 	o.class = utils.combine(o.class, { "positionable" })
 
 	setmetatable(o, { __index = self })
@@ -61,6 +66,8 @@ function positionable:load(data, silent)
 	for key, setting in pairs(data.randomizationSettings or {}) do
 		self.randomizationSettings[key] = setting
 	end
+
+	self.scatterConfig:load(data.scatteredConfig)
 
 	if self.scaleLocked == nil then self.scaleLocked = true end
 	if self.transformExpanded == nil then self.transformExpanded = true end
@@ -105,6 +112,17 @@ function positionable:getProperties()
 			defaultHeader = false,
 			draw = function ()
 				self:drawEntryRandomization()
+			end
+		})
+	end
+
+	if self.parent and self.parent.parent and utils.isA(self.parent.parent, "scatteredGroup") then
+		table.insert(properties, {
+			id = "scatteredShelf",
+			name = "Entry Scattering",
+			defaultHeader = false,
+			draw = function ()
+				self.scatterConfig:draw()
 			end
 		})
 	end
@@ -473,6 +491,7 @@ function positionable:serialize()
 	data.rotationLocked = self.rotationLocked
 	data.randomizationSettings = utils.deepcopy(self.randomizationSettings)
 	data.pos = utils.fromVector(self:getPosition()) -- For savedUI
+	data.scatterConfig = self.scatterConfig:serialize()
 
 	return data
 end

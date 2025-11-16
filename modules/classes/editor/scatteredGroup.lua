@@ -1,16 +1,15 @@
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
-local scatteredElement = require("modules/classes/editor/scatteredConfigElement")
 
 local positionableGroup = require("modules/classes/editor/positionableGroup")
 
 ---Class scattered positionable group
 ---@class scatteredGroup : positionableGroup
 ---@field seed number
----@field itemRandomizationConfig table<scatteredConfigElement>
 ---@field snapToGround boolean
----@field positionable positionable
+---@field baseGroup positionableGroup
+---@field instanceGroup positionableGroup
 local scatteredGroup = setmetatable({}, { __index = positionableGroup })
 
 function scatteredGroup:new(sUI)
@@ -25,12 +24,17 @@ function scatteredGroup:new(sUI)
 
 	o.seed = 1
     o.snapToGround = false
-    o.itemRandomizationConfig = {}
-    o.scaleSpread = 1
 
 	o.lastPos = nil
 
 	o.maxPropertyWidth = nil
+
+	o.baseGroup = positionableGroup:new(sUI)
+	o.baseGroup.name = "Base"
+	o.instanceGroup = positionableGroup:new(sUI)
+	o.instanceGroup.name = "Instances"
+	o.baseGroup:setParent(o)
+	o.instanceGroup:setParent(o)
 
 	setmetatable(o, { __index = self })
    	return o
@@ -41,94 +45,90 @@ function scatteredGroup:load(data, silent)
 
 	self.seed = data.seed
 	self.snapToGround = data.snapToGround or false
-    for _, configData in ipairs(data.itemRandomizationConfig or {}) do
-		local configElement = scatteredElement:new(self, self.sUI)
-		configElement:load(configData, silent)
-		table.insert(self.itemRandomizationConfig, configElement)
-	end
-    self.scaleSpread = data.scaleSpread or 1
-
 	if self.seed == -1 then
 		self:reSeed()
 	end
-end
 
-function scatteredGroup:addNewConfigElement(element)
-	print("Adding new config element")
-	self.lastPos = self:getPosition()
-	history.addAction(history.getElementChange(self))
-	element.spawnable:despawn()
-	element.hiddenByParent = true
-	element.visible = false
-	element.childs = {}
-	local newConfigElement = scatteredElement:new(self, self.sUI)
-	newConfigElement.baseObj = element
-	
-	self:removeChild(element)
-
-	table.insert(self.itemRandomizationConfig, newConfigElement)
-	print(#self.itemRandomizationConfig)
-end
-
-function scatteredGroup:removeConfigElement(configElement)
-	history.addAction(history.getElementChange(self))
-	for i, element in ipairs(self.itemRandomizationConfig) do
-		if element == configElement then
-			table.remove(self.itemRandomizationConfig, i)
-			return
+	local hasBase, hasInstances = false, false
+	for _, child in ipairs(self.childs) do
+		if child.name == "Base" then
+			hasBase = true
+			o.baseGroup = child
+		elseif child.name == "Instances" then
+			hasInstances = true
+			o.instanceGroup = child
 		end
+	end
+
+	if not hasBase then
+		o.baseGroup = positionableGroup:new(self.sUI)
+		o.baseGroup.name = "Base"
+		o.baseGroup:setParent(self)
+	end
+
+	if not hasInstances then
+		o.instanceGroup = positionableGroup:new(self.sUI)
+		o.instanceGroup.name = "Instances"
+		o.instanceGroup:setParent(self)
 	end
 end
 
 function scatteredGroup:applyRandomization()
-	-- if true then return end
-	while self.childs[1] do
-		self.childs[1]:remove()
+	self.lastPos = self:getPosition()
+	while self.instanceGroup.childs[1] do
+		self.instanceGroup.childs[1]:remove()
 	end
+
 	print("removed children")
 	math.randomseed(self.seed)
 	print("set seed to " .. self.seed)
-	for ic, configElement in ipairs(self.itemRandomizationConfig) do
-		print("Applying config element " .. ic)
-		local elementCount = math.random(configElement.count.min, configElement.count.max)
+	for ic, child in ipairs(self.baseGroup.childs) do
+		print("Applying config element " .. ic .. " / " .. child.modulePath)
+		if not child.scatterConfig then
+			print("No scatter config, skipping")
+			goto continue
+		end
+		local elementCount = math.random(child.scatterConfig.count.min, child.scatterConfig.count.max)
 		print("Spawning " .. elementCount .. " elements")
 		for i = 1, elementCount do
 			print("Spawning element " .. i)
-			print("Config Element Base Obj: " .. configElement.baseObj.modulePath)
-			local newObjSerialized = configElement.baseObj:serialize()
+
+			local newObjSerialized = child:serialize()
 			newObjSerialized.visible = true
 			newObjSerialized.hiddenByParent = false
-			local newObj = require(configElement.baseObj.modulePath):new(self.sUI)
+			local newObj = require(child.modulePath):new(self.sUI)
 			newObj:load(newObjSerialized, true)
 
 			print("Deepcopied base object")
 
-			local position = Vector4.new((math.random(configElement.position.x.min, configElement.position.x.max) + self.lastPos.x or 0),
-			(math.random(configElement.position.y.min, configElement.position.y.max) + self.lastPos.y or 0),
-			(math.random(configElement.position.z.min, configElement.position.z.max) + self.lastPos.z or 0), 1)
+			local position = Vector4.new((math.random(child.scatterConfig.position.x.min, child.scatterConfig.position.x.max) + self.lastPos.x or 0),
+			(math.random(child.scatterConfig.position.y.min, child.scatterConfig.position.y.max) + self.lastPos.y or 0),
+			(math.random(child.scatterConfig.position.z.min, child.scatterConfig.position.z.max) + self.lastPos.z or 0), 1)
 			newObj:setPosition(position)
 
 			print("Set position")
 
-			local rotation = EulerAngles.new(math.random(configElement.rotation.x.min, configElement.rotation.x.max),
-			math.random(configElement.rotation.y.min, configElement.rotation.y.max),
-			math.random(configElement.rotation.z.min, configElement.rotation.z.max))
+			local rotation = EulerAngles.new(math.random(child.scatterConfig.rotation.x.min, child.scatterConfig.rotation.x.max),
+			math.random(child.scatterConfig.rotation.y.min, child.scatterConfig.rotation.y.max),
+			math.random(child.scatterConfig.rotation.z.min, child.scatterConfig.rotation.z.max))
 			newObj:setRotation(rotation)
 
 			print("Set rotation")
 
-			local scale = { x = math.random(configElement.scale.x.min, configElement.scale.x.max),
-			y = math.random(configElement.scale.y.min, configElement.scale.y.max),
-			z = math.random(configElement.scale.z.min, configElement.scale.z.max) }
+			local scale = { x = math.random(child.scatterConfig.scale.x.min, child.scatterConfig.scale.x.max),
+			y = math.random(child.scatterConfig.scale.y.min, child.scatterConfig.scale.y.max),
+			z = math.random(child.scatterConfig.scale.z.min, child.scatterConfig.scale.z.max) }
 			newObj:setScale(scale, true)
 
 			print("Set scale")
 			newObj:setSilent(false)
 			newObj:setVisible(true, true)
-			self:addChild(newObj)
+			newObj:setParent(self.instanceGroup)
 			print("Added child")
 		end
+		::continue::
 	end
+	
 	print("Finished applying randomization")
 	if self.snapToGround then
 		self:dropToSurface(Vector4.new(0, 0, -1, 0))
@@ -186,17 +186,6 @@ function scatteredGroup:drawGroupRandomization()
 		self:reSeed()
 	end
 	style.pushButtonNoBG(false)
-	style.spacedSeparator()
-	style.styledText("Config Elements")
-	for _, configElement in ipairs(self.itemRandomizationConfig) do
-		ImGui.Separator()
-		configElement:draw()
-	end
-	if ImGui.Button("Add New Config Element") then
-		history.addAction(history.getElementChange(self))
-		local newConfigElement = scatteredElement:new(self, self.sUI)
-		table.insert(self.itemRandomizationConfig, newConfigElement)
-	end
 end
 
 function scatteredGroup:serialize()
@@ -204,11 +193,6 @@ function scatteredGroup:serialize()
 
 	data.seed = self.seed
 	data.snapToGround = self.snapToGround
-    data.itemRandomizationConfig = {}
-	for _, configElement in ipairs(self.itemRandomizationConfig) do
-		table.insert(data.itemRandomizationConfig, configElement:serialize())
-	end
-    data.scaleSpread = self.scaleSpread
 
 	return data
 end

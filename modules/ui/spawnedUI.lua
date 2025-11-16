@@ -725,12 +725,6 @@ function spawnedUI.drawContextMenu(element, path)
 
             spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(element:serialize(), element.name, icon)
         end
-        if utils.isA(element.parent, "scatteredGroup")  then
-            if ImGui.MenuItem("Add to Scatter Set") then
-                element.parent:addNewConfigElement(element)
-            end
-        end
-        
 
         ImGui.EndPopup()
     end
