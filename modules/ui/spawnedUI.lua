@@ -10,6 +10,8 @@ local registry = require("modules/utils/nodeRefRegistry")
 ---@field root element
 ---@field filter string
 ---@field newGroupName string
+---@field groupTypes string[]
+---@field newGroupTypeIndex number
 ---@field newGroupRandomized boolean
 ---@field spawner spawner?
 ---@field paths {path : string, ref : element}[]
@@ -34,6 +36,8 @@ spawnedUI = {
     multiSelectGroup = require("modules/classes/editor/positionableGroup"):new(spawnedUI),
     filter = "",
     newGroupName = "New_Group",
+    groupTypes = { "Normal", "Randomized", "Scattered" },
+    newGroupTypeIndex = 1,
     newGroupRandomized = false,
     spawner = nil,
 
@@ -721,6 +725,12 @@ function spawnedUI.drawContextMenu(element, path)
 
             spawnedUI.spawner.baseUI.spawnUI.favoritesUI.addNewItem(element:serialize(), element.name, icon)
         end
+        if utils.isA(element.parent, "scatteredGroup")  then
+            if ImGui.MenuItem("Add to Scatter Set") then
+                element.parent:addNewConfigElement(element)
+            end
+        end
+        
 
         ImGui.EndPopup()
     end
@@ -1096,9 +1106,12 @@ function spawnedUI.drawTop()
     ImGui.SameLine()
     if ImGui.Button("Add group") then
         local group = require("modules/classes/editor/positionableGroup"):new(spawnedUI)
+        local selectedType = spawnedUI.groupTypes[spawnedUI.newGroupTypeIndex]
 
-        if spawnedUI.newGroupRandomized then
+        if selectedType == "Randomized" then
             group = require("modules/classes/editor/randomizedGroup"):new(spawnedUI)
+        elseif selectedType == "Scattered" then
+            group = require("modules/classes/editor/scatteredGroup"):new(spawnedUI)
         end
 
         group.name = spawnedUI.newGroupName
@@ -1106,8 +1119,11 @@ function spawnedUI.drawTop()
         history.addAction(history.getInsert({ group }))
     end
     ImGui.SameLine()
-    spawnedUI.newGroupRandomized = style.toggleButton(IconGlyphs.Dice5Outline, spawnedUI.newGroupRandomized)
-    style.tooltip("Make new group randomized")
+    ImGui.SetNextItemWidth(utils.getTextMaxWidth(spawnedUI.groupTypes) + 60)
+    local newIndex, changed = ImGui.Combo("##groupType", spawnedUI.newGroupTypeIndex - 1, spawnedUI.groupTypes, #spawnedUI.groupTypes)
+    if changed then
+        spawnedUI.newGroupTypeIndex = newIndex + 1
+    end
 
     style.pushButtonNoBG(true)
 
