@@ -242,6 +242,11 @@ function scatteredGroup:serialize()
 	data.seed = self.seed
 	data.snapToGround = self.snapToGround
 
+	data.positionMultiplier = self.positionMultiplier
+	data.rotationMultiplier = self.rotationMultiplier
+	data.scaleMultiplier = self.scaleMultiplier
+	data.instanceCountMultiplier = self.instanceCountMultiplier
+	data.snapToGroundOffset = self.snapToGroundOffset
 	return data
 end
 
