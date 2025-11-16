@@ -8,8 +8,14 @@ local positionableGroup = require("modules/classes/editor/positionableGroup")
 ---@class scatteredGroup : positionableGroup
 ---@field seed number
 ---@field snapToGround boolean
+---@field snapToGroundOffset number
+---@field lastPos Vector4
 ---@field baseGroup positionableGroup
 ---@field instanceGroup positionableGroup
+---@field positionMultiplier number
+---@field rotationMultiplier number
+---@field scaleMultiplier number
+---@field instanceCountMultiplier number
 local scatteredGroup = setmetatable({}, { __index = positionableGroup })
 
 function scatteredGroup:new(sUI)
@@ -36,6 +42,12 @@ function scatteredGroup:new(sUI)
 	o.baseGroup:setParent(o)
 	o.instanceGroup:setParent(o)
 
+	o.positionMultiplier = 1
+	o.rotationMultiplier = 1
+	o.scaleMultiplier = 1
+	o.instanceCountMultiplier = 1
+	o.snapToGroundOffset = 100
+
 	setmetatable(o, { __index = self })
    	return o
 end
@@ -45,6 +57,12 @@ function scatteredGroup:load(data, silent)
 
 	self.seed = data.seed
 	self.snapToGround = data.snapToGround or false
+	self.snapToGroundOffset = data.snapToGroundOffset or 100
+	self.positionMultiplier = data.positionMultiplier or 1
+	self.rotationMultiplier = data.rotationMultiplier or 1
+	self.scaleMultiplier = data.scaleMultiplier or 1
+	self.instanceCountMultiplier = data.instanceCountMultiplier or 1
+
 	if self.seed == -1 then
 		self:reSeed()
 	end
@@ -53,45 +71,39 @@ function scatteredGroup:load(data, silent)
 	for _, child in ipairs(self.childs) do
 		if child.name == "Base" then
 			hasBase = true
-			o.baseGroup = child
+			self.baseGroup = child
 		elseif child.name == "Instances" then
 			hasInstances = true
-			o.instanceGroup = child
+			self.instanceGroup = child
 		end
 	end
 
 	if not hasBase then
-		o.baseGroup = positionableGroup:new(self.sUI)
-		o.baseGroup.name = "Base"
-		o.baseGroup:setParent(self)
+		self.baseGroup = positionableGroup:new(self.sUI)
+		self.baseGroup.name = "Base"
+		self.baseGroup:setParent(self)
 	end
 
 	if not hasInstances then
-		o.instanceGroup = positionableGroup:new(self.sUI)
-		o.instanceGroup.name = "Instances"
-		o.instanceGroup:setParent(self)
+		self.instanceGroup = positionableGroup:new(self.sUI)
+		self.instanceGroup.name = "Instances"
+		self.instanceGroup:setParent(self)
 	end
 end
 
-function scatteredGroup:applyRandomization()
-	self.lastPos = self:getPosition()
+function scatteredGroup:applyRandomization(pos)
+	self.lastPos = pos or self:getPosition()
 	while self.instanceGroup.childs[1] do
 		self.instanceGroup.childs[1]:remove()
 	end
 
-	print("removed children")
 	math.randomseed(self.seed)
-	print("set seed to " .. self.seed)
 	for ic, child in ipairs(self.baseGroup.childs) do
-		print("Applying config element " .. ic .. " / " .. child.modulePath)
 		if not child.scatterConfig then
-			print("No scatter config, skipping")
 			goto continue
 		end
-		local elementCount = math.random(child.scatterConfig.count.min, child.scatterConfig.count.max)
-		print("Spawning " .. elementCount .. " elements")
+		local elementCount = math.random(child.scatterConfig.count.min * self.instanceCountMultiplier, child.scatterConfig.count.max  * self.instanceCountMultiplier)
 		for i = 1, elementCount do
-			print("Spawning element " .. i)
 
 			local newObjSerialized = child:serialize()
 			newObjSerialized.visible = true
@@ -99,38 +111,32 @@ function scatteredGroup:applyRandomization()
 			local newObj = require(child.modulePath):new(self.sUI)
 			newObj:load(newObjSerialized, true)
 
-			print("Deepcopied base object")
+			local position = Vector4.new((math.random(child.scatterConfig.position.x.min * self.positionMultiplier, child.scatterConfig.position.x.max * self.positionMultiplier) + self.lastPos.x),
+				(math.random(child.scatterConfig.position.y.min * self.positionMultiplier, child.scatterConfig.position.y.max * self.positionMultiplier) + self.lastPos.y),
+				(math.random(child.scatterConfig.position.z.min * self.positionMultiplier, child.scatterConfig.position.z.max * self.positionMultiplier) + self.lastPos.z), 1)
 
-			local position = Vector4.new((math.random(child.scatterConfig.position.x.min, child.scatterConfig.position.x.max) + self.lastPos.x or 0),
-			(math.random(child.scatterConfig.position.y.min, child.scatterConfig.position.y.max) + self.lastPos.y or 0),
-			(math.random(child.scatterConfig.position.z.min, child.scatterConfig.position.z.max) + self.lastPos.z or 0), 1)
 			newObj:setPosition(position)
 
-			print("Set position")
-
-			local rotation = EulerAngles.new(math.random(child.scatterConfig.rotation.x.min, child.scatterConfig.rotation.x.max),
-			math.random(child.scatterConfig.rotation.y.min, child.scatterConfig.rotation.y.max),
-			math.random(child.scatterConfig.rotation.z.min, child.scatterConfig.rotation.z.max))
+			local rotation = EulerAngles.new(math.random(child.scatterConfig.rotation.x.min * self.rotationMultiplier, child.scatterConfig.rotation.x.max * self.rotationMultiplier),
+			math.random(child.scatterConfig.rotation.y.min * self.rotationMultiplier, child.scatterConfig.rotation.y.max * self.rotationMultiplier),
+			math.random(child.scatterConfig.rotation.z.min * self.rotationMultiplier, child.scatterConfig.rotation.z.max * self.rotationMultiplier))
 			newObj:setRotation(rotation)
 
-			print("Set rotation")
-
-			local scale = { x = math.random(child.scatterConfig.scale.x.min, child.scatterConfig.scale.x.max),
-			y = math.random(child.scatterConfig.scale.y.min, child.scatterConfig.scale.y.max),
-			z = math.random(child.scatterConfig.scale.z.min, child.scatterConfig.scale.z.max) }
+			local scaleValue = math.random(child.scatterConfig.scale.min * self.scaleMultiplier, child.scatterConfig.scale.max * self.scaleMultiplier)
+			local scale = { x = scaleValue,
+			y = scaleValue,
+			z = scaleValue }
 			newObj:setScale(scale, true)
 
-			print("Set scale")
 			newObj:setSilent(false)
 			newObj:setVisible(true, true)
 			newObj:setParent(self.instanceGroup)
-			print("Added child")
 		end
 		::continue::
 	end
 	
-	print("Finished applying randomization")
 	if self.snapToGround then
+		self:setPositionDelta(Vector4.new(0, 0, self.snapToGroundOffset, 0))
 		self:dropToSurface(Vector4.new(0, 0, -1, 0))
 	end
 end
@@ -186,6 +192,48 @@ function scatteredGroup:drawGroupRandomization()
 		self:reSeed()
 	end
 	style.pushButtonNoBG(false)
+
+	style.styledText("Snap to Ground")
+	ImGui.SameLine()
+	local snapToGround, snapToGroundChanged = style.trackedCheckbox(self, "Snap to Ground", self.snapToGround, false)
+	if snapToGroundChanged then
+		self.snapToGround = snapToGround
+	end
+
+	style.styledText("Snap Offset")
+	ImGui.SameLine()
+	local snapOffset, snapOffsetChanged = ImGui.DragFloat("##SnapOffset", self.snapToGroundOffset, 0.1, 0.1, 1000)
+	if snapOffsetChanged then
+		self.snapToGroundOffset = snapOffset
+	end
+
+	style.styledText("Position Multiplier")
+	ImGui.SameLine()
+	local posMult, posMultChanged = ImGui.DragFloat("##PositionMultiplier", self.positionMultiplier,  0.1, 0.1, 100)
+	if posMultChanged then
+		self.positionMultiplier = posMult
+	end
+
+	style.styledText("Rotation Multiplier")
+	ImGui.SameLine()
+	local rotMult, rotMultChanged = ImGui.DragFloat("##RotationMultiplier", self.rotationMultiplier,  0.1, 0.1, 100)
+	if rotMultChanged then
+		self.rotationMultiplier = rotMult
+	end
+
+	style.styledText("Scale Multiplier")
+	ImGui.SameLine()
+	local scaleMult, scaleMultChanged = ImGui.DragFloat("##Scale ultiplier", self.scaleMultiplier, 0.1, 0.1, 100)
+	if scaleMultChanged then
+		self.scaleMultiplier = scaleMult
+	end
+
+	style.styledText("Instance Count Multiplier")
+	ImGui.SameLine()
+	local countMult, countMultChanged = ImGui.DragFloat("##InstanceCountMultiplier", self.instanceCountMultiplier, 0.1, 10)
+	if countMultChanged then
+		self.instanceCountMultiplier = countMult
+	end
 end
 
 function scatteredGroup:serialize()
