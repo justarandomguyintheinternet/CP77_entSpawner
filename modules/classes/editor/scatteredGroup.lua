@@ -17,6 +17,7 @@ local positionableGroup = require("modules/classes/editor/positionableGroup")
 ---@field rotationMultiplier number
 ---@field scaleMultiplier number
 ---@field instanceCountMultiplier number
+---@field softnessMultiplier number
 local scatteredGroup = setmetatable({}, { __index = positionableGroup })
 
 -- SECTION: "BOILERPLATE"
@@ -50,6 +51,7 @@ function scatteredGroup:new(sUI)
 	o.scaleMultiplier = 1
 	o.instanceCountMultiplier = 1
 	o.snapToGroundOffset = 100
+	o.softnessMultiplier = 1
 
 	setmetatable(o, { __index = self })
    	return o
@@ -110,40 +112,85 @@ end
 
 -- SECTION: SCATTER LOGIC
 
+local function random_normal(mean, amplitude)
+    local u1 = math.random()
+    local u2 = math.random()
+
+    -- Box-Muller Transform:
+    local z = math.sqrt(-2 * math.log(u1)) * math.cos(2 * math.pi * u2)
+
+    return mean + z * amplitude
+end
+
+local function ranged_normal(min, max, amplitude, mean)
+	if not mean then 
+		mean = (min + max) / 2
+	end
+	return math.min(max, math.max(min, random_normal(mean, amplitude)))
+end
+
 ---@private
 ---@param scatterConfig scatteredConfig
 ---@return Vector4
 function scatteredGroup:calculatePosition(scatterConfig)
-	return Vector4.new((math.random(scatterConfig.position.x.min * self.positionMultiplier, scatterConfig.position.x.max * self.positionMultiplier) + self.lastPos.x),
-				(math.random(scatterConfig.position.y.min * self.positionMultiplier, scatterConfig.position.y.max * self.positionMultiplier) + self.lastPos.y),
-				(math.random(scatterConfig.position.z.min * self.positionMultiplier, scatterConfig.position.z.max * self.positionMultiplier) + self.lastPos.z), 1)
+	local posXmin = scatterConfig.position.x.min * self.positionMultiplier
+	local posXmax = scatterConfig.position.x.max * self.positionMultiplier
+
+	local posYmin = scatterConfig.position.y.min * self.positionMultiplier
+	local posYmax = scatterConfig.position.y.max * self.positionMultiplier
+	
+	local posZmin = scatterConfig.position.z.min * self.positionMultiplier
+	local posZmax = scatterConfig.position.z.max * self.positionMultiplier
+
+	local rPosX = ranged_normal(posXmin, posXmax, scatterConfig.position.x.distAmplitude * self.softnessMultiplier, scatterConfig.position.x.mean)
+	local rPosY = ranged_normal(posYmin, posYmax, scatterConfig.position.y.distAmplitude * self.softnessMultiplier, scatterConfig.position.y.mean)
+	local rPosZ = ranged_normal(posZmin, posZmax, scatterConfig.position.z.distAmplitude * self.softnessMultiplier, scatterConfig.position.z.mean)
+
+	return Vector4.new(rPosX + self.lastPos.x, rPosY + self.lastPos.y, rPosZ + self.lastPos.z, 1)
 end
 
 ---@private
 ---@param scatterConfig scatteredConfig
 ---@return EulerAngles
 function scatteredGroup:calculateRotation(scatterConfig)
-	return EulerAngles.new(math.random(scatterConfig.rotation.x.min * self.rotationMultiplier, scatterConfig.rotation.x.max * self.rotationMultiplier),
-			math.random(scatterConfig.rotation.y.min * self.rotationMultiplier, scatterConfig.rotation.y.max * self.rotationMultiplier),
-			math.random(scatterConfig.rotation.z.min * self.rotationMultiplier, scatterConfig.rotation.z.max * self.rotationMultiplier))
+	local Xmin = scatterConfig.rotation.x.min * self.rotationMultiplier
+	local Xmax = scatterConfig.rotation.x.max * self.rotationMultiplier
+
+	local Ymin = scatterConfig.rotation.y.min * self.rotationMultiplier
+	local Ymax = scatterConfig.rotation.y.max * self.rotationMultiplier
+
+	local Zmin = scatterConfig.rotation.z.min * self.rotationMultiplier
+	local Zmax = scatterConfig.rotation.z.max * self.rotationMultiplier
+
+	local rX = ranged_normal(Xmin, Xmax, scatterConfig.rotation.x.distAmplitude * self.softnessMultiplier, scatterConfig.rotation.x.mean)
+	local rY = ranged_normal(Ymin, Ymax, scatterConfig.rotation.y.distAmplitude * self.softnessMultiplier, scatterConfig.rotation.y.mean)
+	local rZ = ranged_normal(Zmin, Zmax, scatterConfig.rotation.z.distAmplitude * self.softnessMultiplier, scatterConfig.rotation.z.mean)
+
+	return EulerAngles.new(rX, rY, rZ)
 end
 
 ---@private
 ---@param scatterConfig scatteredConfig
 ---@return number
 function scatteredGroup:calculateScale(scatterConfig)
-	return math.random(scatterConfig.scale.min * self.scaleMultiplier, scatterConfig.scale.max * self.scaleMultiplier)
+	local min = scatterConfig.scale.min * self.scaleMultiplier
+	local max = scatterConfig.scale.max * self.scaleMultiplier
+
+	return ranged_normal(min, max, scatterConfig.scale.distAmplitude * self.softnessMultiplier, scatterConfig.scale.mean)
 end
 
 ---@private
 ---@param scatterConfig scatteredConfig
 ---@return number
 function scatteredGroup:calculateElementCount(scatterConfig)
-	return math.random(scatterConfig.count.min * self.instanceCountMultiplier, scatterConfig.count.max * self.instanceCountMultiplier)
+	local min = scatterConfig.count.min * self.instanceCountMultiplier
+	local max = scatterConfig.count.max * self.instanceCountMultiplier
+
+	return ranged_normal(min, max, scatterConfig.count.distAmplitude * self.softnessMultiplier, scatterConfig.count.mean)
 end
 
 function scatteredGroup:applyRandomization(pos, recursiveParam)
-	self.lastPos = pos or self:getPosition()
+	self.lastPos = pos or self.baseGroup:getPosition()
 	local recursive = recursiveParam or true
 	while self.instanceGroup.childs[1] do
 		self.instanceGroup.childs[1]:remove()
@@ -224,8 +271,6 @@ function scatteredGroup:getProperties()
 	return properties
 end
 
-
-
 function scatteredGroup:drawGroupRandomization()
 	if not self.maxPropertyWidth then
 		self.maxPropertyWidth = utils.getTextMaxWidth({ "Seed", "Randomization Rule", "Fixed Amount Rule", "Fixed Amount %", "Fixed Amount Total" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
@@ -264,6 +309,13 @@ function scatteredGroup:drawGroupRandomization()
 	local snapOffset, snapOffsetChanged = ImGui.DragFloat("##SnapOffset", self.snapToGroundOffset, 0.1, 0.1, 1000)
 	if snapOffsetChanged then
 		self.snapToGroundOffset = snapOffset
+	end
+
+	style.styledText("Softness Multiplier")
+	ImGui.SameLine()
+	local softMult, softMultChanged = ImGui.DragFloat("##SoftnessMultiplier", self.softnessMultiplier,  0.1, 0.1, 100)
+	if softMultChanged then
+		self.softnessMultiplier = softMult
 	end
 
 	style.styledText("Position Multiplier")

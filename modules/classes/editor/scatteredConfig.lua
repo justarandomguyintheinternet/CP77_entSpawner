@@ -2,23 +2,23 @@ local utils = require("modules/utils/utils")
 local settings = require("modules/utils/settings")
 local history = require("modules/utils/history")
 local style = require("modules/ui/style")
-local minMaxValue = require("modules/classes/editor/minMaxValue")
+local scatteredValue = require("modules/classes/editor/scatteredValue")
 
 -- Class for scattered config elements with randomization features
 ---@class scatteredConfig
----@field position {x: minMaxValue, y: minMaxValue, z: minMaxValue}
----@field rotation {x: minMaxValue, y: minMaxValue, z: minMaxValue}
----@field scale minMaxValue
----@field count minMaxValue
+---@field position {x: scatteredValue, y: scatteredValue, z: scatteredValue}
+---@field rotation {x: scatteredValue, y: scatteredValue, z: scatteredValue}
+---@field scale scatteredValue
+---@field count scatteredValue
 local scatteredConfig = {}
 
 function scatteredConfig:new()
 	local o = {}
 
-	o.position = { x = minMaxValue:new(-5, 5, true, "MIRROR"), y =  minMaxValue:new(-5, 5, true, "MIRROR"), z =  minMaxValue:new(0, 0, true, "MIRROR") }
-	o.rotation = { x =  minMaxValue:new(-0, 0, true, "MIRROR"), y =  minMaxValue:new(-0, 0, true, "MIRROR"), z =  minMaxValue:new(-180, 180, true, "MIRROR") }
-	o.scale = minMaxValue:new(1, 1, true, "MIRROR")
-	o.count = minMaxValue:new(1, 5, false, "NONE", "INT")
+	o.position = { x = scatteredValue:new(-5, 5, 30, "MIRROR"), y =  scatteredValue:new(-5, 5, 30, "MIRROR"), z =  scatteredValue:new(0, 0, 30, "MIRROR") }
+	o.rotation = { x =  scatteredValue:new(-0, 0, 100, "MIRROR"), y =  scatteredValue:new(-0, 0, 100, "MIRROR"), z =  scatteredValue:new(-180, 180, 100, "MIRROR") }
+	o.scale = scatteredValue:new(1, 1, 100, "MIRROR")
+	o.count = scatteredValue:new(1, 5, 30, "OFF", "INT")
 
 	self.__index = self
    	return setmetatable(o, self)
@@ -63,14 +63,14 @@ function scatteredConfig:load(data)
 	if data == nil then
 		return new
 	end
-	new.position = { x = minMaxValue:new(data.position.x.min, data.position.x.max, data.position.x.synced, data.position.x.syncType),
-					  y = minMaxValue:new(data.position.y.min, data.position.y.max, data.position.y.synced, data.position.y.syncType),
-					  z = minMaxValue:new(data.position.z.min, data.position.z.max, data.position.z.synced, data.position.z.syncType) }
-	new.rotation = { x = minMaxValue:new(data.rotation.x.min, data.rotation.x.max, data.rotation.x.synced, data.rotation.x.syncType),
-					   y = minMaxValue:new(data.rotation.y.min, data.rotation.y.max, data.rotation.y.synced, data.rotation.y.syncType),
-					   z = minMaxValue:new(data.rotation.z.min, data.rotation.z.max, data.rotation.z.synced, data.rotation.z.syncType) }
-	new.scale = minMaxValue:new(data.scale.min, data.scale.max, data.scale.synced, data.scale.syncType)
-	new.count = minMaxValue:new(data.count.min, data.count.max, data.count.synced, data.count.syncType)
+	new.position = { x = scatteredValue:new(data.position.x.min, data.position.x.max, data.distAmplitude, data.position.x.syncType),
+					  y = scatteredValue:new(data.position.y.min, data.position.y.max, data.distAmplitude, data.position.y.syncType),
+					  z = scatteredValue:new(data.position.z.min, data.position.z.max, data.distAmplitude, data.position.z.syncType) }
+	new.rotation = { x = scatteredValue:new(data.rotation.x.min, data.rotation.x.max, data.distAmplitude, data.rotation.x.syncType),
+					   y = scatteredValue:new(data.rotation.y.min, data.rotation.y.max, data.distAmplitude, data.rotation.y.syncType),
+					   z = scatteredValue:new(data.rotation.z.min, data.rotation.z.max, data.distAmplitude, data.rotation.z.syncType) }
+	new.scale = scatteredValue:new(data.scale.min, data.scale.max, data.distAmplitude, data.scale.syncType)
+	new.count = scatteredValue:new(data.count.min, data.count.max, data.distAmplitude, data.count.syncType, "INT")
 	return new
 end
 
