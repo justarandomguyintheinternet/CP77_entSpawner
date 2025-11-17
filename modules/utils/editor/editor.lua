@@ -293,7 +293,7 @@ function editor.getScreenToWorldRay(x, y)
     return ray:Normalize()
 end
 
-function editor.getRaySceneIntersection(ray, origin, excludeSpawnable, usePhysical)
+function editor.getRaySceneIntersection(ray, origin, excludeSpawnable, usePhysical, physicalOnly)
     local hits = {}
 
     for _, element in pairs(editor.spawnedUI.paths) do
@@ -309,7 +309,7 @@ function editor.getRaySceneIntersection(ray, origin, excludeSpawnable, usePhysic
 
     local raycast = editor.interface:RaycastWithASingleGroup(origin, utils.addVector(origin, utils.multVector(ray, 9999)), "PlayerBlocker")
 
-    if #hits == 0 then
+    if #hits == 0 or physicalOnly then
         if raycast:IsValid() then
             return {
                 result = {

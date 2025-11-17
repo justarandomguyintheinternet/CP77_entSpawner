@@ -478,7 +478,7 @@ function positionable:getDirection(direction)
 	end
 end
 
-function positionable:dropToSurface(grouped, direction)
+function positionable:dropToSurface(grouped, direction, physicalOnly, applyAngle)
 
 end
 

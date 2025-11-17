@@ -17,6 +17,7 @@ local positionableGroup = require("modules/classes/editor/positionableGroup")
 ---@field rotationMultiplier number
 ---@field scaleMultiplier number
 ---@field instanceCountMultiplier number
+---@field applyGroundNormal boolean
 local scatteredGroup = setmetatable({}, { __index = positionableGroup })
 
 -- SECTION: "BOILERPLATE"
@@ -33,6 +34,7 @@ function scatteredGroup:new(sUI)
 
 	o.seed = 1
     o.snapToGround = false
+	o.applyGroundNormal = false
 
 	o.lastPos = nil
 
@@ -241,9 +243,9 @@ function scatteredGroup:applyRandomization(pos, recursiveParam)
 	end
 	
 	if self.snapToGround then
-		self:setPositionDelta(Vector4.new(0, 0, self.snapToGroundOffset, 0))
+		self:setPosition(utils.addVector(self.lastPos, Vector4.new(0, 0, self.snapToGroundOffset, 0)))
 		Cron.After(0.05, function()
-			self:dropToSurface(Vector4.new(0, 0, -1, 0))
+			self:dropToSurface(true, Vector4.new(0, 0, -1, 0), true, self.applyGroundNormal)
 		end, nil)
 	end
 end
@@ -304,9 +306,16 @@ function scatteredGroup:drawGroupRandomization()
 
 	style.styledText("Snap to Ground")
 	ImGui.SameLine()
-	local snapToGround, snapToGroundChanged = style.trackedCheckbox(self, "Snap to Ground", self.snapToGround, false)
+	local snapToGround, snapToGroundChanged = style.trackedCheckbox(self, "##SnapToGround", self.snapToGround, false)
 	if snapToGroundChanged then
 		self.snapToGround = snapToGround
+	end
+
+	style.styledText("Apply Ground Normal")
+	ImGui.SameLine()
+	local applyGroundNormal, applyGroundNormalChanged = style.trackedCheckbox(self, "##applyGroundNormal", self.applyGroundNormal, false)
+	if applyGroundNormalChanged then
+		self.applyGroundNormal = applyGroundNormal
 	end
 
 	style.styledText("Snap Offset")

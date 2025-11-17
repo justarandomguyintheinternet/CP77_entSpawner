@@ -245,7 +245,7 @@ function spawnableElement:setScale(scale, finished)
 	self.spawnable:updateScale(finished, delta)
 end
 
-function spawnableElement:dropToSurface(grouped, direction)
+function spawnableElement:dropToSurface(grouped, direction, physicalOnly, applyAngle)
 	local size = self.spawnable:getSize()
 	local bBox = {
 		min = Vector4.new(-size.x / 2, -size.y / 2, -size.z / 2, 0),
@@ -258,7 +258,7 @@ function spawnableElement:dropToSurface(grouped, direction)
 	if not origin.hit then return end
 
 	origin.position = utils.addVector(origin.position, utils.multVector(direction, 0.025))
-	local hit = editor.getRaySceneIntersection(direction, origin.position, self.spawnable, true)
+	local hit = editor.getRaySceneIntersection(direction, origin.position, self.spawnable, true, physicalOnly)
 
 	if not hit.hit then return end
 
@@ -272,9 +272,11 @@ function spawnableElement:dropToSurface(grouped, direction)
 	if not grouped then
 		history.addAction(history.getElementChange(self))
 	end
-
+	
 	local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.spawnable.rotation:ToQuat(), diff)
-	self:setRotation(newRotation:ToEulerAngles())
+	if applyAngle then
+		self:setRotation(newRotation:ToEulerAngles())
+	end
 
 	local offset = utils.multVecXVec(newRotation:Transform(origin.normal), Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0))
 	local newCenter = utils.addVector(hit.result.unscaledHit or hit.result.position, utils.multVector(hit.result.normal, offset:Length())) -- phyiscal hits dont have unscaledHit

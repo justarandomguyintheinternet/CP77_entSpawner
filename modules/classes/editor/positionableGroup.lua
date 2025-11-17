@@ -139,7 +139,7 @@ function positionableGroup:onEdited()
 	end
 end
 
-function positionableGroup:dropToSurface(_, direction)
+function positionableGroup:dropToSurface(_, direction, physicalOnly, applyAngle)
 	local leafs = self:getPositionableLeafs()
 	table.sort(leafs, function (a, b)
 		return a:getPosition().z < b:getPosition().z
@@ -151,7 +151,7 @@ function positionableGroup:dropToSurface(_, direction)
 
 	for _, entry in pairs(leafs) do
 		task:addTask(function ()
-			entry:dropToSurface(true, direction)
+			entry:dropToSurface(true, direction, physicalOnly, applyAngle)
 			task:taskCompleted()
 		end)
 	end
