@@ -116,7 +116,7 @@ function positionable:getProperties()
 		})
 	end
 
-	if self.parent and self.parent.parent and utils.isA(self.parent.parent, "scatteredGroup") then
+	if self.parent and self.parent.parent and utils.isA(self.parent.parent, "scatteredGroup") and self.parent.name == "Base" then
 		table.insert(properties, {
 			id = "scatteredShelf",
 			name = "Entry Scattering",
