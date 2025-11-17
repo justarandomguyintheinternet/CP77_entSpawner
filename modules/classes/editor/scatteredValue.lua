@@ -87,6 +87,9 @@ function scatteredValue:draw()
         end
     end
 
+    if minChanged or maxChanged then
+        self.mean = getMean(self.min, self.max)
+    end
 end
 
 return scatteredValue

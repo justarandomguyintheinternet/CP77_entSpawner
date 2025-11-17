@@ -112,21 +112,39 @@ end
 
 -- SECTION: SCATTER LOGIC
 
-local function random_normal(mean, amplitude)
+local function random_normal(mean, stddev)
     local u1 = math.random()
     local u2 = math.random()
-
-    -- Box-Muller Transform:
     local z = math.sqrt(-2 * math.log(u1)) * math.cos(2 * math.pi * u2)
-
-    return mean + z * amplitude
+    return mean + z * stddev
 end
 
 local function ranged_normal(min, max, amplitude, mean)
-	if not mean then 
-		mean = (min + max) / 2
-	end
-	return math.min(max, math.max(min, random_normal(mean, amplitude)))
+    mean = mean or (min + max) / 2
+    amplitude = amplitude or 0.5
+    
+    amplitude = math.max(0, math.min(1, amplitude))
+    
+    local range = max - min
+    
+    -- At amplitude=1, behave like uniform distribution
+    -- At amplitude=0, all values at mean
+    -- At amplitude=0.5, nice normal curve
+    
+    -- Map amplitude to standard deviation
+    -- Use (range/6) so that at amplitude=1, 99.7% of normal curve covers the range
+    -- Then scale aggressively so lower amplitudes are tighter
+    local stddev = (range / 6) * math.pow(amplitude, 0.5)
+    local value
+    if amplitude >= 0.99 then
+        -- For very high amplitude, just use uniform to avoid clamping artifacts
+        value = min + math.random() * range
+    else
+        value = random_normal(mean, stddev)
+        value = math.min(max, math.max(min, value))
+    end
+    
+    return value
 end
 
 ---@private

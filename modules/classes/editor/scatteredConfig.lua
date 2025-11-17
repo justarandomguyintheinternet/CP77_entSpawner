@@ -15,10 +15,10 @@ local scatteredConfig = {}
 function scatteredConfig:new()
 	local o = {}
 
-	o.position = { x = scatteredValue:new(-5, 5, 30, "MIRROR"), y =  scatteredValue:new(-5, 5, 30, "MIRROR"), z =  scatteredValue:new(0, 0, 30, "MIRROR") }
-	o.rotation = { x =  scatteredValue:new(-0, 0, 100, "MIRROR"), y =  scatteredValue:new(-0, 0, 100, "MIRROR"), z =  scatteredValue:new(-180, 180, 100, "MIRROR") }
-	o.scale = scatteredValue:new(1, 1, 100, "MIRROR")
-	o.count = scatteredValue:new(1, 5, 30, "OFF", "INT")
+	o.position = { x = scatteredValue:new(-5, 5, 0.5, "MIRROR"), y =  scatteredValue:new(-5, 5, 0.5, "MIRROR"), z =  scatteredValue:new(0, 0, 0.5, "MIRROR") }
+	o.rotation = { x =  scatteredValue:new(-0, 0, 1, "MIRROR"), y =  scatteredValue:new(-0, 0, 1, "MIRROR"), z =  scatteredValue:new(-180, 180, 1, "MIRROR") }
+	o.scale = scatteredValue:new(1, 1, 1, "MIRROR")
+	o.count = scatteredValue:new(1, 5, 1, "OFF", "INT")
 
 	self.__index = self
    	return setmetatable(o, self)
