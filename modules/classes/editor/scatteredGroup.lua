@@ -1,6 +1,7 @@
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
+local Cron = require("modules/utils/Cron")
 
 local positionableGroup = require("modules/classes/editor/positionableGroup")
 
@@ -17,6 +18,8 @@ local positionableGroup = require("modules/classes/editor/positionableGroup")
 ---@field scaleMultiplier number
 ---@field instanceCountMultiplier number
 local scatteredGroup = setmetatable({}, { __index = positionableGroup })
+
+-- SECTION: "BOILERPLATE"
 
 function scatteredGroup:new(sUI)
 	local o = positionableGroup.new(self, sUI)
@@ -91,18 +94,67 @@ function scatteredGroup:load(data, silent)
 	end
 end
 
-function scatteredGroup:applyRandomization(pos)
+function scatteredGroup:serialize()
+	local data = positionableGroup.serialize(self)
+
+	data.seed = self.seed
+	data.snapToGround = self.snapToGround
+
+	data.positionMultiplier = self.positionMultiplier
+	data.rotationMultiplier = self.rotationMultiplier
+	data.scaleMultiplier = self.scaleMultiplier
+	data.instanceCountMultiplier = self.instanceCountMultiplier
+	data.snapToGroundOffset = self.snapToGroundOffset
+	return data
+end
+
+-- SECTION: SCATTER LOGIC
+
+---@private
+---@param scatterConfig scatteredConfig
+---@return Vector4
+function scatteredGroup:calculatePosition(scatterConfig)
+	return Vector4.new((math.random(scatterConfig.position.x.min * self.positionMultiplier, scatterConfig.position.x.max * self.positionMultiplier) + self.lastPos.x),
+				(math.random(scatterConfig.position.y.min * self.positionMultiplier, scatterConfig.position.y.max * self.positionMultiplier) + self.lastPos.y),
+				(math.random(scatterConfig.position.z.min * self.positionMultiplier, scatterConfig.position.z.max * self.positionMultiplier) + self.lastPos.z), 1)
+end
+
+---@private
+---@param scatterConfig scatteredConfig
+---@return EulerAngles
+function scatteredGroup:calculateRotation(scatterConfig)
+	return EulerAngles.new(math.random(scatterConfig.rotation.x.min * self.rotationMultiplier, scatterConfig.rotation.x.max * self.rotationMultiplier),
+			math.random(scatterConfig.rotation.y.min * self.rotationMultiplier, scatterConfig.rotation.y.max * self.rotationMultiplier),
+			math.random(scatterConfig.rotation.z.min * self.rotationMultiplier, scatterConfig.rotation.z.max * self.rotationMultiplier))
+end
+
+---@private
+---@param scatterConfig scatteredConfig
+---@return number
+function scatteredGroup:calculateScale(scatterConfig)
+	return math.random(scatterConfig.scale.min * self.scaleMultiplier, scatterConfig.scale.max * self.scaleMultiplier)
+end
+
+---@private
+---@param scatterConfig scatteredConfig
+---@return number
+function scatteredGroup:calculateElementCount(scatterConfig)
+	return math.random(scatterConfig.count.min * self.instanceCountMultiplier, scatterConfig.count.max * self.instanceCountMultiplier)
+end
+
+function scatteredGroup:applyRandomization(pos, recursiveParam)
 	self.lastPos = pos or self:getPosition()
+	local recursive = recursiveParam or true
 	while self.instanceGroup.childs[1] do
 		self.instanceGroup.childs[1]:remove()
 	end
 
 	math.randomseed(self.seed)
-	for ic, child in ipairs(self.baseGroup.childs) do
+	for _, child in ipairs(self.baseGroup.childs) do
 		if not child.scatterConfig then
 			goto continue
 		end
-		local elementCount = math.random(child.scatterConfig.count.min * self.instanceCountMultiplier, child.scatterConfig.count.max  * self.instanceCountMultiplier)
+		local elementCount = self:calculateElementCount(child.scatterConfig)
 		for i = 1, elementCount do
 
 			local newObjSerialized = child:serialize()
@@ -111,18 +163,13 @@ function scatteredGroup:applyRandomization(pos)
 			local newObj = require(child.modulePath):new(self.sUI)
 			newObj:load(newObjSerialized, true)
 
-			local position = Vector4.new((math.random(child.scatterConfig.position.x.min * self.positionMultiplier, child.scatterConfig.position.x.max * self.positionMultiplier) + self.lastPos.x),
-				(math.random(child.scatterConfig.position.y.min * self.positionMultiplier, child.scatterConfig.position.y.max * self.positionMultiplier) + self.lastPos.y),
-				(math.random(child.scatterConfig.position.z.min * self.positionMultiplier, child.scatterConfig.position.z.max * self.positionMultiplier) + self.lastPos.z), 1)
-
+			local position = self:calculatePosition(child.scatterConfig)
 			newObj:setPosition(position)
 
-			local rotation = EulerAngles.new(math.random(child.scatterConfig.rotation.x.min * self.rotationMultiplier, child.scatterConfig.rotation.x.max * self.rotationMultiplier),
-			math.random(child.scatterConfig.rotation.y.min * self.rotationMultiplier, child.scatterConfig.rotation.y.max * self.rotationMultiplier),
-			math.random(child.scatterConfig.rotation.z.min * self.rotationMultiplier, child.scatterConfig.rotation.z.max * self.rotationMultiplier))
+			local rotation = self:calculateRotation(child.scatterConfig)
 			newObj:setRotation(rotation)
 
-			local scaleValue = math.random(child.scatterConfig.scale.min * self.scaleMultiplier, child.scatterConfig.scale.max * self.scaleMultiplier)
+			local scaleValue = self:calculateScale(child.scatterConfig)
 			local scale = { x = scaleValue,
 			y = scaleValue,
 			z = scaleValue }
@@ -131,15 +178,36 @@ function scatteredGroup:applyRandomization(pos)
 			newObj:setSilent(false)
 			newObj:setVisible(true, true)
 			newObj:setParent(self.instanceGroup)
+
+			if recursive and (utils.isA(newObj, "scatteredGroup") or utils.isA(newObj, "randomizedGroup")) then
+				Cron.After(0.05, function()
+					newObj:applyRandomization()
+				end, nil)
+			end
 		end
 		::continue::
 	end
 	
 	if self.snapToGround then
 		self:setPositionDelta(Vector4.new(0, 0, self.snapToGroundOffset, 0))
-		self:dropToSurface(Vector4.new(0, 0, -1, 0))
+		Cron.After(0.05, function()
+			self:dropToSurface(Vector4.new(0, 0, -1, 0))
+		end, nil)
 	end
 end
+
+function scatteredGroup:reSeed()
+	self.seed = math.random(0, 999999999)
+	self:applyRandomization(nil, false)
+
+	for _, child in pairs(self.instanceGroup.childs) do
+		if utils.isA(child, "scatteredGroup") or utils.isA(child, "randomizedGroup") then
+			child:reSeed()
+		end
+	end
+end
+
+-- SECTION: UI
 
 function scatteredGroup:getProperties()
 	local properties = positionableGroup.getProperties(self)
@@ -156,16 +224,7 @@ function scatteredGroup:getProperties()
 	return properties
 end
 
-function scatteredGroup:reSeed()
-	self.seed = math.random(0, 999999999)
-	self:applyRandomization()
 
-	for _, child in pairs(self.childs) do
-		if utils.isA(child, "scatteredGroup") or utils.isA(child, "randomizedGroup") then
-			child:reSeed()
-		end
-	end
-end
 
 function scatteredGroup:drawGroupRandomization()
 	if not self.maxPropertyWidth then
@@ -223,7 +282,7 @@ function scatteredGroup:drawGroupRandomization()
 
 	style.styledText("Scale Multiplier")
 	ImGui.SameLine()
-	local scaleMult, scaleMultChanged = ImGui.DragFloat("##Scale ultiplier", self.scaleMultiplier, 0.1, 0.1, 100)
+	local scaleMult, scaleMultChanged = ImGui.DragFloat("##ScaleMultiplier", self.scaleMultiplier, 0.1, 0.1, 100)
 	if scaleMultChanged then
 		self.scaleMultiplier = scaleMult
 	end
@@ -234,20 +293,6 @@ function scatteredGroup:drawGroupRandomization()
 	if countMultChanged then
 		self.instanceCountMultiplier = countMult
 	end
-end
-
-function scatteredGroup:serialize()
-	local data = positionableGroup.serialize(self)
-
-	data.seed = self.seed
-	data.snapToGround = self.snapToGround
-
-	data.positionMultiplier = self.positionMultiplier
-	data.rotationMultiplier = self.rotationMultiplier
-	data.scaleMultiplier = self.scaleMultiplier
-	data.instanceCountMultiplier = self.instanceCountMultiplier
-	data.snapToGroundOffset = self.snapToGroundOffset
-	return data
 end
 
 return scatteredGroup
