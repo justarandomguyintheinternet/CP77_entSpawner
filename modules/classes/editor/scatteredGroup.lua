@@ -17,7 +17,6 @@ local positionableGroup = require("modules/classes/editor/positionableGroup")
 ---@field rotationMultiplier number
 ---@field scaleMultiplier number
 ---@field instanceCountMultiplier number
----@field softnessMultiplier number
 local scatteredGroup = setmetatable({}, { __index = positionableGroup })
 
 -- SECTION: "BOILERPLATE"
@@ -51,7 +50,6 @@ function scatteredGroup:new(sUI)
 	o.scaleMultiplier = 1
 	o.instanceCountMultiplier = 1
 	o.snapToGroundOffset = 100
-	o.softnessMultiplier = 1
 
 	setmetatable(o, { __index = self })
    	return o
@@ -112,45 +110,10 @@ end
 
 -- SECTION: SCATTER LOGIC
 
-local function random_normal(mean, stddev)
-    local u1 = math.random()
-    local u2 = math.random()
-    local z = math.sqrt(-2 * math.log(u1)) * math.cos(2 * math.pi * u2)
-    return mean + z * stddev
-end
-
-local function ranged_normal(min, max, amplitude, mean)
-    mean = mean or (min + max) / 2
-    amplitude = amplitude or 0.5
-    
-    amplitude = math.max(0, math.min(1, amplitude))
-    
-    local range = max - min
-    
-    -- At amplitude=1, behave like uniform distribution
-    -- At amplitude=0, all values at mean
-    -- At amplitude=0.5, nice normal curve
-    
-    -- Map amplitude to standard deviation
-    -- Use (range/6) so that at amplitude=1, 99.7% of normal curve covers the range
-    -- Then scale aggressively so lower amplitudes are tighter
-    local stddev = (range / 6) * math.pow(amplitude, 0.5)
-    local value
-    if amplitude >= 0.99 then
-        -- For very high amplitude, just use uniform to avoid clamping artifacts
-        value = min + math.random() * range
-    else
-        value = random_normal(mean, stddev)
-        value = math.min(max, math.max(min, value))
-    end
-    
-    return value
-end
-
 ---@private
 ---@param scatterConfig scatteredConfig
 ---@return Vector4
-function scatteredGroup:calculatePosition(scatterConfig)
+function scatteredGroup:calculatePositionRectangle(scatterConfig)
 	local posXmin = scatterConfig.position.x.min * self.positionMultiplier
 	local posXmax = scatterConfig.position.x.max * self.positionMultiplier
 
@@ -160,11 +123,35 @@ function scatteredGroup:calculatePosition(scatterConfig)
 	local posZmin = scatterConfig.position.z.min * self.positionMultiplier
 	local posZmax = scatterConfig.position.z.max * self.positionMultiplier
 
-	local rPosX = ranged_normal(posXmin, posXmax, scatterConfig.position.x.distAmplitude * self.softnessMultiplier, scatterConfig.position.x.mean)
-	local rPosY = ranged_normal(posYmin, posYmax, scatterConfig.position.y.distAmplitude * self.softnessMultiplier, scatterConfig.position.y.mean)
-	local rPosZ = ranged_normal(posZmin, posZmax, scatterConfig.position.z.distAmplitude * self.softnessMultiplier, scatterConfig.position.z.mean)
+	local rPosX = math.random(posXmin, posXmax)
+	local rPosY = math.random(posYmin, posYmax)
+	local rPosZ = math.random(posZmin, posZmax)
 
 	return Vector4.new(rPosX + self.lastPos.x, rPosY + self.lastPos.y, rPosZ + self.lastPos.z, 1)
+end
+
+---@private
+---@param scatterConfig scatteredConfig
+---@return Vector4
+function scatteredGroup:calculatePositionCylinder(scatterConfig)
+	local angle = math.random() * 2 * math.pi
+	local r = math.sqrt(math.random()) * (scatterConfig.position.r.min * self.positionMultiplier)
+
+	local x = r * math.cos(angle) + self.lastPos.x
+	local y = r * math.sin(angle) + self.lastPos.y
+	local z = math.random(scatterConfig.position.z.min * self.positionMultiplier, scatterConfig.position.z.max * self.positionMultiplier) + self.lastPos.z
+	return Vector4.new(x, y, z, 1)
+end
+
+---@private
+---@param scatterConfig scatteredConfig
+---@return Vector4
+function scatteredGroup:calculatePosition(scatterConfig)
+	if scatterConfig.position.type == "CYLINDER" then
+		return self:calculatePositionCylinder(scatterConfig)
+	else
+		return self:calculatePositionRectangle(scatterConfig)
+	end
 end
 
 ---@private
@@ -180,9 +167,9 @@ function scatteredGroup:calculateRotation(scatterConfig)
 	local Zmin = scatterConfig.rotation.z.min * self.rotationMultiplier
 	local Zmax = scatterConfig.rotation.z.max * self.rotationMultiplier
 
-	local rX = ranged_normal(Xmin, Xmax, scatterConfig.rotation.x.distAmplitude * self.softnessMultiplier, scatterConfig.rotation.x.mean)
-	local rY = ranged_normal(Ymin, Ymax, scatterConfig.rotation.y.distAmplitude * self.softnessMultiplier, scatterConfig.rotation.y.mean)
-	local rZ = ranged_normal(Zmin, Zmax, scatterConfig.rotation.z.distAmplitude * self.softnessMultiplier, scatterConfig.rotation.z.mean)
+	local rX = math.random(Xmin, Xmax)
+	local rY = math.random(Ymin, Ymax)
+	local rZ = math.random(Zmin, Zmax)
 
 	return EulerAngles.new(rX, rY, rZ)
 end
@@ -194,7 +181,7 @@ function scatteredGroup:calculateScale(scatterConfig)
 	local min = scatterConfig.scale.min * self.scaleMultiplier
 	local max = scatterConfig.scale.max * self.scaleMultiplier
 
-	return ranged_normal(min, max, scatterConfig.scale.distAmplitude * self.softnessMultiplier, scatterConfig.scale.mean)
+	return math.random(min, max)
 end
 
 ---@private
@@ -204,7 +191,7 @@ function scatteredGroup:calculateElementCount(scatterConfig)
 	local min = scatterConfig.count.min * self.instanceCountMultiplier
 	local max = scatterConfig.count.max * self.instanceCountMultiplier
 
-	return ranged_normal(min, max, scatterConfig.count.distAmplitude * self.softnessMultiplier, scatterConfig.count.mean)
+	return math.random(min, max)
 end
 
 function scatteredGroup:applyRandomization(pos, recursiveParam)
@@ -327,13 +314,6 @@ function scatteredGroup:drawGroupRandomization()
 	local snapOffset, snapOffsetChanged = ImGui.DragFloat("##SnapOffset", self.snapToGroundOffset, 0.1, 0.1, 1000)
 	if snapOffsetChanged then
 		self.snapToGroundOffset = snapOffset
-	end
-
-	style.styledText("Softness Multiplier")
-	ImGui.SameLine()
-	local softMult, softMultChanged = ImGui.DragFloat("##SoftnessMultiplier", self.softnessMultiplier,  0.1, 0.1, 100)
-	if softMultChanged then
-		self.softnessMultiplier = softMult
 	end
 
 	style.styledText("Position Multiplier")

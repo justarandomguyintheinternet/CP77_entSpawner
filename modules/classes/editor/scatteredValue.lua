@@ -9,27 +9,19 @@ local syncTypes = { "OFF", "MIRROR", "EQUAL" }
 ---@class scatteredValue
 ---@field min number
 ---@field max number
----@field mean number
----@field distAmplitude number
 ---@field synced boolean
 ---@field syncType string
----@filed valueType string
+---@field valueType string
 ---@field id number
 ---@field draw fun(self: scatteredValue)
----@field new fun(self: scatteredValue, min: number, max: number, distAmplitude: number, syncType: string, valueType: string): scatteredValue
+---@field new fun(self: scatteredValue, min: number, max: number, syncType: string, valueType: string): scatteredValue
 local scatteredValue = {}
 
-local function getMean(v1, v2)
-    return (v1 + v2) / 2
-end
-
-function scatteredValue:new(min, max, distAmplitude, syncType, valueType)
+function scatteredValue:new(min, max, syncType, valueType)
     local o = {}
 
     o.min = min or 0
     o.max = max or 0
-    o.mean = getMean(o.min, o.max)
-    o.distAmplitude = distAmplitude or 0.5
     o.syncType = syncType or "MIRROR"
     o.valueType = valueType or "FLOAT"
     o.id = math.random(1000000)
@@ -51,15 +43,10 @@ function scatteredValue:draw()
     else 
         style.styledText("Unsupported value type: " .. self.valueType)
     end
-
+    ImGui.SameLine()
     local syncType, syncChanged = ImGui.Combo("##type" .. self.id, utils.indexValue(syncTypes, self.syncType) - 1, syncTypes, #syncTypes)
     if syncChanged then
         self.syncType = syncTypes[syncType + 1]
-    end
-    ImGui.SameLine()
-    local amp, ampChanged = ImGui.DragFloat("##amp" .. self.id, self.distAmplitude, 0.1, 0.1, 100)
-    if ampChanged then
-        self.distAmplitude = amp
     end
 
     if self.syncType == "MIRROR" then
@@ -85,10 +72,6 @@ function scatteredValue:draw()
         if maxChanged then
             self.max = max
         end
-    end
-
-    if minChanged or maxChanged then
-        self.mean = getMean(self.min, self.max)
     end
 end
 
