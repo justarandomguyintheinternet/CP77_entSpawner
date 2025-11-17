@@ -19,7 +19,8 @@ exportUI = {
         noSplineMarker = {},
         spotEmptyRef = {},
         spotReferencingEmpty = {},
-        markingUnresolved = {}
+        markingUnresolved = {},
+        missingInitialPhase = {}
     },
     sectorPropertiesWidth = nil,
     mainPropertiesWidth = nil
@@ -491,6 +492,36 @@ function exportUI.drawIssues()
             ImGui.EndPopup()
         end
     end
+    if exportUI.getCurrentIssue() == "missingInitialPhase" then
+        ImGui.OpenPopup("Missing Initial Phase")
+        if ImGui.BeginPopupModal("Missing Initial Phase", true, ImGuiWindowFlags.AlwaysAutoResize) then
+            ImGui.Text("The following Community Entries reference non-existing phases as their initial phase.")
+
+            ImGui.Separator()
+
+            for _, entry in pairs(exportUI.exportIssues.missingInitialPhase) do
+                style.mutedText("Node Name:")
+                ImGui.SameLine()
+                ImGui.Text(entry.name)
+
+                style.mutedText("Community Entry:")
+                ImGui.SameLine()
+                ImGui.Text(entry.entry)
+
+                style.mutedText("Missing Phase:")
+                ImGui.SameLine()
+                ImGui.Text(entry.phase)
+
+                ImGui.Separator()
+            end
+
+            if ImGui.Button("OK") then
+                ImGui.CloseCurrentPopup()
+                exportUI.exportIssues.missingInitialPhase = {}
+            end
+            ImGui.EndPopup()
+        end
+    end
 end
 
 function exportUI.draw()
@@ -662,6 +693,16 @@ function exportUI.getNodeRefsFromMarking(marking, spotNodes)
     return nodeRefs
 end
 
+local function hasEntryPhase(entry, phase)
+    for _, entryPhase in pairs(entry.phases) do
+        if entryPhase.phaseName == phase then
+            return true
+        end
+    end
+
+    return false
+end
+
 function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRefs)
     local wsPersistentData = {}
     local registryEntries = {}
@@ -719,6 +760,14 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
                     ["$value"] = entry.initialPhaseName
                 }
             })
+
+            if not hasEntryPhase(entry, entry.initialPhaseName) then
+                table.insert(exportUI.exportIssues.missingInitialPhase, {
+                    name = community.node.name,
+                    entry = entry.entryName,
+                    phase = entry.initialPhaseName
+                })
+            end
 
             local phases = {}
 

@@ -181,6 +181,8 @@ local function fixInstanceData(data, parent)
             if data ~= nil then
                 fixInstanceData(value, data)
             end
+        elseif key == "betterNetrunningBreachedCameras" or key == "betterNetrunningBreachedNPCs" or key == "betterNetrunningBreachedBasic" or key == "betterNetrunningBreachedTurrets" then
+            data[key] = nil
         end
     end
 end

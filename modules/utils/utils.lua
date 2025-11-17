@@ -648,6 +648,8 @@ function miscUtils.buildBitfieldString(bitTable, bitTableNames)
 
     if bitfieldString ~= "" then
         bitfieldString = bitfieldString:sub(1, -2)
+    else
+        bitfieldString = "0"
     end
 
     return bitfieldString

@@ -31,7 +31,8 @@ local types = {
             ["Mesh"] = { class = require("modules/classes/spawn/mesh/mesh"), index = 1 },
             ["Rotating Mesh"] = { class = require("modules/classes/spawn/mesh/rotatingMesh"), index = 2 },
             ["Cloth Mesh"] = { class = require("modules/classes/spawn/mesh/clothMesh"), index = 3 },
-            ["Dynamic Mesh"] = { class = require("modules/classes/spawn/physics/dynamicMesh"), index = 4 }
+            ["Dynamic Mesh"] = { class = require("modules/classes/spawn/physics/dynamicMesh"), index = 4 },
+            ["Proxy Mesh"] = { class = require("modules/classes/spawn/mesh/proxyMesh"), index = 4 }
         },
         index = 2
     },
@@ -68,8 +69,9 @@ local types = {
             ["Water Null"] = { class = require("modules/classes/spawn/area/waterNull"), index = 6 },
             ["Trigger Area"] = { class = require("modules/classes/spawn/area/triggerArea"), index = 2 },
             ["Ambient Area"] = { class = require("modules/classes/spawn/area/ambientArea"), index = 3 },
-            ["Dummy Area"] = { class = require("modules/classes/spawn/area/dummyArea"), index = 8 },
-            ["Conversation Area"] = { class = require("modules/classes/spawn/area/conversationArea"), index = 7 }
+            ["Dummy Area"] = { class = require("modules/classes/spawn/area/dummyArea"), index = 9 },
+            ["Conversation Area"] = { class = require("modules/classes/spawn/area/conversationArea"), index = 7 },
+            ["Crowd Null Area"] = { class = require("modules/classes/spawn/area/crowdNull"), index = 8 }
         },
         index = 7
     },
@@ -769,7 +771,7 @@ function spawnUI.loadPopupData(typeName, variantName)
     local data = {}
 
     for _, entry in pairs(spawnData[typeName][variantName].data) do
-        if utils.matchSearch(entry.name, spawnUI.popupFilter) ~= nil then
+        if utils.matchSearch(entry.name, spawnUI.popupFilter) then
             table.insert(data, entry)
         end
     end
@@ -808,7 +810,6 @@ function spawnUI.drawPopupVariant(typeName, variantName)
         local y = #spawnUI.popupData * ImGui.GetFrameHeightWithSpacing()
 
         if ImGui.BeginChild("##list", xSpace, math.max(math.min(y, screenHeight / 2), 1)) then
-
             local clipper = ImGuiListClipper.new()
             clipper:Begin(#spawnUI.popupData, -1)
 

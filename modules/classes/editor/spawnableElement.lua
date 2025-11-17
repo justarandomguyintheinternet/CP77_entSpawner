@@ -327,6 +327,12 @@ function spawnableElement:drawEntryRandomization()
 end
 
 function spawnableElement:updateRandomization()
+	if self.randomizationSettings.randomizeAppearance or self.randomizationSettings.randomizeRotation then
+		if self.spawnable.spawning then
+			self.spawnable.queueRespawn = true
+		end
+	end
+
 	if self.randomizationSettings.randomizeRotation then
 		local angle = math.random() * 360
 		local euler = EulerAngles.new(0, 0, 0)
@@ -338,7 +344,7 @@ function spawnableElement:updateRandomization()
 			euler.yaw = angle
 		end
 
-		self:setRotation(euler)
+		self:setRotationDelta(euler)
 	end
 
 	if self.randomizationSettings.randomizeAppearance then
@@ -347,12 +353,6 @@ function spawnableElement:updateRandomization()
 
 		if not self.spawnable.spawning then
 			self.spawnable:respawn()
-		end
-	end
-
-	if self.randomizationSettings.randomizeAppearance or self.randomizationSettings.randomizeRotation then
-		if self.spawnable.spawning then
-			self.spawnable.queueRespawn = true
 		end
 	end
 end
