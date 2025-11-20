@@ -6,7 +6,9 @@ local positionable = require("modules/classes/editor/positionable")
 
 ---Class for organizing multiple objects and or groups, with position and rotation
 ---@class positionableGroup : positionable
----@field yaw number
+---@field origin Vector4
+---@field rotation EulerAngles
+---@field originInitialized boolean
 ---@field supportsSaving boolean
 local positionableGroup = setmetatable({}, { __index = positionable })
 
@@ -16,7 +18,9 @@ function positionableGroup:new(sUI)
 	o.name = "New Group"
 	o.modulePath = "modules/classes/editor/positionableGroup"
 
-	o.yaw = 0
+	o.origin = nil
+	o.rotation = nil
+	o.originInitialized = false
 	o.class = utils.combine(o.class, { "positionableGroup" })
 	o.quickOperations = {
 		[IconGlyphs.ContentSaveOutline] = {
@@ -32,17 +36,51 @@ function positionableGroup:new(sUI)
    	return o
 end
 
-function positionableGroup:getDirection(direction)
-	local leafs = self:getPositionableLeafs()
-	local dir = Vector4.new(0, 0, 0, 0)
+function positionableGroup:load(data, silent)
+	positionable.load(self, data, silent)
 
-	for _, entry in pairs(leafs) do
-		if entry.visible then
-			dir = utils.addVector(dir, entry:getDirection(direction))
-		end
+	-- load default values to support previous implementations
+	data.origin = data.origin or self:getPosition()
+	data.originInitialized = data.originInitialized or (#self.childs > 0)
+	data.rotation = data.rotation or EulerAngles.new(0, 0, 0)
+
+	self.origin = Vector4.new(data.origin.x, data.origin.y, data.origin.z, 0)
+	self.originInitialized = true
+
+	self.rotation = EulerAngles.new(data.rotation.roll, data.rotation.pitch, data.rotation.yaw)
+end
+
+function positionableGroup:serialize()
+	local data = positionable.serialize(self)
+
+	data.origin = { x = self.origin.x, y = self.origin.y, z = self.origin.z }
+	data.originInitialized = self.originInitialized
+	data.rotation = { roll = self.rotation.roll, pitch = self.rotation.pitch, yaw = self.rotation.yaw }
+
+	return data
+end
+
+function positionableGroup:addChild(child)
+	positionable.addChild(self, child)
+
+	if not self.originInitialized then
+		self.origin = child:getPosition()
+		self.originInitialized = true
 	end
+end
 
-	return Vector4.new(dir.x / #leafs, dir.y / #leafs, dir.z / #leafs, 0)
+function positionableGroup:getDirection(direction)
+    local groupQuat = self:getRotation():ToQuat()
+
+    if direction == "forward" then
+        return groupQuat:GetForward()
+    elseif direction == "right" then
+        return groupQuat:GetRight()
+    elseif direction == "up" then
+        return groupQuat:GetUp()
+    else
+		return groupQuat:GetForward()
+    end
 end
 
 ---Gets all the positionable leaf objects, i.e. positionable's without childs
@@ -61,7 +99,7 @@ function positionableGroup:getPositionableLeafs()
 	return objects
 end
 
-function positionableGroup:getPosition()
+function positionableGroup:setOriginToCenter()
 	local center = Vector4.new(0, 0, 0, 0)
 
 	local leafs = self:getPositionableLeafs()
@@ -71,7 +109,22 @@ function positionableGroup:getPosition()
 
 	local nLeafs = math.max(1, #leafs)
 
-	return Vector4.new(center.x / nLeafs, center.y / nLeafs, center.z / nLeafs, 0)
+	self.origin = Vector4.new(center.x / nLeafs, center.y / nLeafs, center.z / nLeafs, 0)
+	if nLeafs > 0 then
+		self.originInitialized = true
+	end
+end
+
+function positionableGroup:setOrigin(v)
+	self.origin = v
+	self.originInitialized = true
+end
+
+function positionableGroup:getPosition()
+	if self.origin == nil then
+		self:setOriginToCenter()
+	end
+	return self.origin
 end
 
 function positionableGroup:setPosition(position)
@@ -80,6 +133,7 @@ function positionableGroup:setPosition(position)
 end
 
 function positionableGroup:setPositionDelta(delta)
+	self.origin = utils.addVector(self.origin, delta)
 	local leafs = self:getPositionableLeafs()
 
 	for _, entry in pairs(leafs) do
@@ -103,22 +157,27 @@ function positionableGroup:drawRotation(rotation)
 	style.popGreyedOut(locked)
 end
 
--- TODO: Track rotation of group independently, use that for rotation axis for objects (In global space, convert group axis to local space (unit vector - (group axis - object axis)))
+function positionableGroup:setRotationIdentity()
+	self.rotation = EulerAngles.new(0, 0, 0)
+end
 
 function positionableGroup:setRotation(rotation)
 	if self.rotationLocked then return end
 
-	self:setRotationDelta(EulerAngles.new(0, 0, rotation.yaw - self.yaw))
-	self.yaw = rotation.yaw
+	self:setRotationDelta(utils.subEuler(rotation, self.rotation))
 end
 
 function positionableGroup:getRotation()
-	return EulerAngles.new(0, 0, self.yaw)
+	if self.rotation == nil then
+		self.rotation = EulerAngles.new(0, 0, 0)
+	end
+	return self.rotation
 end
 
 function positionableGroup:setRotationDelta(delta)
 	if self.rotationLocked then return end
 
+	self.rotation = utils.addEuler(self.rotation, delta)
 	local pos = self:getPosition()
 	local leafs = self:getPositionableLeafs()
 

@@ -712,6 +712,20 @@ function spawnedUI.drawContextMenu(element, path)
                 end
                 spawnedUI.spawner.baseUI.spawnUI.selectedGroup = idx
             end
+            if ImGui.MenuItem("Set Origin to Center") then
+                element:setOriginToCenter()
+            end
+            if ImGui.MenuItem("Set Player Position as Origin") then
+                element:setOrigin(GetPlayer():GetWorldPosition())
+            end
+            if ImGui.MenuItem("Set Current Rotation as Identity") then
+                element:setRotationIdentity()
+            end
+        end
+        if element.parent ~= nil and element.parent.expandable and not element.parent:isRoot(true) then
+            if ImGui.MenuItem("Set Origin to Element") then
+                element.parent:setOrigin(element:getPosition())
+            end
         end
         if ImGui.MenuItem(not element.expandable and "Make Favorite" or "Make Prefab", "CTRL-F") then
             local icon = element.icon
