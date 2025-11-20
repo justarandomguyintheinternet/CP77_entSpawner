@@ -185,30 +185,17 @@ function positionableGroup:setRotationDelta(delta)
 	local pos = self:getPosition()
 	local leafs = self:getPositionableLeafs()
 
+	local deltaQuat = delta:ToQuat()
+
 	for _, entry in pairs(leafs) do
 		local relativePosition = utils.subVector(entry:getPosition(), pos)
+		local entryQuat = entry:getRotation():ToQuat()
 
-		-- Apply ZXY rotation order
-		if delta.yaw ~= 0 then
-			relativePosition = Vector4.RotateAxis(relativePosition, Vector4.new(0, 0, 1, 0), Deg2Rad(delta.yaw)) -- Z axis (yaw)
-		end
-		if delta.pitch ~= 0 then
-			relativePosition = Vector4.RotateAxis(relativePosition, Vector4.new(1, 0, 0, 0), Deg2Rad(delta.pitch)) -- X axis (pitch)
-		end
-		if delta.roll ~= 0 then
-			relativePosition = Vector4.RotateAxis(relativePosition, Vector4.new(0, 1, 0, 0), Deg2Rad(delta.roll)) -- Y axis (roll)
-		end
-
-		local originalPosition = entry:getPosition()
-		local newPositionDelta = utils.subVector(relativePosition, utils.subVector(originalPosition, pos))
-
-		entry:setPositionDelta(newPositionDelta)
-		
-		local entryEulerAngles = entry:getRotation()
-		local entryQuat = entryEulerAngles:ToQuat()
-		local deltaQuat = delta:ToQuat()
 		local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](deltaQuat, entryQuat):ToEulerAngles()
 		entry:setRotation(newRotation)
+
+		local newPosition = utils.addVector(pos, deltaQuat:Transform(relativePosition))
+		entry:setPosition(newPosition)
 	end
 end
 

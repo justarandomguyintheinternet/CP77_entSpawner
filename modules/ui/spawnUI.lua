@@ -707,10 +707,10 @@ function spawnUI.spawnNew(entry, class, isFavorite)
         data.visible = false
 
         new:load(data, true) -- Load without spawning
-        new:setSilent(false)
-        new:setVisible(true, true) -- Now spawn, but dont record in history
         new:setPosition(pos)
         new:setRotation(rot)
+        new:setSilent(false)
+        new:setVisible(true, true) -- Now spawn, but dont record in history
     else
         new:load({
             name = utils.getFileName(entry.name),
