@@ -701,6 +701,9 @@ function spawnedUI.drawContextMenu(element, path)
             end
         end
         if element.expandable then
+            if ImGui.MenuItem("Drop Children to Floor") then
+                element:dropChildrenToSurface(Vector4.new(0, 0, -1, 0))
+            end
             if ImGui.MenuItem("Set as \"Spawn New\" group", "CTRL-N") then
                 local idx = 1
                 local elementPath = element:getPath()

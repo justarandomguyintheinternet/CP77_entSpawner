@@ -1,6 +1,8 @@
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
+local intersection = require("modules/utils/editor/intersection")
+local editor = require("modules/utils/editor/editor")
 
 local positionable = require("modules/classes/editor/positionable")
 
@@ -103,7 +105,7 @@ function positionableGroup:getPositionableLeafs()
 	return objects
 end
 
-function positionableGroup:setOriginToCenter()
+function positionableGroup:getCenter()
 	local center = Vector4.new(0, 0, 0, 0)
 
 	local leafs = self:getPositionableLeafs()
@@ -113,8 +115,12 @@ function positionableGroup:setOriginToCenter()
 
 	local nLeafs = math.max(1, #leafs)
 
-	self.origin = Vector4.new(center.x / nLeafs, center.y / nLeafs, center.z / nLeafs, 0)
-	if nLeafs > 0 then
+	return Vector4.new(center.x / nLeafs, center.y / nLeafs, center.z / nLeafs, 0)
+end
+
+function positionableGroup:setOriginToCenter()
+	self.origin = self:getCenter()
+	if not self.origin:IsXYZZero() then
 		self.originInitialized = true
 	end
 end
@@ -207,11 +213,105 @@ function positionableGroup:onEdited()
 	end
 end
 
-function positionableGroup:dropToSurface(_, direction)
+function positionableGroup:getSize()
+	local min = Vector4.new(math.huge, math.huge, math.huge, 0)
+	local max = Vector4.new(-math.huge, -math.huge, -math.huge, 0)
+
+	local leafs = self:getPositionableLeafs()
+
+	for _, entry in pairs(leafs) do
+		local entrySize = entry:getSize()
+		local entryPos = entry:getPosition()
+
+		if not entrySize or not entryPos then
+			goto continue
+		end
+
+		local entryMin = utils.subVector(entryPos, utils.multVector(entrySize, 0.5))
+		local entryMax = utils.addVector(entryPos, utils.multVector(entrySize, 0.5))
+
+		min = Vector4.new(
+			math.min(min.x, entryMin.x),
+			math.min(min.y, entryMin.y),
+			math.min(min.z, entryMin.z),
+			0
+		)
+
+		max = Vector4.new(
+			math.max(max.x, entryMax.x),
+			math.max(max.y, entryMax.y),
+			math.max(max.z, entryMax.z),
+			0
+		)
+		::continue::
+	end
+
+	return utils.subVector(max, min)
+end
+
+function positionableGroup:dropToSurface(isMulti, direction, excludeDict)
+	if isMulti then self:dropChildrenToSurface(isMulti, direction); return end
+
+	local excludeDict = {}
+	local leafs = self:getPositionableLeafs()
+	for _, entry in pairs(leafs) do
+		excludeDict[entry.id] = true
+	end
+
+	-- local size = self:getSize()
+	-- print("x: " .. size.x .. " y: " .. size.y .. " z: " .. size.z)
+	local size = { x = 0.01, y = 0.01, z = 0.01 }
+	local bBox = {
+		min = Vector4.new(-size.x / 2, -size.y / 2, -size.z / 2, 0),
+		max = Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0)
+	}
+
+	local toOrigin = utils.multVector(direction, -999)
+	local origin = intersection.getBoxIntersection(utils.subVector(self:getCenter(), toOrigin), utils.multVector(direction, -1), self:getCenter(), self:getRotation(), bBox)
+
+	if not origin.hit then return end
+
+	origin.position = utils.addVector(origin.position, utils.multVector(direction, 0.025))
+	local hit = editor.getRaySceneIntersection(direction, origin.position, excludeDict, true)
+
+	if not hit.hit then return end
+
+	local target = utils.multVector(hit.result.normal, -1)
+	local current = origin.normal
+
+	local axis = current:Cross(target)
+	local angle = Vector4.GetAngleBetween(current, target)
+	local diff = Quaternion.SetAxisAngle(self:getRotation():ToQuat():TransformInverse(axis):Normalize(), math.rad(angle))
+
+	if not grouped then
+		history.addAction(history.getElementChange(self))
+	end
+
+	local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self:getRotation():ToQuat(), diff)
+	-- self:setRotation(newRotation:ToEulerAngles())
+
+	local offset = utils.multVecXVec(newRotation:Transform(origin.normal), Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0))
+	local newCenter = utils.addVector(hit.result.unscaledHit or hit.result.position, utils.multVector(hit.result.normal, offset:Length())) -- phyiscal hits dont have unscaledHit
+
+	if hit.hit then
+		self:setPosition(utils.addVector(newCenter, utils.subVector(self:getPosition(), self:getCenter())))
+		self:onEdited()
+	end
+end
+
+function positionableGroup:dropChildrenToSurface(_, direction, excludeSelf)
 	local leafs = self:getPositionableLeafs()
 	table.sort(leafs, function (a, b)
 		return a:getPosition().z < b:getPosition().z
 	end)
+
+	local excludeDict = nil
+	if excludeSelf then
+		excludeDict = {}
+		for _, entry in pairs(leafs) do
+			excludeDict[entry.id] = true
+		end
+	end
 
 	local task = require("modules/utils/tasks"):new()
 	task.tasksTodo = #leafs
@@ -219,7 +319,7 @@ function positionableGroup:dropToSurface(_, direction)
 
 	for _, entry in pairs(leafs) do
 		task:addTask(function ()
-			entry:dropToSurface(true, direction)
+			entry:dropToSurface(false, direction, excludeDict)
 			task:taskCompleted()
 		end)
 	end

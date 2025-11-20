@@ -444,6 +444,10 @@ function positionable:setScaleDelta(delta, finished)
 
 end
 
+function positionable:getSize()
+
+end
+
 function positionable:getScale()
 	return Vector4.new(1, 1, 1, 0)
 end
@@ -460,7 +464,7 @@ function positionable:getDirection(direction)
 	end
 end
 
-function positionable:dropToSurface(grouped, direction)
+function positionable:dropToSurface(grouped, direction, excludeDict)
 
 end
 

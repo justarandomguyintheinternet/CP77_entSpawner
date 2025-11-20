@@ -537,7 +537,7 @@ function spawnUI.drawAll()
             elseif not ImGui.IsMouseDragging(0, style.draggingThreshold) and spawnUI.dragging then
                 if not ImGui.IsItemHovered() then
                     local ray = editor.getScreenToWorldRay()
-                    spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+                    spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), nil, true)
 
                     local class = spawnUI.getActiveSpawnList().class
                     spawnUI.dragData.lastSpawned = spawnUI.spawnNew(spawnUI.dragData, class, false)
@@ -756,7 +756,7 @@ function spawnUI.repeatLastSpawn()
     if not spawnUI.lastSpawnedClass or not spawnUI.lastSpawnedEntry then return end
 
     local ray = editor.getScreenToWorldRay()
-    spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+    spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), nil,  true)
 
     spawnUI.spawnNew(spawnUI.lastSpawnedEntry, spawnUI.lastSpawnedClass, spawnUI.lastSpawnedIsFavorite)
     spawnUI.spawnedUI.cachePaths()
@@ -892,7 +892,7 @@ function spawnUI.drawPopup()
         end
 
         local ray = editor.getScreenToWorldRay()
-        spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+        spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), nil, true)
 
         ImGui.OpenPopup("##spawnNew")
     end

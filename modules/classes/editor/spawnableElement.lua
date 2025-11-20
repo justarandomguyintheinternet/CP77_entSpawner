@@ -245,7 +245,12 @@ function spawnableElement:setScale(scale, finished)
 	self.spawnable:updateScale(finished, delta)
 end
 
-function spawnableElement:dropToSurface(grouped, direction)
+function spawnableElement:getSize()
+	local size = self.spawnable:getSize()
+	return Vector4.new(size.x, size.y, size.z, 1)
+end
+
+function spawnableElement:dropToSurface(grouped, direction, excludeDict)
 	local size = self.spawnable:getSize()
 	local bBox = {
 		min = Vector4.new(-size.x / 2, -size.y / 2, -size.z / 2, 0),
@@ -258,7 +263,9 @@ function spawnableElement:dropToSurface(grouped, direction)
 	if not origin.hit then return end
 
 	origin.position = utils.addVector(origin.position, utils.multVector(direction, 0.025))
-	local hit = editor.getRaySceneIntersection(direction, origin.position, self.spawnable, true)
+	local excludeIds = excludeDict or {}
+	excludeIds[self.id] = true
+	local hit = editor.getRaySceneIntersection(direction, origin.position, excludeIds, true)
 
 	if not hit.hit then return end
 
