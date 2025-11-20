@@ -707,14 +707,10 @@ function spawnUI.spawnNew(entry, class, isFavorite)
         data.visible = false
 
         new:load(data, true) -- Load without spawning
-        new:setPosition(pos)
-        new:setRotation(rot)
         new:setSilent(false)
         new:setVisible(true, true) -- Now spawn, but dont record in history
-
-        if new.modulePath == "modules/classes/editor/positionableGroup" or new.modulePath == "modules/classes/editor/randomizedGroup" then
-            new.yaw = 0
-        end
+        new:setPosition(pos)
+        new:setRotation(rot)
     else
         new:load({
             name = utils.getFileName(entry.name),

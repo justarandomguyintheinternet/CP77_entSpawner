@@ -53,6 +53,10 @@ end
 function positionableGroup:serialize()
 	local data = positionable.serialize(self)
 
+	self.origin = self.origin or self:getPosition()
+	self.rotation = self.rotation or EulerAngles.new(0, 0, 0)
+	self.originInitialized = self.originInitialized or (#self.childs > 0)
+
 	data.origin = { x = self.origin.x, y = self.origin.y, z = self.origin.z }
 	data.originInitialized = self.originInitialized
 	data.rotation = { roll = self.rotation.roll, pitch = self.rotation.pitch, yaw = self.rotation.yaw }
