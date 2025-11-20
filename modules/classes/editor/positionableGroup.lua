@@ -106,16 +106,39 @@ function positionableGroup:getPositionableLeafs()
 end
 
 function positionableGroup:getCenter()
-	local center = Vector4.new(0, 0, 0, 0)
+	local min = Vector4.new(math.huge, math.huge, math.huge, 0)
+	local max = Vector4.new(-math.huge, -math.huge, -math.huge, 0)
 
 	local leafs = self:getPositionableLeafs()
+
 	for _, entry in pairs(leafs) do
-		center = utils.addVector(center, entry:getPosition())
+		local entrySize = entry:getSize()
+		local entryPos = entry:getCenter()
+
+		if not entrySize or not entryPos then
+			goto continue
+		end
+
+		local entryMin = utils.subVector(entryPos, utils.multVector(entrySize, 0.5))
+		local entryMax = utils.addVector(entryPos, utils.multVector(entrySize, 0.5))
+
+		min = Vector4.new(
+			math.min(min.x, entryMin.x),
+			math.min(min.y, entryMin.y),
+			math.min(min.z, entryMin.z),
+			0
+		)
+
+		max = Vector4.new(
+			math.max(max.x, entryMax.x),
+			math.max(max.y, entryMax.y),
+			math.max(max.z, entryMax.z),
+			0
+		)
+		::continue::
 	end
 
-	local nLeafs = math.max(1, #leafs)
-
-	return Vector4.new(center.x / nLeafs, center.y / nLeafs, center.z / nLeafs, 0)
+	return utils.addVector(utils.multVector(utils.subVector(max, min), 0.5), min)
 end
 
 function positionableGroup:setOriginToCenter()
@@ -221,7 +244,7 @@ function positionableGroup:getSize()
 
 	for _, entry in pairs(leafs) do
 		local entrySize = entry:getSize()
-		local entryPos = entry:getPosition()
+		local entryPos = entry:getCenter()
 
 		if not entrySize or not entryPos then
 			goto continue
@@ -258,16 +281,16 @@ function positionableGroup:dropToSurface(isMulti, direction, excludeDict)
 		excludeDict[entry.id] = true
 	end
 
-	-- local size = self:getSize()
-	-- print("x: " .. size.x .. " y: " .. size.y .. " z: " .. size.z)
-	local size = { x = 0.01, y = 0.01, z = 0.01 }
+	local size = self:getSize()
+	print("x: " .. size.x .. " y: " .. size.y .. " z: " .. size.z)
+	-- local size = { x = 0.01, y = 0.01, z = 0.01 }
 	local bBox = {
 		min = Vector4.new(-size.x / 2, -size.y / 2, -size.z / 2, 0),
 		max = Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0)
 	}
 
 	local toOrigin = utils.multVector(direction, -999)
-	local origin = intersection.getBoxIntersection(utils.subVector(self:getCenter(), toOrigin), utils.multVector(direction, -1), self:getCenter(), self:getRotation(), bBox)
+	local origin = intersection.getBoxIntersection(utils.subVector(self:getCenter(), toOrigin), utils.multVector(direction, -1), self:getCenter(), self:getRotation(), bBox --[[ -9 +9 ]])
 
 	if not origin.hit then return end
 

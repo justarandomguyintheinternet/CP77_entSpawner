@@ -250,6 +250,10 @@ function spawnableElement:getSize()
 	return Vector4.new(size.x, size.y, size.z, 1)
 end
 
+function spawnableElement:getCenter()
+	return self.spawnable:getCenter()
+end
+
 function spawnableElement:dropToSurface(grouped, direction, excludeDict)
 	local size = self.spawnable:getSize()
 	local bBox = {

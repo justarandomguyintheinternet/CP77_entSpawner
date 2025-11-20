@@ -448,6 +448,10 @@ function positionable:getSize()
 
 end
 
+function positionable:getCenter()
+
+end
+
 function positionable:getScale()
 	return Vector4.new(1, 1, 1, 0)
 end
