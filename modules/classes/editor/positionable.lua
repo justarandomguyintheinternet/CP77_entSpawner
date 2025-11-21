@@ -47,7 +47,7 @@ function positionable:new(sUI)
 		probability = 0.5
 	}
 
-	o.scatterConfig = scatteredConfig:new()
+	o.scatterConfig = scatteredConfig:new(o)
 
 	o.class = utils.combine(o.class, { "positionable" })
 
