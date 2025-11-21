@@ -79,25 +79,30 @@ function scatteredConfig:load(data)
 	if data == nil then
 		return new
 	end
-	new.position = { x = scatteredValue:new(data.position.x.min, data.position.x.max, data.position.x.syncType),
-					  y = scatteredValue:new(data.position.y.min, data.position.y.max,data.position.y.syncType),
-					  z = scatteredValue:new(data.position.z.min, data.position.z.max,  ata.position.z.syncType),
-					  r = scatteredValue:new(data.position.r.min, data.position.r.max, data.position.z.syncType) }
-	new.rotation = { x = scatteredValue:new(data.rotation.x.min, data.rotation.x.max, data.rotation.x.syncType),
-					   y = scatteredValue:new(data.rotation.y.min, data.rotation.y.max, data.rotation.y.syncType),
-					   z = scatteredValue:new(data.rotation.z.min, data.rotation.z.max, data.rotation.z.syncType) }
-	new.scale = scatteredValue:new(data.scale.min, data.scale.max, data.scale.syncType)
-	new.count = scatteredValue:new(data.count.min, data.count.max, data.count.syncType, "INT")
+	new.position = { x = scatteredValue:load(data.position.x),
+					  y = scatteredValue:load(data.position.y),
+					  z = scatteredValue:load(data.position.z),
+					  r = scatteredValue:load(data.position.r) }
+	new.rotation = { x = scatteredValue:load(data.rotation.x),
+					   y = scatteredValue:load(data.rotation.y),
+					   z = scatteredValue:load(data.rotation.z) }
+	new.scale = scatteredValue:load(data.scale)
+	new.count = scatteredValue:load(data.count)
 	return new
 end
 
 function scatteredConfig:serialize()
 	local data = {}
 
-	data.position = self.position
-	data.rotation = self.rotation
-	data.scale = self.scale
-	data.count = self.count
+	data.position = { x = self.position.x:serialize(),
+					  y = self.position.y:serialize(),
+					  z = self.position.z:serialize(),
+					  r = self.position.r:serialize() }
+	data.rotation = {  x = self.rotation.x:serialize(),
+					   y = self.rotation.y:serialize(),
+					   z = self.rotation.z:serialize() }
+	data.scale = self.scale:serialize()
+	data.count = self.count:serialize()
 
 	return data
 end

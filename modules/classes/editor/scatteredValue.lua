@@ -1,6 +1,5 @@
 local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
-local history = require("modules/utils/history")
 local settings = require("modules/utils/settings")
 
 local syncTypes = { "OFF", "MIRROR", "EQUAL" }
@@ -27,6 +26,19 @@ function scatteredValue:new(min, max, syncType, valueType)
     o.id = math.random(1000000)
     self.__index = self
    	return setmetatable(o, self)
+end
+
+function scatteredValue:load(data)
+    return self:new(data.min, data.max, data.syncType, data.valueType)
+end
+
+function scatteredValue:serialize()
+    return {
+        min = self.min,
+        max = self.max,
+        syncType = self.syncType,
+        valueType = self.valueType
+    }
 end
 
 function scatteredValue:draw()
