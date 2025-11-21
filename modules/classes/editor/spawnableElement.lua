@@ -285,8 +285,10 @@ function spawnableElement:dropToSurface(grouped, direction, excludeDict)
 	end
 
 	local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.spawnable.rotation:ToQuat(), diff)
-	self:setRotation(newRotation:ToEulerAngles())
-
+	if self.applyRotationWhenDropped then
+		self:setRotation(newRotation:ToEulerAngles())
+	end
+	
 	local offset = utils.multVecXVec(newRotation:Transform(origin.normal), Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0))
 	local newCenter = utils.addVector(hit.result.unscaledHit or hit.result.position, utils.multVector(hit.result.normal, offset:Length())) -- phyiscal hits dont have unscaledHit
 
