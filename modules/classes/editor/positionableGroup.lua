@@ -282,8 +282,6 @@ function positionableGroup:dropToSurface(isMulti, direction, excludeDict)
 	end
 
 	local size = self:getSize()
-	print("x: " .. size.x .. " y: " .. size.y .. " z: " .. size.z)
-	-- local size = { x = 0.01, y = 0.01, z = 0.01 }
 	local bBox = {
 		min = Vector4.new(-size.x / 2, -size.y / 2, -size.z / 2, 0),
 		max = Vector4.new(size.x / 2, size.y / 2, size.z / 2, 0)
