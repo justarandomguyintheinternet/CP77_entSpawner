@@ -1,18 +1,16 @@
 local scatteredValue = require("modules/classes/editor/scatteredValue")
+local scatteredAreaBase = require("modules/classes/editor/scatteredAreaBase")
 
-local densityScale = 1000 -- 10m³
-
----@class scatteredRectangleArea
----@field volume number
+---@class scatteredRectangleArea : scatteredAreaBase
 ---@field x scatteredValue
 ---@field y scatteredValue
 ---@field z scatteredValue
-local scatteredRectangleArea = {}
+local scatteredRectangleArea = scatteredAreaBase:new()
 
 ---@param owner element
 ---@return scatteredRectangleArea
 function scatteredRectangleArea:new(owner)
-	local o = {}
+	local o = scatteredAreaBase:new(owner)
     
     o.x = scatteredValue:new(-5, 5, "MIRROR")
 	o.x.label = "X"
@@ -51,15 +49,6 @@ function scatteredRectangleArea:calculateVolume()
    self.volume = lenX * lenY * lenZ
 end
 
----@param density scatteredValue
----@return number
-function scatteredRectangleArea:getInstancesCount(density)
-    local min = (density.min / densityScale) * self.volume
-    local max = (density.max / densityScale) * self.volume
-
-    return math.floor(math.random(min, max))
-end
-
 ---@return Vector4
 function scatteredRectangleArea:getRandomInstancePositionOffset()
     local posXmin = self.x.min
@@ -92,9 +81,8 @@ end
 ---@param data table
 ---@return scatteredRectangleArea
 function scatteredRectangleArea:load(owner, data)
-    local new = self:new(owner)
+    local new = scatteredAreaBase.load(self, owner, data)
 
-    new.volume = data.volume
     new.x = scatteredValue:load(owner, data.x)
     new.y = scatteredValue:load(owner, data.y)
     new.z = scatteredValue:load(owner, data.z)
@@ -104,12 +92,13 @@ end
 
 ---@return table
 function scatteredRectangleArea:serialize()
-    return {
-        volume = self.volume,
-        x = self.x:serialize(),
-        y = self.y:serialize(),
-        z = self.z:serialize()
-    }
+    local baseData = scatteredAreaBase.serialize(self)
+
+    baseData.x = self.x:serialize()
+    baseData.y = self.y:serialize()
+    baseData.z = self.z:serialize()
+    
+    return baseData
 end
 
 return scatteredRectangleArea

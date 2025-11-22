@@ -1,17 +1,15 @@
 local scatteredValue = require("modules/classes/editor/scatteredValue")
+local scatteredAreaBase = require("modules/classes/editor/scatteredAreaBase")
 
-local densityScale = 1000 -- 10m³
-
----@class scatteredCylinderArea
----@field volume number
+---@class scatteredCylinderArea : scatteredAreaBase
 ---@field r scatteredValue
 ---@field z scatteredValue
-local scatteredCylinderArea = {}
+local scatteredCylinderArea = scatteredAreaBase:new()
 
 ---@param owner element
 ---@return scatteredCylinderArea
 function scatteredCylinderArea:new(owner)
-	local o = {}
+	local o = scatteredAreaBase:new(owner)
     
     o.r = scatteredValue:new(-5, 5, "EQUAL")
 	o.r.label = "R"
@@ -42,15 +40,6 @@ function scatteredCylinderArea:calculateVolume()
     self.volume = circleArea * h
 end
 
----@param density scatteredValue
----@return number
-function scatteredCylinderArea:getInstancesCount(density)
-    local min = (density.min / densityScale) * self.volume
-    local max = (density.max / densityScale) * self.volume
-
-    return math.floor(math.random(min, max))
-end
-
 ---@return Vector4
 function scatteredCylinderArea:getRandomInstancePositionOffset()
     local angle = math.random() * 2 * math.pi
@@ -76,22 +65,22 @@ end
 ---@param data table
 ---@return scatteredRectangleArea
 function scatteredCylinderArea:load(owner, data)
-    local new = self:new(owner)
+    local new = scatteredAreaBase.load(self, owner, data)
 
-    new.volume = data.volume
     new.r = scatteredValue:load(owner, data.r)
     new.z = scatteredValue:load(owner, data.z)
-
+    
     return new
 end
 
 ---@return table
 function scatteredCylinderArea:serialize()
-    return {
-        volume = self.volume,
-        r = self.r:serialize(),
-        z = self.z:serialize()
-    }
+    local baseData = scatteredAreaBase.serialize(self)
+
+    baseData.r = self.r:serialize()
+    baseData.z = self.z:serialize()
+
+    return baseData
 end
 
 return scatteredCylinderArea

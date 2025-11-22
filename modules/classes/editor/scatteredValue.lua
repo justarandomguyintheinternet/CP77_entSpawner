@@ -98,6 +98,7 @@ function scatteredValue:draw()
     ImGui.SameLine()
     local max, maxChanged = style.trackedDragFloat(self.owner, "##max" .. self.id, self.max, step, maxLow, maxHigh, format .. self.label)
 
+    ImGui.PushItemWidth(80 * style.viewSize)
     ImGui.SameLine()
     local syncType, syncChanged = ImGui.Combo("##type" .. self.id, utils.indexValue(syncTypes, self.syncType) - 1, syncTypes, #syncTypes)
     if syncChanged then

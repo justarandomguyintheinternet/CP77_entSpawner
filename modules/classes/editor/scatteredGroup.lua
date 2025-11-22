@@ -4,10 +4,11 @@ local history = require("modules/utils/history")
 local Cron = require("modules/utils/Cron")
 local scatteredRectangleArea = require("modules/classes/editor/scatteredRectangleArea")
 local scatteredCylinderArea = require("modules/classes/editor/scatteredCylinderArea")
+local scatteredPrismArea = require("modules/classes/editor/scatteredPrismArea")
 
 local positionableGroup = require("modules/classes/editor/positionableGroup")
 
-local areaTypes = { "CYLINDER", "RECTANGLE", "AREA" }
+local areaTypes = { "CYLINDER", "RECTANGLE", "SHAPE" }
 
 ---Class scattered positionable group
 ---@class scatteredGroup : positionableGroup
@@ -17,8 +18,9 @@ local areaTypes = { "CYLINDER", "RECTANGLE", "AREA" }
 ---@field lastPos Vector4
 ---@field baseGroup positionableGroup
 ---@field instanceGroup positionableGroup
+---@field shapeGroup positionableGroup
 ---@field applyGroundNormal boolean
----@field area {rectangle: scatteredRectangleArea, cylinder: scatteredCylinderArea, type: string}
+---@field area {rectangle: scatteredRectangleArea, cylinder: scatteredCylinderArea, shape: table[scatteredPrismArea] type: string}
 local scatteredGroup = setmetatable({}, { __index = positionableGroup })
 
 -- SECTION: "BOILERPLATE"
@@ -45,14 +47,19 @@ function scatteredGroup:new(sUI)
 	o.baseGroup.name = "Base"
 	o.instanceGroup = positionableGroup:new(sUI)
 	o.instanceGroup.name = "Instances"
+	o.shapeGroup = positionableGroup:new(sUI)
+	o.shapeGroup.name = "Shape"
+
 	o.baseGroup:setParent(o)
 	o.instanceGroup:setParent(o)
+	o.shapeGroup:setParent(o)
 
 	o.snapToGroundOffset = 100
 
 	o.area = {}
 	o.area.rectangle = scatteredRectangleArea:new(o)
 	o.area.cylinder = scatteredCylinderArea:new(o)
+	o.area.shape = {}
 	o.area.type = "CYLINDER"
 
 	setmetatable(o, { __index = self })
@@ -74,7 +81,7 @@ function scatteredGroup:load(data, silent)
 		self:reSeed()
 	end
 
-	local hasBase, hasInstances = false, false
+	local hasBase, hasInstances, hasShape = false, false, false
 	for _, child in ipairs(self.childs) do
 		if child.name == "Base" then
 			hasBase = true
@@ -82,6 +89,9 @@ function scatteredGroup:load(data, silent)
 		elseif child.name == "Instances" then
 			hasInstances = true
 			self.instanceGroup = child
+		elseif child.name == "Shape" then 
+			hasShape = true
+			self.shapeGroup = child
 		end
 	end
 
@@ -95,6 +105,12 @@ function scatteredGroup:load(data, silent)
 		self.instanceGroup = positionableGroup:new(self.sUI)
 		self.instanceGroup.name = "Instances"
 		self.instanceGroup:setParent(self)
+	end
+
+	if not hasShape then
+		self.shapeGroup = positionableGroup:new(self.sUI)
+		self.shapeGroup.name = "Shape"
+		self.shapeGroup:setParent(self)
 	end
 end
 
@@ -115,29 +131,37 @@ end
 -- SECTION: SCATTER LOGIC
 
 ---@private
----@param scatterConfig scatteredConfig
 ---@return Vector4
-function scatteredGroup:calculatePositionRectangle(scatterConfig)
+function scatteredGroup:calculatePositionRectangle()
 	local offset = self.area.rectangle:getRandomInstancePositionOffset()
 	return utils.addVector(offset, self.lastPos)
 end
 
 ---@private
----@param scatterConfig scatteredConfig
 ---@return Vector4
-function scatteredGroup:calculatePositionCylinder(scatterConfig)
+function scatteredGroup:calculatePositionCylinder()
 	local offset = self.area.cylinder:getRandomInstancePositionOffset()
 	return utils.addVector(offset, self.lastPos)
 end
 
 ---@private
----@param scatterConfig scatteredConfig
+---@param prismIndex number
 ---@return Vector4
-function scatteredGroup:calculatePosition(scatterConfig)
+function scatteredGroup:calculatePositionPrism(prismIndex)
+	local offset = self.area.shape[prismIndex]:getRandomInstancePositionOffset()
+	return utils.addVector(offset, self.lastPos)
+end
+
+---@private
+---@param prismIndex number?
+---@return Vector4
+function scatteredGroup:calculatePosition(prismIndex)
 	if self.area.type == "CYLINDER" then
-		return self:calculatePositionCylinder(scatterConfig)
+		return self:calculatePositionCylinder()
 	elseif self.area.type == "RECTANGLE" then
-		return self:calculatePositionRectangle(scatterConfig)
+		return self:calculatePositionRectangle()
+	elseif self.area.type == "SHAPE" then
+		return self:calculatePositionPrism(prismIndex)
 	else
 		print("Unsupported area type: " .. tostring(self.area.type))
 		return self.lastPos 
@@ -176,14 +200,15 @@ end
 
 ---@private
 ---@param scatterConfig scatteredConfig
+---@param prismIndex number?
 ---@return number
-function scatteredGroup:calculateElementCount(scatterConfig)
+function scatteredGroup:calculateElementCount(scatterConfig, prismIndex)
 	if self.area.type == "RECTANGLE" then
 		return self.area.rectangle:getInstancesCount(scatterConfig.density)
 	elseif self.area.type == "CYLINDER" then
 		return self.area.cylinder:getInstancesCount(scatterConfig.density)
-	elseif self.area.type == "AREA" then 
-		return 0
+	elseif self.area.type == "SHAPE" then 
+		return self.area.shape[prismIndex]:getInstancesCount(scatterConfig.density)
 	else
 		print("Unsupported Area type: " .. tostring(self.area.type))
 		return 0
@@ -196,44 +221,56 @@ function scatteredGroup:applyRandomization(pos, recursiveParam)
 	while self.instanceGroup.childs[1] do
 		self.instanceGroup.childs[1]:remove()
 	end
-
 	math.randomseed(self.seed)
-	for _, child in ipairs(self.baseGroup.childs) do
-		if not child.scatterConfig then
-			goto continue
-		end
-		local elementCount = self:calculateElementCount(child.scatterConfig)
-		for i = 1, elementCount do
 
-			local newObjSerialized = child:serialize()
-			newObjSerialized.visible = true
-			newObjSerialized.hiddenByParent = false
-			local newObj = require(child.modulePath):new(self.sUI)
-			newObj:load(newObjSerialized, true)
+	local shapes = {}
+	if self.area.type == "CYLINDER" then
+		table.insert(shapes, self.area.cylinder)
+	elseif self.area.type == "RECTANGLE" then
+		table.insert(shapes, self.area.rectangle)
+	elseif self.area.type == "SHAPE" then
+		self:triangulate()
+		shapes = self.area.shape
+	end
 
-			local position = self:calculatePosition(child.scatterConfig)
-			newObj:setPosition(position)
-
-			local rotation = self:calculateRotation(child.scatterConfig)
-			newObj:setRotation(rotation)
-
-			local scaleValue = self:calculateScale(child.scatterConfig)
-			local scale = { x = scaleValue,
-			y = scaleValue,
-			z = scaleValue }
-			newObj:setScale(scale, true)
-
-			newObj:setSilent(false)
-			newObj:setVisible(true, true)
-			newObj:setParent(self.instanceGroup)
-
-			if recursive and (utils.isA(newObj, "scatteredGroup") or utils.isA(newObj, "randomizedGroup")) then
-				Cron.After(0.05, function()
-					newObj:applyRandomization()
-				end, nil)
+	for si, shape in ipairs(shapes) do
+		for _, child in ipairs(self.baseGroup.childs) do
+			if not child.scatterConfig then
+				goto continue
 			end
+			local elementCount = self:calculateElementCount(child.scatterConfig, si)
+			for i = 1, elementCount do
+
+				local newObjSerialized = child:serialize()
+				newObjSerialized.visible = true
+				newObjSerialized.hiddenByParent = false
+				local newObj = require(child.modulePath):new(self.sUI)
+				newObj:load(newObjSerialized, true)
+
+				local position = self:calculatePosition(si)
+				newObj:setPosition(position)
+
+				local rotation = self:calculateRotation(child.scatterConfig)
+				newObj:setRotation(rotation)
+
+				local scaleValue = self:calculateScale(child.scatterConfig)
+				local scale = { x = scaleValue,
+								y = scaleValue,
+								z = scaleValue }
+				newObj:setScale(scale, true)
+
+				newObj:setSilent(false)
+				newObj:setVisible(true, true)
+				newObj:setParent(self.instanceGroup)
+
+				if recursive and (utils.isA(newObj, "scatteredGroup") or utils.isA(newObj, "randomizedGroup")) then
+					Cron.After(0.05, function()
+						newObj:applyRandomization()
+					end, nil)
+				end
+			end
+			::continue::
 		end
-		::continue::
 	end
 	
 	if self.snapToGround then
@@ -253,6 +290,135 @@ function scatteredGroup:reSeed()
 			child:reSeed()
 		end
 	end
+end
+
+-- SECTION: TRIANGULATION
+
+local function subVec2(v1, v2)
+	return { x = v1.x - v2.x, y = v1.y - v2.y }
+end
+
+local function cross(ax, ay, bx, by)
+    return ax * by - ay * bx
+end
+
+local function area(poly)
+    local a = 0
+    for i = 1, #poly do
+        local j = (i % #poly) + 1
+        a = a + (poly[i].x * poly[j].y - poly[j].x * poly[i].y)
+    end
+    return a * 0.5
+end
+
+local function isPointInTriangle(px, py, ax, ay, bx, by, cx, cy)
+    local v0x, v0y = cx - ax, cy - ay
+    local v1x, v1y = bx - ax, by - ay
+    local v2x, v2y = px - ax, py - ay
+
+    local dot00 = v0x*v0x + v0y*v0y
+    local dot01 = v0x*v1x + v0y*v1y
+    local dot02 = v0x*v2x + v0y*v2y
+    local dot11 = v1x*v1x + v1y*v1y
+    local dot12 = v2x*v1x + v2y*v1y
+
+    local invDenom = 1 / (dot00 * dot11 - dot01 * dot01)
+    local u = (dot11 * dot02 - dot01 * dot12) * invDenom
+    local v = (dot00 * dot12 - dot01 * dot02) * invDenom
+
+    return u >= 0 and v >= 0 and (u + v) < 1
+end
+
+local function isConvex(prev, curr, next)
+    local crossVal = cross(
+        curr.x - prev.x, curr.y - prev.y,
+        next.x - curr.x, next.y - curr.y
+    )
+    return crossVal > 0      -- assuming CCW polygon
+end
+
+function scatteredGroup:triangulate()
+    self.area.shape = {}
+
+    local h
+    local verts = {}
+    for _, v in ipairs(self.shapeGroup.childs) do
+        if not (utils.isA(v, "spawnableElement") and v.spawnable.modulePath == "area/outlineMarker") then goto continue end
+
+        local childPos = v:getPosition()
+        table.insert(verts, { x = childPos.x, y = childPos.y })
+        h = v.spawnable.height
+		self.lastPos.z = childPos.z
+		
+        ::continue::
+    end
+
+    -- Ensure CCW orientation
+    if area(verts) < 0 then
+        local rev = {}
+        for i=#verts,1,-1 do table.insert(rev, verts[i]) end
+        verts = rev
+    end
+
+    while #verts > 3 do
+        local earFound = false
+
+        for i=1,#verts do
+            local prev = verts[(i-2) % #verts + 1]
+            local curr = verts[i]
+            local next = verts[i % #verts + 1]
+
+            if isConvex(prev, curr, next) then
+                -- Check other points NOT in the triangle
+                local ear = true
+
+                for j=1,#verts do
+                    if j ~= i and verts[j] ~= prev and verts[j] ~= next then
+                        local p = verts[j]
+                        if isPointInTriangle(
+                            p.x, p.y,
+                            prev.x, prev.y,
+                            curr.x, curr.y,
+                            next.x, next.y
+                        ) then
+                            ear = false
+                            break
+                        end
+                    end
+                end
+
+                if ear then
+                    -- Found an ear: output triangle
+					local newPrism = scatteredPrismArea:new(self)
+					newPrism.v1 = subVec2(prev, self.lastPos)
+					newPrism.v2 = subVec2(curr, self.lastPos)
+					newPrism.v3 = subVec2(next, self.lastPos)
+					newPrism.z = h
+					newPrism:calculateVolume()
+                    table.insert(self.area.shape, newPrism)
+
+                    -- Remove the ear vertex
+                    table.remove(verts, i)
+
+                    earFound = true
+                    break
+                end
+            end
+        end
+
+        if not earFound then
+            print("Ear clipping failed: polygon may be degenerate or self-intersecting.")
+        end
+    end
+
+    -- Final triangle
+	local newPrism = scatteredPrismArea:new(self)
+	newPrism.v1 = subVec2(verts[1], self.lastPos)
+	newPrism.v2 = subVec2(verts[2], self.lastPos)
+	newPrism.v3 = subVec2(verts[3], self.lastPos)
+	newPrism.z = h
+	newPrism:calculateVolume()
+	table.insert(self.area.shape, newPrism)
 end
 
 -- SECTION: UI
