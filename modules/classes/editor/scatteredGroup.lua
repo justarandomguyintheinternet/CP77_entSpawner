@@ -2,8 +2,12 @@ local utils = require("modules/utils/utils")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 local Cron = require("modules/utils/Cron")
+local scatteredRectangleArea = require("modules/classes/editor/scatteredRectangleArea")
+local scatteredCylinderArea = require("modules/classes/editor/scatteredCylinderArea")
 
 local positionableGroup = require("modules/classes/editor/positionableGroup")
+
+local areaTypes = { "CYLINDER", "RECTANGLE", "AREA" }
 
 ---Class scattered positionable group
 ---@class scatteredGroup : positionableGroup
@@ -13,11 +17,8 @@ local positionableGroup = require("modules/classes/editor/positionableGroup")
 ---@field lastPos Vector4
 ---@field baseGroup positionableGroup
 ---@field instanceGroup positionableGroup
----@field positionMultiplier number
----@field rotationMultiplier number
----@field scaleMultiplier number
----@field instanceCountMultiplier number
 ---@field applyGroundNormal boolean
+---@field area {rectangle: scatteredRectangleArea, cylinder: scatteredCylinderArea, type: string}
 local scatteredGroup = setmetatable({}, { __index = positionableGroup })
 
 -- SECTION: "BOILERPLATE"
@@ -47,11 +48,12 @@ function scatteredGroup:new(sUI)
 	o.baseGroup:setParent(o)
 	o.instanceGroup:setParent(o)
 
-	o.positionMultiplier = 1
-	o.rotationMultiplier = 1
-	o.scaleMultiplier = 1
-	o.instanceCountMultiplier = 1
 	o.snapToGroundOffset = 100
+
+	o.area = {}
+	o.area.rectangle = scatteredRectangleArea:new(o)
+	o.area.cylinder = scatteredCylinderArea:new(o)
+	o.area.type = "CYLINDER"
 
 	setmetatable(o, { __index = self })
    	return o
@@ -63,10 +65,10 @@ function scatteredGroup:load(data, silent)
 	self.seed = data.seed
 	self.snapToGround = data.snapToGround or false
 	self.snapToGroundOffset = data.snapToGroundOffset or 100
-	self.positionMultiplier = data.positionMultiplier or 1
-	self.rotationMultiplier = data.rotationMultiplier or 1
-	self.scaleMultiplier = data.scaleMultiplier or 1
-	self.instanceCountMultiplier = data.instanceCountMultiplier or 1
+	self.area = {}
+	self.area.rectangle = scatteredRectangleArea:load(self, data.area.rectangle)
+	self.area.cylinder = scatteredCylinderArea:load(self, data.area.cylinder)
+	self.area.type = data.area.type
 
 	if self.seed == -1 then
 		self:reSeed()
@@ -101,12 +103,12 @@ function scatteredGroup:serialize()
 
 	data.seed = self.seed
 	data.snapToGround = self.snapToGround
-
-	data.positionMultiplier = self.positionMultiplier
-	data.rotationMultiplier = self.rotationMultiplier
-	data.scaleMultiplier = self.scaleMultiplier
-	data.instanceCountMultiplier = self.instanceCountMultiplier
 	data.snapToGroundOffset = self.snapToGroundOffset
+	data.area = {}
+	data.area.rectangle = self.area.rectangle:serialize()
+	data.area.cylinder = self.area.cylinder:serialize()
+	data.area.type = self.area.type
+
 	return data
 end
 
@@ -116,43 +118,29 @@ end
 ---@param scatterConfig scatteredConfig
 ---@return Vector4
 function scatteredGroup:calculatePositionRectangle(scatterConfig)
-	local posXmin = scatterConfig.position.x.min * self.positionMultiplier
-	local posXmax = scatterConfig.position.x.max * self.positionMultiplier
-
-	local posYmin = scatterConfig.position.y.min * self.positionMultiplier
-	local posYmax = scatterConfig.position.y.max * self.positionMultiplier
-	
-	local posZmin = scatterConfig.position.z.min * self.positionMultiplier
-	local posZmax = scatterConfig.position.z.max * self.positionMultiplier
-
-	local rPosX = math.random(posXmin, posXmax)
-	local rPosY = math.random(posYmin, posYmax)
-	local rPosZ = math.random(posZmin, posZmax)
-
-	return Vector4.new(rPosX + self.lastPos.x, rPosY + self.lastPos.y, rPosZ + self.lastPos.z, 1)
+	local offset = self.area.rectangle:getRandomInstancePositionOffset()
+	return utils.addVector(offset, self.lastPos)
 end
 
 ---@private
 ---@param scatterConfig scatteredConfig
 ---@return Vector4
 function scatteredGroup:calculatePositionCylinder(scatterConfig)
-	local angle = math.random() * 2 * math.pi
-	local r = math.sqrt(math.random()) * (scatterConfig.position.r.min * self.positionMultiplier)
-
-	local x = r * math.cos(angle) + self.lastPos.x
-	local y = r * math.sin(angle) + self.lastPos.y
-	local z = math.random(scatterConfig.position.z.min * self.positionMultiplier, scatterConfig.position.z.max * self.positionMultiplier) + self.lastPos.z
-	return Vector4.new(x, y, z, 1)
+	local offset = self.area.cylinder:getRandomInstancePositionOffset()
+	return utils.addVector(offset, self.lastPos)
 end
 
 ---@private
 ---@param scatterConfig scatteredConfig
 ---@return Vector4
 function scatteredGroup:calculatePosition(scatterConfig)
-	if scatterConfig.position.type == "CYLINDER" then
+	if self.area.type == "CYLINDER" then
 		return self:calculatePositionCylinder(scatterConfig)
-	else
+	elseif self.area.type == "RECTANGLE" then
 		return self:calculatePositionRectangle(scatterConfig)
+	else
+		print("Unsupported area type: " .. tostring(self.area.type))
+		return self.lastPos 
 	end
 end
 
@@ -160,14 +148,14 @@ end
 ---@param scatterConfig scatteredConfig
 ---@return EulerAngles
 function scatteredGroup:calculateRotation(scatterConfig)
-	local Xmin = scatterConfig.rotation.x.min * self.rotationMultiplier
-	local Xmax = scatterConfig.rotation.x.max * self.rotationMultiplier
+	local Xmin = scatterConfig.rotation.x.min
+	local Xmax = scatterConfig.rotation.x.max
 
-	local Ymin = scatterConfig.rotation.y.min * self.rotationMultiplier
-	local Ymax = scatterConfig.rotation.y.max * self.rotationMultiplier
+	local Ymin = scatterConfig.rotation.y.min
+	local Ymax = scatterConfig.rotation.y.max
 
-	local Zmin = scatterConfig.rotation.z.min * self.rotationMultiplier
-	local Zmax = scatterConfig.rotation.z.max * self.rotationMultiplier
+	local Zmin = scatterConfig.rotation.z.min
+	local Zmax = scatterConfig.rotation.z.max
 
 	local rX = math.random(Xmin, Xmax)
 	local rY = math.random(Ymin, Ymax)
@@ -180,8 +168,8 @@ end
 ---@param scatterConfig scatteredConfig
 ---@return number
 function scatteredGroup:calculateScale(scatterConfig)
-	local min = scatterConfig.scale.min * self.scaleMultiplier
-	local max = scatterConfig.scale.max * self.scaleMultiplier
+	local min = scatterConfig.scale.min
+	local max = scatterConfig.scale.max
 
 	return math.random(min, max)
 end
@@ -190,10 +178,16 @@ end
 ---@param scatterConfig scatteredConfig
 ---@return number
 function scatteredGroup:calculateElementCount(scatterConfig)
-	local min = scatterConfig.count.min * self.instanceCountMultiplier
-	local max = scatterConfig.count.max * self.instanceCountMultiplier
-
-	return math.random(min, max)
+	if self.area.type == "RECTANGLE" then
+		return self.area.rectangle:getInstancesCount(scatterConfig.density)
+	elseif self.area.type == "CYLINDER" then
+		return self.area.cylinder:getInstancesCount(scatterConfig.density)
+	elseif self.area.type == "AREA" then 
+		return 0
+	else
+		print("Unsupported Area type: " .. tostring(self.area.type))
+		return 0
+	end
 end
 
 function scatteredGroup:applyRandomization(pos, recursiveParam)
@@ -325,32 +319,19 @@ function scatteredGroup:drawGroupRandomization()
 		self.snapToGroundOffset = snapOffset
 	end
 
-	style.styledText("Position Multiplier")
+	style.styledText("Position Randomization:")
+	style.mutedText("Type:")
 	ImGui.SameLine()
-	local posMult, posMultChanged = ImGui.DragFloat("##PositionMultiplier", self.positionMultiplier,  0.1, 0.1, 100)
-	if posMultChanged then
-		self.positionMultiplier = posMult
+	ImGui.PushItemWidth(120 * style.viewSize)
+	local posType, posTypeChanged = ImGui.Combo("##posTypeCombo", utils.indexValue(areaTypes, self.area.type) - 1, areaTypes, #areaTypes)
+	if posTypeChanged then
+		self.area.type = areaTypes[posType + 1]
 	end
-
-	style.styledText("Rotation Multiplier")
-	ImGui.SameLine()
-	local rotMult, rotMultChanged = ImGui.DragFloat("##RotationMultiplier", self.rotationMultiplier,  0.1, 0.1, 100)
-	if rotMultChanged then
-		self.rotationMultiplier = rotMult
-	end
-
-	style.styledText("Scale Multiplier")
-	ImGui.SameLine()
-	local scaleMult, scaleMultChanged = ImGui.DragFloat("##ScaleMultiplier", self.scaleMultiplier, 0.1, 0.1, 100)
-	if scaleMultChanged then
-		self.scaleMultiplier = scaleMult
-	end
-
-	style.styledText("Instance Count Multiplier")
-	ImGui.SameLine()
-	local countMult, countMultChanged = ImGui.DragFloat("##InstanceCountMultiplier", self.instanceCountMultiplier, 0.1, 10)
-	if countMultChanged then
-		self.instanceCountMultiplier = countMult
+	
+	if self.area.type == "RECTANGLE" then
+		self.area.rectangle:draw()
+	elseif self.area.type == "CYLINDER" then
+		self.area.cylinder:draw()
 	end
 end
 

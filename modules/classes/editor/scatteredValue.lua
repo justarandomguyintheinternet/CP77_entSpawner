@@ -63,6 +63,7 @@ function scatteredValue:serialize()
     }
 end
 
+---@return boolean
 function scatteredValue:draw()
     local minLow, minHigh
     local maxLow, maxHigh
@@ -127,6 +128,8 @@ function scatteredValue:draw()
             self.max = max
         end
     end
+
+    return minChanged or maxChanged
 end
 
 return scatteredValue
