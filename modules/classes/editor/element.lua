@@ -26,6 +26,8 @@ local history = require("modules/utils/history")
 ---@field quickOperations {[string]: {condition : fun(PARAM: element) : boolean, operation : fun(PARAM: element)}}
 ---@field groupOperationData table
 ---@field selected boolean
+---@field lockedRename boolean
+---@field lockedRemove boolean
 element = {}
 
 function element:new(sUI)
@@ -56,6 +58,9 @@ function element:new(sUI)
 	o.hovered = false
 	o.editName = false
 	o.focusNameEdit = 0
+
+	o.lockedRemove = false
+	o.lockedRename = false
 
 	o.sUI = sUI
 
@@ -94,7 +99,6 @@ function element:load(data, silent)
 	if self.headerOpen == nil then self.headerOpen = settings.headerState end
 	if self.selected == nil then self.selected = false end
 	if self.hiddenByParent == nil then self.hiddenByParent = false end
-
 	self.modulePath = self.modulePath or self:getModulePathByType(data)
 
 	self.childs = {}
@@ -131,6 +135,7 @@ end
 ---Update file name to new given
 ---@param name string
 function element:rename(name)
+	if self.lockedRename then return end
 	local oldPath = self:getPath()
 	local oldState = self:serialize()
 
@@ -159,6 +164,7 @@ end
 ---@param parent element
 ---@param index number?
 function element:setParent(parent, index)
+	if self.lockedRemove then return end
 	if self.parent then
 		self.parent:removeChild(self)
 	end
@@ -169,6 +175,7 @@ end
 
 ---Removes self from parent
 function element:remove()
+	if self.lockedRemove then return end
 	if self.parent ~= nil then
 		self.parent:removeChild(self)
 	end

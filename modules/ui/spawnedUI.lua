@@ -665,15 +665,17 @@ function spawnedUI.drawContextMenu(element, path)
         style.mutedText(isMulti and #spawnedUI.selectedPaths .. " elements" or element.name)
         ImGui.Separator()
 
-        if ImGui.MenuItem("Delete", "DEL") then
-            if isMulti then
-                history.addAction(history.getRemove(spawnedUI.getRoots(spawnedUI.selectedPaths)))
-                for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
-                    entry.ref:remove()
+        if not element.lockedRemove then
+            if ImGui.MenuItem("Delete", "DEL") then
+                if isMulti then
+                    history.addAction(history.getRemove(spawnedUI.getRoots(spawnedUI.selectedPaths)))
+                    for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
+                        entry.ref:remove()
+                    end
+                else
+                    history.addAction(history.getRemove({ element }))
+                    element:remove()
                 end
-            else
-                history.addAction(history.getRemove({ element }))
-                element:remove()
             end
         end
         if ImGui.MenuItem("Copy", "CTRL-C") then
@@ -682,8 +684,10 @@ function spawnedUI.drawContextMenu(element, path)
         if ImGui.MenuItem("Paste", "CTRL-V") then
             history.addAction(history.getInsert(spawnedUI.paste(spawnedUI.clipboard, element)))
         end
-        if ImGui.MenuItem("Cut", "CTRL-X") then
-            spawnedUI.cut(isMulti, element)
+        if not element.lockedRemove then
+            if ImGui.MenuItem("Cut", "CTRL-X") then
+                spawnedUI.cut(isMulti, element)
+            end
         end
         if ImGui.MenuItem("Duplicate", "CTRL-D") then
             local data = spawnedUI.copy(isMulti, element)
@@ -930,7 +934,7 @@ function spawnedUI.drawElement(element, dummy)
             ImGui.Text(element.name)
         end
 
-        if element.hovered and ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) then
+        if element.hovered and ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) and not element.lockedRename then
             element.editName = true
             element.focusNameEdit = 1
             element:setSelected(true)

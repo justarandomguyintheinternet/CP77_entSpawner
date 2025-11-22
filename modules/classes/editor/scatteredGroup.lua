@@ -45,14 +45,21 @@ function scatteredGroup:new(sUI)
 
 	o.baseGroup = positionableGroup:new(sUI)
 	o.baseGroup.name = "Base"
+	o.baseGroup:setParent(o)
+	o.baseGroup.lockedRemove = true
+	o.baseGroup.lockedRename = true
+
 	o.instanceGroup = positionableGroup:new(sUI)
 	o.instanceGroup.name = "Instances"
+	o.instanceGroup:setParent(o)
+	o.instanceGroup.lockedRemove = true
+	o.instanceGroup.lockedRename = true
+
 	o.shapeGroup = positionableGroup:new(sUI)
 	o.shapeGroup.name = "Shape"
-
-	o.baseGroup:setParent(o)
-	o.instanceGroup:setParent(o)
 	o.shapeGroup:setParent(o)
+	o.shapeGroup.lockedRemove = true
+	o.shapeGroup.lockedRename = true
 
 	o.snapToGroundOffset = 100
 
@@ -62,11 +69,18 @@ function scatteredGroup:new(sUI)
 	o.area.shape = {}
 	o.area.type = "CYLINDER"
 
+	print(o.shapeGroup.lockedRemove)
+	print(o.instanceGroup.lockedRemove)
+	print(o.baseGroup.lockedRemove)
+
 	setmetatable(o, { __index = self })
    	return o
 end
 
 function scatteredGroup:load(data, silent)
+	self.baseGroup.lockedRemove = false
+	self.instanceGroup.lockedRemove = false
+	self.shapeGroup.lockedRemove = false
 	positionableGroup.load(self, data, silent)
 
 	self.seed = data.seed
@@ -76,10 +90,6 @@ function scatteredGroup:load(data, silent)
 	self.area.rectangle = scatteredRectangleArea:load(self, data.area.rectangle)
 	self.area.cylinder = scatteredCylinderArea:load(self, data.area.cylinder)
 	self.area.type = data.area.type
-
-	if self.seed == -1 then
-		self:reSeed()
-	end
 
 	local hasBase, hasInstances, hasShape = false, false, false
 	for _, child in ipairs(self.childs) do
@@ -112,6 +122,19 @@ function scatteredGroup:load(data, silent)
 		self.shapeGroup.name = "Shape"
 		self.shapeGroup:setParent(self)
 	end
+
+	self.baseGroup.lockedRemove = true
+	self.baseGroup.lockedRename = true
+
+	self.instanceGroup.lockedRemove = true
+	self.instanceGroup.lockedRename = true
+
+	self.shapeGroup.lockedRemove = true
+	self.shapeGroup.lockedRename = true
+
+	if self.seed == -1 then
+		self:reSeed()
+	end
 end
 
 function scatteredGroup:serialize()
@@ -126,6 +149,38 @@ function scatteredGroup:serialize()
 	data.area.type = self.area.type
 
 	return data
+end
+
+function scatteredGroup:setParent(parent, index)
+	self.baseGroup.lockedRemove = false
+	self.instanceGroup.lockedRemove = false
+	self.shapeGroup.lockedRemove = false
+
+	positionableGroup.setParent(self, parent, index)
+
+	self.baseGroup.lockedRemove = true
+	self.instanceGroup.lockedRemove = true
+	self.shapeGroup.lockedRemove = true
+end
+
+function scatteredGroup:removeChild(child)
+	if child == self.baseGroup then
+		self.baseGroup.lockedRemove = false
+	elseif child == self.instanceGroup then
+		self.instanceGroup.lockedRemove = false
+	elseif child == self.shapeGroup then
+		self.shapeGroup.lockedRemove = false
+	end
+
+	positionableGroup.removeChild(self, child)
+end
+
+function scatteredGroup:remove()
+	self.baseGroup.lockedRemove = false
+	self.instanceGroup.lockedRemove = false
+	self.shapeGroup.lockedRemove = false
+
+	positionableGroup.remove(self)
 end
 
 -- SECTION: SCATTER LOGIC
@@ -349,7 +404,7 @@ function scatteredGroup:triangulate()
         table.insert(verts, { x = childPos.x, y = childPos.y })
         h = v.spawnable.height
 		self.lastPos.z = childPos.z
-		
+
         ::continue::
     end
 
