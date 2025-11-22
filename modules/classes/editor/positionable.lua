@@ -67,7 +67,7 @@ function positionable:load(data, silent)
 		self.randomizationSettings[key] = setting
 	end
 
-	self.scatterConfig:load(data.scatteredConfig)
+	self.scatterConfig:load(data.scatterConfig)
 
 	if self.scaleLocked == nil then self.scaleLocked = true end
 	if self.transformExpanded == nil then self.transformExpanded = true end

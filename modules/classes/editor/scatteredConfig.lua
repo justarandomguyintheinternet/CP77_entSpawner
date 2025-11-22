@@ -70,17 +70,15 @@ function scatteredConfig:draw()
 	self.density:draw()
 end
 
-function scatteredConfig:load(owner, data)
-	local new = self:new(owner)
+function scatteredConfig:load(data)
 	if data == nil then
-		return new
+		return
 	end
-	new.rotation = { x = scatteredValue:load(owner, data.rotation.x),
+	self.rotation = { x = scatteredValue:load(owner, data.rotation.x),
 					   y = scatteredValue:load(owner, data.rotation.y),
 					   z = scatteredValue:load(owner, data.rotation.z) }
-	new.scale = scatteredValue:load(owner, data.scale)
-	new.density = scatteredValue:load(owner, data.density)
-	return new
+	self.scale = scatteredValue:load(owner, data.scale)
+	self.density = scatteredValue:load(owner, data.density)
 end
 
 function scatteredConfig:serialize()
