@@ -1102,6 +1102,13 @@ function spawnedUI.drawTop()
     ImGui.PopItemWidth()
 
     ImGui.SameLine()
+    ImGui.SetNextItemWidth(utils.getTextMaxWidth(spawnedUI.groupTypes) + 60)
+    local newIndex, changed = ImGui.Combo("##groupType", spawnedUI.newGroupTypeIndex - 1, spawnedUI.groupTypes, #spawnedUI.groupTypes)
+    if changed then
+        spawnedUI.newGroupTypeIndex = newIndex + 1
+    end
+
+    ImGui.SameLine()
     if ImGui.Button("Add group") then
         local group = require("modules/classes/editor/positionableGroup"):new(spawnedUI)
         local selectedType = spawnedUI.groupTypes[spawnedUI.newGroupTypeIndex]
@@ -1115,12 +1122,6 @@ function spawnedUI.drawTop()
         group.name = spawnedUI.newGroupName
         spawnedUI.addRootElement(group)
         history.addAction(history.getInsert({ group }))
-    end
-    ImGui.SameLine()
-    ImGui.SetNextItemWidth(utils.getTextMaxWidth(spawnedUI.groupTypes) + 60)
-    local newIndex, changed = ImGui.Combo("##groupType", spawnedUI.newGroupTypeIndex - 1, spawnedUI.groupTypes, #spawnedUI.groupTypes)
-    if changed then
-        spawnedUI.newGroupTypeIndex = newIndex + 1
     end
 
     style.pushButtonNoBG(true)
