@@ -130,6 +130,22 @@ function positionable:getProperties()
 	return properties
 end
 
+function positionable:getGroupedProperties()
+	local properties = element.getGroupedProperties(self)
+
+	if self.parent and self.parent.parent and utils.isA(self.parent.parent, "scatteredGroup") and self.parent.name == "Base" then
+		properties["groupedScatteredProperties"] = {
+			id = "groupedScatteredProperties",
+			name = "Entry Scattering",
+			draw = function (element, entries)
+				self.scatterConfig:drawGrouped(element, entries)
+			end
+		}
+	end
+	
+	return properties
+end
+
 function positionable:setSelected(state)
 	local updated = state ~= self.selected
 	if updated and not self.hovered and (settings.gizmoOnSelected or editor.active) then

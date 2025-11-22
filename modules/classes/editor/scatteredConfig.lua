@@ -70,6 +70,54 @@ function scatteredConfig:draw()
 	self.density:draw()
 end
 
+function scatteredConfig:drawGrouped(element, entries)
+	local ssc = element.scatterConfig
+
+	ImGui.Separator()
+	style.styledText("Rotation Randomization:")
+	if ssc.rotation.x:draw() then
+		history.addAction(history.getMultiSelectChange(entries))
+		for _, e in ipairs(entries) do
+			e.scatterConfig.rotation.x.min = ssc.rotation.x.min
+			e.scatterConfig.rotation.x.max = ssc.rotation.x.max
+		end
+	end
+	if ssc.rotation.y:draw() then
+		history.addAction(history.getMultiSelectChange(entries))
+		for _, e in ipairs(entries) do
+			e.scatterConfig.rotation.y.min = ssc.rotation.y.min
+			e.scatterConfig.rotation.y.max = ssc.rotation.y.max
+		end
+	end
+	if ssc.rotation.z:draw() then
+		history.addAction(history.getMultiSelectChange(entries))
+		for _, e in ipairs(entries) do
+			e.scatterConfig.rotation.z.min = ssc.rotation.z.min
+			e.scatterConfig.rotation.z.max = ssc.rotation.z.max
+		end
+	end
+
+	ImGui.Separator()
+	style.styledText("Scale Randomization:")
+	if ssc.scale:draw() then
+		history.addAction(history.getMultiSelectChange(entries))
+		for _, e in ipairs(entries) do
+			e.scatterConfig.scale.min = ssc.scale.min
+			e.scatterConfig.scale.max = ssc.scale.max
+		end
+	end
+
+	ImGui.Separator()
+	style.styledText("Density Randomization:")
+	if ssc.density:draw() then
+		history.addAction(history.getMultiSelectChange(entries))
+		for _, e in ipairs(entries) do
+			e.scatterConfig.density.min = ssc.density.min
+			e.scatterConfig.density.max = ssc.density.max
+		end
+	end
+end
+
 function scatteredConfig:load(data)
 	if data == nil then
 		return
