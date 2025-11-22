@@ -21,6 +21,7 @@ local areaTypes = { "CYLINDER", "RECTANGLE", "SHAPE" }
 ---@field shapeGroup positionableGroup
 ---@field applyGroundNormal boolean
 ---@field area {rectangle: scatteredRectangleArea, cylinder: scatteredCylinderArea, shape: table[scatteredPrismArea] type: string}
+---@field densityMultiplier number
 local scatteredGroup = setmetatable({}, { __index = positionableGroup })
 
 -- SECTION: "BOILERPLATE"
@@ -69,9 +70,7 @@ function scatteredGroup:new(sUI)
 	o.area.shape = {}
 	o.area.type = "CYLINDER"
 
-	print(o.shapeGroup.lockedRemove)
-	print(o.instanceGroup.lockedRemove)
-	print(o.baseGroup.lockedRemove)
+	o.densityMultiplier = 1.0
 
 	setmetatable(o, { __index = self })
    	return o
@@ -86,10 +85,12 @@ function scatteredGroup:load(data, silent)
 	self.seed = data.seed
 	self.snapToGround = data.snapToGround or false
 	self.snapToGroundOffset = data.snapToGroundOffset or 100
+	self.densityMultiplier = data.densityMultiplier or 1.0
 	self.area = {}
 	self.area.rectangle = scatteredRectangleArea:load(self, data.area.rectangle)
 	self.area.cylinder = scatteredCylinderArea:load(self, data.area.cylinder)
 	self.area.type = data.area.type
+
 
 	local hasBase, hasInstances, hasShape = false, false, false
 	for _, child in ipairs(self.childs) do
@@ -143,6 +144,7 @@ function scatteredGroup:serialize()
 	data.seed = self.seed
 	data.snapToGround = self.snapToGround
 	data.snapToGroundOffset = self.snapToGroundOffset
+	data.densityMultiplier = self.densityMultiplier
 	data.area = {}
 	data.area.rectangle = self.area.rectangle:serialize()
 	data.area.cylinder = self.area.cylinder:serialize()
@@ -258,12 +260,17 @@ end
 ---@param prismIndex number?
 ---@return number
 function scatteredGroup:calculateElementCount(scatterConfig, prismIndex)
+	local density = { min = scatterConfig.density.min,
+					  max = scatterConfig.density.max }
+	density.min = density.min * self.densityMultiplier
+	density.max = density.max * self.densityMultiplier
+
 	if self.area.type == "RECTANGLE" then
-		return self.area.rectangle:getInstancesCount(scatterConfig.density)
+		return self.area.rectangle:getInstancesCount(density)
 	elseif self.area.type == "CYLINDER" then
-		return self.area.cylinder:getInstancesCount(scatterConfig.density)
+		return self.area.cylinder:getInstancesCount(density)
 	elseif self.area.type == "SHAPE" then 
-		return self.area.shape[prismIndex]:getInstancesCount(scatterConfig.density)
+		return self.area.shape[prismIndex]:getInstancesCount(density)
 	else
 		print("Unsupported Area type: " .. tostring(self.area.type))
 		return 0
@@ -535,7 +542,7 @@ function scatteredGroup:drawGroupRandomization()
 
 	style.styledText("Snap Offset")
 	ImGui.SameLine()
-	local snapOffset, snapOffsetChanged = ImGui.DragFloat("##SnapOffset", self.snapToGroundOffset, 0.1, 0.1, 1000)
+	local snapOffset, snapOffsetChanged = style.trackedDragFloat(self, "##SnapOffset", self.snapToGroundOffset, 0.1, 0.1, 1000, "%.1f")
 	if snapOffsetChanged then
 		self.snapToGroundOffset = snapOffset
 	end
@@ -544,7 +551,7 @@ function scatteredGroup:drawGroupRandomization()
 	style.mutedText("Type:")
 	ImGui.SameLine()
 	ImGui.PushItemWidth(120 * style.viewSize)
-	local posType, posTypeChanged = ImGui.Combo("##posTypeCombo", utils.indexValue(areaTypes, self.area.type) - 1, areaTypes, #areaTypes)
+	local posType, posTypeChanged = style.trackedCombo(self, "##posTypeCombo", utils.indexValue(areaTypes, self.area.type) - 1, areaTypes)
 	if posTypeChanged then
 		self.area.type = areaTypes[posType + 1]
 	end
@@ -553,6 +560,12 @@ function scatteredGroup:drawGroupRandomization()
 		self.area.rectangle:draw()
 	elseif self.area.type == "CYLINDER" then
 		self.area.cylinder:draw()
+	end
+
+	style.styledText("Density Multiplier")
+	local densityMultiplier, densityMultiplierChanged = style.trackedDragFloat(self, "##densityMultiplier", self.densityMultiplier, 0.01, 0.01, 1000, "%.2f")
+	if densityMultiplierChanged then
+		self.densityMultiplier = densityMultiplier
 	end
 end
 
