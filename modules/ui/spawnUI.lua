@@ -32,7 +32,7 @@ local types = {
             ["Rotating Mesh"] = { class = require("modules/classes/spawn/mesh/rotatingMesh"), index = 2 },
             ["Cloth Mesh"] = { class = require("modules/classes/spawn/mesh/clothMesh"), index = 3 },
             ["Dynamic Mesh"] = { class = require("modules/classes/spawn/physics/dynamicMesh"), index = 4 },
-            ["Proxy Mesh"] = { class = require("modules/classes/spawn/mesh/proxyMesh"), index = 4 }
+            ["Proxy Mesh"] = { class = require("modules/classes/spawn/mesh/proxyMesh"), index = 5 }
         },
         index = 2
     },
@@ -548,7 +548,7 @@ function spawnUI.drawAll()
                 spawnUI.popupSpawnHit = nil
             end
             if ImGui.IsItemClicked(ImGuiMouseButton.Middle) then
-                ImGui.SetClipboardText(ImGui.SetClipboardText(entry.name))
+                ImGui.SetClipboardText(entry.name)
             end
             if ImGui.IsItemHovered() and settings.assetPreviewEnabled[spawnUI.getActiveSpawnList().modulePath] then
                 spawnUI.handleAssetPreviewHovered(entry, false)
