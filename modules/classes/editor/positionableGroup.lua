@@ -156,7 +156,11 @@ end
 
 function positionableGroup:getPosition()
 	if self.origin == nil then
-		self:setOriginToCenter()
+		if #self.childs == 0 then
+			self.origin = Vector4.new(0, 0, 0, 1)
+		else
+			self:setOriginToCenter()
+		end
 	end
 	return self.origin
 end
