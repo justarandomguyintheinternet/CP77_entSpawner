@@ -106,7 +106,7 @@ function positionableGroup:getPositionableLeafs()
 	return objects
 end
 
-function positionableGroup:getCenter()
+function positionableGroup:getWorldMinMax()
 	local min = Vector4.new(math.huge, math.huge, math.huge, 0)
 	local max = Vector4.new(-math.huge, -math.huge, -math.huge, 0)
 
@@ -139,6 +139,11 @@ function positionableGroup:getCenter()
 		::continue::
 	end
 
+	return min, max
+end
+
+function positionableGroup:getCenter()
+	local min, max = self:getWorldMinMax()
 	return utils.addVector(utils.multVector(utils.subVector(max, min), 0.5), min)
 end
 
@@ -242,38 +247,7 @@ function positionableGroup:onEdited()
 end
 
 function positionableGroup:getSize()
-	local min = Vector4.new(math.huge, math.huge, math.huge, 0)
-	local max = Vector4.new(-math.huge, -math.huge, -math.huge, 0)
-
-	local leafs = self:getPositionableLeafs()
-
-	for _, entry in pairs(leafs) do
-		local entrySize = entry:getSize()
-		local entryPos = entry:getCenter()
-
-		if not entrySize or not entryPos then
-			goto continue
-		end
-
-		local entryMin = utils.subVector(entryPos, utils.multVector(entrySize, 0.5))
-		local entryMax = utils.addVector(entryPos, utils.multVector(entrySize, 0.5))
-
-		min = Vector4.new(
-			math.min(min.x, entryMin.x),
-			math.min(min.y, entryMin.y),
-			math.min(min.z, entryMin.z),
-			0
-		)
-
-		max = Vector4.new(
-			math.max(max.x, entryMax.x),
-			math.max(max.y, entryMax.y),
-			math.max(max.z, entryMax.z),
-			0
-		)
-		::continue::
-	end
-
+	local min, max = self:getWorldMinMax()
 	return utils.subVector(max, min)
 end
 
