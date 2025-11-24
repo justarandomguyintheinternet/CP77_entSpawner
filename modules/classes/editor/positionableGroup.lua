@@ -206,7 +206,7 @@ end
 function positionableGroup:setRotation(rotation)
 	if self.rotationLocked then return end
 
-	self:setRotationDelta(utils.addEulerRelative(rotation, self.rotation))
+	self:setRotationDelta(utils.subEuler(rotation, self.rotation))
 end
 
 function positionableGroup:getRotation()
