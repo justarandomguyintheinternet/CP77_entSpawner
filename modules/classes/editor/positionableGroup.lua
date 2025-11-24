@@ -148,10 +148,9 @@ function positionableGroup:getCenter()
 end
 
 function positionableGroup:setOriginToCenter()
+	if #self.childs == 0 then return end
 	self.origin = self:getCenter()
-	if not self.origin:IsXYZZero() then
-		self.originInitialized = true
-	end
+	self.originInitialized = true
 end
 
 function positionableGroup:setOrigin(v)
