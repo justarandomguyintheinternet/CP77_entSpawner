@@ -162,6 +162,7 @@ end
 function spawnable:despawn()
     local entity = self:getEntity()
     if entity then
+        visualizer.showArrows(entity, false)
         Game.GetStaticEntitySystem():DespawnEntity(self.entityID)
     end
     self.spawned = false
