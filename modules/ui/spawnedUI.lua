@@ -701,6 +701,9 @@ function spawnedUI.drawContextMenu(element, path)
             end
         end
         if element.expandable then
+            if ImGui.MenuItem("Drop Children to Floor") then
+                element:dropChildrenToSurface(false, Vector4.new(0, 0, -1, 0))
+            end
             if ImGui.MenuItem("Set as \"Spawn New\" group", "CTRL-N") then
                 local idx = 1
                 local elementPath = element:getPath()
@@ -711,6 +714,20 @@ function spawnedUI.drawContextMenu(element, path)
                     idx = idx + 1
                 end
                 spawnedUI.spawner.baseUI.spawnUI.selectedGroup = idx
+            end
+            if ImGui.MenuItem("Set Origin to Center") then
+                element:setOriginToCenter()
+            end
+            if ImGui.MenuItem("Set Player Position as Origin") then
+                element:setOrigin(GetPlayer():GetWorldPosition())
+            end
+            if ImGui.MenuItem("Set Current Rotation as Identity") then
+                element:setRotationIdentity()
+            end
+        end
+        if element.parent ~= nil and element.parent.expandable and not element.parent:isRoot(true) then
+            if ImGui.MenuItem("Set Origin to Element") then
+                element.parent:setOrigin(element:getPosition())
             end
         end
         if ImGui.MenuItem(not element.expandable and "Make Favorite" or "Make Prefab", "CTRL-F") then
