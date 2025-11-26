@@ -21,6 +21,7 @@ local element = require("modules/classes/editor/element")
 ---@field controlsHovered boolean
 ---@field randomizationSettings table
 ---@field scatterConfig scatteredConfig
+---@field applyRotationWhenDropped boolean
 local positionable = setmetatable({}, { __index = element })
 
 function positionable:new(sUI)
@@ -42,6 +43,7 @@ function positionable:new(sUI)
 	o.visualizerState = false
 	o.visualizerDirection = "none"
 	o.controlsHovered = false
+	o.applyRotationWhenDropped = true
 
 	o.randomizationSettings = {
 		probability = 0.5
@@ -105,6 +107,15 @@ function positionable:getProperties()
 		end
 	})
 
+	table.insert(properties, {
+		id = "general",
+		name = "General",
+		defaultHeader = false,
+		draw = function ()
+			self:drawGeneralProperties()
+		end
+	})
+
 	if self.parent and utils.isA(self.parent, "randomizedGroup") then
 		table.insert(properties, {
 			id = "randomizationSelf",
@@ -144,6 +155,13 @@ function positionable:getGroupedProperties()
 	end
 	
 	return properties
+end
+
+function positionable:drawGeneralProperties()
+	ImGui.PushItemWidth(80 * style.viewSize)
+	style.mutedText("Apply Rotation When Dropped")
+	ImGui.SameLine()
+	self.applyRotationWhenDropped, _ = style.trackedCheckbox(self, "##applyRotationWhenDropped", self.applyRotationWhenDropped)
 end
 
 function positionable:setSelected(state)
@@ -478,6 +496,14 @@ function positionable:setScaleDelta(delta, finished)
 
 end
 
+function positionable:getSize()
+
+end
+
+function positionable:getCenter()
+
+end
+
 function positionable:getScale()
 	return Vector4.new(1, 1, 1, 0)
 end
@@ -494,7 +520,7 @@ function positionable:getDirection(direction)
 	end
 end
 
-function positionable:dropToSurface(grouped, direction, physicalOnly, applyAngle)
+function positionable:dropToSurface(grouped, direction, excludeDict)
 
 end
 

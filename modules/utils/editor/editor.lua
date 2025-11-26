@@ -183,7 +183,7 @@ function editor.init(spawner)
 
     input.registerImGuiHotkey({ ImGuiKey.LeftShift, ImGuiKey.D }, function ()
         local ray = editor.getScreenToWorldRay()
-        local hit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), false)
+        local hit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), nil, false)
 
         if #hit.allHits == 0 then
             editor.depthSelectOpen = false
@@ -293,14 +293,14 @@ function editor.getScreenToWorldRay(x, y)
     return ray:Normalize()
 end
 
-function editor.getRaySceneIntersection(ray, origin, excludeSpawnable, usePhysical, physicalOnly)
+function editor.getRaySceneIntersection(ray, origin, excludeIds, usePhysical)
     local hits = {}
 
     for _, element in pairs(editor.spawnedUI.paths) do
         if element.ref.visible and utils.isA(element.ref, "spawnableElement") then
             local hit = element.ref.spawnable:calculateIntersection(origin, ray)
 
-            if hit.hit and (not excludeSpawnable or (excludeSpawnable and element.ref.spawnable ~= excludeSpawnable)) then
+            if hit.hit and (not excludeIds or (excludeIds and not excludeIds[element.ref.id])) then
                 hit.element = element.ref
                 table.insert(hits, hit)
             end
@@ -362,7 +362,7 @@ end
 
 function editor.setTarget()
     local ray = editor.getScreenToWorldRay()
-    local hit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), false)
+    local hit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), nil, false)
     if not hit.hit or (not hit.isNode and #hit.allHits == 0) then return end -- or not hit.isNode | for now allow selecing through physical objects
 
     hit = hit.result

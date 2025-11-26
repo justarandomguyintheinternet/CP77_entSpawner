@@ -32,7 +32,7 @@ local types = {
             ["Rotating Mesh"] = { class = require("modules/classes/spawn/mesh/rotatingMesh"), index = 2 },
             ["Cloth Mesh"] = { class = require("modules/classes/spawn/mesh/clothMesh"), index = 3 },
             ["Dynamic Mesh"] = { class = require("modules/classes/spawn/physics/dynamicMesh"), index = 4 },
-            ["Proxy Mesh"] = { class = require("modules/classes/spawn/mesh/proxyMesh"), index = 4 }
+            ["Proxy Mesh"] = { class = require("modules/classes/spawn/mesh/proxyMesh"), index = 5 }
         },
         index = 2
     },
@@ -537,7 +537,7 @@ function spawnUI.drawAll()
             elseif not ImGui.IsMouseDragging(0, style.draggingThreshold) and spawnUI.dragging then
                 if not ImGui.IsItemHovered() then
                     local ray = editor.getScreenToWorldRay()
-                    spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+                    spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), nil, true)
 
                     local class = spawnUI.getActiveSpawnList().class
                     spawnUI.dragData.lastSpawned = spawnUI.spawnNew(spawnUI.dragData, class, false)
@@ -548,7 +548,7 @@ function spawnUI.drawAll()
                 spawnUI.popupSpawnHit = nil
             end
             if ImGui.IsItemClicked(ImGuiMouseButton.Middle) then
-                ImGui.SetClipboardText(ImGui.SetClipboardText(entry.name))
+                ImGui.SetClipboardText(entry.name)
             end
             if ImGui.IsItemHovered() and settings.assetPreviewEnabled[spawnUI.getActiveSpawnList().modulePath] then
                 spawnUI.handleAssetPreviewHovered(entry, false)
@@ -711,10 +711,6 @@ function spawnUI.spawnNew(entry, class, isFavorite)
         new:setRotation(rot)
         new:setSilent(false)
         new:setVisible(true, true) -- Now spawn, but dont record in history
-
-        if new.modulePath == "modules/classes/editor/positionableGroup" or new.modulePath == "modules/classes/editor/randomizedGroup" then
-            new.yaw = 0
-        end
     else
         new:load({
             name = utils.getFileName(entry.name),
@@ -760,7 +756,7 @@ function spawnUI.repeatLastSpawn()
     if not spawnUI.lastSpawnedClass or not spawnUI.lastSpawnedEntry then return end
 
     local ray = editor.getScreenToWorldRay()
-    spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+    spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), nil,  true)
 
     spawnUI.spawnNew(spawnUI.lastSpawnedEntry, spawnUI.lastSpawnedClass, spawnUI.lastSpawnedIsFavorite)
     spawnUI.spawnedUI.cachePaths()
@@ -896,7 +892,7 @@ function spawnUI.drawPopup()
         end
 
         local ray = editor.getScreenToWorldRay()
-        spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+        spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), nil, true)
 
         ImGui.OpenPopup("##spawnNew")
     end

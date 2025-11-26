@@ -105,7 +105,7 @@ function favorite:draw(context)
     elseif not ImGui.IsMouseDragging(0, style.draggingThreshold) and self.spawnUI.dragging then
         if not ImGui.IsItemHovered() then
             local ray = editor.getScreenToWorldRay()
-            self.spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), true)
+            self.spawnUI.popupSpawnHit = editor.getRaySceneIntersection(ray, GetPlayer():GetFPPCameraComponent():GetLocalToWorld():GetTranslation(), nil, true)
 
             spawnUI.dragData.lastSpawned = spawnUI.spawnNew(self.spawnUI.dragData, require(self.data.modulePath), true)
         end

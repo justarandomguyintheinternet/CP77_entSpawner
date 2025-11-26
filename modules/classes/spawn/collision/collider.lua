@@ -132,6 +132,9 @@ function collider:getMaterialIndexByName(material)
 end
 
 function collider:getSize()
+    if self.shape == 1 then
+        return { x = self.scale.x * 2, y = self.scale.x * 2, z = self.scale.z + self.scale.x * 2 }
+    end
     return { x = self.scale.x * 2, y = self.scale.y * 2, z = self.scale.z * 2 }
 end
 
