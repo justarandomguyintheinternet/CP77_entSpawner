@@ -253,7 +253,7 @@ end
 function positionableGroup:dropToSurface(isMulti, direction, excludeDict)
 	if isMulti then self:dropChildrenToSurface(isMulti, direction); return end
 
-	local excludeDict = {}
+	local excludeDict = excludeDict or {}
 	local leafs = self:getPositionableLeafs()
 	for _, entry in pairs(leafs) do
 		excludeDict[entry.id] = true
@@ -300,15 +300,14 @@ function positionableGroup:dropToSurface(isMulti, direction, excludeDict)
 	end
 end
 
-function positionableGroup:dropChildrenToSurface(_, direction, excludeSelf)
-	local leafs = self:getPositionableLeafs()
+function positionableGroup:dropChildrenToSurface(_, direction, excludeSelf, excludeDict)
+	local leafs = self.childs
 	table.sort(leafs, function (a, b)
 		return a:getPosition().z < b:getPosition().z
 	end)
 
-	local excludeDict = nil
+	local excludeDict = excludeDict or {}
 	if excludeSelf then
-		excludeDict = {}
 		for _, entry in pairs(leafs) do
 			excludeDict[entry.id] = true
 		end

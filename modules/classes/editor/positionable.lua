@@ -74,6 +74,8 @@ function positionable:load(data, silent)
 	if self.scaleLocked == nil then self.scaleLocked = true end
 	if self.transformExpanded == nil then self.transformExpanded = true end
 	if self.rotationRelative == nil then self.rotationRelative = false end
+
+	self.applyRotationWhenDropped = data.applyRotationWhenDropped == nil and true or data.applyRotationWhenDropped
 end
 
 function positionable:drawTransform()
@@ -534,6 +536,7 @@ function positionable:serialize()
 	data.randomizationSettings = utils.deepcopy(self.randomizationSettings)
 	data.pos = utils.fromVector(self:getPosition()) -- For savedUI
 	data.scatterConfig = self.scatterConfig:serialize()
+	data.applyRotationWhenDropped = self.applyRotationWhenDropped
 
 	return data
 end

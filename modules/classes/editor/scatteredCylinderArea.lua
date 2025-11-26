@@ -11,7 +11,7 @@ local scatteredCylinderArea = scatteredAreaBase:new()
 function scatteredCylinderArea:new(owner)
 	local o = scatteredAreaBase:new(owner)
     
-    o.r = scatteredValue:new(-5, 5, "EQUAL")
+    o.r = scatteredValue:new(5, 5, "EQUAL")
 	o.r.label = "R"
 	o.r.lowerBound = -10000
 	o.r.upperBound = 10000

@@ -15,11 +15,9 @@ local areaTypes = { "CYLINDER", "RECTANGLE", "SHAPE" }
 ---@field seed number
 ---@field snapToGround boolean
 ---@field snapToGroundOffset number
----@field lastPos Vector4
 ---@field baseGroup positionableGroup
 ---@field instanceGroup positionableGroup
 ---@field shapeGroup positionableGroup
----@field applyGroundNormal boolean
 ---@field area {rectangle: scatteredRectangleArea, cylinder: scatteredCylinderArea, shape: table[scatteredPrismArea] type: string}
 ---@field densityMultiplier number
 local scatteredGroup = setmetatable({}, { __index = positionableGroup })
@@ -38,9 +36,6 @@ function scatteredGroup:new(sUI)
 
 	o.seed = 1
     o.snapToGround = false
-	o.applyGroundNormal = false
-
-	o.lastPos = nil
 
 	o.maxPropertyWidth = nil
 
@@ -191,14 +186,14 @@ end
 ---@return Vector4
 function scatteredGroup:calculatePositionRectangle()
 	local offset = self.area.rectangle:getRandomInstancePositionOffset()
-	return utils.addVector(offset, self.lastPos)
+	return utils.addVector(offset, self.baseGroup:getPosition())
 end
 
 ---@private
 ---@return Vector4
 function scatteredGroup:calculatePositionCylinder()
 	local offset = self.area.cylinder:getRandomInstancePositionOffset()
-	return utils.addVector(offset, self.lastPos)
+	return utils.addVector(offset, self.baseGroup:getPosition())
 end
 
 ---@private
@@ -206,7 +201,7 @@ end
 ---@return Vector4
 function scatteredGroup:calculatePositionPrism(prismIndex)
 	local offset = self.area.shape[prismIndex]:getRandomInstancePositionOffset()
-	return utils.addVector(offset, self.lastPos)
+	return utils.addVector(offset, self.shapeGroup:getPosition())
 end
 
 ---@private
@@ -221,7 +216,7 @@ function scatteredGroup:calculatePosition(prismIndex)
 		return self:calculatePositionPrism(prismIndex)
 	else
 		print("Unsupported area type: " .. tostring(self.area.type))
-		return self.lastPos 
+		return self.baseGroup:getPosition()
 	end
 end
 
@@ -278,7 +273,6 @@ function scatteredGroup:calculateElementCount(scatterConfig, prismIndex)
 end
 
 function scatteredGroup:applyRandomization(pos, recursiveParam)
-	self.lastPos = pos or self.baseGroup:getPosition()
 	local recursive = recursiveParam or true
 	while self.instanceGroup.childs[1] do
 		self.instanceGroup.childs[1]:remove()
@@ -336,9 +330,14 @@ function scatteredGroup:applyRandomization(pos, recursiveParam)
 	end
 	
 	if self.snapToGround then
-		self:setPosition(utils.addVector(self.lastPos, Vector4.new(0, 0, self.snapToGroundOffset, 0)))
-		Cron.After(0.05, function()
-			self:dropToSurface(true, Vector4.new(0, 0, -1, 0), true, self.applyGroundNormal)
+		self.instanceGroup:setPosition(utils.addVector(self.instanceGroup:getPosition(), Vector4.new(0, 0, self.snapToGroundOffset, 0)))
+		Cron.After(1, function()
+			local excludeDict = {}
+			local leafs = self:getPositionableLeafs()
+			for _, entry in pairs(leafs) do
+				excludeDict[entry.id] = true
+			end
+			self.instanceGroup:dropChildrenToSurface(false, Vector4.new(0, 0, -1, 0), true, excludeDict)
 		end, nil)
 	end
 end
@@ -410,7 +409,6 @@ function scatteredGroup:triangulate()
         local childPos = v:getPosition()
         table.insert(verts, { x = childPos.x, y = childPos.y })
         h = v.spawnable.height
-		self.lastPos.z = childPos.z
 
         ::continue::
     end
@@ -452,9 +450,9 @@ function scatteredGroup:triangulate()
                 if ear then
                     -- Found an ear: output triangle
 					local newPrism = scatteredPrismArea:new(self)
-					newPrism.v1 = subVec2(prev, self.lastPos)
-					newPrism.v2 = subVec2(curr, self.lastPos)
-					newPrism.v3 = subVec2(next, self.lastPos)
+					newPrism.v1 = subVec2(prev, self.shapeGroup:getPosition())
+					newPrism.v2 = subVec2(curr, self.shapeGroup:getPosition())
+					newPrism.v3 = subVec2(next, self.shapeGroup:getPosition())
 					newPrism.z = h
 					newPrism:calculateVolume()
                     table.insert(self.area.shape, newPrism)
@@ -475,9 +473,9 @@ function scatteredGroup:triangulate()
 
     -- Final triangle
 	local newPrism = scatteredPrismArea:new(self)
-	newPrism.v1 = subVec2(verts[1], self.lastPos)
-	newPrism.v2 = subVec2(verts[2], self.lastPos)
-	newPrism.v3 = subVec2(verts[3], self.lastPos)
+	newPrism.v1 = subVec2(verts[1], self.shapeGroup:getPosition())
+	newPrism.v2 = subVec2(verts[2], self.shapeGroup:getPosition())
+	newPrism.v3 = subVec2(verts[3], self.shapeGroup:getPosition())
 	newPrism.z = h
 	newPrism:calculateVolume()
 	table.insert(self.area.shape, newPrism)
@@ -531,13 +529,6 @@ function scatteredGroup:drawGroupRandomization()
 	local snapToGround, snapToGroundChanged = style.trackedCheckbox(self, "##SnapToGround", self.snapToGround, false)
 	if snapToGroundChanged then
 		self.snapToGround = snapToGround
-	end
-
-	style.styledText("Apply Ground Normal")
-	ImGui.SameLine()
-	local applyGroundNormal, applyGroundNormalChanged = style.trackedCheckbox(self, "##applyGroundNormal", self.applyGroundNormal, false)
-	if applyGroundNormalChanged then
-		self.applyGroundNormal = applyGroundNormal
 	end
 
 	style.styledText("Snap Offset")
