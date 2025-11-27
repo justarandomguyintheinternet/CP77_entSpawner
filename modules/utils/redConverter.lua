@@ -110,6 +110,11 @@ local function convertArray(propValue, prop)
     local propData = {}
     local innerType = prop:GetType():GetInnerType():GetMetaType()
 
+    -- Sometimes (static?) arrays are userdata, e.g. https://nativedb.red4ext.com/c/1589593404660993 - vehicleDoors
+    if type(propValue) ~= "table" then
+        return propData
+    end
+
     for _, entry in pairs(propValue) do
         local innerData = red.convertAny(innerType, prop:GetType():GetInnerType():GetName().value, entry, prop, propValue)
 
@@ -202,6 +207,7 @@ function red.convertAny(metaType, propType, value, prop, data)
     elseif metaType == ERTTIType.Enum then
         propData = value.value
     elseif metaType == ERTTIType.Array or metaType == ERTTIType.StaticArray or metaType == ERTTIType.NativeArray or metaType == ERTTIType.FixedArray then
+        print(metaType, propType, prop:GetName().value)
         propData = convertArray(value, prop)
     elseif metaType == ERTTIType.Handle or metaType == ERTTIType.WeakHandle then
         propData = convertHandle(value, prop, prop:GetName().value)

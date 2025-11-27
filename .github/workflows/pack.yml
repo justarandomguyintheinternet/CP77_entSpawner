@@ -9,6 +9,7 @@ on:
       - fix/*
       - light-channels
       - crowd-null
+      - fix-*
   workflow_dispatch:
 
 jobs:
