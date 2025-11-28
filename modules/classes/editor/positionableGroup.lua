@@ -112,6 +112,11 @@ function positionableGroup:getWorldMinMax()
 
 	local leafs = self:getPositionableLeafs()
 
+	if #leafs == 0 then
+		local pos = self:getPosition()
+		return pos, pos
+	end
+
 	for _, entry in pairs(leafs) do
 		local entrySize = entry:getSize()
 		local entryPos = entry:getCenter()
