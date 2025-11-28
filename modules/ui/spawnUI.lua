@@ -416,7 +416,7 @@ end
 
 function spawnUI.drawAll()
     ImGui.SetNextItemWidth(300 * style.viewSize)
-    spawnUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search by name... (Supports pattern matching)', spawnUI.filter, 100)
+    spawnUI.filter, changed = ImGui.InputTextWithHint('##Filter', 'Search by name... (Supports pattern matching)', spawnUI.filter, 500)
     if changed then
         spawnUI.updateFilter()
     end
