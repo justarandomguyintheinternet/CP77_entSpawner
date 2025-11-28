@@ -503,11 +503,6 @@ function scatteredGroup:drawGroupRandomization()
 		self.maxPropertyWidth = utils.getTextMaxWidth({ "Seed", "Randomization Rule", "Fixed Amount Rule", "Fixed Amount %", "Fixed Amount Total" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
 	end
 
-	if ImGui.Button("Apply Randomization") then
-		history.addAction(history.getElementChange(self))
-		self:applyRandomization()
-	end
-
 	style.mutedText("Seed")
 	ImGui.SameLine()
 	ImGui.SetCursorPosX(self.maxPropertyWidth)
