@@ -309,7 +309,7 @@ function editor.getRaySceneIntersection(ray, origin, excludeIds, usePhysical)
 
     local raycast = editor.interface:RaycastWithASingleGroup(origin, utils.addVector(origin, utils.multVector(ray, 9999)), "PlayerBlocker")
 
-    if #hits == 0 or physicalOnly then
+    if #hits == 0 then
         if raycast:IsValid() then
             return {
                 result = {
