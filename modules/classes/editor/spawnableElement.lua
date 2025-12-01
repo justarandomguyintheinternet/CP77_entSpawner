@@ -283,7 +283,7 @@ function spawnableElement:dropToSurface(grouped, direction, excludeDict)
 	if not grouped then
 		history.addAction(history.getElementChange(self))
 	end
-
+	
 	local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](self.spawnable.rotation:ToQuat(), diff)
 	if self.applyRotationWhenDropped then
 		self:setRotation(newRotation:ToEulerAngles())

@@ -4,6 +4,8 @@ local history = require("modules/utils/history")
 local style = require("modules/ui/style")
 local editor = require("modules/utils/editor/editor")
 
+local scatteredConfig = require("modules/classes/editor/scatteredConfig")
+
 local element = require("modules/classes/editor/element")
 
 ---Element with position, rotation and optionally scale, handles the rendering / editing of those. Values have to be provided by the inheriting class
@@ -18,6 +20,7 @@ local element = require("modules/classes/editor/element")
 ---@field visualizerDirection string
 ---@field controlsHovered boolean
 ---@field randomizationSettings table
+---@field scatterConfig scatteredConfig
 ---@field applyRotationWhenDropped boolean
 local positionable = setmetatable({}, { __index = element })
 
@@ -46,6 +49,8 @@ function positionable:new(sUI)
 		probability = 0.5
 	}
 
+	o.scatterConfig = scatteredConfig:new(o)
+
 	o.class = utils.combine(o.class, { "positionable" })
 
 	setmetatable(o, { __index = self })
@@ -64,9 +69,13 @@ function positionable:load(data, silent)
 		self.randomizationSettings[key] = setting
 	end
 
+	self.scatterConfig:load(data.scatterConfig)
+
 	if self.scaleLocked == nil then self.scaleLocked = true end
 	if self.transformExpanded == nil then self.transformExpanded = true end
 	if self.rotationRelative == nil then self.rotationRelative = false end
+
+	self.applyRotationWhenDropped = data.applyRotationWhenDropped == nil and true or data.applyRotationWhenDropped
 end
 
 function positionable:drawTransform()
@@ -120,6 +129,33 @@ function positionable:getProperties()
 		})
 	end
 
+	if self.parent and self.parent.parent and utils.isA(self.parent.parent, "scatteredGroup") and self.parent.name == "Base" then
+		table.insert(properties, {
+			id = "scatteredShelf",
+			name = "Entry Scattering",
+			defaultHeader = false,
+			draw = function ()
+				self.scatterConfig:draw()
+			end
+		})
+	end
+
+	return properties
+end
+
+function positionable:getGroupedProperties()
+	local properties = element.getGroupedProperties(self)
+
+	if self.parent and self.parent.parent and utils.isA(self.parent.parent, "scatteredGroup") and self.parent.name == "Base" then
+		properties["groupedScatteredProperties"] = {
+			id = "groupedScatteredProperties",
+			name = "Entry Scattering",
+			draw = function (element, entries)
+				self.scatterConfig:drawGrouped(element, entries)
+			end
+		}
+	end
+	
 	return properties
 end
 
@@ -499,6 +535,8 @@ function positionable:serialize()
 	data.rotationLocked = self.rotationLocked
 	data.randomizationSettings = utils.deepcopy(self.randomizationSettings)
 	data.pos = utils.fromVector(self:getPosition()) -- For savedUI
+	data.scatterConfig = self.scatterConfig:serialize()
+	data.applyRotationWhenDropped = self.applyRotationWhenDropped
 
 	return data
 end
