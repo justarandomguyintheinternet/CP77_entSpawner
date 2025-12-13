@@ -17,6 +17,7 @@ class ImGuiHook
 public:
   ImGuiHook() = delete;
   static void Hook();
+  static void RequestReset();
 private:
   static bool m_hooked;
   static bool m_initialized;
@@ -32,11 +33,14 @@ private:
   static std::mutex m_initMutex;
   static std::mutex m_updatePlatforms;
   static bool m_initializationFailed;
+  static bool m_viewportsEnabled;
 
   static HWND m_hwnd;
 
   static bool m_overlayEnabled;
   static bool m_toggledInput;
+
+  static bool m_resetRequested;
 
   static void* PresentHooked(int32_t* apDeviceIndex, uint8_t aSomeSync, UINT aSyncInterval);
   static void* ResizeHooked(uint32_t a1, uint32_t a2, uint32_t a3, uint8_t a4, int32_t* a5);

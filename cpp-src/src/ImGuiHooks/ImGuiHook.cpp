@@ -8,6 +8,8 @@
 #include "../../include/WorldBuilder/UI/WindowManager.h"
 #include "../../include/WorldBuilder/globals.h"
 #include "../../include/WorldBuilder/reverse/RenderContext.h"
+#include "WorldBuilder/WorldBuilderGlobal.h"
+
 #include <RedLib/RedLib.hpp>
 #include <cstdint>
 #include <d3d12.h>
@@ -30,6 +32,9 @@ std::mutex ImGuiHook::m_updatePlatforms;
 bool ImGuiHook::m_initializationFailed = false;
 HWND ImGuiHook::m_hwnd;
 
+bool ImGuiHook::m_viewportsEnabled;
+bool ImGuiHook::m_resetRequested = false;
+
 constexpr UINT WM_IMGUI_PRESENT = WM_USER + 1;
 
 // TODO: Move overlay enabled to "root" state when it gets implemented
@@ -37,6 +42,11 @@ bool ImGuiHook::m_overlayEnabled = false;
 bool ImGuiHook::m_toggledInput = true;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+void ImGuiHook::RequestReset()
+{
+  m_resetRequested = true;
+}
 
 LRESULT CALLBACK ImGuiHook::OnWndProc(HWND ahWnd, UINT auMsg, WPARAM awParam, LPARAM alParam)
 {
@@ -102,6 +112,8 @@ void ImGuiHook::ResetImGui()
 
 void ImGuiHook::InitializeImGui()
 {
+  m_viewportsEnabled = WorldBuilderGlobal::Config.EnableViewports;
+
   try
   {
     DXGI_SWAP_CHAIN_DESC sdesc;
@@ -216,7 +228,8 @@ void ImGuiHook::InitializeImGui()
 
     io.DisplaySize = ImVec2((float)sdesc.BufferDesc.Width, (float)sdesc.BufferDesc.Height);
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    if (m_viewportsEnabled)
+      io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
     ImGui_ImplWin32_EnableDpiAwareness();
@@ -336,13 +349,24 @@ void ImGuiHook::DrawImGuiFrame()
 
 void* ImGuiHook::PresentHooked(int32_t* apDeviceIndex, uint8_t aSomeSync, UINT aSyncInterval)
 {
-  const auto* pContext = RenderContext::GetInstance();
+  bool enableOverlay = false;
+  if (m_resetRequested)
+  {
+    if (m_overlayEnabled)
+      m_overlayEnabled = false;
+    else {
+      ResetImGui();
+      m_resetRequested = false;
+      enableOverlay = true;
+    }
+  }
 
   if (!m_initialized && !m_initializationFailed)
   {
     std::lock_guard<std::mutex> lock(m_initMutex);
     gSdk->logger->Info(gHandle, "Initializing ImGui...");
 
+    const auto* pContext = RenderContext::GetInstance();
     m_swapChain = pContext->devices[*apDeviceIndex - 1].pSwapChain;
     m_commandQueue = pContext->pDirectQueue;
 
@@ -362,8 +386,12 @@ void* ImGuiHook::PresentHooked(int32_t* apDeviceIndex, uint8_t aSomeSync, UINT a
   if (m_initialized && !m_initializationFailed)
   {
     DrawImGuiFrame();
-    SendMessage(m_hwnd, WM_IMGUI_PRESENT, 0, 0);
+    if (m_viewportsEnabled)
+      SendMessage(m_hwnd, WM_IMGUI_PRESENT, 0, 0);
   }
+
+  if (enableOverlay)
+    m_overlayEnabled = true;
 
   return m_originalPresent(apDeviceIndex, aSomeSync, aSyncInterval);
 }

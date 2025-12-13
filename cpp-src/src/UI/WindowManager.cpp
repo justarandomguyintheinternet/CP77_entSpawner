@@ -6,7 +6,10 @@
 
 #include "../../include/WorldBuilder/UI/Menubar.h"
 #include "../include/WorldBuilder/WorldBuilderGlobal.h"
+#include "WorldBuilder/UI/ConfigWindow.h"
 #include "imgui.h"
+
+#include <filesystem>
 
 using namespace WorldBuilder::UI;
 
@@ -16,6 +19,8 @@ Menubar WindowManager::m_menubar;
 
 void WindowManager::Initialize()
 {
+  m_windows.push_back(std::make_unique<ConfigWindow>(ConfigWindow()));
+
   m_initialized = true;
 }
 
@@ -34,5 +39,9 @@ void WindowManager::Draw()
 
   ImGui::ShowDemoWindow();
   ImGui::ShowAboutWindow();
+
+  for (auto& window : m_windows) {
+    window->Draw();
+  }
 }
 
