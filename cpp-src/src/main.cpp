@@ -3,6 +3,8 @@
 #include "../include/WorldBuilder/ImGuiHooks/ImGuiHook.h"
 #include "../include/WorldBuilder/globals.h"
 #include "RED4ext/Api/Runtime.hpp"
+#include "RED4ext/Scripting/Natives/Generated/world/StreamingSector.hpp"
+
 #include <ImGUi/imgui.h>
 #include <Redlib/RedLib.hpp>
 
@@ -19,6 +21,9 @@ RED4EXT_C_EXPORT bool RED4EXT_CALL Main(Red::PluginHandle aHandle,
             Red::TypeInfoRegistrar::RegisterDiscovered();
             aSdk->logger->Info(aHandle, "WorldBuilder Entry Method Called");
             ImGuiHook::Hook();
+
+            RED4ext::worldStreamingSector;
+
             break;
         }
         case RED4ext::EMainReason::Unload: {

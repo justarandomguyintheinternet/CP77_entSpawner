@@ -16,6 +16,15 @@ add_library(WorldBuilder SHARED
         src/reverse/RenderContext.cpp
         vendor/Microsoft/D3D12Downlevel.h
         include/WorldBuilder/ImGuiHooks/FrameContext.h
+        src/WorldBuilderGlobal.cpp
+        include/WorldBuilder/WorldBuilderGlobal.h
+        src/State/Project.cpp
+        include/WorldBuilder/State/Project.h
+        src/UI/WindowManager.cpp
+        include/WorldBuilder/UI/WindowManager.h
+        include/WorldBuilder/UI/Window.h
+        src/UI/Menubar.cpp
+        include/WorldBuilder/UI/Menubar.h
 )
 
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ImGui)

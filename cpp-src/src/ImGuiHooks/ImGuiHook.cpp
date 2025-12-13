@@ -5,6 +5,7 @@
 #include "imgui_impl_dx12.h"
 #include "imgui_impl_win32.h"
 
+#include "../../include/WorldBuilder/UI/WindowManager.h"
 #include "../../include/WorldBuilder/globals.h"
 #include "../../include/WorldBuilder/reverse/RenderContext.h"
 #include <RedLib/RedLib.hpp>
@@ -210,6 +211,9 @@ void ImGuiHook::InitializeImGui()
 
     io.IniFilename = R"(..\..\red4ext\plugins\WorldBuilder\imgui.ini)";
 
+    // TODO: Crashes with Fullscreen -> add option with warning, default to non crashing behavior
+    io.ConfigViewportsNoDefaultParent = false;
+
     io.DisplaySize = ImVec2((float)sdesc.BufferDesc.Width, (float)sdesc.BufferDesc.Height);
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
@@ -283,12 +287,7 @@ void ImGuiHook::DrawImGuiFrame()
 
     if (m_overlayEnabled)
     {
-      ImGui::Begin("Hello, world!");
-      ImGui::Text("Hello, world!");
-      ImGui::End();
-
-      ImGui::ShowDemoWindow();
-      ImGui::ShowAboutWindow();
+      WorldBuilder::UI::WindowManager::Draw();
     }
 
     ImGui::Render();
