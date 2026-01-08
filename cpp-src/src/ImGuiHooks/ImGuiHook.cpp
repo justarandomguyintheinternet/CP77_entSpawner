@@ -78,7 +78,8 @@ LRESULT CALLBACK ImGuiHook::OnWndProc(HWND ahWnd, UINT auMsg, WPARAM awParam, LP
 
   if (m_overlayEnabled)
   {
-    ImGui_ImplWin32_WndProcHandler(ahWnd, auMsg, awParam, alParam);
+    if (const auto imguiRes = ImGui_ImplWin32_WndProcHandler(ahWnd, auMsg, awParam, alParam))
+      return imguiRes;
 
     if ((auMsg >= WM_MOUSEFIRST && auMsg <= WM_MOUSELAST) || (auMsg >= WM_KEYFIRST && auMsg <= WM_KEYLAST))
       return 1;
