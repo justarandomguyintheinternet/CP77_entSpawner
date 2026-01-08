@@ -112,7 +112,7 @@ void ImGuiHook::ResetImGui()
 
 void ImGuiHook::InitializeImGui()
 {
-  m_viewportsEnabled = WorldBuilderGlobal::Config.EnableViewports;
+  m_viewportsEnabled = WorldBuilderGlobal::Config.EnableMultiViewports.value;
 
   try
   {
@@ -270,6 +270,8 @@ void ImGuiHook::InitializeImGui()
     gSdk->logger->Error(gHandle, "Exception during ImGui initialization");
     m_initializationFailed = true;
   }
+
+  WorldBuilderGlobal::Initialize();
 }
 
 void ImGuiHook::DrawImGuiFrame()

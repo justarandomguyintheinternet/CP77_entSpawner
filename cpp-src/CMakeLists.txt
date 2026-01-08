@@ -25,9 +25,12 @@ add_library(WorldBuilder SHARED
         include/WorldBuilder/UI/Window.h
         src/UI/Menubar.cpp
         include/WorldBuilder/UI/Menubar.h
-        include/WorldBuilder/State/Config.h
+        include/WorldBuilder/State/Config/Config.h
         src/UI/ConfigWindow.cpp
         include/WorldBuilder/UI/ConfigWindow.h
+        src/State/Config/ConfigValue.cpp
+        include/WorldBuilder/State/Config/ConfigValue.h
+        src/State/Config/Config.cpp
 )
 
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ImGui)
