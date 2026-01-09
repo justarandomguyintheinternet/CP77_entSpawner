@@ -691,7 +691,7 @@ function spawnedUI.drawContextMenu(element, path)
         if ImGui.MenuItem("Move to new group", "CTRL-G") then
             spawnedUI.moveToNewGroup(isMulti, element)
         end
-        if utils.isA(element, "positionable") then
+        if utils.isA(element, "spawnableElement") then
             if ImGui.MenuItem("Drop to floor", "CTRL-E") then
                 if isMulti then
                     spawnedUI.multiSelectGroup:dropToSurface(true, Vector4.new(0, 0, -1, 0))
@@ -700,10 +700,7 @@ function spawnedUI.drawContextMenu(element, path)
                 end
             end
         end
-        if element.expandable then
-            if ImGui.MenuItem("Drop Children to Floor") then
-                element:dropChildrenToSurface(false, Vector4.new(0, 0, -1, 0))
-            end
+        if utils.isA(element, "positionableGroup") then
             if ImGui.MenuItem("Set as \"Spawn New\" group", "CTRL-N") then
                 local idx = 1
                 local elementPath = element:getPath()
@@ -715,6 +712,9 @@ function spawnedUI.drawContextMenu(element, path)
                 end
                 spawnedUI.spawner.baseUI.spawnUI.selectedGroup = idx
             end
+            if ImGui.MenuItem("Drop Children to Floor") then
+                element:dropChildrenToSurface(false, Vector4.new(0, 0, -1, 0))
+            end
             if ImGui.MenuItem("Set Origin to Center") then
                 element:setOriginToCenter()
             end
@@ -725,12 +725,12 @@ function spawnedUI.drawContextMenu(element, path)
                 element:setRotationIdentity()
             end
         end
-        if element.parent ~= nil and element.parent.expandable and not element.parent:isRoot(true) then
-            if ImGui.MenuItem("Set Origin to Element") then
+        if element.parent ~= nil and utils.isA(element.parent, "positionableGroup") and not element.parent:isRoot(true) then
+            if ImGui.MenuItem("Set Parent Origin to Element") then
                 element.parent:setOrigin(element:getPosition())
             end
         end
-        if ImGui.MenuItem(not element.expandable and "Make Favorite" or "Make Prefab", "CTRL-F") then
+        if ImGui.MenuItem(not utils.isA(element, "positionableGroup") and "Make Favorite" or "Make Prefab", "CTRL-F") then
             local icon = element.icon
             if icon == "" then
                 icon = IconGlyphs.Group

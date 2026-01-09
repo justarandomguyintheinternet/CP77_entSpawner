@@ -116,27 +116,24 @@ function positionableGroup:getWorldMinMax()
 		local entrySize = entry:getSize()
 		local entryPos = entry:getCenter()
 
-		if not entrySize or not entryPos then
-			goto continue
+		if entrySize and entryPos then
+			local entryMin = utils.subVector(entryPos, utils.multVector(entrySize, 0.5))
+			local entryMax = utils.addVector(entryPos, utils.multVector(entrySize, 0.5))
+
+			min = Vector4.new(
+				math.min(min.x, entryMin.x),
+				math.min(min.y, entryMin.y),
+				math.min(min.z, entryMin.z),
+				0
+			)
+
+			max = Vector4.new(
+				math.max(max.x, entryMax.x),
+				math.max(max.y, entryMax.y),
+				math.max(max.z, entryMax.z),
+				0
+			)
 		end
-
-		local entryMin = utils.subVector(entryPos, utils.multVector(entrySize, 0.5))
-		local entryMax = utils.addVector(entryPos, utils.multVector(entrySize, 0.5))
-
-		min = Vector4.new(
-			math.min(min.x, entryMin.x),
-			math.min(min.y, entryMin.y),
-			math.min(min.z, entryMin.z),
-			0
-		)
-
-		max = Vector4.new(
-			math.max(max.x, entryMax.x),
-			math.max(max.y, entryMax.y),
-			math.max(max.z, entryMax.z),
-			0
-		)
-		::continue::
 	end
 
 	return min, max
