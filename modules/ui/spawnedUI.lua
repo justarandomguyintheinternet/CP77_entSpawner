@@ -10,6 +10,8 @@ local registry = require("modules/utils/nodeRefRegistry")
 ---@field root element
 ---@field filter string
 ---@field newGroupName string
+---@field groupTypes string[]
+---@field newGroupTypeIndex number
 ---@field newGroupRandomized boolean
 ---@field spawner spawner?
 ---@field paths {path : string, ref : element}[]
@@ -34,6 +36,8 @@ spawnedUI = {
     multiSelectGroup = require("modules/classes/editor/positionableGroup"):new(spawnedUI),
     filter = "",
     newGroupName = "New_Group",
+    groupTypes = { "Normal", "Randomized", "Scattered" },
+    newGroupTypeIndex = 1,
     newGroupRandomized = false,
     spawner = nil,
 
@@ -661,15 +665,17 @@ function spawnedUI.drawContextMenu(element, path)
         style.mutedText(isMulti and #spawnedUI.selectedPaths .. " elements" or element.name)
         ImGui.Separator()
 
-        if ImGui.MenuItem("Delete", "DEL") then
-            if isMulti then
-                history.addAction(history.getRemove(spawnedUI.getRoots(spawnedUI.selectedPaths)))
-                for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
-                    entry.ref:remove()
+        if not element.lockedRemove then
+            if ImGui.MenuItem("Delete", "DEL") then
+                if isMulti then
+                    history.addAction(history.getRemove(spawnedUI.getRoots(spawnedUI.selectedPaths)))
+                    for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
+                        entry.ref:remove()
+                    end
+                else
+                    history.addAction(history.getRemove({ element }))
+                    element:remove()
                 end
-            else
-                history.addAction(history.getRemove({ element }))
-                element:remove()
             end
         end
         if ImGui.MenuItem("Copy", "CTRL-C") then
@@ -678,8 +684,10 @@ function spawnedUI.drawContextMenu(element, path)
         if ImGui.MenuItem("Paste", "CTRL-V") then
             history.addAction(history.getInsert(spawnedUI.paste(spawnedUI.clipboard, element)))
         end
-        if ImGui.MenuItem("Cut", "CTRL-X") then
-            spawnedUI.cut(isMulti, element)
+        if not element.lockedRemove then
+            if ImGui.MenuItem("Cut", "CTRL-X") then
+                spawnedUI.cut(isMulti, element)
+            end
         end
         if ImGui.MenuItem("Duplicate", "CTRL-D") then
             local data = spawnedUI.copy(isMulti, element)
@@ -943,7 +951,7 @@ function spawnedUI.drawElement(element, dummy)
             ImGui.Text(element.name)
         end
 
-        if element.hovered and ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) then
+        if element.hovered and ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) and not element.lockedRename then
             element.editName = true
             element.focusNameEdit = 1
             element:setSelected(true)
@@ -1111,20 +1119,27 @@ function spawnedUI.drawTop()
     ImGui.PopItemWidth()
 
     ImGui.SameLine()
+    ImGui.SetNextItemWidth(utils.getTextMaxWidth(spawnedUI.groupTypes) + 60)
+    local newIndex, changed = ImGui.Combo("##groupType", spawnedUI.newGroupTypeIndex - 1, spawnedUI.groupTypes, #spawnedUI.groupTypes)
+    if changed then
+        spawnedUI.newGroupTypeIndex = newIndex + 1
+    end
+
+    ImGui.SameLine()
     if ImGui.Button("Add group") then
         local group = require("modules/classes/editor/positionableGroup"):new(spawnedUI)
+        local selectedType = spawnedUI.groupTypes[spawnedUI.newGroupTypeIndex]
 
-        if spawnedUI.newGroupRandomized then
+        if selectedType == "Randomized" then
             group = require("modules/classes/editor/randomizedGroup"):new(spawnedUI)
+        elseif selectedType == "Scattered" then
+            group = require("modules/classes/editor/scatteredGroup"):new(spawnedUI)
         end
 
         group.name = spawnedUI.newGroupName
         spawnedUI.addRootElement(group)
         history.addAction(history.getInsert({ group }))
     end
-    ImGui.SameLine()
-    spawnedUI.newGroupRandomized = style.toggleButton(IconGlyphs.Dice5Outline, spawnedUI.newGroupRandomized)
-    style.tooltip("Make new group randomized")
 
     style.pushButtonNoBG(true)
 
