@@ -35,13 +35,15 @@ function config.saveFile(path, data)
     file:close()
 end
 
-function config.loadFiles(path)
-    local files = {}
+function config.loadFiles(path, files)
+    local files = files or {}
 
     for _, file in pairs(dir(path)) do
         if file.name:match("^.+(%..+)$") == ".json" then
             local data = config.loadFile(path .. file.name)
             table.insert(files, {data = data.spawnable, lastSpawned = nil, name = data.name, fileName = data.name })
+        elseif file.type == "directory" then
+            config.loadFiles(path .. file.name .. "/", files)
         end
     end
 
@@ -50,8 +52,8 @@ function config.loadFiles(path)
     return files
 end
 
-function config.loadLists(path)
-    local paths = {}
+function config.loadLists(path, paths)
+    local paths = paths or {}
 
     for _, file in pairs(dir(path)) do
         local extension = file.name:match("^.+(%..+)$")
@@ -62,6 +64,8 @@ function config.loadLists(path)
             end
 
             data:close()
+        elseif file.type == "directory" then
+            config.loadLists(path .. file.name .. "/", paths)
         end
     end
 
