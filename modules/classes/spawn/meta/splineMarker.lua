@@ -83,13 +83,25 @@ function splineMarker:isLinkedSplineLooped()
     return false
 end
 
-function splineMarker:refreshLinkedSplinesPreview()
-    if not self.object or not self.object.parent or not self.object.sUI then
+function splineMarker:refreshLinkedSplinesPreview(parent, forceRespawn)
+    if not self.object or not self.object.sUI then
         return
     end
 
-    local parentPath = self.object.parent:getPath()
-    local ownRoot = self.object:getRootParent()
+    if self.object.sUI.ensureCache then
+        self.object.sUI.ensureCache()
+    end
+
+    parent = parent or (self.object and self.object.parent or nil)
+    if not parent then
+        return
+    end
+
+    local parentPath = parent.getPath and parent:getPath() or nil
+    local ownRoot = parent.getRootParent and parent:getRootParent() or nil
+    if not parentPath or not ownRoot then
+        return
+    end
 
     for _, entry in pairs(self.object.sUI.paths) do
         if utils.isA(entry.ref, "spawnableElement") then
@@ -99,7 +111,11 @@ function splineMarker:refreshLinkedSplinesPreview()
                 and entry.ref:getRootParent() == ownRoot
                 and spawnableRef.splinePath == parentPath then
                 spawnableRef:loadSplinePoints()
-                if spawnableRef.updateCurvePreview then
+                if forceRespawn and spawnableRef.isSpawned and spawnableRef.respawn and spawnableRef:isSpawned() then
+                    -- Topology changes (add/remove/reparent marker) can leave stale curve components.
+                    -- Respawn guarantees the spline preview mesh set is fully rebuilt.
+                    spawnableRef:respawn()
+                elseif spawnableRef.updateCurvePreview then
                     spawnableRef:updateCurvePreview()
                 end
             end
@@ -109,6 +125,17 @@ end
 
 function splineMarker:notifyLinkedSplinePreviewChanged()
     self:refreshLinkedSplinesPreview()
+end
+
+function splineMarker:onParentChanged(oldParent)
+    connectedMarker.onParentChanged(self, oldParent)
+
+    -- Keep linked spline previews in sync when markers are added/removed/moved between groups.
+    self:refreshLinkedSplinesPreview(oldParent, true)
+    local newParent = self.object and self.object.parent or nil
+    if newParent ~= oldParent then
+        self:refreshLinkedSplinesPreview(newParent, true)
+    end
 end
 
 function splineMarker:getAutoTangentAxis(parent)
@@ -162,16 +189,40 @@ function splineMarker:applyAutoTangents(parent, distanceIn, distanceOut)
     self.tangentOut = { x = axis.x * distOut, y = axis.y * distOut, z = axis.z * distOut }
 end
 
+function splineMarker:getSymmetricTangentDistance()
+    local currentIn = Vector4.new(self.tangentIn.x, self.tangentIn.y, self.tangentIn.z, 0):Length()
+    local currentOut = Vector4.new(self.tangentOut.x, self.tangentOut.y, self.tangentOut.z, 0):Length()
+    return (currentIn + currentOut) / 2
+end
+
+function splineMarker:updateTangentGizmoVisibility()
+    local entity = self:getEntity()
+    if not entity then return end
+
+    local showManualTangents = self.previewed and not self.automaticTangents
+    local tangentInLine = entity:FindComponentByName("tangentInLine")
+    local tangentOutLine = entity:FindComponentByName("tangentOutLine")
+    local tangentIn = entity:FindComponentByName("tangentIn")
+    local tangentOut = entity:FindComponentByName("tangentOut")
+
+    if tangentInLine then tangentInLine:Toggle(showManualTangents) end
+    if tangentOutLine then tangentOutLine:Toggle(showManualTangents) end
+    if tangentIn then tangentIn:Toggle(showManualTangents) end
+    if tangentOut then tangentOut:Toggle(showManualTangents) end
+end
+
 function splineMarker:midAssemble()
     local entity = self:getEntity()
     if not entity then return end
+
+    local showManualTangents = self.previewed and not self.automaticTangents
 
     local tangentInLine = entMeshComponent.new()
     tangentInLine.name = "tangentInLine"
     tangentInLine.mesh = ResRef.FromString("base\\spawner\\cube_aligned.mesh")
     tangentInLine.meshAppearance = "lime"
     tangentInLine.visualScale = Vector3.new(0.005, 0.005, 0.005)
-    tangentInLine.isEnabled = self.previewed
+    tangentInLine.isEnabled = showManualTangents
     entity:AddComponent(tangentInLine)
 
     local tangentOutLine = entMeshComponent.new()
@@ -179,7 +230,7 @@ function splineMarker:midAssemble()
     tangentOutLine.mesh = ResRef.FromString("base\\spawner\\cube_aligned.mesh")
     tangentOutLine.meshAppearance = "lime"
     tangentOutLine.visualScale = Vector3.new(0.005, 0.005, 0.005)
-    tangentOutLine.isEnabled = self.previewed
+    tangentOutLine.isEnabled = showManualTangents
     entity:AddComponent(tangentOutLine)
 
     local tangentIn = entMeshComponent.new()
@@ -187,7 +238,7 @@ function splineMarker:midAssemble()
     tangentIn.mesh = ResRef.FromString("base\\environment\\ld_kit\\marker.mesh")
     tangentIn.meshAppearance = "default"
     tangentIn.visualScale = Vector3.new(0.0025, 0.0025, 0.0025)
-    tangentIn.isEnabled = self.previewed
+    tangentIn.isEnabled = showManualTangents
     entity:AddComponent(tangentIn)
 
     local tangentOut = entMeshComponent.new()
@@ -195,7 +246,7 @@ function splineMarker:midAssemble()
     tangentOut.mesh = ResRef.FromString("base\\environment\\ld_kit\\marker.mesh")
     tangentOut.meshAppearance = "default"
     tangentOut.visualScale = Vector3.new(0.0025, 0.0025, 0.0025)
-    tangentOut.isEnabled = self.previewed
+    tangentOut.isEnabled = showManualTangents
     entity:AddComponent(tangentOut)
 
     self:updateTangentMarkers()
@@ -232,22 +283,12 @@ function splineMarker:updateTangentMarkers()
 
     updateTangent(tangentInLine, tangentIn, self.tangentIn)
     updateTangent(tangentOutLine, tangentOut, self.tangentOut)
+    self:updateTangentGizmoVisibility()
 end
 
 function splineMarker:setPreview(state)
     connectedMarker.setPreview(self, state)
-
-    local entity = self:getEntity()
-    if not entity then return end
-
-    local tangentInLine = entity:FindComponentByName("tangentInLine")
-    local tangentOutLine = entity:FindComponentByName("tangentOutLine")
-    local tangentIn = entity:FindComponentByName("tangentIn")
-    local tangentOut = entity:FindComponentByName("tangentOut")
-    if tangentInLine then tangentInLine:Toggle(self.previewed) end
-    if tangentOutLine then tangentOutLine:Toggle(self.previewed) end
-    if tangentIn then tangentIn:Toggle(self.previewed) end
-    if tangentOut then tangentOut:Toggle(self.previewed) end
+    self:updateTangentGizmoVisibility()
 end
 
 function splineMarker:getNeighbors(parent)
@@ -323,7 +364,7 @@ end
 
 function splineMarker:draw()
     if not self.maxPropertyWidth then
-        self.maxPropertyWidth = utils.getTextMaxWidth({ self.previewText, "Automatic Tangents", "Tangent In", "Tangent Out" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        self.maxPropertyWidth = utils.getTextMaxWidth({ self.previewText, "Automatic Tangents", "Parallel symmetrical tangents", "Distance", "Tangent In", "Tangent Out" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
     end
 
     style.mutedText(self.previewText)
@@ -345,10 +386,48 @@ function splineMarker:draw()
     self.automaticTangents, changed = style.trackedCheckbox(self.object, "##automaticTangents", self.automaticTangents)
     style.tooltip("When enabled, the tangent is automatically smoothed from neighbor points.")
     if changed then
+        self:updateTangentGizmoVisibility()
         self:notifyLinkedSplinePreviewChanged()
     end
 
     if self.automaticTangents then
+        return
+    end
+
+    style.mutedText("Parallel symmetrical tangents")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.symmetricTangents, changed = style.trackedCheckbox(self.object, "##symmetricTangents", self.symmetricTangents)
+    if changed then
+        if self.symmetricTangents then
+            local distance = self:getSymmetricTangentDistance()
+            self:applyAutoTangents(self.object.parent, distance, distance)
+            self:updateTangentMarkers()
+        end
+        self:notifyLinkedSplinePreviewChanged()
+    end
+
+    if self.symmetricTangents then
+        style.mutedText("Distance")
+        ImGui.SameLine()
+        ImGui.SetCursorPosX(self.maxPropertyWidth)
+        local distance = self:getSymmetricTangentDistance()
+        local changedDistance
+        distance, changedDistance = style.trackedDragFloat(self.object, "##symmetricTangentDistance", distance, 0.05, 0, 99999, "%.2f", 110)
+        ImGui.PushID("resetSymmetricTangentDistance")
+        local resetDistance = style.drawNoBGConditionalButton(true, IconGlyphs.Close)
+        ImGui.PopID()
+        if resetDistance then
+            distance = 0
+            changedDistance = true
+        end
+
+        if changedDistance then
+            self:applyAutoTangents(self.object.parent, distance, distance)
+            self:updateTangentMarkers()
+            self:notifyLinkedSplinePreviewChanged()
+        end
+
         return
     end
 
@@ -373,28 +452,7 @@ function splineMarker:draw()
         changedX = true
     end
     if changedX or changedY or changedZ then
-        if self.symmetricTangents then
-            local distanceIn = Vector4.new(self.tangentIn.x, self.tangentIn.y, self.tangentIn.z, 0):Length()
-            self:applyAutoTangents(self.object.parent, distanceIn, nil)
-        end
         self:updateTangentMarkers()
-        self:notifyLinkedSplinePreviewChanged()
-    end
-    ImGui.SameLine()
-    local wasSymmetricTangents = self.symmetricTangents
-    if wasSymmetricTangents then
-        ImGui.PushStyleColor(ImGuiCol.Text, 0.25, 0.62, 0.97, 1.0)
-    end
-    self.symmetricTangents, changed = style.toggleButton(IconGlyphs.LinkVariant, self.symmetricTangents)
-    if wasSymmetricTangents then
-        ImGui.PopStyleColor()
-    end
-    style.tooltip("Toggle symmetric tangents")
-    if changed and self.symmetricTangents then
-        self:applyAutoTangents(self.object.parent)
-        self:updateTangentMarkers()
-    end
-    if changed then
         self:notifyLinkedSplinePreviewChanged()
     end
 
@@ -419,10 +477,6 @@ function splineMarker:draw()
         changedX = true
     end
     if changedX or changedY or changedZ then
-        if self.symmetricTangents then
-            local distanceOut = Vector4.new(self.tangentOut.x, self.tangentOut.y, self.tangentOut.z, 0):Length()
-            self:applyAutoTangents(self.object.parent, nil, distanceOut)
-        end
         self:updateTangentMarkers()
         self:notifyLinkedSplinePreviewChanged()
     end
