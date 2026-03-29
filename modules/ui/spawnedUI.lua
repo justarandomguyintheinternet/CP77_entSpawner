@@ -31,7 +31,7 @@ local registry = require("modules/utils/nodeRefRegistry")
 ---@field clipperIndex number
 spawnedUI = {
     root = require("modules/classes/editor/element"):new(spawnedUI),
-    multiSelectGroup = require("modules/classes/editor/positionableGroup"):new(spawnedUI),
+    multiSelectGroup = require("modules/classes/editor/positionableGroup"):new(spawnedUI, true),
     filter = "",
     newGroupName = "New_Group",
     newGroupRandomized = false,
@@ -1276,7 +1276,7 @@ function spawnedUI.drawProperties()
         style.mutedText("Selection (" .. nSelected .. " elements)")
         style.spacedSeparator()
         for _, entry in pairs(spawnedUI.getRoots(spawnedUI.selectedPaths)) do
-            table.insert(spawnedUI.multiSelectGroup.childs, entry.ref)
+            spawnedUI.multiSelectGroup:addChild(entry.ref)
         end
         spawnedUI.multiSelectGroup:drawProperties()
     end

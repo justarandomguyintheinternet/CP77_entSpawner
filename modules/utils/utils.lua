@@ -4,6 +4,16 @@ local miscUtils = {
     data = {}
 }
 
+---@param sourceNumbers table<number>
+---@return number
+function miscUtils.avgTable(sourceNumbers)
+    local sum = 0
+    for _, num in ipairs(sourceNumbers) do
+        sum = sum + num
+    end
+    return sum / #sourceNumbers
+end
+
 ---@param origin table
 ---@return table
 function miscUtils.deepcopy(origin)

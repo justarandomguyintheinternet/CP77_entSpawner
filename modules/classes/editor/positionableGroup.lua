@@ -12,9 +12,10 @@ local positionable = require("modules/classes/editor/positionable")
 ---@field rotation EulerAngles
 ---@field originInitialized boolean
 ---@field supportsSaving boolean
+---@field isMultiSelectGroup boolean
 local positionableGroup = setmetatable({}, { __index = positionable })
 
-function positionableGroup:new(sUI)
+function positionableGroup:new(sUI, isMultiSelectGroup)
 	local o = positionable.new(self, sUI)
 
 	o.name = "New Group"
@@ -34,6 +35,11 @@ function positionableGroup:new(sUI)
 	}
 	o.supportsSaving = true
 	o.applyRotationWhenDropped = false
+	if (isMultiSelectGroup ~= nil) then
+		o.isMultiSelectGroup = isMultiSelectGroup
+	else
+		o.isMultiSelectGroup = false
+	end
 
 	setmetatable(o, { __index = self })
    	return o
@@ -46,11 +52,14 @@ function positionableGroup:load(data, silent)
 	data.origin = data.origin or self:getPosition()
 	data.originInitialized = data.originInitialized or (#self.childs > 0)
 	data.rotation = data.rotation or EulerAngles.new(0, 0, 0)
+	data.isMultiSelectGroup = data.isMultiSelectGroup or false
 
 	self.origin = Vector4.new(data.origin.x, data.origin.y, data.origin.z, 0)
 	self.originInitialized = true
 
 	self.rotation = EulerAngles.new(data.rotation.roll, data.rotation.pitch, data.rotation.yaw)
+
+	self.isMultiSelectGroup = data.isMultiSelectGroup
 end
 
 function positionableGroup:serialize()
@@ -64,7 +73,35 @@ function positionableGroup:serialize()
 	data.originInitialized = self.originInitialized
 	data.rotation = { roll = self.rotation.roll, pitch = self.rotation.pitch, yaw = self.rotation.yaw }
 
+	data.isMultiSelectGroup = self.isMultiSelectGroup
+
 	return data
+end
+
+local function adjustMutliSelectGroupOrigin(group)
+	if #group.childs == 0 then return end
+
+	local json = require("modules/utils/json")
+
+	local roll = {}
+	local pitch = {}
+	local yaw = {}
+	for _, entry in pairs(group.childs) do
+		local rotation = entry:getRotation()
+		table.insert(roll, rotation.roll)
+		table.insert(pitch, rotation.pitch)
+		table.insert(yaw, rotation.yaw)
+	end
+
+	group.rotation = EulerAngles.new(
+		utils.avgTable(roll),
+		utils.avgTable(pitch),
+		utils.avgTable(yaw)
+	)
+
+	group:setOriginToCenter()
+	
+	group.originInitialized = true
 end
 
 function positionableGroup:addChild(child)
@@ -73,6 +110,18 @@ function positionableGroup:addChild(child)
 	if not self.originInitialized then
 		self.origin = child:getPosition()
 		self.originInitialized = true
+	end
+
+	if self.isMultiSelectGroup then
+		adjustMutliSelectGroupOrigin(self)
+	end
+end
+
+function positionableGroup:removeChild(child)
+	positionable.removeChild(self, child)
+
+	if self.isMultiSelectGroup then
+		adjustMutliSelectGroupOrigin(self)
 	end
 end
 
