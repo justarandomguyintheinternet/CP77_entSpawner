@@ -5,6 +5,7 @@ local utils = require("modules/utils/utils")
 local intersection = require("modules/utils/editor/intersection")
 local builder = require("modules/utils/entityBuilder")
 local cache = require("modules/utils/cache")
+local collisionMeshesUtils = require("modules/utils/data/collisionMeshes")
 
 local colliderBase = require("modules/classes/spawn/collision/colliderBase")
 local materials = colliderBase.getColliderGenerics().materials
@@ -71,11 +72,11 @@ function meshCollider:loadSpawnData(data, position, rotation)
     instead so this needs to reparse it to avoid modifying spawnUI
     ]]--
     if (not string.find(data.spawnData, "%.")) then
-        local split = utils.split(data.spawnData, " ")
-        if #split == 3 then
-            self.sectorHash = split[1]
-            self.shapeHash = split[2]
-            self.meshType = split[3]
+        local sectorHash, shapeHash, shapeType = collisionMeshesUtils.parseCollisionMeshesFileLine(data.spawnData)
+        if sectorHash and shapeHash and shapeType then
+            self.sectorHash = sectorHash
+            self.shapeHash = shapeHash
+            self.meshType = shapeType
         end
     end
 

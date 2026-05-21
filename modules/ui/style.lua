@@ -10,6 +10,7 @@ local style = {
     mutedColor = 0xFFA5A19B,
     extraMutedColor = 0x96A5A19B,
     highlightColor = 0xFFDCD8D1,
+    warnColor = 0xFFD64541,
     elementIndent = 35,
     draggedColor = 0xFF00007F,
     targetedColor = 0xFF00007F,
