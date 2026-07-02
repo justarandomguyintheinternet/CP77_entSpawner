@@ -1,4 +1,5 @@
 local utils = require("modules/utils/utils")
+local settings = require("modules/utils/settings")
 local style = require("modules/ui/style")
 local history = require("modules/utils/history")
 local intersection = require("modules/utils/editor/intersection")
@@ -10,6 +11,11 @@ local positionable = require("modules/classes/editor/positionable")
 ---@class positionableGroup : positionable
 ---@field origin Vector4
 ---@field rotation EulerAngles
+---@field rotationQuat Quaternion
+---@field rotationDragState table?
+---@field rotationUIDragStart EulerAngles?
+---@field rotationUIDragStartQuat Quaternion?
+---@field rotationUIDragValue table
 ---@field originInitialized boolean
 ---@field supportsSaving boolean
 local positionableGroup = setmetatable({}, { __index = positionable })
@@ -22,6 +28,11 @@ function positionableGroup:new(sUI)
 
 	o.origin = nil
 	o.rotation = nil
+	o.rotationQuat = nil
+	o.rotationDragState = nil
+	o.rotationUIDragStart = nil
+	o.rotationUIDragStartQuat = nil
+	o.rotationUIDragValue = { roll = nil, pitch = nil }
 	o.originInitialized = false
 	o.class = utils.combine(o.class, { "positionableGroup" })
 	o.quickOperations = {
@@ -51,6 +62,7 @@ function positionableGroup:load(data, silent)
 	self.originInitialized = true
 
 	self.rotation = EulerAngles.new(data.rotation.roll, data.rotation.pitch, data.rotation.yaw)
+	self.rotationQuat = self.rotation:ToQuat()
 end
 
 function positionableGroup:serialize()
@@ -58,6 +70,7 @@ function positionableGroup:serialize()
 
 	self.origin = self.origin or self:getPosition()
 	self.rotation = self.rotation or EulerAngles.new(0, 0, 0)
+	self.rotationQuat = self.rotationQuat or self.rotation:ToQuat()
 	self.originInitialized = self.originInitialized or (#self.childs > 0)
 
 	data.origin = { x = self.origin.x, y = self.origin.y, z = self.origin.z }
@@ -189,31 +202,171 @@ function positionableGroup:drawRotation(rotation)
 	local locked = self.rotationLocked
 	local shiftActive = ImGui.IsKeyDown(ImGuiKey.LeftShift) and not ImGui.IsMouseDragging(0, 0)
 	local finished = false
+	local unstableZoneThreshold = 3.6
+	local function drawLiveAngleFromStart(value, name, axis)
+		local steps = settings.rotSteps
+		local formatText = "%.2f"
+
+		if ImGui.IsKeyDown(ImGuiKey.LeftShift) then
+			steps = steps * 0.1 * settings.precisionMultiplier
+			formatText = "%.3f"
+		end
+
+		local displayValue = self.rotationUIDragValue[axis] or value
+		local inUnstableZone = math.abs(displayValue) <= unstableZoneThreshold
+		if inUnstableZone then
+			ImGui.PushStyleColor(ImGuiCol.FrameBg, 1.0, 0.55, 0.0, 0.35)
+			ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, 1.0, 0.55, 0.0, 0.45)
+			ImGui.PushStyleColor(ImGuiCol.FrameBgActive, 1.0, 0.55, 0.0, 0.55)
+		end
+		local newValue, changed = ImGui.DragFloat("##" .. name, displayValue, steps, -99999, 99999, formatText .. " " .. name, ImGuiSliderFlags.NoRoundToFormat)
+		if inUnstableZone then
+			ImGui.PopStyleColor(3)
+		end
+		self.controlsHovered = (ImGui.IsItemHovered() or ImGui.IsItemActive()) or self.controlsHovered
+
+		if (ImGui.IsItemHovered() or ImGui.IsItemActive()) and axis ~= self.visualizerDirection then
+			self:setVisualizerDirection(axis)
+		end
+
+		local finishedAxis = ImGui.IsItemDeactivatedAfterEdit()
+
+		if changed and not history.propBeingEdited then
+			history.addAction(history.getElementChange(self))
+			history.propBeingEdited = true
+		end
+
+		if changed then
+			if not self.rotationUIDragStart then
+				self.rotationUIDragStart = EulerAngles.new(rotation.roll, rotation.pitch, rotation.yaw)
+				self.rotationUIDragStartQuat = self.rotationQuat or self:getRotation():ToQuat()
+				self.rotationUIDragValue.roll = rotation.roll
+				self.rotationUIDragValue.pitch = rotation.pitch
+				self:beginRotationDrag()
+			end
+
+			local start = self.rotationUIDragStart
+			local startQuat = self.rotationUIDragStartQuat or start:ToQuat()
+			local angleDelta = (axis == "roll" and (newValue - start.roll) or (newValue - start.pitch))
+			local localAxis = axis == "roll" and Vector4.new(0, 1, 0, 0) or Vector4.new(1, 0, 0, 0)
+			local worldAxis = startQuat:Transform(localAxis):Normalize()
+			local stepQuat = Quaternion.SetAxisAngle(worldAxis, Deg2Rad(angleDelta))
+			local targetQuat = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](stepQuat, startQuat)
+
+			self.rotationUIDragValue[axis] = newValue
+			self:applyRotationDrag(stepQuat, targetQuat, targetQuat:ToEulerAngles())
+		end
+
+		if finishedAxis then
+			self.rotationUIDragStart = nil
+			self.rotationUIDragStartQuat = nil
+			self.rotationUIDragValue.roll = nil
+			self.rotationUIDragValue.pitch = nil
+			self:endRotationDrag()
+			history.propBeingEdited = false
+			self:onEdited()
+		end
+
+		return finishedAxis
+	end
 
 	ImGui.PushItemWidth(80 * style.viewSize)
 	style.popGreyedOut(not locked)
-    finished = self:drawProp(rotation.roll, "Roll", "roll")
+    finished = drawLiveAngleFromStart(rotation.roll, "Roll", "roll")
+	self:handleRightAngleChange("roll", shiftActive and not finished)
     ImGui.SameLine()
-    finished = self:drawProp(rotation.pitch, "Pitch", "pitch")
+    finished = drawLiveAngleFromStart(rotation.pitch, "Pitch", "pitch") or finished
+	self:handleRightAngleChange("pitch", shiftActive and not finished)
     ImGui.SameLine()
 	finished = self:drawProp(rotation.yaw, "Yaw", "yaw")
 	self:handleRightAngleChange("yaw", shiftActive and not finished)
 	style.popGreyedOut(locked)
+	ImGui.SameLine()
+	style.mutedText(IconGlyphs.AlertOutline)
+	style.tooltip("Experimental Roll/Pitch\nUnreliable between -3.60° and 3.60°\nUse with caution")
 end
 
 function positionableGroup:setRotationIdentity()
 	self.rotation = EulerAngles.new(0, 0, 0)
+	self.rotationQuat = self.rotation:ToQuat()
+end
+
+function positionableGroup:beginRotationDrag()
+	local pos = self:getPosition()
+	local leafs = self:getPositionableLeafs()
+	local entries = {}
+
+	for _, entry in pairs(leafs) do
+		table.insert(entries, {
+			entry = entry,
+			startRelativePosition = utils.subVector(entry:getPosition(), pos),
+			startRotationQuat = entry:getRotation():ToQuat()
+		})
+	end
+
+	self.rotationDragState = {
+		position = pos,
+		entries = entries
+	}
+end
+
+---@param stepQuat Quaternion
+---@param targetQuat Quaternion
+---@param targetEuler EulerAngles?
+function positionableGroup:applyRotationDrag(stepQuat, targetQuat, targetEuler)
+	if self.rotationLocked then return end
+	if not self.rotationDragState then
+		self:beginRotationDrag()
+	end
+
+	local state = self.rotationDragState
+	self.rotationQuat = targetQuat
+	self.rotation = targetEuler or targetQuat:ToEulerAngles()
+
+	for _, data in pairs(state.entries) do
+		local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](stepQuat, data.startRotationQuat):ToEulerAngles()
+		data.entry:setRotation(newRotation)
+
+		local newPosition = utils.addVector(state.position, stepQuat:Transform(data.startRelativePosition))
+		data.entry:setPosition(newPosition)
+	end
+end
+
+function positionableGroup:endRotationDrag()
+	self.rotationDragState = nil
 end
 
 function positionableGroup:setRotation(rotation)
 	if self.rotationLocked then return end
 
-	self:setRotationDelta(utils.subEuler(rotation, self.rotation))
+	self.rotationDragState = nil
+	local pos = self:getPosition()
+	local leafs = self:getPositionableLeafs()
+	local currentQuat = self.rotationQuat or self:getRotation():ToQuat()
+	local targetQuat = rotation:ToQuat()
+	local deltaQuat = Quaternion.MulInverse(targetQuat, currentQuat)
+
+	self.rotationQuat = targetQuat
+	self.rotation = EulerAngles.new(rotation.roll, rotation.pitch, rotation.yaw)
+
+	for _, entry in pairs(leafs) do
+		local relativePosition = utils.subVector(entry:getPosition(), pos)
+		local entryQuat = entry:getRotation():ToQuat()
+
+		local newRotation = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](deltaQuat, entryQuat):ToEulerAngles()
+		entry:setRotation(newRotation)
+
+		local newPosition = utils.addVector(pos, deltaQuat:Transform(relativePosition))
+		entry:setPosition(newPosition)
+	end
 end
 
 function positionableGroup:getRotation()
 	if self.rotation == nil then
 		self.rotation = EulerAngles.new(0, 0, 0)
+	end
+	if self.rotationQuat == nil then
+		self.rotationQuat = self.rotation:ToQuat()
 	end
 	return self.rotation
 end
@@ -221,11 +374,29 @@ end
 function positionableGroup:setRotationDelta(delta)
 	if self.rotationLocked then return end
 
-	self.rotation = utils.addEuler(self.rotation, delta)
 	local pos = self:getPosition()
 	local leafs = self:getPositionableLeafs()
+	local workingQuat = self.rotationQuat or self:getRotation():ToQuat()
+	local deltaQuat = EulerAngles.new(0, 0, 0):ToQuat()
 
-	local deltaQuat = delta:ToQuat()
+	local function applyLocalAxisDelta(localAxis, angleDeg)
+		if angleDeg == 0 then return end
+
+		local worldAxis = workingQuat:Transform(localAxis):Normalize()
+		local stepQuat = Quaternion.SetAxisAngle(worldAxis, Deg2Rad(angleDeg))
+
+		deltaQuat = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](stepQuat, deltaQuat)
+		workingQuat = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](stepQuat, workingQuat)
+	end
+
+	-- Keep mapping aligned with existing element behavior:
+	-- roll -> local Y, pitch -> local X, yaw -> local Z.
+	applyLocalAxisDelta(Vector4.new(0, 1, 0, 0), delta.roll)
+	applyLocalAxisDelta(Vector4.new(1, 0, 0, 0), delta.pitch)
+	applyLocalAxisDelta(Vector4.new(0, 0, 1, 0), delta.yaw)
+
+	self.rotationQuat = workingQuat
+	self.rotation = workingQuat:ToEulerAngles()
 
 	for _, entry in pairs(leafs) do
 		local relativePosition = utils.subVector(entry:getPosition(), pos)

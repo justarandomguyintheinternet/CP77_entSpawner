@@ -23,6 +23,8 @@ local style = require("modules/ui/style")
 ---@field originalPosition Vector4?
 ---@field originalRotation EulerAngles?
 ---@field originalScale Vector4?
+---@field originalRotationQuat Quaternion?
+---@field rotationAxisWorld Vector4?
 ---@field interface gamestateMachineGameScriptInterface?
 ---@field depthSelectElements table
 ---@field depthSelectOpen boolean
@@ -47,6 +49,8 @@ local editor = {
     originalPosition = nil,
     originalRotation = nil,
     originalScale = nil,
+    originalRotationQuat = nil,
+    rotationAxisWorld = nil,
     interface = nil,
     depthSelectElements = {},
     depthSelectOpen = false,
@@ -65,6 +69,13 @@ function viewportHovered()
     return editor.active and input.context.viewport.hovered
 end
 
+local function clearGroupRotationDragState()
+    local selected = editor.getSelected()
+    if selected and selected.endRotationDrag and utils.isA(selected, "positionableGroup") then
+        selected:endRotationDrag()
+    end
+end
+
 function editor.cancleEditingTransform()
     editor.grab = false
     editor.rotate = false
@@ -80,6 +91,9 @@ function editor.cancleEditingTransform()
     editor.originalDiff.pos = nil
     editor.originalDiff.rot = nil
     editor.originalDiff.scale = nil
+    editor.originalRotationQuat = nil
+    editor.rotationAxisWorld = nil
+    clearGroupRotationDragState()
     input.trackNumeric(false)
 end
 
@@ -96,6 +110,9 @@ function editor.confirmEditingTransform()
     editor.rotate = false
     editor.scale = false
     editor.currentAxis = "none"
+    editor.originalRotationQuat = nil
+    editor.rotationAxisWorld = nil
+    clearGroupRotationDragState()
     input.trackNumeric(false)
 end
 
@@ -407,6 +424,9 @@ function editor.updateCurrentAxis()
         editor.originalDiff.pos = nil
         editor.originalDiff.rot = nil
         editor.originalDiff.scale = nil
+        editor.originalRotationQuat = nil
+        editor.rotationAxisWorld = nil
+        clearGroupRotationDragState()
     end
 end
 
@@ -456,6 +476,9 @@ function editor.recordChange()
     editor.originalDiff.pos = nil
     editor.originalDiff.rot = nil
     editor.originalDiff.scale = nil
+    editor.originalRotationQuat = nil
+    editor.rotationAxisWorld = nil
+    clearGroupRotationDragState()
 end
 
 function editor.checkArrow()
@@ -597,14 +620,40 @@ function editor.updateDrag()
 
         if not editor.originalDiff.rot then
             editor.originalDiff.rot = angle
+            editor.originalRotationQuat = editor.originalRotation:ToQuat()
+            if selected.beginRotationDrag and utils.isA(selected, "positionableGroup") then
+                selected:beginRotationDrag()
+            end
+
+            if axis.x.mult == 1 and axis.y.mult == 0 and axis.z.mult == 0 then
+                editor.rotationAxisWorld = editor.originalRotationQuat:GetRight():Normalize()
+            elseif axis.x.mult == 0 and axis.y.mult == 1 and axis.z.mult == 0 then
+                editor.rotationAxisWorld = editor.originalRotationQuat:GetForward():Normalize()
+            elseif axis.x.mult == 0 and axis.y.mult == 0 and axis.z.mult == 1 then
+                editor.rotationAxisWorld = editor.originalRotationQuat:GetUp():Normalize()
+            else
+                editor.rotationAxisWorld = nil
+            end
         end
 
-        local original = EulerAngles.new(editor.originalRotation)
-        original.pitch = original.pitch + (angle - editor.originalDiff.rot + input.getNumeric(0)) * axis.x.mult
-        original.roll = original.roll + (angle - editor.originalDiff.rot + input.getNumeric(0)) * axis.y.mult
-        original.yaw = original.yaw + (angle - editor.originalDiff.rot + input.getNumeric(0)) * axis.z.mult
+        local angleDelta = angle - editor.originalDiff.rot + input.getNumeric(0)
 
-        selected:setRotation(original)
+        if editor.rotationAxisWorld and editor.originalRotationQuat then
+            local stepQuat = Quaternion.SetAxisAngle(editor.rotationAxisWorld, Deg2Rad(angleDelta))
+            local targetQuat = Game['OperatorMultiply;QuaternionQuaternion;Quaternion'](stepQuat, editor.originalRotationQuat)
+            if selected.applyRotationDrag and utils.isA(selected, "positionableGroup") then
+                selected:applyRotationDrag(stepQuat, targetQuat, targetQuat:ToEulerAngles())
+            else
+                selected:setRotation(targetQuat:ToEulerAngles())
+            end
+        else
+            local original = EulerAngles.new(editor.originalRotation)
+            original.pitch = original.pitch + angleDelta * axis.x.mult
+            original.roll = original.roll + angleDelta * axis.y.mult
+            original.yaw = original.yaw + angleDelta * axis.z.mult
+
+            selected:setRotation(original)
+        end
     elseif editor.scale then
         local distance = Vector4.Length(editor.getScreenRelativeToPoint(position))
 
