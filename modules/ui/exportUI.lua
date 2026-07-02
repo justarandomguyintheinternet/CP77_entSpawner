@@ -23,7 +23,11 @@ exportUI = {
         missingInitialPhase = {}
     },
     sectorPropertiesWidth = nil,
-    mainPropertiesWidth = nil
+    mainPropertiesWidth = nil,
+    groupsDividerHovered = false,
+    groupsDividerDragging = false,
+    templatesDividerHovered = false,
+    templatesDividerDragging = false
 }
 
 function exportUI.init(spawner)
@@ -74,13 +78,18 @@ local function drawVariantsTooltip()
 end
 
 function exportUI.drawGroups()
+    local defaultSize = 260
+    local minSize = 120 * style.viewSize
+    local maxSize = 800 * style.viewSize
+    settings.exportGroupsHeight = math.max(minSize, math.min(maxSize, settings.exportGroupsHeight or 260))
+
+    ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0)
+    ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
+    ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
+
+    ImGui.BeginChildFrame(1, 0, settings.exportGroupsHeight)
+
     if #exportUI.groups > 0 then
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0)
-        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
-        ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
-
-        ImGui.BeginChildFrame(1, 0, math.min(15, math.max(#exportUI.groups, 10)) * ImGui.GetFrameHeightWithSpacing())
-
         for key, group in ipairs(exportUI.groups) do
             ImGui.BeginGroup()
 
@@ -214,15 +223,52 @@ function exportUI.drawGroups()
             end
             ImGui.EndGroup()
         end
-
-        ImGui.EndChildFrame()
-        ImGui.PopStyleColor()
-        ImGui.PopStyleVar(2)
     else
         ImGui.PushStyleColor(ImGuiCol.Text, style.mutedColor)
         ImGui.TextWrapped("No groups yet added, add them from the \"Saved\" tab!")
         ImGui.PopStyleColor()
     end
+
+    ImGui.EndChildFrame()
+    ImGui.PopStyleColor()
+    ImGui.PopStyleVar(2)
+
+    if exportUI.groupsDividerHovered then
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, 0.4, 0.4, 0.4, 1.0)
+    else
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, 0.2, 0.2, 0.2, 1.0)
+    end
+
+    ImGui.BeginChild("##groupsDivider", 0, 7.5 * style.viewSize, false, ImGuiWindowFlags.NoMove)
+    local wx, wy = ImGui.GetContentRegionAvail()
+    local textWidth, textHeight = ImGui.CalcTextSize(IconGlyphs.DragHorizontalVariant)
+    ImGui.SetCursorPosX((wx - textWidth) / 2)
+    ImGui.SetCursorPosY(1 * style.viewSize + (wy - textHeight) / 2)
+    ImGui.Text(IconGlyphs.DragHorizontalVariant)
+    ImGui.EndChild()
+    if exportUI.groupsDividerHovered and ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) then
+        settings.exportGroupsHeight = defaultSize
+        settings.save()
+    end
+    exportUI.groupsDividerHovered = ImGui.IsItemHovered()
+
+    if exportUI.groupsDividerHovered and ImGui.IsMouseDragging(0, 0) then
+        exportUI.groupsDividerDragging = true
+    end
+    if exportUI.groupsDividerDragging and not ImGui.IsMouseDragging(0, 0) then
+        exportUI.groupsDividerDragging = false
+        settings.save()
+    end
+    if exportUI.groupsDividerDragging then
+        local _, dy = ImGui.GetMouseDragDelta(0, 0)
+        settings.exportGroupsHeight = settings.exportGroupsHeight + dy
+        settings.exportGroupsHeight = math.max(minSize, math.min(maxSize, settings.exportGroupsHeight))
+        ImGui.ResetMouseDragDelta()
+    end
+    if exportUI.groupsDividerHovered or exportUI.groupsDividerDragging then
+        ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeNS)
+    end
+    ImGui.PopStyleColor()
 end
 
 function exportUI.loadTemplate(data)
@@ -266,14 +312,37 @@ function exportUI.loadTemplate(data)
 end
 
 function exportUI.drawTemplates()
+    local defaultSize = 160
+    local minSize = 80 * style.viewSize
+    local maxSize = 500 * style.viewSize
+    settings.exportTemplatesHeight = math.max(minSize, math.min(maxSize, settings.exportTemplatesHeight or 160))
+
     if utils.tableLength(exportUI.templates) > 0 then
         ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0)
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
         ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
 
-        ImGui.BeginChildFrame(2, 0, math.min(5, math.max(utils.tableLength(exportUI.templates), 3)) * ImGui.GetFrameHeightWithSpacing())
+        ImGui.BeginChildFrame(2, 0, settings.exportTemplatesHeight)
 
+        local sortedTemplates = {}
         for key, data in pairs(exportUI.templates) do
+            table.insert(sortedTemplates, { key = key, data = data })
+        end
+
+        table.sort(sortedTemplates, function(a, b)
+            local aName = tostring(a.data.projectName or a.key or ""):lower()
+            local bName = tostring(b.data.projectName or b.key or ""):lower()
+
+            if aName == bName then
+                return tostring(a.key) < tostring(b.key)
+            end
+
+            return aName < bName
+        end)
+
+        for _, entry in ipairs(sortedTemplates) do
+            local key = entry.key
+            local data = entry.data
             ImGui.BeginGroup()
 
             local nodeFlags = ImGuiTreeNodeFlags.SpanFullWidth
@@ -305,10 +374,54 @@ function exportUI.drawTemplates()
         ImGui.PopStyleColor()
         ImGui.PopStyleVar(2)
     else
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0)
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 0, 0)
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, 0)
+        ImGui.BeginChildFrame(2, 0, settings.exportTemplatesHeight)
         ImGui.PushStyleColor(ImGuiCol.Text, style.mutedColor)
         ImGui.TextWrapped("No templates created yet.")
         ImGui.PopStyleColor()
+        ImGui.EndChildFrame()
+        ImGui.PopStyleColor()
+        ImGui.PopStyleVar(2)
     end
+
+    if exportUI.templatesDividerHovered then
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, 0.4, 0.4, 0.4, 1.0)
+    else
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, 0.2, 0.2, 0.2, 1.0)
+    end
+
+    ImGui.BeginChild("##templatesDivider", 0, 7.5 * style.viewSize, false, ImGuiWindowFlags.NoMove)
+    local wx, wy = ImGui.GetContentRegionAvail()
+    local textWidth, textHeight = ImGui.CalcTextSize(IconGlyphs.DragHorizontalVariant)
+    ImGui.SetCursorPosX((wx - textWidth) / 2)
+    ImGui.SetCursorPosY(1 * style.viewSize + (wy - textHeight) / 2)
+    ImGui.Text(IconGlyphs.DragHorizontalVariant)
+    ImGui.EndChild()
+    if exportUI.templatesDividerHovered and ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) then
+        settings.exportTemplatesHeight = defaultSize
+        settings.save()
+    end
+    exportUI.templatesDividerHovered = ImGui.IsItemHovered()
+
+    if exportUI.templatesDividerHovered and ImGui.IsMouseDragging(0, 0) then
+        exportUI.templatesDividerDragging = true
+    end
+    if exportUI.templatesDividerDragging and not ImGui.IsMouseDragging(0, 0) then
+        exportUI.templatesDividerDragging = false
+        settings.save()
+    end
+    if exportUI.templatesDividerDragging then
+        local _, dy = ImGui.GetMouseDragDelta(0, 0)
+        settings.exportTemplatesHeight = settings.exportTemplatesHeight + dy
+        settings.exportTemplatesHeight = math.max(minSize, math.min(maxSize, settings.exportTemplatesHeight))
+        ImGui.ResetMouseDragDelta()
+    end
+    if exportUI.templatesDividerHovered or exportUI.templatesDividerDragging then
+        ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeNS)
+    end
+    ImGui.PopStyleColor()
 end
 
 function exportUI.getCurrentIssue()
@@ -550,6 +663,14 @@ function exportUI.draw()
     ImGui.SetNextItemWidth(200 * style.viewSize)
     ImGui.SetCursorPosX(exportUI.mainPropertiesWidth)
     exportUI.projectName = ImGui.InputTextWithHint('##name', 'Export name...', exportUI.projectName, 100)
+    if exportUI.projectName ~= "" then
+        ImGui.SameLine()
+        style.pushButtonNoBG(true)
+        if ImGui.Button(IconGlyphs.Close .. "##clearExportProjectName") then
+            exportUI.projectName = ""
+        end
+        style.pushButtonNoBG(false)
+    end
 
     ImGui.Text("XL Format")
     ImGui.SameLine()
@@ -558,13 +679,39 @@ function exportUI.draw()
     exportUI.xlFormat, _ = ImGui.Combo("##xlFormat", exportUI.xlFormat, { "JSON", "YAML" }, 2)
     style.tooltip("Select the format in which the contents of the generated .xl file should be.")
 
+    style.pushGreyedOut(#exportUI.groups == 0)
+    if ImGui.Button("Clear group list") then
+        exportUI.groups = {}
+    end
+    style.popGreyedOut(#exportUI.groups == 0)
+    style.tooltip("Remove all groups from the current export list")
+
     style.sectionHeaderEnd()
-    style.sectionHeaderStart("GROUPS")
+    style.sectionHeaderStart(string.format("GROUPS (%d)", #exportUI.groups))
 
     exportUI.drawGroups()
 
     style.sectionHeaderEnd()
     style.sectionHeaderStart("EXPORT AND SAVE")
+
+    local groupNameCounts = {}
+    local duplicateGroupNames = {}
+    for _, group in ipairs(exportUI.groups) do
+        local name = group.name or ""
+        groupNameCounts[name] = (groupNameCounts[name] or 0) + 1
+    end
+    for name, count in pairs(groupNameCounts) do
+        if name ~= "" and count > 1 then
+            table.insert(duplicateGroupNames, name)
+        end
+    end
+
+    if #duplicateGroupNames > 0 then
+        table.sort(duplicateGroupNames)
+        style.styledText(IconGlyphs.AlertOutline .. " Duplicate group names detected", 0xFF0088FF)
+        style.tooltip("Duplicated group names:\n- " .. table.concat(duplicateGroupNames, "\n- "))
+        ImGui.Spacing()
+    end
 
     style.pushGreyedOut(#exportUI.groups == 0 or exportUI.projectName == "")
     if ImGui.Button("Export") and #exportUI.groups > 0  and exportUI.projectName ~= "" then
@@ -624,6 +771,60 @@ function exportUI.addGroup(name)
 
     local center = group:getPosition()
     data.center = utils.fromVector(center)
+end
+
+---Remove groups from export list by group name
+---@param name string
+---@return integer
+function exportUI.removeGroupByName(name)
+    local removed = 0
+
+    for i = #exportUI.groups, 1, -1 do
+        if exportUI.groups[i].name == name then
+            table.remove(exportUI.groups, i)
+            removed = removed + 1
+        end
+    end
+
+    return removed
+end
+
+---Sync group data in export list from saved group file
+---Keeps export-specific settings (streaming/category/level/refs) while refreshing center + variants
+---@param name string
+---@return integer
+function exportUI.syncGroup(name)
+    if not config.fileExists("data/objects/" .. name .. ".json") then
+        return 0
+    end
+
+    local blob = config.loadFile("data/objects/" .. name .. ".json")
+    local loadedGroup = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
+    loadedGroup:load(blob, true)
+    local center = loadedGroup:getPosition()
+
+    local updated = 0
+
+    for _, group in ipairs(exportUI.groups) do
+        if group.name == name then
+            local variants = {}
+            for _, child in pairs(loadedGroup.childs) do
+                if child.expandable then
+                    if group.variantData and group.variantData[child.name] then
+                        variants[child.name] = group.variantData[child.name]
+                    else
+                        variants[child.name] = { name = "default", ref = "", defaultOn = true }
+                    end
+                end
+            end
+
+            group.variantData = variants
+            group.center = utils.fromVector(center)
+            updated = updated + 1
+        end
+    end
+
+    return updated
 end
 
 function exportUI.getSpawnableByNodeRef(nodes, nodeRef)

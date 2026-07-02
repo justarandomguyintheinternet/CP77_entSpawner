@@ -17,6 +17,36 @@ savedUI = {
     maxTextWidth = nil
 }
 
+local function isSavedGroup(data)
+    return data and (data.type == "group" or data.modulePath == "modules/classes/editor/positionableGroup")
+end
+
+local function removeFromExportListIfPresent(data)
+    if not isSavedGroup(data) then
+        return 0
+    end
+
+    local baseUI = savedUI.spawner and savedUI.spawner.baseUI
+    if not baseUI or not baseUI.exportUI or not baseUI.exportUI.removeGroupByName then
+        return 0
+    end
+
+    return baseUI.exportUI.removeGroupByName(data.name)
+end
+
+local function showDeletedGroupToast(data, removedFromExport)
+    if not isSavedGroup(data) then
+        return
+    end
+
+    local msg = string.format("Deleted saved group \"%s\"", data.name)
+    if removedFromExport > 0 then
+        msg = msg .. " and removed it from export list"
+    end
+
+    ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, msg))
+end
+
 function savedUI.convertObject(object, getState)
     local spawnable = require("modules/classes/spawn/entity/entityTemplate"):new()
     spawnable:loadSpawnData({
@@ -262,6 +292,9 @@ function savedUI.deleteData(data)
     else
         os.remove("data/objects/" .. data.name .. ".json")
         savedUI.files[data.name .. ".json"] = nil
+
+        local removedFromExport = removeFromExportListIfPresent(data)
+        showDeletedGroupToast(data, removedFromExport)
     end
 end
 
@@ -286,6 +319,11 @@ function savedUI.handlePopUp()
                 ImGui.CloseCurrentPopup()
                 os.remove("data/objects/" .. savedUI.deleteFile.name .. ".json")
                 savedUI.files[savedUI.deleteFile.name .. ".json"] = nil
+
+                local removedFromExport = removeFromExportListIfPresent(savedUI.deleteFile)
+                showDeletedGroupToast(savedUI.deleteFile, removedFromExport)
+
+                savedUI.deleteFile = nil
                 savedUI.popup = false
             end
             ImGui.EndPopup()

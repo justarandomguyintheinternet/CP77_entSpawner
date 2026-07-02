@@ -435,7 +435,11 @@ function element:serialize()
 	return data
 end
 
-function element:save()
+---@param showToast boolean?
+function element:save(showToast)
+	showToast = showToast ~= false
+	local updatedInExport = 0
+
 	local data = self:serialize()
 
 	if self.fileName ~= self.name then
@@ -444,6 +448,28 @@ function element:save()
 
 	config.saveFile("data/objects/" .. self.fileName .. ".json", data)
 	self.sUI.spawner.baseUI.savedUI.reload()
+
+	if utils.isA(self, "positionableGroup") and self.supportsSaving and self.parent ~= nil and self.parent:isRoot(true) then
+		local baseUI = self.sUI and self.sUI.spawner and self.sUI.spawner.baseUI
+		if baseUI and baseUI.exportUI and baseUI.exportUI.syncGroup then
+			updatedInExport = baseUI.exportUI.syncGroup(self.name) or 0
+		end
+
+		if showToast then
+			local msg = string.format("Saved group \"%s\"", self.name)
+			if updatedInExport > 0 then
+				if updatedInExport == 1 then
+					msg = msg .. " and updated it in export list"
+				else
+					msg = msg .. string.format(" and updated %s entries in export list", updatedInExport)
+				end
+			end
+
+			ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, msg))
+		end
+	end
+
+	return updatedInExport
 end
 
 return element
