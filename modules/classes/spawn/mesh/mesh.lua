@@ -39,6 +39,7 @@ local lossyConversionPairs = {
 ---@field protected occluderTypes table
 ---@field protected hasOccluder boolean|table
 ---@field protected windImpulseEnabled boolean
+---@field protected forceAutoHideDistance number
 ---@field protected castLocalShadows integer
 ---@field protected castRayTracedGlobalShadows integer
 ---@field protected castRayTracedLocalShadows integer
@@ -73,6 +74,7 @@ function mesh:new()
     o.occluderTypes = utils.enumTable("visWorldOccluderType")
     o.hasOccluder = false
     o.windImpulseEnabled = true
+    o.forceAutoHideDistance = 0
 
     o.castLocalShadows = 0
     o.castRayTracedGlobalShadows = 0
@@ -263,6 +265,7 @@ function mesh:save()
     data.castShadows = self.castShadows
     data.occluderType = self.occluderType
     data.windImpulseEnabled = self.windImpulseEnabled
+    data.forceAutoHideDistance = self.forceAutoHideDistance
 
     return data
 end
@@ -363,7 +366,7 @@ function mesh:draw()
     spawnable.draw(self)
 
     if not self.maxPropertyWidth then
-        self.maxPropertyWidth = utils.getTextMaxWidth({ "Appearance", "Collider", "Occluder", "Enable Wind Impulse" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+        self.maxPropertyWidth = utils.getTextMaxWidth({ "Appearance", "Collider", "Occluder", "Enable Wind Impulse", "Force Auto-Hide Distance" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
     end
 
     style.pushGreyedOut(#self.apps == 0)
@@ -420,6 +423,12 @@ function mesh:draw()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
     self.windImpulseEnabled, _ = style.trackedCheckbox(self.object, "##windImpulseEnabled", self.windImpulseEnabled)
     style.tooltip("Enable wind impulse for this mesh, not previewed.")
+
+    style.mutedText("Force Auto-Hide Distance")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    self.forceAutoHideDistance = style.trackedDragFloat(self.object, "##forceAutoHideDistance", self.forceAutoHideDistance, 1, 0, 99999, "%.1f", 110)
+    style.tooltip("Overrides the mesh node's auto-hide distance. 0 keeps the engine default; very large values can increase rendering cost.")
 
     self.shadowHeaderState = ImGui.TreeNodeEx("Shadow Settings")
 
@@ -605,6 +614,43 @@ end
 
 function mesh:getGroupedProperties()
     local properties = spawnable.getGroupedProperties(self)
+
+    properties["meshVisibility"] = {
+        name = "Mesh Visibility",
+        id = "meshVisibility",
+        data = {
+            forceAutoHideDistance = 0,
+            maxPropertyWidth = nil
+        },
+        draw = function(element, entries)
+            local visibilityData = element.groupOperationData["meshVisibility"]
+            if not visibilityData.maxPropertyWidth then
+                visibilityData.maxPropertyWidth = utils.getTextMaxWidth({ "Force Auto-Hide Distance" }) + ImGui.GetStyle().ItemSpacing.x * 2 + ImGui.GetCursorPosX()
+            end
+
+            style.mutedText("Force Auto-Hide Distance")
+            ImGui.SameLine()
+            ImGui.SetCursorPosX(visibilityData.maxPropertyWidth)
+            ImGui.SetNextItemWidth(110 * style.viewSize)
+            visibilityData.forceAutoHideDistance, _ = ImGui.DragFloat("##groupForceAutoHideDistance", visibilityData.forceAutoHideDistance, 1, 0, 99999, "%.1f")
+            style.tooltip("0 keeps the engine default; very large values can increase rendering cost.")
+            ImGui.SameLine()
+            if ImGui.Button("Apply##groupForceAutoHideDistance") then
+                history.addAction(history.getMultiSelectChange(entries))
+
+                local nApplied = 0
+                for _, entry in ipairs(entries) do
+                    if entry.spawnable and entry.spawnable.forceAutoHideDistance ~= nil then
+                        entry.spawnable.forceAutoHideDistance = visibilityData.forceAutoHideDistance
+                        nApplied = nApplied + 1
+                    end
+                end
+
+                ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("Set force auto-hide distance for %s mesh nodes", nApplied)))
+            end
+        end,
+        entries = { self.object }
+    }
 
     properties["meshConverter"] = {
         name = "Mesh Conversion",
@@ -919,6 +965,7 @@ function mesh:export()
         castRayTracedGlobalShadows = self.shadowCastingModeEnum[self.castRayTracedGlobalShadows + 1],
         castRayTracedLocalShadows = self.shadowCastingModeEnum[self.castRayTracedLocalShadows + 1],
         castShadows = self.shadowCastingModeEnum[self.castShadows + 1],
+        forceAutoHideDistance = self.forceAutoHideDistance,
         occluderType = self.occluderTypes[self.occluderType + 1],
         windImpulseEnabled = self.windImpulseEnabled and 1 or 0
     }
