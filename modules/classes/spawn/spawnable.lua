@@ -78,8 +78,10 @@ function spawnable:new()
     o.worldNodePropertyWidth = nil
 
     o.noExport = false
-    o.primaryRange = 120
-    o.secondaryRange = 100
+    -- These names are part of the saved-build format. During export primaryRange
+    -- maps to UkFloat1, while secondaryRange maps to MaxStreamingDistance.
+    o.primaryRange = 100
+    o.secondaryRange = 120
     o.uk10 = 1024
     o.uk11 = 512
     o.streamingMultiplier = 1
@@ -304,6 +306,7 @@ function spawnable:getProperties()
             ImGui.SameLine()
             ImGui.SetCursorPosX(self.worldNodePropertyWidth)
             self.primaryRange, _, _ = style.trackedDragFloat(self.object, "##primaryRange", self.primaryRange, 0.1, 0, 9999, "%.2f", 90)
+            style.tooltip("Exports to worldNodeData.UkFloat1")
             ImGui.SameLine()
             local distance = self.streamingRefPointOverride and utils.distanceVector(self.streamingRefPoint, GetPlayer():GetWorldPosition()) or utils.distanceVector(self.position, GetPlayer():GetWorldPosition())
             style.styledText(IconGlyphs.AxisArrowInfo, distance > self.primaryRange and 0xFF0000FF or 0xFF00FF00)
@@ -313,6 +316,7 @@ function spawnable:getProperties()
             ImGui.SameLine()
             ImGui.SetCursorPosX(self.worldNodePropertyWidth)
             self.secondaryRange, _, _ = style.trackedDragFloat(self.object, "##secondaryRange", self.secondaryRange, 0.1, 0, 9999, "%.2f", 90)
+            style.tooltip("Exports to worldNodeData.MaxStreamingDistance")
             ImGui.SameLine()
             style.styledText(IconGlyphs.AxisArrowInfo, distance > self.secondaryRange and 0xFF0000FF or 0xFF00FF00)
             style.tooltip(string.format("Distance to from %s: %.2f", self.streamingRefPointOverride and "reference point" or "node position", distance))
@@ -370,25 +374,51 @@ function spawnable:getGroupedProperties()
         id = "worldNode",
 		data = {
             multiplier = 1,
+            primaryRange = 100,
+            secondaryRange = 120,
             maxPropertyWidth = nil
         },
 		draw = function(element, entries)
             if not element.groupOperationData["streamingProperties"].maxPropertyWidth then
-                element.groupOperationData["streamingProperties"].maxPropertyWidth = utils.getTextMaxWidth({ "Streaming Distances", "NodeRef's", "Override Streaming Ref. Point", "Streaming Ref. Point" }) + ImGui.GetStyle().ItemSpacing.x * 2 + ImGui.GetCursorPosX()
+                element.groupOperationData["streamingProperties"].maxPropertyWidth = utils.getTextMaxWidth({ "Set Streaming Distances", "Streaming Distances Multiplier", "NodeRef's", "Override Streaming Ref. Point", "Streaming Ref. Point" }) + ImGui.GetStyle().ItemSpacing.x * 2 + ImGui.GetCursorPosX()
+            end
+
+            local streamingData = element.groupOperationData["streamingProperties"]
+
+            style.mutedText("Set Streaming Distances")
+            ImGui.SameLine()
+            ImGui.SetCursorPosX(streamingData.maxPropertyWidth)
+            ImGui.SetNextItemWidth(90 * style.viewSize)
+            streamingData.primaryRange, _ = ImGui.DragFloat("##groupPrimaryRange", streamingData.primaryRange, 0.1, 0, 9999, "P %.2f")
+            style.tooltip("Primary Range; exports to worldNodeData.UkFloat1")
+            ImGui.SameLine()
+            ImGui.SetNextItemWidth(90 * style.viewSize)
+            streamingData.secondaryRange, _ = ImGui.DragFloat("##groupSecondaryRange", streamingData.secondaryRange, 0.1, 0, 9999, "S %.2f")
+            style.tooltip("Secondary Range; exports to worldNodeData.MaxStreamingDistance")
+            ImGui.SameLine()
+            if ImGui.Button("Apply##groupStreamingDistances") then
+                history.addAction(history.getMultiSelectChange(entries))
+
+                for _, entry in ipairs(entries) do
+                    entry.spawnable.primaryRange = streamingData.primaryRange
+                    entry.spawnable.secondaryRange = streamingData.secondaryRange
+                end
+
+                ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, string.format("Set streaming distances for %s nodes", #entries)))
             end
 
             style.mutedText("Streaming Distances Multiplier")
             ImGui.SetNextItemWidth(80 * style.viewSize)
             ImGui.SameLine()
-            ImGui.SetCursorPosX(element.groupOperationData["streamingProperties"].maxPropertyWidth)
-            element.groupOperationData["streamingProperties"].multiplier, _ = ImGui.DragFloat("##groupStreamingDistancesMultiplier", element.groupOperationData["streamingProperties"].multiplier, 0.01, 0, 50, "x%.2f")
+            ImGui.SetCursorPosX(streamingData.maxPropertyWidth)
+            streamingData.multiplier, _ = ImGui.DragFloat("##groupStreamingDistancesMultiplier", streamingData.multiplier, 0.01, 0, 50, "x%.2f")
             style.tooltip("Multiplier for streaming values, when using \"Auto-Set\"")
             ImGui.SameLine()
             if ImGui.Button("Auto-Set") then
                 history.addAction(history.getMultiSelectChange(entries))
 
                 for _, entry in ipairs(entries) do
-                    local values = entry.spawnable:calculateStreamingValues(element.groupOperationData["streamingProperties"].multiplier * entry.spawnable.streamingMultiplier)
+                    local values = entry.spawnable:calculateStreamingValues(streamingData.multiplier * entry.spawnable.streamingMultiplier)
 
                     entry.spawnable.primaryRange = values.primary
                     entry.spawnable.secondaryRange = values.secondary
@@ -582,9 +612,9 @@ function spawnable:calculateStreamingValues(multiplier)
     -- multiplier = math.min(1, math.max(0, falloffRange * math.log(math.max(0, maxAxis + minSize))))
     local scale = self:getSize()
 
-    local primary = math.max(math.max(scale.x, scale.y, scale.z) * multiplier * 60, 25)
-    primary = math.min(primary, 200 * multiplier)
-    local secondary = primary * 0.8
+    local secondary = math.max(math.max(scale.x, scale.y, scale.z) * multiplier * 60, 25)
+    secondary = math.min(secondary, 200 * multiplier)
+    local primary = secondary * 0.8
 
     return { primary = primary, secondary = secondary, uk10 = self.uk10, uk11 = self.uk11 }
 end

@@ -7,7 +7,6 @@ local utils = require("modules/utils/utils")
 ---Class for worldDynamicMeshNode
 ---@class dynamicMesh : mesh
 ---@field private startAsleep boolean
----@field private forceAutoHideDistance number
 local dynamicMesh = setmetatable({}, { __index = mesh })
 
 function dynamicMesh:new()
@@ -65,7 +64,6 @@ end
 function dynamicMesh:save()
     local data = mesh.save(self)
     data.startAsleep = self.startAsleep
-    data.forceAutoHideDistance = self.forceAutoHideDistance or 150
 
     return data
 end
@@ -76,7 +74,7 @@ function dynamicMesh:draw()
     mesh.draw(self)
 
     if calculateMaxWidth then
-        self.maxPropertyWidth = math.max(self.maxPropertyWidth, utils.getTextMaxWidth({ "Start Asleep", "Auto Hide Distance" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX())
+        self.maxPropertyWidth = math.max(self.maxPropertyWidth, utils.getTextMaxWidth({ "Start Asleep" }) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX())
     end
 
     style.mutedText("Start Asleep")
@@ -84,11 +82,6 @@ function dynamicMesh:draw()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
     self.startAsleep = style.trackedCheckbox(self.object, "##startAsleep", self.startAsleep)
 
-    style.mutedText("Auto Hide Distance")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.forceAutoHideDistance = style.trackedDragFloat(self.object, "##forceAutoHideDistance", self.forceAutoHideDistance, 0.1, 0, 1000, "%.1f")
-    
     self:drawConversionSelector("##dynamicMeshConverterType", "Lossy Conversion##dynamicMeshSingle")
 end
 
@@ -96,7 +89,6 @@ function dynamicMesh:export()
     local data = mesh.export(self)
     data.type = "worldDynamicMeshNode"
     data.data.startAsleep = self.startAsleep and 1 or 0
-    data.data.forceAutoHideDistance = self.forceAutoHideDistance
 
     return data
 end
