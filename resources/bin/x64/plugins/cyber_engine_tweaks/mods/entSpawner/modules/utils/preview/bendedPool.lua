@@ -8,8 +8,9 @@ local logger = require("modules/utils/core/logger")
 ---@class bendedPool
 local pool = {}
 
--- Must match the nodes shipped in the archive.
-local slotCount = 200
+-- Nodes shipped in the archive; the pool shrinks to the sector actually loaded (an older archive).
+local expectedSlots = 500
+local slotCount = expectedSlots
 local prefabPath = "$/mods/entSpawner/preview_bended/#all"
 local variantPrefix = "wb_bended_v"
 local sectorPath = "world_builder\\sectors\\wb_preview_bended.streamingsector"
@@ -154,9 +155,13 @@ local function resolve(slot)
 
             -- debugName is editor data, so slots are found by node index: node N is slot N.
             local count = sector:GetNodeCount()
-            if count ~= slotCount then
-                return string.format("The preview sector holds %d nodes, expected %d. Is the World Builder archive up to date?", count, slotCount)
+            if count == 0 then
+                return "The preview sector holds no node. Is the World Builder archive up to date?"
             end
+            if count ~= expectedSlots then
+                logger:warn(string.format("[bendedPool] the preview sector holds %d nodes, expected %d: World Builder archive out of date", count, expectedSlots))
+            end
+            slotCount = count
 
             local nodes = {}
             for i = 0, count - 1 do
@@ -512,6 +517,7 @@ function pool.reset()
     sectorToken = nil
     sectorNodes = nil
     sectorIssue = nil
+    slotCount = expectedSlots
     pool.lastReason = ""
 end
 

@@ -3255,16 +3255,18 @@ end
 ---Computes default spawn transform using current settings and selection.
 ---@return Vector4
 ---@return EulerAngles
+---@return boolean facesCamera The rotation faces the camera rather than copying the selection.
 function spawnUI.getSpawnNewPosition()
     local pos = editor.getCameraPosition()
     local cameraRotation = editor.getCameraRotation()
     local forward = editor.getCameraForward()
 
     if not pos or not cameraRotation or not forward then
-        return Vector4.new(0, 0, 0, 0), EulerAngles.new(0, 0, 0)
+        return Vector4.new(0, 0, 0, 0), EulerAngles.new(0, 0, 0), false
     end
 
     local rot = EulerAngles.new(0, 0, cameraRotation.yaw + 180)
+    local facesCamera = true
 
     pos = utils.addVector(pos, utils.multVector(forward, settings.spawnDist))
 
@@ -3280,13 +3282,15 @@ function spawnUI.getSpawnNewPosition()
         if #spawnUI.spawnedUI.selectedPaths == 1 and utils.isA(spawnUI.spawnedUI.selectedPaths[1].ref, "spawnableElement") then
             pos = spawnUI.spawnedUI.selectedPaths[1].ref:getPosition()
             rot = spawnUI.spawnedUI.selectedPaths[1].ref:getRotation()
+            facesCamera = false
         elseif #spawnUI.spawnedUI.selectedPaths > 1 then
             pos = spawnUI.spawnedUI.multiSelectGroup:getPosition()
             rot = spawnUI.spawnedUI.multiSelectGroup:getDirection("forward"):ToRotation()
+            facesCamera = false
         end
     end
 
-    return pos, rot
+    return pos, rot, facesCamera
 end
 
 ---@param data table?
@@ -3380,7 +3384,7 @@ function spawnUI.spawnNew(entry, class, isFavorite, options)
     local parent = spawnUI.getSpawnTargetParent()
 
     local new = require("modules/classes/editor/spawnableElement"):new(spawnUI.spawnedUI)
-    local pos, rot = spawnUI.getSpawnNewPosition()
+    local pos, rot, facesCamera = spawnUI.getSpawnNewPosition()
 
     local snap = spawnUI.popupSpawnHit and spawnUI.popupSpawnHit.hit
     if snap then
@@ -3393,9 +3397,16 @@ function spawnUI.spawnNew(entry, class, isFavorite, options)
         if math.abs(angle) < 0.1 then
             local cameraRotation = editor.getCameraRotation()
             rot = EulerAngles.new(0, 0, cameraRotation and cameraRotation.yaw + 180 or 0)
+            facesCamera = cameraRotation ~= nil
         else
             rot = Quaternion.SetAxisAngle(axis:Normalize(), math.rad(angle)):ToEulerAngles()
+            facesCamera = false
         end
+    end
+
+    -- Path-like assets run away from the camera instead of facing it.
+    if facesCamera and not isFavorite and class and class.spawnAlongView then
+        rot = EulerAngles.new(rot.roll, rot.pitch, rot.yaw + 180)
     end
 
     local favoriteIsGroup = isFavorite and utils.isSerializedGroup(entry.data)

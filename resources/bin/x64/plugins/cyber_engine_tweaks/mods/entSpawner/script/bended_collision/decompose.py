@@ -31,6 +31,8 @@ SLICE_BUDGET = 12   # pieces per slice before the tolerance grows
 CLUSTER = 0.04     # vertex clustering cell before decomposition (m)
 MAX_TRIS = 8000     # the cell grows until the simplified mesh is below this
 MIN_AREA = 0.01     # patches smaller than this (m2) add no slab
+END_CAP_COS = 0.9   # faces this square to the rig axis, in a mesh's end plane, are seams with the next mesh
+END_CAP_DIST = 0.02
 
 
 def to_game(p):
@@ -234,6 +236,34 @@ def exposed(points):
     return out
 
 
+def over_walk(points):
+    """Height of each point above the highest walkable surface just below it (-inf when none)."""
+    out = np.full(len(points), -np.inf)
+    if COLMAP is None:
+        return out
+    ok, cid = _cells(points)
+    w = COLMAP[4][cid[ok]]
+    z = points[ok, 2]
+    with np.errstate(invalid="ignore"):
+        best = np.where(w <= z[:, None] + 0.05, w, -np.inf).max(1)
+    out[ok] = np.where(np.isfinite(best), z - best, -np.inf)
+    return out
+
+
+def overhangs_walk(piece):
+    """Whether the piece's hull tops rise more than TOL into the free space above a walkable surface:
+    the hull of a non-convex patch (an end cap with curbs, a wall with a notch) fills its concavities."""
+    h = piece.hull
+    if h is None or COLMAP is None:
+        return False
+    top = h.equations[:, 2] > 0.3
+    if not top.any():
+        return False
+    smp = face_samples(h)[np.repeat(top, len(BARY))]
+    over = over_walk(smp)
+    return bool(np.any((over > TOL) & (over <= CLEARANCE)))
+
+
 def merge_cost(A, B, top_limit=None):
     if A.hull is None or B.hull is None:
         return math.inf
@@ -346,6 +376,33 @@ def agglomerate(alive, links, budget=None):
     return alive
 
 
+def split_overhangs(pieces, links, patches, valid, slab):
+    """Replaces each patch slab overhanging a walkable surface by one slab per polygon, linked to the
+    polygons it shares a vertex with and to the patch's neighbours; stage 1 merges back what TOL allows."""
+    nxt = len(patches)
+    for pi in [p for p in pieces if len(patches[p]) > 1 and overhangs_walk(pieces[p])]:
+        n, t = slab[pi]
+        ids, owner = [], {}
+        for i in patches[pi]:
+            pts, w, ch, area, _ = valid[i]
+            pieces[nxt] = Piece(np.concatenate([pts, pts - n * t]), np.concatenate([w, w]), {ch: area}, area,
+                                n * area, pts.min(0), pts.max(0))
+            for p in pts:
+                owner.setdefault(tuple(np.round(p / 0.002).astype(np.int64)), []).append(nxt)
+            ids.append(nxt)
+            nxt += 1
+        neighbours = links.pop(pi)
+        del pieces[pi]
+        for k in neighbours:
+            links[k].discard(pi)
+            links[k].update(ids)
+        for i in ids:
+            links[i] = set(neighbours)
+        for shared in owner.values():
+            for i in shared:
+                links[i].update(j for j in shared if j != i)
+
+
 def decompose_slice(polys, tri_pts_slice, tri_n_slice):
     """polys: list of (points[k,3], weights[k,nb], chunk). Returns merged pieces."""
     valid = []
@@ -375,7 +432,7 @@ def decompose_slice(polys, tri_pts_slice, tri_n_slice):
     global COLMAP
     COLMAP = build_colmap(tri_pts_slice, tri_n_slice)
     patches, adjacency = coplanar_patches(valid)
-    pieces, links = {}, {}
+    pieces, links, slab = {}, {}, {}
     for pi, group in enumerate(patches):
         if sum(valid[i][3] for i in group) < MIN_AREA:
             continue
@@ -394,6 +451,7 @@ def decompose_slice(polys, tri_pts_slice, tri_n_slice):
             chunks[valid[i][2]] = chunks.get(valid[i][2], 0) + valid[i][3]
         pieces[pi] = Piece(np.concatenate([pts, pts - n * t]), np.concatenate([w, w]), chunks, area, nsum,
                            pts.min(0), pts.max(0))
+        slab[pi] = (n, t)
     for pi in pieces:
         # neighbours, walking through dropped (tiny) patches
         found, seen, stack = set(), {pi}, list(adjacency[pi])
@@ -407,6 +465,7 @@ def decompose_slice(polys, tri_pts_slice, tri_n_slice):
             else:
                 stack.extend(adjacency[q])
         links[pi] = found
+    split_overhangs(pieces, links, patches, valid, slab)
 
     # stage 1: topological neighbours only
     alive = agglomerate(pieces, links)
@@ -548,10 +607,13 @@ def decompose(glb_path, bones):
     # whole triangles go to the slice of their centre: pieces only hold real vertices, which the game
     # skins exactly like the render (an inserted cut point would not follow the render's chord)
     t_mid = s_v[tris_g].mean(1)
+    # end caps sit between two meshes of a chain, where their hull would ridge the road
+    s_min, s_max = s_v[tris_g].min(), s_v[tris_g].max()
+    cap = (np.abs(tn @ axis) > END_CAP_COS) & ((t_hi - s_min < END_CAP_DIST) | (s_max - t_lo < END_CAP_DIST))
     result = []
     for k in range(len(edges) - 1):
         lo, hi = edges[k], edges[k + 1]
-        sel = np.nonzero((t_mid >= lo) & (t_mid < hi))[0]
+        sel = np.nonzero((t_mid >= lo) & (t_mid < hi) & ~cap)[0]
         polys = [(pos[tris_g[ti]], W[tris_g[ti]], int(chunk_g[ti])) for ti in sel]
         if not polys:
             continue

@@ -720,7 +720,8 @@ local function prepareCurrentGroupForExport(runtime)
     -- Bended collision: one node per parent group, emitted after the group's last bended mesh.
     current.collisionLast = {}
     current.collisionSources = {}
-    current.collisionInserted = {}
+    -- Key of the node each extra exported node (split piece, collision) follows.
+    current.inserted = {}
     for index, object in ipairs(current.nodes) do
         local spawnable = object.ref.spawnable
         if spawnable and spawnable.exportCollision and spawnable.getExportCollision then
@@ -755,20 +756,20 @@ local function exportBendedCollision(current, element, key)
 
     for _, node in ipairs(bendedCollisionExport.buildNodes(parent.name or current.exported.name, sources)) do
         table.insert(current.exported.nodes, node)
-        table.insert(current.collisionInserted, key)
+        table.insert(current.inserted, key)
     end
 end
 
----Variant ranges start later by the collision nodes inserted before them.
+---Variant ranges start later by the extra nodes inserted before them.
 ---@param current table
 local function shiftVariantIndices(current)
-    if not current.collisionInserted or #current.collisionInserted == 0 then return end
+    if not current.inserted or #current.inserted == 0 then return end
 
     local indices = current.exported.variantIndices
     for i = 2, #indices do
         local start = indices[i]
         local shift = 0
-        for _, key in ipairs(current.collisionInserted) do
+        for _, key in ipairs(current.inserted) do
             if key <= start then
                 shift = shift + 1
             end
@@ -1085,7 +1086,12 @@ beginNextGroup = function (runtime)
 
                     local okExport, exportErr = pcall(function ()
                         if object and utils.isA(object.ref, "spawnableElement") and not object.ref.spawnable.noExport and shouldExportNode(runtime, object.ref) then
-                            table.insert(exportCurrent.exported.nodes, object.ref.spawnable:export(key, exportCurrent.totalNodes))
+                            for index, node in ipairs(object.ref.spawnable:exportNodes(key, exportCurrent.totalNodes)) do
+                                table.insert(exportCurrent.exported.nodes, node)
+                                if index > 1 then
+                                    table.insert(exportCurrent.inserted, key)
+                                end
+                            end
 
                             if object.ref.spawnable.exportCollision and object.ref.spawnable.getExportCollision then
                                 exportBendedCollision(exportCurrent, object.ref, key)

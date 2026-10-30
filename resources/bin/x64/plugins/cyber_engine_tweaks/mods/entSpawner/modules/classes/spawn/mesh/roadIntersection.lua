@@ -26,6 +26,7 @@ function roadIntersection:new()
     o.icon = IconGlyphs.RoadVariant
 
     setmetatable(o, { __index = self })
+    o:setDefaultStreamingPreset("District")
    	return o
 end
 
@@ -168,6 +169,10 @@ function roadIntersection:draw()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
     ImGui.Text(tostring(#ports))
     style.tooltip("Points where a bended road joins this intersection, measured on the vanilla roads.")
+
+    if #ports > 0 then
+        style.mutedText("Suggested roads:")
+    end
 
     local indent = ImGui.GetCursorPosX() + 8 * style.viewSize
     for index, port in ipairs(ports) do

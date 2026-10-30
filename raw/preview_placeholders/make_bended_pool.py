@@ -13,7 +13,7 @@ import sys
 
 sector_in, block_in, sector_out, block_out = sys.argv[1:5]
 
-COUNT = 200
+COUNT = 500
 RANGE = 9000.0
 ORIGIN = (0.0, 0.0, 0.0)
 # Idle placeholders are collapsed to a point so they draw nothing at the origin.

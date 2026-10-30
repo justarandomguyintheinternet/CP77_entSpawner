@@ -1305,7 +1305,8 @@ function spawnable:loadSpawnData(data, position, rotation)
 
     local presetIndex = data.streamingPresetIndex or self.streamingPresetIndex or 0
     local presetVersion = data.streamingPresetVersion or 1
-    if presetVersion < streamingPresetVersion and presetIndex >= 2 then
+    -- Only a saved index can predate the current preset list; a class default is already current.
+    if data.streamingPresetIndex and presetVersion < streamingPresetVersion and presetIndex >= 2 then
         presetIndex = presetIndex + 1
     end
     self.streamingPresetIndex = math.min(presetIndex, #streamingPresetLabels - 1)
@@ -1353,6 +1354,26 @@ function spawnable:export(key, length)
             }
         }
     }
+end
+
+---Default streaming preset of a class, in place of the Default Streaming Distance setting; call from `new`.
+---@param label string Preset label, e.g. "District".
+function spawnable:setDefaultStreamingPreset(label)
+    for index, presetLabel in ipairs(streamingPresetLabels) do
+        if presetLabel == label then
+            self.streamingPresetIndex = index - 1
+            self.primaryRange = streamingPresetValues[index]
+            return
+        end
+    end
+end
+
+---Nodes exported for this spawnable, in order; most export one.
+---@param key integer
+---@param length integer
+---@return table[] nodes
+function spawnable:exportNodes(key, length)
+    return { self:export(key, length) }
 end
 
 return spawnable

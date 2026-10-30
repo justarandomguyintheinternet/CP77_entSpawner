@@ -17,6 +17,9 @@ local settleTime = 0.3
 local collidersPerComponent = 64
 local trianglesPerMesh = 251
 local visualMeshPrefix = "base\\spawner\\bended_collision_"
+local visualColours = { "red", "green", "blue" }
+-- The hologram meshes ship with a 1 m box, which the renderer hides past a few dozen meters.
+local visualBoundsExtent = 500
 
 ---@class bendedCollisionRecord
 ---@field owner table Spawnable providing `getCollisionShapes()`, `position` and `rotation`.
@@ -38,6 +41,43 @@ local clock = 0
 local tick = 0
 local mouseDown = false
 local waiting = {}
+---Held so the widened hologram meshes stay loaded.
+local visualTokens = {}
+local visualBoundsReady = false
+
+---Widens the bounds of the hologram meshes once they are loaded.
+---@return boolean done
+local function widenVisualBounds()
+    local ok, done = pcall(function()
+        local depot = Game.GetResourceDepot and Game.GetResourceDepot()
+        if not depot then return false end
+
+        local done = true
+        for _, colour in ipairs(visualColours) do
+            local token = visualTokens[colour]
+            if not token then
+                token = depot:LoadResource(ResRef.FromString(visualMeshPrefix .. colour .. ".mesh"))
+                visualTokens[colour] = token
+            end
+
+            if token:IsLoaded() then
+                local box = Box.new()
+                box.Min = Vector4.new(-visualBoundsExtent, -visualBoundsExtent, -visualBoundsExtent, 1)
+                box.Max = Vector4.new(visualBoundsExtent, visualBoundsExtent, visualBoundsExtent, 1)
+                token:GetResource().boundingBox = box
+            elseif not token:IsFailed() then
+                done = false
+            end
+        end
+        return done
+    end)
+
+    if not ok then
+        logger:warn("Bended collision hologram bounds: " .. tostring(done))
+        return true
+    end
+    return done
+end
 
 ---@param owner table
 ---@return bendedCollisionRecord
@@ -381,6 +421,10 @@ function preview.update(dt)
     clock = clock + (dt or 0)
     tick = tick + 1
 
+    if not visualBoundsReady then
+        visualBoundsReady = widenVisualBounds()
+    end
+
     for _, record in pairs(records) do
         if not record.built and record.signature and not mouseDown and clock - record.changedAt >= settleTime then
             build(record)
@@ -391,6 +435,7 @@ end
 ---Forgets every host, e.g. when the game session ends and the entities are gone.
 function preview.reset()
     waiting = {}
+    visualBoundsReady = false
     for _, record in pairs(records) do
         record.parts = {}
         record.entityID = nil

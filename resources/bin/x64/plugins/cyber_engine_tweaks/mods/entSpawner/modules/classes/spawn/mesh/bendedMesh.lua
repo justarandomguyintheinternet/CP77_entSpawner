@@ -18,16 +18,17 @@ local colliderColors = colliderBase.getColliderGenerics().colors
 local colliderPresets = colliderBase.getColliderGenerics().presets
 local colliderMaterials = colliderBase.getColliderGenerics().materials
 
-local COLLISION_MODE_PIECES = 0
-local COLLISION_MODE_BOXES = 1
 local COLLISION_CLASSES = { "ground", "raised", "wall" }
 local COLLISION_CLASS_LABELS = { ground = "Ground", raised = "Raised", wall = "Wall" }
-local AUTO_MATERIAL_LABEL = "Automatic"
+local DEFAULT_COLLISION_MATERIAL = "concrete.physmat"
 local DEFAULT_COLLISION_PRESET = "World Static"
 local projectedWireframe = require("modules/utils/editor/projectedWireframe")
 local input = require("modules/utils/core/input")
 
 local bendedMesh = setmetatable({}, { __index = mesh })
+-- Spawned with the path running away from the camera.
+bendedMesh.spawnAlongView = true
+
 local zeroVector3 = { x = 0, y = 0, z = 0 }
 
 local function normalizeVector4(raw, fallback)
@@ -127,9 +128,14 @@ local PATH_CURVE_SAMPLES_PER_BONE = 12
 local PATH_MODE_CURVE = 1
 local PATH_MODE_BONES = 2
 local pathModeOptions = {
-    "Curve",
-    "Bones (Advanced)"
+    "Curve Mode",
+    "Bone Mode (advanced)"
 }
+local pathModeTooltips = {
+    "Place a few control points, the bones follow the curve.",
+    "Edit every bone of the rig, anchoring the ones to keep."
+}
+local miscLabels = { "Remove From Rain Map", "Navigation Impact", "Cast Local Shadows", "Cast Shadows" }
 local LENGTH_MODE_FIT = 1
 local LENGTH_MODE_KEEP = 2
 local lengthModeOptions = {
@@ -137,6 +143,10 @@ local lengthModeOptions = {
     "Keep Rest Length"
 }
 local CURVE_SAMPLES_PER_SEGMENT = 48
+-- In-world line of a Curve mode path: one segment per this many meters, at least this many per curve segment.
+local CURVE_DRAW_STEP = 1
+local CURVE_DRAW_MIN_PER_SEGMENT = 12
+local CURVE_DRAW_MAX_SEGMENTS = 160
 
 local PATH_PREVIEW_FOCUS_POINT = 1
 local PATH_PREVIEW_LINE_THICKNESS = 0.04
@@ -428,13 +438,13 @@ function bendedMesh:new()
     o.curvePoints = {}
     o.continuationRepeatShape = false
     o.importedDeformation = nil
-    o.pathPreviewEnabled = true
-    o.pathPreviewShowFrames = true
+    o.pathPreviewEnabled = false
     o.deformedPreviewEnabled = true
     o.liveCollisionEnabled = true
     o.collisionShapeVisible = false
+    -- Hierarchy visualization helper: In-World Path Viz and Show Collision together.
+    o.previewed = false
     o.exportCollision = true
-    o.collisionMode = COLLISION_MODE_PIECES
     o.collisionMaterials = { ground = "", raised = "", wall = "" }
     o.collisionPresets = { ground = DEFAULT_COLLISION_PRESET, raised = DEFAULT_COLLISION_PRESET, wall = DEFAULT_COLLISION_PRESET }
     o.collisionMaterialSearch = {}
@@ -448,8 +458,6 @@ function bendedMesh:new()
     o.pathPreviewControlCount = 0
     o.pathPreviewFrameCount = 0
     o.pathPreviewSubdivisionCount = 0
-    o.bendedColliderStep = 1
-    o.bendedColliderOverlap = 0.05
     o.version = 0
     o.pendingAutoFit = false
     o.maxPropertyWidth = nil
@@ -458,6 +466,7 @@ function bendedMesh:new()
     o.convertTarget = 0
 
     setmetatable(o, { __index = self })
+    o:setDefaultStreamingPreset("District")
     return o
 end
 
@@ -504,12 +513,11 @@ function bendedMesh:loadSpawnData(data, position, rotation)
     self.importedDeformation = type(data.importedDeformation) == "table" and data.importedDeformation or nil
 
     self.pathPreviewEnabled = utils.toBoolean(data.pathPreviewEnabled, self.pathPreviewEnabled)
-    self.pathPreviewShowFrames = utils.toBoolean(data.pathPreviewShowFrames, self.pathPreviewShowFrames)
     self.deformedPreviewEnabled = utils.toBoolean(data.deformedPreviewEnabled, self.deformedPreviewEnabled)
     self.liveCollisionEnabled = utils.toBoolean(data.liveCollisionEnabled, self.liveCollisionEnabled)
     self.collisionShapeVisible = utils.toBoolean(data.collisionShapeVisible, self.collisionShapeVisible)
+    self:syncPreviewed()
     self.exportCollision = utils.toBoolean(data.exportCollision, self.exportCollision)
-    self.collisionMode = math.max(0, math.min(1, math.floor(utils.toNumber(data.collisionMode, self.collisionMode))))
     -- Fresh tables: the payload may be shared with the project cache or the clipboard.
     local materials, presets = {}, {}
     for _, class in ipairs(COLLISION_CLASSES) do
@@ -523,8 +531,6 @@ function bendedMesh:loadSpawnData(data, position, rotation)
     self.viewportHandlesEnabled = utils.toBoolean(data.viewportHandlesEnabled, self.viewportHandlesEnabled)
     self.magneticEnds = utils.toBoolean(data.magneticEnds, self.magneticEnds)
     self.linkJoinedEnds = utils.toBoolean(data.linkJoinedEnds, self.linkJoinedEnds)
-    self.bendedColliderStep = math.max(1, math.min(16, math.floor(utils.toNumber(data.bendedColliderStep, self.bendedColliderStep))))
-    self.bendedColliderOverlap = math.max(0, math.min(0.5, utils.toNumber(data.bendedColliderOverlap, self.bendedColliderOverlap)))
 
     self.pathPoints = {}
     for _, point in ipairs(data.pathPoints or {}) do
@@ -541,6 +547,21 @@ end
 function bendedMesh:onAssemble(entity)
     mesh.onAssemble(self, entity)
     self:updatePathVisualization()
+end
+
+---Hierarchy visualization helper state: on while the path or the collision is shown.
+function bendedMesh:syncPreviewed()
+    self.previewed = self.pathPreviewEnabled or self.collisionShapeVisible
+end
+
+---Hierarchy visualization helper: turns In-World Path Viz and Show Collision on or off together.
+---@param state boolean
+function bendedMesh:setPreview(state)
+    self.pathPreviewEnabled = state
+    self.collisionShapeVisible = state
+    self.previewed = state
+    self:refreshCollisionPreview()
+    self:refreshArrowScale()
 end
 
 function bendedMesh:updateScale()
@@ -599,19 +620,15 @@ function bendedMesh:save()
     data.continuationRepeatShape = self.continuationRepeatShape
     data.importedDeformation = self.importedDeformation
     data.pathPreviewEnabled = self.pathPreviewEnabled
-    data.pathPreviewShowFrames = self.pathPreviewShowFrames
     data.deformedPreviewEnabled = self.deformedPreviewEnabled
     data.liveCollisionEnabled = self.liveCollisionEnabled
     data.collisionShapeVisible = self.collisionShapeVisible
     data.exportCollision = self.exportCollision
-    data.collisionMode = self.collisionMode
     data.collisionMaterials = utils.deepcopy(self.collisionMaterials)
     data.collisionPresets = utils.deepcopy(self.collisionPresets)
     data.viewportHandlesEnabled = self.viewportHandlesEnabled
     data.magneticEnds = self.magneticEnds
     data.linkJoinedEnds = self.linkJoinedEnds
-    data.bendedColliderStep = self.bendedColliderStep
-    data.bendedColliderOverlap = self.bendedColliderOverlap
     data.pathPoints = {}
     data.deformedBox = {
         min = { x = normalizedBox.min.x, y = normalizedBox.min.y, z = normalizedBox.min.z, w = 1 },
@@ -1669,6 +1686,19 @@ end
 ---@return table[] matrices `{ X, Y, Z, W }` Vector4 rows.
 function bendedMesh:rebuildMatricesFromPath(updateBox)
     local frames = self:getSampledPathFrames()
+    local matrices = self:matricesFromFrames(frames)
+
+    if updateBox then
+        self:autoFitDeformedBox(frames)
+    end
+
+    return matrices
+end
+
+---Deformation matrices of a set of bone frames, in the node's local space.
+---@param frames table[]
+---@return table[] matrices `{ X, Y, Z, W }` Vector4 rows.
+function bendedMesh:matricesFromFrames(frames)
     local corrections = self:getRestCorrections(#frames)
     local matrices = {}
 
@@ -1685,10 +1715,6 @@ function bendedMesh:rebuildMatricesFromPath(updateBox)
             Z = Vector4.new(m[9], m[10], m[11], 0),
             W = Vector4.new(m[13], m[14], m[15], 1)
         }
-    end
-
-    if updateBox then
-        self:autoFitDeformedBox(frames)
     end
 
     return matrices
@@ -1993,6 +2019,7 @@ function bendedMesh:syncCurveBones()
     local distances = self:getRestDistancesFor(count)
     local restTotal = distances[#distances]
     local keepLength = self.pathLengthMode == LENGTH_MODE_KEEP and not looped
+    self._curveLength = total
 
     local bones = {}
     for index = 1, count do
@@ -2016,6 +2043,68 @@ function bendedMesh:syncCurveBones()
     end
 
     self.pathPoints = bones
+end
+
+---Number of meshes Split into Chain would make: the Pieces setting, or the automatic count.
+---1 when the curve fits one mesh or cannot be split.
+---@return integer
+function bendedMesh:getSplitCount()
+    if not self:isCurveMode() or self.pathLooped or self.pathLengthMode ~= LENGTH_MODE_FIT then return 1 end
+
+    local chain = self._toolSettings and self._toolSettings.chainCount
+    if chain and chain > 0 then return chain end
+    return (self:getAutoChainCount())
+end
+
+---Deformation matrices of each piece Split into Chain would make, in the node's local space.
+---@param count integer
+---@return table[] pieces One matrix list per piece.
+function bendedMesh:getSplitPieceMatrices(count)
+    local pieces = {}
+    for index, frames in ipairs(self:getSplitPieceFrames(count)) do
+        pieces[index] = self:matricesFromFrames(frames)
+    end
+    return pieces
+end
+
+---Bone frames of each piece Split into Chain would make, in mesh space.
+---@param count integer
+---@return table[] pieces One frame list per piece.
+function bendedMesh:getSplitPieceFrames(count)
+    local bones = self:getMeshBonesQuantity() or #self.pathPoints
+    local segments = buildCurveSegments(self.curvePoints, false)
+    local samples, total = sampleCurveSegments(segments)
+    local distances = self:getRestDistancesFor(bones)
+    local restTotal = distances[#distances]
+    local span = total / count
+    local pieces = {}
+
+    for piece = 1, count do
+        local points = {}
+        for index = 1, bones do
+            local fraction = restTotal > 0 and distances[index] / restTotal or (index - 1) / math.max(1, bones - 1)
+            local position, tangent, roll = evaluateCurveAt(segments, samples, total, span * (piece - 1 + fraction))
+            points[index] = { x = position.x, y = position.y, z = position.z, roll = roll, tangent = tangent }
+        end
+        pieces[piece] = buildPathFrames(points, false, self.pathUpAxis, self.pathSolver == PATH_SOLVER_CURVE)
+    end
+
+    return pieces
+end
+
+---Points along the curve at even arc-length steps, in mesh space, for drawing it.
+---@param maxSegments integer
+---@return table[] points
+function bendedMesh:getCurveDrawPoints(maxSegments)
+    local segments = buildCurveSegments(self.curvePoints, self.pathLooped and #self.curvePoints > 2)
+    local samples, total = sampleCurveSegments(segments)
+    local count = math.min(maxSegments, math.max(#segments * CURVE_DRAW_MIN_PER_SEGMENT, math.ceil(total / CURVE_DRAW_STEP)))
+
+    local points = {}
+    for index = 0, count do
+        points[index + 1] = (evaluateCurveAt(segments, samples, total, total * index / count))
+    end
+    return points
 end
 
 ---Resolved tangent of every curve point, for the editor and the overlay.
@@ -2251,7 +2340,7 @@ end
 
 function bendedMesh:despawn()
     self:getPathPreviewHosts():despawn()
-    bendedPool.release(self)
+    self:releasePreviewPieces(0)
     bendedCollisionPreview.release(self)
     self.deformedPreviewSignature = nil
     mesh.despawn(self)
@@ -2296,10 +2385,11 @@ function bendedMesh:getDeformedPreviewSignature()
 end
 
 ---World-space payload for the placeholder node: path matrices composed with T * R * S.
+---@param matrices table[]? Local deformation, defaults to the path's.
 ---@return bendedPoolPayload? payload
 ---@return string? issue
-function bendedMesh:buildDeformedPreviewPayload()
-    local matrices = self:rebuildMatricesFromPath(false)
+function bendedMesh:buildDeformedPreviewPayload(matrices)
+    matrices = matrices or self:rebuildMatricesFromPath(false)
     local bones = self:getMeshBonesQuantity()
 
     if bones and bones ~= #matrices then
@@ -2366,27 +2456,15 @@ function bendedMesh:refreshDeformedPreview()
 end
 
 ---Convex collision pieces deformed by the current path, in the mesh entity's local space (scaled).
+---An unsplit curve gives the pieces of the chain a split would make, like the preview and the export.
 ---@return bendedCollisionShape[]? shapes
 ---@return string? issue
 function bendedMesh:getCollisionShapes()
     local rigData = self:getRig()
     local source = bendedCollision.get(self.spawnData)
 
-    if self.collisionMode == COLLISION_MODE_BOXES then
-        if not rigData then
-            return nil, "Waiting for the mesh rig."
-        end
-        if not self.bBoxLoaded then
-            return nil, "Waiting for the mesh bounds."
-        end
-        local material = source and source.materials and source.materials.ground or "concrete.physmat"
-        source = bendedCollision.buildBoxSource(rigData, self.bBox, self.bendedColliderStep, self.bendedColliderOverlap, material)
-    elseif not source then
-        return nil, "No collision data for this mesh. Box mode works without it."
-    end
-
     if not source then
-        return nil, "No collision for this rig."
+        return nil, "No collision data for this mesh."
     end
     if not rigData then
         return nil, "Waiting for the mesh rig."
@@ -2396,9 +2474,17 @@ function bendedMesh:getCollisionShapes()
         self:syncCurveBones()
     end
 
-    local shapes = bendedCollision.deform(source, bendedCollision.getSkinMatrices(rigData, self:rebuildMatricesFromPath(false)))
-    if not shapes then
-        return nil, "The path does not drive every bone of the mesh."
+    local splitCount = self:getSplitCount()
+    local pieces = splitCount > 1 and self:getSplitPieceMatrices(splitCount) or { self:rebuildMatricesFromPath(false) }
+    local shapes = {}
+    for _, matrices in ipairs(pieces) do
+        local deformed = bendedCollision.deform(source, bendedCollision.getSkinMatrices(rigData, matrices))
+        if not deformed then
+            return nil, "The path does not drive every bone of the mesh."
+        end
+        for _, shape in ipairs(deformed) do
+            table.insert(shapes, shape)
+        end
     end
 
     local scale = self.scale or { x = 1, y = 1, z = 1 }
@@ -2424,7 +2510,7 @@ end
 ---Fingerprint of the collision settings, on top of the deformation.
 ---@return string
 function bendedMesh:getCollisionSettingsSignature()
-    local parts = { tostring(self.collisionMode), tostring(self.bendedColliderStep), string.format("%.3f", self.bendedColliderOverlap or 0) }
+    local parts = {}
     for _, class in ipairs(COLLISION_CLASSES) do
         table.insert(parts, tostring(self.collisionMaterials[class]))
         table.insert(parts, tostring(self.collisionPresets[class]))
@@ -2443,7 +2529,7 @@ function bendedMesh:refreshCollisionPreview()
         self:syncCurveBones()
     end
 
-    bendedCollisionPreview.request(self, self:getDeformedPreviewSignature() .. "#" .. self:getCollisionSettingsSignature())
+    bendedCollisionPreview.request(self, self:getDeformedPreviewSignature() .. "#" .. self:getSplitCount() .. "#" .. self:getCollisionSettingsSignature())
     bendedCollisionPreview.setVisual(self, self.collisionShapeVisible and colliderColors[settings.colliderColor + 1] or nil)
 end
 
@@ -2453,7 +2539,7 @@ function bendedMesh:refreshDeformedMesh()
 
     if not active then
         if self.deformedPreviewSignature then
-            bendedPool.release(self)
+            self:releasePreviewPieces(0)
             self.deformedPreviewSignature = nil
             self:applyEntityMeshVisibility()
         end
@@ -2464,20 +2550,66 @@ function bendedMesh:refreshDeformedMesh()
         self:syncCurveBones()
     end
 
-    local signature = self:getDeformedPreviewSignature()
+    -- An unsplit curve longer than the mesh is previewed as the chain a split would make.
+    local count = self:getSplitCount()
+    local signature = self:getDeformedPreviewSignature() .. "#" .. count
     if signature == self.deformedPreviewSignature then return end
     self.deformedPreviewSignature = signature
 
-    local payload, issue = self:buildDeformedPreviewPayload()
+    local payloads, issue = {}, nil
+    if count > 1 then
+        for index, matrices in ipairs(self:getSplitPieceMatrices(count)) do
+            payloads[index], issue = self:buildDeformedPreviewPayload(matrices)
+            if not payloads[index] then
+                payloads = {}
+                break
+            end
+        end
+    else
+        payloads[1], issue = self:buildDeformedPreviewPayload()
+    end
     self.deformedPreviewIssue = issue
+    self.deformedPreviewPieces = #payloads
 
-    if not payload then
-        bendedPool.release(self)
+    if #payloads == 0 then
+        self:releasePreviewPieces(0)
         self:applyEntityMeshVisibility()
         return
     end
 
-    bendedPool.submit(self, payload)
+    self:releasePreviewPieces(#payloads)
+    for index, payload in ipairs(payloads) do
+        bendedPool.submit(self:getPreviewPieceOwner(index), payload)
+    end
+end
+
+---Pool owner of preview piece `index`; the mesh itself owns the first.
+---@param index integer
+---@return table
+function bendedMesh:getPreviewPieceOwner(index)
+    if index == 1 then return self end
+
+    self._previewPieceOwners = self._previewPieceOwners or {}
+    local owner = self._previewPieceOwners[index]
+    if not owner then
+        owner = {}
+        self._previewPieceOwners[index] = owner
+    end
+    return owner
+end
+
+---Releases the preview pieces past `count`.
+---@param count integer
+function bendedMesh:releasePreviewPieces(count)
+    if count < 1 then
+        bendedPool.release(self)
+    end
+    for index, owner in pairs(self._previewPieceOwners or {}) do
+        if index > count then
+            bendedPool.release(owner)
+            self._previewPieceOwners[index] = nil
+        end
+    end
 end
 
 ---Hides the undeformed entity mesh while the placeholder shows the deformed one.
@@ -2711,42 +2843,48 @@ function bendedMesh:updatePathVisualization()
     local previousSubdivisionCount = self.pathPreviewSubdivisionCount
     local previousFrameCount = self.pathPreviewFrameCount
 
-    local usedSegments = 0
-    local requiredSegments = 0
-    if #frames > 1 then
-        requiredSegments = (#frames - 1) + (looped and 1 or 0)
+    -- Curve mode draws the curve itself; the bones of one unsplit mesh are too sparse to follow it.
+    local linePoints = {}
+    if curveMode then
+        linePoints = self:getCurveDrawPoints(CURVE_DRAW_MAX_SEGMENTS)
+    elseif #frames > 1 then
+        for i, frame in ipairs(frames) do
+            linePoints[i] = frame.position
+        end
+        if looped then
+            table.insert(linePoints, frames[1].position)
+        end
     end
+
+    -- Bone markers follow the pieces the preview shows.
+    local markerFrames = frames
+    local splitCount = self:getSplitCount()
+    if splitCount > 1 then
+        markerFrames = {}
+        for _, pieceFrames in ipairs(self:getSplitPieceFrames(splitCount)) do
+            for _, frame in ipairs(pieceFrames) do
+                table.insert(markerFrames, frame)
+            end
+        end
+    end
+
+    local usedSegments = 0
+    local requiredSegments = math.max(0, #linePoints - 1)
 
     -- Spawn every host this pass needs up front, so a path that just grew converges in a single
     -- redraw instead of one per host. Overshooting only costs a host the trim below gives back.
-    local requiredFrameComponents = 0
-    if self.pathPreviewShowFrames then
-        requiredFrameComponents = math.min(#frames, PATH_PREVIEW_MAX_SEGMENTS)
-            + 3 * math.min(#frames, PATH_PREVIEW_MAX_FRAMES) + 3
-    end
+    local requiredFrameComponents = math.min(#markerFrames, PATH_PREVIEW_MAX_SEGMENTS)
+        + 3 * math.min(#frames, PATH_PREVIEW_MAX_FRAMES) + 3
     local requiredHandles = curveMode and 2 * #controlFrames or 0
     local requiredComponents = requiredSegments + #self.pathPoints + #controlFrames + requiredHandles + requiredFrameComponents
     self:getPathPreviewHosts():ensure(requiredComponents, self.position, self.rotation)
-    local maxSegments = requiredSegments
 
-    if #frames > 1 and maxSegments > 0 then
-        for i = 1, #frames - 1 do
-            if usedSegments >= maxSegments then break end
-            local startPoint = self:toScaledLocalPoint(frames[i].position)
-            local endPoint = self:toScaledLocalPoint(frames[i + 1].position)
-            local nextIndex = usedSegments + 1
-            if self:renderPathPreviewLine("bendPathSeg", nextIndex, startPoint, endPoint, "cyan", segmentThickness) then
-                usedSegments = nextIndex
-            end
-        end
-
-        if looped and usedSegments < maxSegments then
-            local startPoint = self:toScaledLocalPoint(frames[#frames].position)
-            local endPoint = self:toScaledLocalPoint(frames[1].position)
-            local nextIndex = usedSegments + 1
-            if self:renderPathPreviewLine("bendPathSeg", nextIndex, startPoint, endPoint, "cyan", segmentThickness) then
-                usedSegments = nextIndex
-            end
+    for i = 1, requiredSegments do
+        local startPoint = self:toScaledLocalPoint(linePoints[i])
+        local endPoint = self:toScaledLocalPoint(linePoints[i + 1])
+        local nextIndex = usedSegments + 1
+        if self:renderPathPreviewLine("bendPathSeg", nextIndex, startPoint, endPoint, "cyan", segmentThickness) then
+            usedSegments = nextIndex
         end
     end
 
@@ -2789,82 +2927,71 @@ function bendedMesh:updatePathVisualization()
     self:hidePathPreviewOverflow("bendPathHandle", usedHandles, self.pathPreviewHandleCount or 0)
     self.pathPreviewHandleCount = usedHandles
 
-    if self.pathPreviewShowFrames then
-        local frameLength = self:getPathPreviewFrameLength()
-        local frameThickness = math.max(0.002, segmentThickness * 0.75)
-        local subdivisionThickness = math.max(0.0015, frameThickness * 0.85)
-        local usedSubdivisions = 0
-        local maxSubdivisions = PATH_PREVIEW_MAX_SEGMENTS
+    local frameLength = self:getPathPreviewFrameLength()
+    local frameThickness = math.max(0.002, segmentThickness * 0.75)
+    local subdivisionThickness = math.max(0.0015, frameThickness * 0.85)
+    local usedSubdivisions = 0
+    local maxSubdivisions = PATH_PREVIEW_MAX_SEGMENTS
 
-        if maxSubdivisions > 0 then
-            for _, frame in ipairs(frames) do
-                if usedSubdivisions >= maxSubdivisions then break end
-                if frame and not frame.isControlPoint then
-                    local nextIndex = usedSubdivisions + 1
-                    if self:renderPathSubdivisionMarker(nextIndex, frame, widthMin, widthMax, subdivisionThickness, "red") then
-                        usedSubdivisions = nextIndex
-                    end
+    if maxSubdivisions > 0 then
+        for _, frame in ipairs(markerFrames) do
+            if usedSubdivisions >= maxSubdivisions then break end
+            if frame and not frame.isControlPoint then
+                local nextIndex = usedSubdivisions + 1
+                if self:renderPathSubdivisionMarker(nextIndex, frame, widthMin, widthMax, subdivisionThickness, "red") then
+                    usedSubdivisions = nextIndex
                 end
             end
         end
+    end
 
-        self:hidePathPreviewOverflow("bendPathDirMain", usedSubdivisions, previousSubdivisionCount)
-        self.pathPreviewSubdivisionCount = usedSubdivisions
+    self:hidePathPreviewOverflow("bendPathDirMain", usedSubdivisions, previousSubdivisionCount)
+    self.pathPreviewSubdivisionCount = usedSubdivisions
 
-        local usedFrames = 0
-        local maxFrames = PATH_PREVIEW_MAX_FRAMES
+    local usedFrames = 0
+    local maxFrames = PATH_PREVIEW_MAX_FRAMES
+    for _, frame in ipairs(controlFrames) do
+        if usedFrames >= maxFrames then break end
+        if frame then
+            local nextIndex = usedFrames + 1
+            if self:renderPathFrame(nextIndex, frame, frameLength, frameThickness, {
+                xRangeMin = widthMin,
+                xRangeMax = widthMax
+            }) then
+                usedFrames = nextIndex
+            end
+        end
+    end
+
+    for i = usedFrames + 1, previousFrameCount do
+        self:hideFrameTriplet("bendPathFrame", i)
+    end
+    self.pathPreviewFrameCount = usedFrames
+
+    if #frames > 0 then
+        local focusFrame = nil
+
         for _, frame in ipairs(controlFrames) do
-            if usedFrames >= maxFrames then break end
-            if frame then
-                local nextIndex = usedFrames + 1
-                if self:renderPathFrame(nextIndex, frame, frameLength, frameThickness, {
-                    xRangeMin = widthMin,
-                    xRangeMax = widthMax
-                }) then
-                    usedFrames = nextIndex
-                end
+            if frame.controlPointIndex == PATH_PREVIEW_FOCUS_POINT then
+                focusFrame = frame
+                break
             end
         end
 
-        for i = usedFrames + 1, previousFrameCount do
-            self:hideFrameTriplet("bendPathFrame", i)
+        if not focusFrame then
+            focusFrame = frames[1]
         end
-        self.pathPreviewFrameCount = usedFrames
 
-        if #frames > 0 then
-            local focusFrame = nil
-
-            for _, frame in ipairs(controlFrames) do
-                if frame.controlPointIndex == PATH_PREVIEW_FOCUS_POINT then
-                    focusFrame = frame
-                    break
-                end
-            end
-
-            if not focusFrame then
-                focusFrame = frames[1]
-            end
-
-            if focusFrame then
-                self:renderPathFrameWithPrefix("bendPathFocusFrame", 1, focusFrame, frameLength, math.max(0.002, frameThickness * 1.1), {
-                    xRangeMin = widthMin,
-                    xRangeMax = widthMax
-                })
-            else
-                self:hideFrameTriplet("bendPathFocusFrame", 1)
-            end
+        if focusFrame then
+            self:renderPathFrameWithPrefix("bendPathFocusFrame", 1, focusFrame, frameLength, math.max(0.002, frameThickness * 1.1), {
+                xRangeMin = widthMin,
+                xRangeMax = widthMax
+            })
         else
             self:hideFrameTriplet("bendPathFocusFrame", 1)
         end
     else
-        self:hidePathPreviewOverflow("bendPathDirMain", 0, previousSubdivisionCount)
         self:hideFrameTriplet("bendPathFocusFrame", 1)
-
-        for i = 1, previousFrameCount do
-            self:hideFrameTriplet("bendPathFrame", i)
-        end
-        self.pathPreviewSubdivisionCount = 0
-        self.pathPreviewFrameCount = 0
     end
 
     local hosts = self:getPathPreviewHosts()
@@ -2889,6 +3016,13 @@ function bendedMesh:updatePathVisualization()
 end
 
 function bendedMesh:autoFitDeformedBox(frames)
+    self.deformedBox = self:computeDeformedBox(frames)
+end
+
+---Box of the mesh deformed by `frames`, in mesh space.
+---@param frames table[]?
+---@return table box `{ min, max }` Vector4.
+function bendedMesh:computeDeformedBox(frames)
     local baseMin = self.bBox and self.bBox.min or Vector4.new(-0.5, -0.5, -0.5, 0)
     local baseMax = self.bBox and self.bBox.max or Vector4.new(0.5, 0.5, 0.5, 0)
     frames = frames or self:getSampledPathFrames()
@@ -2922,14 +3056,13 @@ function bendedMesh:autoFitDeformedBox(frames)
     end
 
     if #transformed == 0 then
-        self.deformedBox = copyDeformedBox(nil)
-        return
+        return copyDeformedBox(nil)
     end
 
     local minimum, maximum = utils.getVector4BBox(transformed)
     minimum.w = 1
     maximum.w = 1
-    self.deformedBox = {
+    return {
         min = minimum,
         max = maximum
     }
@@ -2942,6 +3075,7 @@ local HANDLE_TIP_RADIUS = 4
 local HANDLE_PICK_RADIUS = 11
 local HANDLE_CURVE_PICK_RADIUS = 20
 local HANDLE_CURVE_SAMPLES = 32
+local HOVER_ARROW_LENGTH = 6
 
 local handleColors = {
     path = 0xC8FFE000,
@@ -2990,11 +3124,15 @@ end
 
 ---@return boolean
 function bendedMesh:wantsViewportOverlay()
-    return self.viewportHandlesEnabled ~= false
-        and not self.isAssetPreview
+    return not self.isAssetPreview
         and self.object ~= nil
         and self.object.selected == true
-        and not self.object:isLocked()
+end
+
+---Whether the editing handles are drawn and interactive.
+---@return boolean
+function bendedMesh:hasViewportHandles()
+    return self.viewportHandlesEnabled ~= false and self:wantsViewportOverlay() and not self.object:isLocked()
 end
 
 ---Handles of the current edit mode, in world space.
@@ -3171,7 +3309,7 @@ end
 ---@param text string
 ---@param titleColor number?
 local function drawHint(drawList, x, y, title, text, titleColor)
-    local body = "\n\n" .. text
+    local body = text and ("\n\n" .. text) or ""
     local width, height = ImGui.CalcTextSize(title .. body)
     ImGui.ImDrawListAddRectFilled(drawList, x + 14, y + 14, x + 22 + width, y + 20 + height, handleColors.hintBackground, 4)
     ImGui.ImDrawListAddText(drawList, ImGui.GetFontSize(), x + 18, y + 17, titleColor or handleColors.hintTitle, title)
@@ -3186,19 +3324,84 @@ local dragModeLabels = {
     snap = "on the surface"
 }
 
----Draws the editing handles and runs their mouse interaction.
+---Draws the editing handles, and marks the end or point hovered in the properties.
 ---@param screen table
 ---@param drawList table
 function bendedMesh:drawViewportOverlay(screen, drawList)
+    -- Set by `draw` every frame a button or row is hovered, consumed here.
+    local hoveredEnd, hoveredPoint, hoveredSnap = self._hoveredEnd, self._hoveredPoint, self._hoveredSnap
+    self._hoveredEnd, self._hoveredPoint, self._hoveredSnap = nil, nil, nil
     if not self:wantsViewportOverlay() then return end
 
+    if self:hasViewportHandles() then
+        self:drawViewportHandles(screen, drawList)
+    end
+    self:drawHoveredIndicator(screen, drawList, hoveredEnd, hoveredPoint)
+    if hoveredSnap then
+        self:drawSnapIndicator(screen, drawList, hoveredSnap == "start")
+    end
+end
+
+---Marks the end a Continue button acts on, or the point a row edits.
+---@param screen table
+---@param drawList table
+---@param hoveredEnd string? `start` or `end`.
+---@param hoveredPoint table? `{ kind = "curve"|"bone", index }`
+function bendedMesh:drawHoveredIndicator(screen, drawList, hoveredEnd, hoveredPoint)
+    local world, title, text, arrow
+    if hoveredEnd then
+        local frames = self:getSampledPathFrames()
+        local atStart = hoveredEnd == "start"
+        local frame = self:pathFrameToWorld(frames[atStart and 1 or #frames])
+        local s = atStart and -1 or 1
+        local p, f = frame.position, frame.forward
+        world = Vector4.new(p.x, p.y, p.z, 1)
+        arrow = Vector4.new(p.x + s * f.x * HOVER_ARROW_LENGTH, p.y + s * f.y * HOVER_ARROW_LENGTH, p.z + s * f.z * HOVER_ARROW_LENGTH, 1)
+        title = atStart and "Start" or "End"
+        text = atStart and "The new mesh is joined here, before the first point." or "The new mesh is joined here, after the last point."
+    elseif hoveredPoint then
+        local points = hoveredPoint.kind == "curve" and self.curvePoints or self.pathPoints
+        local point = points and points[hoveredPoint.index]
+        if not point then return end
+        local p = self:getWorldPointFromLocal(point)
+        world = Vector4.new(p.x, p.y, p.z, 1)
+        title = (hoveredPoint.kind == "curve" and "Point " or "Bone ") .. hoveredPoint.index
+    else
+        return
+    end
+
+    if arrow then
+        projectedWireframe.drawWorldLine(drawList, screen, world, arrow, { color = handleColors.pointActive, thickness = 3 })
+    end
+
+    local projected = projectedWireframe.projectWorldPoint(screen, world)
+    if not projected or projected.behind then return end
+    ImGui.ImDrawListAddCircle(drawList, projected.x, projected.y, HANDLE_POINT_RADIUS + 6, 0xC8000000, -1, 4)
+    ImGui.ImDrawListAddCircle(drawList, projected.x, projected.y, HANDLE_POINT_RADIUS + 6, handleColors.pointActive, -1, 2)
+    ImGui.ImDrawListAddCircleFilled(drawList, projected.x, projected.y, HANDLE_POINT_RADIUS - 1, handleColors.pointActive, -1)
+    drawHint(drawList, projected.x, projected.y, title, text, handleColors.pointActive)
+end
+
+---Draws the editing handles and runs their mouse interaction.
+---@param screen table
+---@param drawList table
+function bendedMesh:drawViewportHandles(screen, drawList)
     local editor = require("modules/utils/editor/editor")
     local handles = self:getViewportHandles()
     local curveMode = self:isCurveMode()
 
-    -- Path through the bones.
+    -- The curve itself in Curve mode, the path through the bones otherwise.
+    local linePoints = self.pathPoints
+    if curveMode then
+        self:syncCurveBones()
+        if not self._overlayCurve or self._overlayCurve.key ~= self._curveKey then
+            self._overlayCurve = { key = self._curveKey, points = self:getCurveDrawPoints(CURVE_DRAW_MAX_SEGMENTS) }
+        end
+        linePoints = self._overlayCurve.points
+    end
+
     local previous = nil
-    for _, point in ipairs(self.pathPoints) do
+    for _, point in ipairs(linePoints) do
         local world = self:getWorldPointFromLocal(point)
         if previous then
             projectedWireframe.drawWorldLine(drawList, screen, previous, world, { color = handleColors.path, thickness = 2 })
@@ -3760,14 +3963,12 @@ function bendedMesh:joinPointToEnd(index, target)
     point.roll = roll
 end
 
----Joins one end of this curve to the nearest end of another bended mesh, position and tangent.
+---Nearest other mesh end or intersection port within `SNAP_END_RANGE` of one end of this curve.
 ---@param atStart boolean
----@param options table? `{ quiet, noHistory }`
----@return boolean
-function bendedMesh:snapEndToNearest(atStart, options)
-    options = options or {}
-    local index = atStart and 1 or #self.curvePoints
-    local mine = self:getWorldPointFromLocal(self.curvePoints[index])
+---@return table? target `{ frame, isStart, name }` from `collectOtherEnds`
+---@return table position World position of this curve's end.
+function bendedMesh:findSnapTarget(atStart)
+    local mine = self:getWorldPointFromLocal(self.curvePoints[atStart and 1 or #self.curvePoints])
     local best, bestDistance = nil, SNAP_END_RANGE
 
     for _, other in ipairs(self:collectOtherEnds()) do
@@ -3777,6 +3978,18 @@ function bendedMesh:snapEndToNearest(atStart, options)
             best, bestDistance = other, distance
         end
     end
+
+    return best, mine
+end
+
+---Joins one end of this curve to the nearest end of another bended mesh, position and tangent.
+---@param atStart boolean
+---@param options table? `{ quiet, noHistory }`
+---@return boolean
+function bendedMesh:snapEndToNearest(atStart, options)
+    options = options or {}
+    local index = atStart and 1 or #self.curvePoints
+    local best = self:findSnapTarget(atStart)
 
     if not best then
         if options.quiet then return false end
@@ -3793,6 +4006,40 @@ function bendedMesh:snapEndToNearest(atStart, options)
     if options.quiet then return true end
     ImGui.ShowToast(ImGui.Toast.new(ImGui.ToastType.Success, 2500, "Joined to " .. tostring(best.name)))
     return true
+end
+
+---Marks the end a Snap button moves, the end or port it joins, and a line between them.
+---@param screen table
+---@param drawList table
+---@param atStart boolean
+function bendedMesh:drawSnapIndicator(screen, drawList, atStart)
+    if not self.curvePoints or #self.curvePoints == 0 then return end
+    local target, mine = self:findSnapTarget(atStart)
+    local from = Vector4.new(mine.x, mine.y, mine.z, 1)
+    local to = target and Vector4.new(target.frame.position.x, target.frame.position.y, target.frame.position.z, 1)
+
+    if to then
+        projectedWireframe.drawWorldLine(drawList, screen, from, to, { color = 0xC8000000, thickness = 5 })
+        projectedWireframe.drawWorldLine(drawList, screen, from, to, { color = handleColors.pointJoined, thickness = 3 })
+    end
+
+    local function marker(world, color, title, text)
+        local projected = projectedWireframe.projectWorldPoint(screen, world)
+        if not projected or projected.behind then return end
+        ImGui.ImDrawListAddCircle(drawList, projected.x, projected.y, HANDLE_POINT_RADIUS + 6, 0xC8000000, -1, 4)
+        ImGui.ImDrawListAddCircle(drawList, projected.x, projected.y, HANDLE_POINT_RADIUS + 6, color, -1, 2)
+        ImGui.ImDrawListAddCircleFilled(drawList, projected.x, projected.y, HANDLE_POINT_RADIUS - 1, color, -1)
+        drawHint(drawList, projected.x, projected.y, title, text, color)
+    end
+
+    local title = atStart and "Start" or "End"
+    if not to then
+        marker(from, handleColors.pointActive, title, string.format("No bended mesh end or intersection port within %d m.", SNAP_END_RANGE))
+        return
+    end
+    local distance = length3({ x = to.x - from.x, y = to.y - from.y, z = to.z - from.z })
+    marker(from, handleColors.pointActive, title, string.format("Moves %.2f m to join this point.", distance))
+    marker(to, handleColors.pointJoined, tostring(target.name), target.port and "Road port" or (target.isStart and "Start" or "End"))
 end
 
 ---Runs the path the other way round, keeping its shape and bank.
@@ -4213,6 +4460,7 @@ function bendedMesh:splitIntoChain(count)
         table.insert(self.curvePoints, copyCurvePoint(point))
     end
     self.pathLengthMode = LENGTH_MODE_FIT
+    self:getToolSettings().chainCount = nil
     self:refreshAfterTool()
 
     local parent = self.object.parent
@@ -4258,12 +4506,37 @@ end
 ---@return integer count
 ---@return number stretch Percent.
 function bendedMesh:getAutoChainCount()
-    local length = self:getCurveLength()
+    local length = self._curveLength or self:getCurveLength()
     local rest = self:getToolLength()
     if rest <= 0.001 then return 1, 0 end
 
     local count = math.max(1, math.floor(length / rest + 0.5))
     return count, (length / (count * rest) - 1) * 100
+end
+
+---Hierarchy row badges: whether the collision is exported, curve needing a split.
+---@return table[]
+function bendedMesh:getExtraStateIcons()
+    local icons = {}
+
+    if bendedCollision.get(self.spawnData) then
+        table.insert(icons, {
+            icon = IconGlyphs.TextureBox,
+            tooltip = self.exportCollision and "Collision included during export" or "Collision not included during export",
+            color = self.exportCollision and style.mutedColor or style.warnColor
+        })
+    end
+
+    local count = self:getSplitCount()
+    if count > 1 then
+        table.insert(icons, {
+            icon = IconGlyphs.SetSplit,
+            tooltip = string.format("This curve needs %d meshes.\nThe preview and the export already split it; use Split into Chain to edit the pieces.", count),
+            color = style.mutedColor
+        })
+    end
+
+    return icons
 end
 
 --- Magnetic ends while moving the mesh with the gizmo ----------------------------------------
@@ -4353,14 +4626,58 @@ function bendedMesh:getToolSettings()
     return self._toolSettings
 end
 
-local function toolFloat(self, label, id, value, speed, min, max, format, tooltip)
+local toolLabels = { "Shape", "Radius", "Angle", "Height", "Offset", "Length", "Sag", "Match Mesh Length", "Max Bank", "Full Bank Radius", "Spacing", "Height Offset" }
+
+local function toolLabel(self, label)
     style.mutedText(label)
     ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    ImGui.SetCursorPosX(self.toolPropertyWidth)
+end
+
+local function toolFloat(self, label, id, value, speed, min, max, format, tooltip)
+    toolLabel(self, label)
     ImGui.SetNextItemWidth(110 * style.viewSize)
     local newValue, changed = ImGui.DragFloat(id, value, speed, min, max, format)
     if tooltip then style.tooltip(tooltip) end
     return newValue, changed
+end
+
+---Pieces count and Split into Chain, highlighted while the curve needs more than one mesh.
+function bendedMesh:drawSplitControls()
+    local tool = self:getToolSettings()
+    local locked = self.object and self.object:isLocked()
+    local splitCount = self:getSplitCount()
+
+    ImGui.BeginDisabled(not self:isCurveMode() or locked or self.pathLooped)
+    local autoCount, autoStretch = self:getAutoChainCount()
+    style.mutedText("Pieces")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    ImGui.SetNextItemWidth(110 * style.viewSize)
+    local chainCount, changed = ImGui.DragInt("##toolChainCount", tool.chainCount or 0, 0.1, 0, 200, tool.chainCount and tool.chainCount > 0 and "%d" or "Auto")
+    tool.chainCount = chainCount
+    if changed then
+        self:updatePathVisualization()
+    end
+    style.tooltip(string.format("How many meshes to cut the curve into.\nAuto picks the count that stretches the mesh least: %d (%+.1f%%).", autoCount, autoStretch))
+    chainCount = (tool.chainCount and tool.chainCount > 0) and tool.chainCount or autoCount
+    ImGui.SameLine()
+    style.mutedText(string.format("%+.1f%%", (self:getCurveLength() / (chainCount * math.max(0.001, self:getToolLength())) - 1) * 100))
+    style.tooltip("Stretch of each piece at this count.")
+
+    local label = style.resolveActionLabelNoIconOnly(IconGlyphs.SetSplit, string.format("Split into Chain (%d)", chainCount), "bendedSplitIntoChain")
+    local clicked
+    if splitCount > 1 then
+        clicked = style.warnButton(label)
+    else
+        clicked = ImGui.Button(label)
+    end
+    if clicked then
+        self:splitIntoChain(chainCount)
+    end
+    style.tooltip((splitCount > 1 and string.format("This curve needs %d meshes. The preview and the export already split it.\n\n", splitCount) or "")
+        .. "Cuts the curve into that many meshes of this asset, each on its own stretch of the same curve.\nThis mesh keeps the first stretch; the others are added right after it.\n\nDraw a long curve first (handles, Alt+click, shapes), then split it.\nFor a closed ring, turn Looped off and drag one end onto the other with Alt.", ImGuiHoveredFlags.AllowWhenDisabled)
+    ImGui.EndDisabled()
 end
 
 function bendedMesh:drawShapeTools()
@@ -4368,13 +4685,17 @@ function bendedMesh:drawShapeTools()
         return
     end
 
+    -- One tree level deeper than the other properties, so the label column is measured here.
+    if not self.toolPropertyWidth then
+        self.toolPropertyWidth = math.max(self.maxPropertyWidth, utils.getTextMaxWidth(toolLabels) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX())
+    end
+
     local tool = self:getToolSettings()
     local curveMode = self:isCurveMode()
     local locked = self.object and self.object:isLocked()
 
-    style.mutedText("Shape")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    style.sectionHeaderStart("SHAPE")
+    toolLabel(self, "Shape")
     ImGui.SetNextItemWidth(140 * style.viewSize)
     tool.shape = ImGui.Combo("##toolShape", tool.shape - 1, toolShapeOptions, #toolShapeOptions) + 1
 
@@ -4386,9 +4707,7 @@ function bendedMesh:drawShapeTools()
         if tool.shape == 4 then
             tool.height = toolFloat(self, "Height", "##toolHeight", tool.height, 0.05, -1000, 1000, "%.2f m", "Total rise over the turn.")
         end
-        style.mutedText("Match Mesh Length")
-        ImGui.SameLine()
-        ImGui.SetCursorPosX(self.maxPropertyWidth)
+        toolLabel(self, "Match Mesh Length")
         tool.matchLength = ImGui.Checkbox("##toolMatchLength", tool.matchLength)
         style.tooltip("Picks the angle so the curve is exactly as long as the mesh.\nThe sign of Angle still sets the turn side.")
     elseif tool.shape == 2 then
@@ -4418,8 +4737,9 @@ function bendedMesh:drawShapeTools()
         tool.length = nil
     end
     style.tooltip("Set Length back to the mesh length.")
+    style.sectionHeaderEnd()
 
-    ImGui.Dummy(0, 6 * style.viewSize)
+    style.sectionHeaderStart("BANK")
     ImGui.BeginDisabled(not curveMode or locked)
     tool.maxBank = toolFloat(self, "Max Bank", "##toolMaxBank", tool.maxBank, 0.1, 0, 60, "%.1f deg", "Bank reached in turns at or tighter than Full Bank Radius.")
     tool.fullBankRadius = math.max(0.1, (toolFloat(self, "Full Bank Radius", "##toolFullBankRadius", tool.fullBankRadius, 0.5, 0.1, 10000, "%.1f m", "Turns this tight or tighter get the full bank.\nWider turns get proportionally less.")))
@@ -4434,23 +4754,35 @@ function bendedMesh:drawShapeTools()
         self:refreshAfterTool()
     end
     style.tooltip("Sets every point's roll back to 0.")
+    ImGui.EndDisabled()
+    style.sectionHeaderEnd()
 
-    ImGui.Dummy(0, 6 * style.viewSize)
+    style.sectionHeaderStart("GROUND")
+    ImGui.BeginDisabled(not curveMode or locked)
     tool.drapeSpacing = math.max(0.5, (toolFloat(self, "Spacing", "##toolDrapeSpacing", tool.drapeSpacing, 0.1, 0.5, 1000, "%.1f m", "Distance between the points the curve is rebuilt with.")))
     tool.drapeOffset = toolFloat(self, "Height Offset", "##toolDrapeOffset", tool.drapeOffset, 0.01, -100, 100, "%.2f m", "Height of each point above the ground.")
     if ImGui.Button("Drape on Ground") then
         self:drapeOnGround(tool.drapeSpacing, tool.drapeOffset)
     end
     style.tooltip("Rebuilds the curve with a point every Spacing meters,\nthen drops each one onto the ground below it.")
+    ImGui.EndDisabled()
+    style.sectionHeaderEnd()
 
-    ImGui.Dummy(0, 6 * style.viewSize)
+    style.sectionHeaderStart("PATH")
+    ImGui.BeginDisabled(not curveMode or locked)
     if ImGui.Button(style.resolveActionLabelNoIconOnly(IconGlyphs.SourceCommitStart, "Snap Start", "bendedSnapStart")) then
         self:snapEndToNearest(true)
+    end
+    if ImGui.IsItemHovered() then
+        self._hoveredSnap = "start"
     end
     style.tooltip(string.format("Joins the first point to the nearest end of another bended mesh,\nor road port of a placed intersection, within %d m.\nPosition, tangent and bank are matched.", SNAP_END_RANGE))
     ImGui.SameLine()
     if ImGui.Button(style.resolveActionLabelNoIconOnly(IconGlyphs.SourceCommitEnd, "Snap End", "bendedSnapEnd")) then
         self:snapEndToNearest(false)
+    end
+    if ImGui.IsItemHovered() then
+        self._hoveredSnap = "end"
     end
     style.tooltip(string.format("Joins the last point to the nearest end of another bended mesh,\nor road port of a placed intersection, within %d m.\nPosition, tangent and bank are matched.", SNAP_END_RANGE))
     ImGui.SameLine()
@@ -4460,26 +4792,6 @@ function bendedMesh:drawShapeTools()
     style.tooltip("Keeps only the node's yaw and moves its pitch and roll into the curve,\nso World Z is the world's up again.")
     ImGui.EndDisabled()
 
-    ImGui.Dummy(0, 6 * style.viewSize)
-    ImGui.BeginDisabled(not curveMode or locked or self.pathLooped)
-    local autoCount, autoStretch = self:getAutoChainCount()
-    style.mutedText("Pieces")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    ImGui.SetNextItemWidth(110 * style.viewSize)
-    tool.chainCount = ImGui.DragInt("##toolChainCount", tool.chainCount or 0, 0.1, 0, 200, tool.chainCount and tool.chainCount > 0 and "%d" or "Auto")
-    style.tooltip(string.format("How many meshes to cut the curve into.\nAuto picks the count that stretches the mesh least: %d (%+.1f%%).", autoCount, autoStretch))
-    local chainCount = (tool.chainCount and tool.chainCount > 0) and tool.chainCount or autoCount
-    ImGui.SameLine()
-    style.mutedText(string.format("%+.1f%%", (self:getCurveLength() / (chainCount * math.max(0.001, self:getToolLength())) - 1) * 100))
-    style.tooltip("Stretch of each piece at this count.")
-    if ImGui.Button(style.resolveActionLabelNoIconOnly(IconGlyphs.SetSplit, "Split into Chain", "bendedSplitIntoChain")) then
-        self:splitIntoChain(chainCount)
-    end
-    style.tooltip("Cuts the curve into that many meshes of this asset, each on its own stretch of the same curve.\nThis mesh keeps the first stretch; the others are added right after it.\n\nDraw a long curve first (handles, Alt+click, shapes), then split it.\nFor a closed ring, turn Looped off and drag one end onto the other with Alt.", ImGuiHoveredFlags.AllowWhenDisabled)
-    ImGui.EndDisabled()
-
-    ImGui.Dummy(0, 6 * style.viewSize)
     ImGui.BeginDisabled(locked)
     if ImGui.Button(style.resolveActionLabelNoIconOnly(IconGlyphs.SwapHorizontal, "Reverse", "bendedReverse")) then
         self:reversePath()
@@ -4496,6 +4808,7 @@ function bendedMesh:drawShapeTools()
     end
     style.tooltip("Moves the node's origin onto the first point. The mesh does not move.")
     ImGui.EndDisabled()
+    style.sectionHeaderEnd(true)
 
     if not curveMode then
         style.styledTextWrapped(IconGlyphs.InformationOutline .. "  Bank, ground, snap and bake work in Curve mode. A shape switches the mesh to Curve mode.", style.extraMutedColor)
@@ -4586,6 +4899,15 @@ function bendedMesh:refreshArrowScale()
     self:updatePathVisualization()
 end
 
+---Marks the point of the row group just ended for the viewport, while it is hovered or edited.
+---@param kind string `curve` or `bone`.
+---@param index integer
+function bendedMesh:trackHoveredRow(kind, index)
+    if ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem) or ImGui.IsItemActive() then
+        self._hoveredPoint = { kind = kind, index = index }
+    end
+end
+
 function bendedMesh:drawPathPointEditor(index, point, pointCount)
     local changedAny = false
     local anyAnchorChanged = false
@@ -4668,7 +4990,8 @@ function bendedMesh:drawPathVisualizationSettings()
             style.tooltip(self.deformedPreviewIssue)
         elseif status == "active" then
             style.mutedText(IconGlyphs.CheckCircleOutline)
-            style.tooltip("Deformed preview active.")
+            local pieces = self.deformedPreviewPieces or 1
+            style.tooltip(pieces > 1 and string.format("Deformed preview active, shown as the %d pieces Split into Chain would make.", pieces) or "Deformed preview active.")
         elseif status == "pending" then
             style.mutedText(IconGlyphs.TimerSandEmpty)
             style.tooltip(bendedPool.lastReason ~= "" and ("Waiting for a placeholder node.\n" .. bendedPool.lastReason) or "Waiting for a placeholder node.")
@@ -4710,9 +5033,10 @@ function bendedMesh:drawPathVisualizationSettings()
     self.collisionShapeVisible, changed = style.trackedCheckbox(self.object, "##collisionShapeVisible", self.collisionShapeVisible)
     ImGui.EndDisabled()
     if changed then
+        self:syncPreviewed()
         self:refreshCollisionPreview()
     end
-    style.tooltip("Show the live collision as a hologram in the collider color (Settings > Colliders).\nUses bended preview placeholders: one per 251 triangles.")
+    style.tooltip("Show the live collision as a hologram in the collider color (Settings > Colliders).\nUses bended preview placeholders: one per 251 triangles.\nAlso toggled by the visualization helper button in the hierarchy.")
 
     if self.collisionShapeVisible and self.liveCollisionEnabled and not self.isAssetPreview then
         local shown, total = bendedCollisionPreview.getVisualStatus(self)
@@ -4727,12 +5051,6 @@ function bendedMesh:drawPathVisualizationSettings()
             end
         end
     end
-
-    style.mutedText(style.resolveActionLabelNoIconOnly(IconGlyphs.Export, "Export Collision"))
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.exportCollision, changed = style.trackedCheckbox(self.object, "##exportCollision", self.exportCollision)
-    style.tooltip("Export the collision pieces with the mesh.\nThe bended meshes of a group share one collision node, placed after the last of them.")
 
     style.mutedText(style.resolveActionLabelNoIconOnly(IconGlyphs.VectorBezier, "Viewport Handles"))
     ImGui.SameLine()
@@ -4756,23 +5074,29 @@ function bendedMesh:drawPathVisualizationSettings()
     ImGui.SameLine()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
     self.pathPreviewEnabled, changed = style.trackedCheckbox(self.object, "##pathPreviewEnabled", self.pathPreviewEnabled)
+    if changed then
+        self:syncPreviewed()
+    end
     changedAny = changedAny or changed
-    style.tooltip("Show path overlays (points, segments, and local frames) in the world.")
-
-    style.mutedText(style.resolveActionLabelNoIconOnly(IconGlyphs.FormatAlignJustify, "Show Local Frames"))
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.pathPreviewShowFrames, changed = style.trackedCheckbox(self.object, "##pathPreviewShowFrames", self.pathPreviewShowFrames, not self.pathPreviewEnabled)
-    changedAny = changedAny or changed
+    style.tooltip("Show path overlays (points, segments, and local frames) in the world.\nAlso toggled by the visualization helper button in the hierarchy.")
 
     ImGui.TreePop()
     return changedAny
 end
 
+---Offset of a point row's fields from the row start: end icon, index and spacing.
+---@param count integer Number of rows.
+---@return number
+local function pointFieldsOffset(count)
+    local spacing = ImGui.GetStyle().ItemSpacing.x
+    return ImGui.CalcTextSize(IconGlyphs.SourceCommitStart) + ImGui.CalcTextSize(tostring(count)) + 3 * spacing
+end
+
 ---Row of one curve point: position, roll, tangent mode, insert and delete.
+---@param fieldsX number Cursor X of the fields column.
 ---@return boolean changed
 ---@return boolean topologyChanged
-function bendedMesh:drawCurvePointEditor(index, point, tangent)
+function bendedMesh:drawCurvePointEditor(index, point, tangent, fieldsX)
     local changedAny = false
     local topologyChanged = false
     local changed
@@ -4834,7 +5158,7 @@ function bendedMesh:drawCurvePointEditor(index, point, tangent)
     style.tooltip("Remove this control point.")
 
     if point.dir and not topologyChanged then
-        ImGui.SetCursorPosX(120)
+        ImGui.SetCursorPosX(fieldsX)
         local heading, slope = directionToAngles(point.dir)
         local headingChanged, slopeChanged
         heading, headingChanged = field.advancedTrackedFloat(self.object, "##curvePointHeading", heading, { suffix = " Heading", width = 96, step = 0.1 })
@@ -4906,7 +5230,7 @@ function bendedMesh:drawCurveEditor()
             style.mutedText(string.format("Length : curve %.2f m, mesh %.2f m", curveLength, restLength))
         else
             local stretch = (curveLength / restLength - 1) * 100
-            local text = string.format("Length : %.2f m (rest %.2f m, %+.1f%%)", curveLength, restLength, stretch)
+            local text = string.format("Length : %.2f m (base %.2f m, %+.1f%%)", curveLength, restLength, stretch)
             if math.abs(stretch) > 2 then
                 style.styledText(IconGlyphs.AlertOutline .. " " .. text, 0xFF4CB8FF)
             else
@@ -4923,8 +5247,10 @@ function bendedMesh:drawCurveEditor()
     end
 
     local tangents = self:getCurveTangents()
+    local fieldsX = ImGui.GetCursorPosX() + pointFieldsOffset(#self.curvePoints)
     for index, point in ipairs(self.curvePoints) do
         ImGui.PushID("curvePoint" .. index)
+        ImGui.BeginGroup()
 
         if index == 1 then
             ImGui.Text(IconGlyphs.SourceCommitStart)
@@ -4936,12 +5262,14 @@ function bendedMesh:drawCurveEditor()
         ImGui.SameLine()
         style.mutedText(tostring(index))
         ImGui.SameLine()
-        ImGui.SetCursorPosX(120)
+        ImGui.SetCursorPosX(fieldsX)
 
-        local pointChanged, pointTopology = self:drawCurvePointEditor(index, point, tangents[index])
+        local pointChanged, pointTopology = self:drawCurvePointEditor(index, point, tangents[index], fieldsX)
         needsUpdate = needsUpdate or pointChanged
         topologyChanged = topologyChanged or pointTopology
 
+        ImGui.EndGroup()
+        self:trackHoveredRow("curve", index)
         ImGui.PopID()
         if pointTopology then break end
     end
@@ -4962,16 +5290,16 @@ function bendedMesh:drawCurveEditor()
 end
 
 function bendedMesh:drawPathEditor()
-    style.mutedText("Edit Mode")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    local modeIndex, modeChanged = style.trackedCombo(self.object, "##pathMode", self.pathMode - 1, pathModeOptions, 180, {
-        tooltip = "Curve: place a few control points, the bones follow the curve.\nBones: edit every bone of the rig, anchoring the ones to keep."
-    })
-    if modeChanged then
-        self:setPathMode(math.max(1, math.min(math.floor(modeIndex) + 1, #pathModeOptions)))
-        self:autoFitDeformedBox()
-        self:refreshArrowScale()
+    for mode, label in ipairs(pathModeOptions) do
+        if mode > 1 then ImGui.SameLine() end
+        local selected = self.pathMode == mode
+        if style.switchTabButton(label .. "##pathMode" .. mode, selected, nil, 0) and not selected then
+            history.addAction(history.getElementChange(self.object))
+            self:setPathMode(mode)
+            self:autoFitDeformedBox()
+            self:refreshArrowScale()
+        end
+        style.tooltip(pathModeTooltips[mode])
     end
 
     if self:isCurveMode() then
@@ -5047,7 +5375,7 @@ function bendedMesh:drawPathEditor()
     local pathLength, restLength = self:getPathLengths()
     if restLength and restLength > 0.000001 then
         local stretch = (pathLength / restLength - 1) * 100
-        local text = string.format("Length : %.2f m (rest %.2f m, %+.1f%%)", pathLength, restLength, stretch)
+        local text = string.format("Length : %.2f m (base %.2f m, %+.1f%%)", pathLength, restLength, stretch)
         if math.abs(stretch) > 2 then
             style.styledText(IconGlyphs.AlertOutline .. " " .. text, 0xFF4CB8FF)
         else
@@ -5062,8 +5390,10 @@ function bendedMesh:drawPathEditor()
         style.styledTextWrapped(IconGlyphs.AlertOutline .. "  This mesh's bones form a grid rather than a line, so a path cannot drive them correctly.", style.extraMutedColor)
     end
 
+    local fieldsX = ImGui.GetCursorPosX() + pointFieldsOffset(#self.pathPoints)
     for index, point in ipairs(self.pathPoints) do
         ImGui.PushID(index)
+        ImGui.BeginGroup()
         local deleteRequested = false
 
         if index == 1 then
@@ -5077,7 +5407,7 @@ function bendedMesh:drawPathEditor()
         ImGui.SameLine()
         style.mutedText(tostring(index))
         ImGui.SameLine()
-        ImGui.SetCursorPosX(120)
+        ImGui.SetCursorPosX(fieldsX)
 
         local pointChanged, anchorChanged = self:drawPathPointEditor(index, point, #self.pathPoints)
         pathVisualizationNeedsUpdate = pathVisualizationNeedsUpdate or pointChanged
@@ -5134,6 +5464,8 @@ function bendedMesh:drawPathEditor()
             ImGui.EndDisabled()
         end
 
+        ImGui.EndGroup()
+        self:trackHoveredRow("bone", index)
         ImGui.PopID()
 
         if deleteRequested then
@@ -5168,11 +5500,11 @@ function bendedMesh:drawPathEditor()
 end
 
 function bendedMesh:drawDeformationMatrices()
-    if not ImGui.TreeNodeEx("Path Deformation", ImGuiTreeNodeFlags.SpanFullWidth) then
+    if not ImGui.TreeNodeEx("Path Deformation", ImGuiTreeNodeFlags.SpanFullWidth + ImGuiTreeNodeFlags.DefaultOpen) then
         return
     end
 
-    if ImGui.Button("Copy Data") then
+    if ImGui.Button(style.resolveActionLabelNoIconOnly(IconGlyphs.ContentCopy, "Copy Data", "bendedCopyData")) then
         utils.insertClipboardValue(deformationClipboardKey, self:getDeformationClipboardPayload())
     end
     style.tooltip("Copy path deformation settings to clipboard for pasting into another bended mesh.")
@@ -5181,7 +5513,7 @@ function bendedMesh:drawDeformationMatrices()
     local clipboardPayload = utils.getClipboardValue(deformationClipboardKey)
     local canPaste = self:isDeformationClipboardPayloadValid(clipboardPayload)
     ImGui.BeginDisabled(not canPaste)
-    if ImGui.Button("Paste Data") and canPaste then
+    if ImGui.Button(style.resolveActionLabelNoIconOnly(IconGlyphs.ContentPaste, "Paste Data", "bendedPasteData")) and canPaste then
         history.addAction(history.getElementChange(self.object))
         self:applyDeformationClipboardPayload(clipboardPayload)
     end
@@ -5193,10 +5525,16 @@ function bendedMesh:drawDeformationMatrices()
     if ImGui.Button(style.resolveActionLabelNoIconOnly(IconGlyphs.RayEndArrow, "Continue From Start", "bendedContinueFromStart")) and canCreateContinuation then
         self:createContinuationMesh(true)
     end
+    if ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) then
+        self._hoveredEnd = "start"
+    end
     style.tooltip("Create a new bended mesh of the same asset joined to the start of this one.")
     ImGui.SameLine()
     if ImGui.Button(style.resolveActionLabelNoIconOnly(IconGlyphs.RayStartArrow, "Continue From End", "bendedContinueFromEnd")) and canCreateContinuation then
         self:createContinuationMesh(false)
+    end
+    if ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) then
+        self._hoveredEnd = "end"
     end
     style.tooltip("Create a new bended mesh of the same asset joined to the end of this one.")
     ImGui.EndDisabled()
@@ -5204,11 +5542,62 @@ function bendedMesh:drawDeformationMatrices()
     self.continuationRepeatShape, _ = style.trackedCheckbox(self.object, "Repeat Curve##continuationRepeatShape", self.continuationRepeatShape)
     style.tooltip("The new mesh repeats this mesh's curve instead of starting straight.")
 
+    self:drawSplitControls()
     self:drawShapeTools()
 
-    self:drawPathEditor()
+    if ImGui.TreeNodeEx("Advanced", ImGuiTreeNodeFlags.SpanFullWidth) then
+        self:drawPathEditor()
+        ImGui.TreePop()
+    end
 
     ImGui.TreePop()
+end
+
+function bendedMesh:drawMiscSettings()
+    if not ImGui.TreeNodeEx("Misc", ImGuiTreeNodeFlags.SpanFullWidth) then
+        return
+    end
+
+    -- One tree level deeper than the other properties, so the label column is measured here.
+    if not self.miscPropertyWidth then
+        self.miscPropertyWidth = math.max(self.maxPropertyWidth, utils.getTextMaxWidth(miscLabels) + 2 * ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX())
+    end
+
+    style.mutedText("Remove From Rain Map")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.miscPropertyWidth)
+    self.removeFromRainMap, _ = style.trackedCheckbox(self.object, "##removeFromRainMap", self.removeFromRainMap)
+
+    style.mutedText("Navigation Impact")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.miscPropertyWidth)
+    self.navigationImpact = math.max(0, math.min(self.navigationImpact or 0, math.max(0, #self.navmeshImpactEnum - 1)))
+    self.navigationImpact, _ = style.trackedCombo(self.object, "##navigationImpact", self.navigationImpact, self.navmeshImpactEnum, 160)
+
+    style.mutedText("Cast Local Shadows")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.miscPropertyWidth)
+    local changed
+    self.castLocalShadows, changed = style.trackedCombo(self.object, "##bendedCastLocalShadows", self.castLocalShadows, self.shadowCastingModeEnum, 120)
+    self:updateShadowSettings(changed)
+
+    style.mutedText("Cast Shadows")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.miscPropertyWidth)
+    self.castShadows, changed = style.trackedCombo(self.object, "##bendedCastShadows", self.castShadows, self.shadowCastingModeEnum, 120)
+    self:updateShadowSettings(changed)
+
+    ImGui.TreePop()
+end
+
+---Physics material of a collision class: the one set on this node, else the mesh's own.
+---@param class string
+---@return string
+function bendedMesh:getCollisionMaterial(class)
+    local material = self.collisionMaterials[class]
+    if material and material ~= "" then return material end
+    local source = bendedCollision.get(self.spawnData)
+    return source and source.materials and source.materials[class] or DEFAULT_COLLISION_MATERIAL
 end
 
 ---Material and preset selectors of one collision class.
@@ -5221,19 +5610,12 @@ function bendedMesh:drawCollisionClass(class)
     ImGui.SameLine()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
 
-    local materialLabels = { AUTO_MATERIAL_LABEL }
-    for _, label in ipairs(colliderBase.getMaterialDisplayOptions()) do
-        table.insert(materialLabels, label)
-    end
-
-    local current = self.collisionMaterials[class]
-    local selected = AUTO_MATERIAL_LABEL
-    if current ~= "" then
-        for index, name in ipairs(colliderMaterials) do
-            if name == current then
-                selected = colliderBase.getMaterialDisplayByIndex(index - 1)
-                break
-            end
+    local current = self:getCollisionMaterial(class)
+    local selected = current
+    for index, name in ipairs(colliderMaterials) do
+        if name == current then
+            selected = colliderBase.getMaterialDisplayByIndex(index - 1)
+            break
         end
     end
 
@@ -5243,13 +5625,15 @@ function bendedMesh:drawCollisionClass(class)
         "Search material...",
         selected,
         self.collisionMaterialSearch[class] or "",
-        materialLabels,
-        { element = self.object, width = 150, matchContentWidth = true, tooltip = "Physics material. Automatic: from the mesh (asphalt, concrete, dirt)." }
+        colliderBase.getMaterialDisplayOptions(),
+        { element = self.object, width = 150, matchContentWidth = true, tooltip = "Physics material. Defaults to the mesh's own." }
     )
     if materialChanged then
         local index = colliderBase.getMaterialIndexByDisplay(selected)
-        self.collisionMaterials[class] = index and colliderMaterials[index + 1] or ""
-        changed = true
+        if index then
+            self.collisionMaterials[class] = colliderMaterials[index + 1]
+            changed = true
+        end
     end
 
     ImGui.SameLine()
@@ -5276,42 +5660,9 @@ function bendedMesh:drawCollisionSettings()
         return
     end
 
-    local changed, anyChanged
-
-    style.mutedText("Collision Mode")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.collisionMode, changed = style.trackedCombo(self.object, "##collisionMode", self.collisionMode, { "Pieces", "Boxes" }, 150, {
-        tooltip = "Pieces: convex pieces fitted to the mesh.\nBoxes: one box per bone segment, sized to the mesh bounds."
-    })
-    anyChanged = changed
-
-    if self.collisionMode == COLLISION_MODE_BOXES then
-        style.mutedText("Splits / Segment")
-        ImGui.SameLine()
-        ImGui.SetCursorPosX(self.maxPropertyWidth)
-        self.bendedColliderStep, changed, _ = style.trackedDragInt(self.object, "##collisionBoxSplits", self.bendedColliderStep, 1, 16, 80)
-        if changed then
-            self.bendedColliderStep = math.max(1, math.min(16, math.floor(self.bendedColliderStep)))
-            anyChanged = true
-        end
-        style.tooltip("Boxes per bone segment.\nHigher values follow bends more closely.")
-
-        style.mutedText("Length Overlap")
-        ImGui.SameLine()
-        ImGui.SetCursorPosX(self.maxPropertyWidth)
-        self.bendedColliderOverlap, changed, _ = style.trackedDragFloat(self.object, "##collisionBoxOverlap", self.bendedColliderOverlap, 0.005, 0, 0.5, "%.3f", 80)
-        if changed then
-            self.bendedColliderOverlap = math.max(0, math.min(0.5, self.bendedColliderOverlap))
-            anyChanged = true
-        end
-        style.tooltip("Extra box length, as a share of its length, to close gaps in bends.")
-
-        anyChanged = self:drawCollisionClass("ground") or anyChanged
-    else
-        for _, class in ipairs(COLLISION_CLASSES) do
-            anyChanged = self:drawCollisionClass(class) or anyChanged
-        end
+    local anyChanged = false
+    for _, class in ipairs(COLLISION_CLASSES) do
+        anyChanged = self:drawCollisionClass(class) or anyChanged
     end
 
     if anyChanged then
@@ -5342,7 +5693,6 @@ function bendedMesh:draw()
             "Use Algorithm",
             "Path Algorithm",
             "Bone Placement",
-            "Edit Mode",
             "Length Mode",
             "Mesh bones quantity",
             style.resolveActionLabelNoIconOnly(IconGlyphs.TriangleWave, "Deformed Preview"),
@@ -5353,23 +5703,7 @@ function bendedMesh:draw()
             style.resolveActionLabelNoIconOnly(IconGlyphs.Magnet, "Magnetic Ends"),
             style.resolveActionLabelNoIconOnly(IconGlyphs.LinkVariant, "Linked Ends"),
             "Pieces",
-            "Shape",
-            "Radius",
-            "Angle",
-            "Height",
-            "Offset",
-            "Length",
-            "Sag",
-            "Match Mesh Length",
-            "Max Bank",
-            "Full Bank Radius",
-            "Spacing",
-            "Height Offset",
             style.resolveActionLabelNoIconOnly(IconGlyphs.MapMarkerMultipleOutline, "In-World Path Viz"),
-            style.resolveActionLabelNoIconOnly(IconGlyphs.FormatAlignJustify, "Show Local Frames"),
-            "Splits / Segment",
-            "Length Overlap",
-            "Collision Mode",
             "Ground",
             "Raised",
             "Wall"
@@ -5383,36 +5717,19 @@ function bendedMesh:draw()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
     self.isBendedRoad, _ = style.trackedCheckbox(self.object, "##isBendedRoad", self.isBendedRoad)
 
-    style.mutedText("Remove From Rain Map")
+    style.mutedText(style.resolveActionLabelNoIconOnly(IconGlyphs.Export, "Export Collision"))
     ImGui.SameLine()
     ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.removeFromRainMap, _ = style.trackedCheckbox(self.object, "##removeFromRainMap", self.removeFromRainMap)
+    self.exportCollision, _ = style.trackedCheckbox(self.object, "##exportCollision", self.exportCollision)
+    style.tooltip("Export the collision pieces with the mesh.\nThe bended meshes of a group share one collision node, placed after the last of them.")
 
-    style.mutedText("Navigation Impact")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.navigationImpact = math.max(0, math.min(self.navigationImpact or 0, math.max(0, #self.navmeshImpactEnum - 1)))
-    self.navigationImpact, _ = style.trackedCombo(self.object, "##navigationImpact", self.navigationImpact, self.navmeshImpactEnum, 160)
-
-    style.mutedText("Cast Local Shadows")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    local changed
-    self.castLocalShadows, changed = style.trackedCombo(self.object, "##bendedCastLocalShadows", self.castLocalShadows, self.shadowCastingModeEnum, 120)
-    self:updateShadowSettings(changed)
-
-    style.mutedText("Cast Shadows")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.castShadows, changed = style.trackedCombo(self.object, "##bendedCastShadows", self.castShadows, self.shadowCastingModeEnum, 120)
-    self:updateShadowSettings(changed)
-    
     local visualizationChanged = self:drawPathVisualizationSettings()
     if visualizationChanged then
         self:refreshArrowScale()
     end
-    self:drawDeformationMatrices()
     self:drawCollisionSettings()
+    self:drawDeformationMatrices()
+    self:drawMiscSettings()
     self:drawConversionSelector("##bendedMeshConverterType", "Lossy Conversion##bendedMeshSingle")
 end
 
@@ -5514,14 +5831,67 @@ end
 
 function bendedMesh:export()
     local matrices = self:rebuildMatricesFromPath(self.bBoxLoaded)
+    return self:exportPiece(matrices, self:getNormalizedDeformedBox())
+end
 
+---Nodes of the export: an unsplit curve gives the chain Split into Chain would make, the project is left as is.
+---@param key integer
+---@param length integer
+---@return table[] nodes
+function bendedMesh:exportNodes(key, length)
+    local count = self:getSplitCount()
+    if count <= 1 then
+        return { self:export(key, length) }
+    end
+
+    local nodes = {}
+    for index, frames in ipairs(self:getSplitPieceFrames(count)) do
+        -- Pieces after the first sit on their own first bone, as Split into Chain places them.
+        local origin
+        if index > 1 then
+            origin = frames[1].position
+            local shifted = {}
+            for i, frame in ipairs(frames) do
+                local copy = {}
+                for field, value in pairs(frame) do
+                    copy[field] = value
+                end
+                copy.position = { x = frame.position.x - origin.x, y = frame.position.y - origin.y, z = frame.position.z - origin.z }
+                shifted[i] = copy
+            end
+            frames = shifted
+        end
+
+        local node = self:exportPiece(self:matricesFromFrames(frames), self:computeDeformedBox(frames), origin)
+        node.name = string.format("%s (%d/%d)", node.name, index, count)
+        if index > 1 then
+            node.nodeRef = (self.nodeRef or "") ~= "" and (self.nodeRef .. "_" .. index) or ""
+        end
+        table.insert(nodes, node)
+    end
+
+    return nodes
+end
+
+---Node of one deformation.
+---@param matrices table[] Deformation matrices, in the node's local space.
+---@param normalizedBox table Deformed box, in the node's local space.
+---@param origin table? Mesh-space point the node sits on, from the mesh's own position.
+---@return table node
+function bendedMesh:exportPiece(matrices, normalizedBox, origin)
     local app = self.app
     if app == "" then
         app = "default"
     end
 
-    local normalizedBox = self:getNormalizedDeformedBox()
     local data = spawnable.export(self)
+    if origin then
+        local position = self:getWorldPointFromLocal(origin)
+        data.position = utils.fromVector(position)
+        if not self.streamingRefPointOverride then
+            data.streamingRefPoint = utils.fromVector(position)
+        end
+    end
     data.type = "worldBendedMeshNode"
     data.scale = self.scale
     data.data = {
