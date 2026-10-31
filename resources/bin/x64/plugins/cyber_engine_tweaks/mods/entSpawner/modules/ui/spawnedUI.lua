@@ -2231,7 +2231,8 @@ local LIFT_FLOOR_COUNT_ICONS = {
 local function snapStateIconXToGrid(x)
     local step = STATE_ICON_GRID_STEP * style.viewSize
     local snapped = math.floor((x + step * 0.5) / step) * step
-    if snapped < x then
+    -- Half a pixel of slack: rounding can put a slot an ulp short of `x` and skip a whole step.
+    if snapped < x - 0.5 then
         snapped = snapped + step
     end
 
