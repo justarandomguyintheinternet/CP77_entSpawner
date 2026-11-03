@@ -20,6 +20,7 @@ local previewControls = require("modules/utils/preview/previewControls")
 local assetFavorites = require("modules/utils/project/assetFavorites")
 local assetValidation = require("modules/utils/game/assetValidation")
 local colorUtil = require("modules/utils/ui/color")
+local pathOrigin = require("modules/utils/data/pathOrigin")
 local workspotSync = require("modules/utils/game/workspotSync")
 local spawnableClass = require("modules/classes/spawn/spawnable")
 
@@ -594,6 +595,8 @@ function spawnUI.loadSpawnData(spawner)
     local visualizerModuleSet = {}
     local settingsChanged = false
 
+    pathOrigin.beginListScan()
+
     if type(settings.spawnNewVisualizerEnabledByModule) ~= "table" then
         settings.spawnNewVisualizerEnabledByModule = {}
         settingsChanged = true
@@ -706,6 +709,8 @@ function spawnUI.loadSpawnData(spawner)
             visualizerGroups[dataName] = visualizerEntries
         end
     end
+
+    pathOrigin.endListScan()
 
     spawnNewVisualizerClassGroups = visualizerGroups
     spawnNewVisualizerModuleSet = visualizerModuleSet
@@ -860,7 +865,12 @@ local function getEntryPathOriginKey(entry, spawnList)
         return nil
     end
 
-    return getPathOriginKeyFromPath(getEntryAssetPath(entry, spawnList))
+    -- Resolved once per entry, `false` meaning no known origin.
+    if entry.pathOriginKey == nil then
+        entry.pathOriginKey = getPathOriginKeyFromPath(getEntryAssetPath(entry, spawnList)) or false
+    end
+
+    return entry.pathOriginKey or nil
 end
 
 ---Gets tag display metadata for one search-list entry origin.
@@ -1064,7 +1074,7 @@ local entryFilters = {
     {
         id = "pathOrigin",
         label = "Asset origin",
-        labelTooltip = "Filter entries based on where they come from.\nThis is determined by the starting path of the asset, for example 'base/' or 'mod/'.\nChecking all options will show all entries, while unchecking all will show only entries that don't match any known origin.",
+        labelTooltip = "Filter entries based on where they come from.\nThis is determined by the starting path of the asset, for example 'base/' or 'mod/'.\nAssets only listed by a third-party list in data/spawnables count as modded, whatever their path.\nChecking all options will show all entries, while unchecking all will show only entries that don't match any known origin.",
         -- Rendered as an inline checkbox row rather than a combo; its keys are a
         -- fixed set, so they must survive lists that happen to contain none of them.
         checkboxes = {

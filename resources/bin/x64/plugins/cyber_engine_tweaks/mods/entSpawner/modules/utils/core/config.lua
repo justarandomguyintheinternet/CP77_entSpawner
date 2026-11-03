@@ -1,4 +1,5 @@
 local logger = require("modules/utils/core/logger")
+local pathOrigin = require("modules/utils/data/pathOrigin")
 config = {}
 
 ---@class ConfigSpawnFileEntry
@@ -636,6 +637,7 @@ function config.loadLists(path, paths)
         local extension = file.name:match("^.+(%..+)$")
         if extension and extension:lower() == ".txt" then
             local data = io.open(path .. file.name)
+            local firstIndex = #paths + 1
             for line in data:lines() do
                 local className, spawnPath = parseSpawnListLine(line)
                 if spawnPath ~= "" then
@@ -649,6 +651,7 @@ function config.loadLists(path, paths)
             end
 
             data:close()
+            pathOrigin.registerList(path .. file.name, paths, firstIndex)
         elseif file.type == "directory" then
             config.loadLists(path .. file.name .. "/", paths)
         end

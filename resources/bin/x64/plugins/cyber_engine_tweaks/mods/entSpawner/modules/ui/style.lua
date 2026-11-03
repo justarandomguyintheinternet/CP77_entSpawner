@@ -5,6 +5,7 @@ local settings = require("modules/utils/core/settings")
 local utils = require("modules/utils/core/utils")
 local colorUtil = require("modules/utils/ui/color")
 local input = require("modules/utils/core/input")
+local pathOrigin = require("modules/utils/data/pathOrigin")
 local dragBeingEdited = false
 
 ---Records one history action per widget interaction, for every tracked widget in this module.
@@ -2056,26 +2057,29 @@ style.pathOriginTagInfo = {
         label = "Modded",
         tag = "Mod",
         color = 0xFFA55987,
-        tooltip = "Only assets with starting path 'mod/' or 'mods/' are recognized as modded."
+        tooltip = "Assets only listed by a third-party list in data/spawnables, or with starting path 'mod/' or 'mods/'."
      }
 }
 
----Resolves a normalized path origin key from the first segment of a path.
----Supported roots: `base`, `ep1`, `mod`, `mods`.
+---Resolves a normalized path origin key: modded when only a third-party list holds the path,
+---otherwise from its first segment. Supported roots: `base`, `ep1`, `mod`, `mods`.
 ---@param path string?
 ---@return string?
 function style.getPathOriginKeyFromPath(path)
-    local normalizedPath = utils.normalizePath(path, { separator = "backslash" })
+    local normalizedPath = utils.normalizePath(path, { separator = "backslash", lowercase = true })
     if normalizedPath == "" then
         return nil
     end
 
-    local firstSegment = normalizedPath:match("^([^\\]+)")
-    if not firstSegment then
+    if pathOrigin.isModded(normalizedPath) then
+        return "modded"
+    end
+
+    local segment = normalizedPath:match("^([^\\]+)")
+    if not segment then
         return nil
     end
 
-    local segment = string.lower(firstSegment)
     if segment == "base" then
         return "base"
     end
