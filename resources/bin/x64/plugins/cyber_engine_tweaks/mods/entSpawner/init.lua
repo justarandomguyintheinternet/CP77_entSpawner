@@ -52,7 +52,7 @@ spawner = {
     },
 
     -- Public API for other mods, reached through GetMod("entSpawner"):
-    -- version / getVersion() for the mod version, about for the full metadata (author,
+    -- version / getVersion() for the mod version, about for the full metadata (author, maintainer,
     -- contributors, dependency descriptors), getDependencies() for their current state.
     version = about.version,
     about = about,

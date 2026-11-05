@@ -315,6 +315,7 @@ about.dependencies = {
         name = "WindowUtils",
         required = false,
         provides = "Adds extra window handling to the World Builder windows.",
+        url = "https://www.nexusmods.com/cyberpunk2077/mods/26589",
         check = function()
             if getMod("WindowUtils") then
                 return about.states.ok
@@ -342,6 +343,7 @@ about.dependencies = {
         name = "XUtils",
         required = false,
         provides = "While its free camera is active, new objects spawn at the camera instead of at player height.",
+        url = "https://www.nexusmods.com/cyberpunk2077/mods/30296",
         check = function()
             if getMod("XUtils") then
                 return about.states.ok
