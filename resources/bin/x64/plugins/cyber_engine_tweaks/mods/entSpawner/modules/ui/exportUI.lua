@@ -7,6 +7,7 @@ local field = require("modules/utils/ui/field")
 local projectedWireframe = require("modules/utils/editor/projectedWireframe")
 local groupExportManager = require("modules/utils/pipeline/groupExportManager")
 local pipelineCommon = require("modules/utils/pipeline/common")
+local streamingBox = require("modules/utils/pipeline/streamingBox")
 local soundSystemData = require("modules/utils/data/soundSystem")
 
 local minScriptVersion = "1.0.5"
@@ -103,26 +104,6 @@ function exportUI.init(spawner)
     exportUI.spawner = spawner
 end
 
-local function calculateExtents(center, objects)
-    local maxExtent = {x = 0, y = 0, z = 0}
-
-    for _, point in ipairs(objects) do
-        if utils.isA(point.ref, "spawnableElement") and Vector4.Distance(point.ref:getPosition(), Vector4.new(0, 0, 0, 0)) > 25 then
-            local pos = point.ref:getPosition()
-            local range = math.min(point.ref.spawnable.primaryRange, 250)
-
-            local dx = math.abs(pos.x - center.x) + range
-            local dy = math.abs(pos.y - center.y) + range
-            local dz = math.abs(pos.z - center.z) + range
-
-            maxExtent.x = math.max(maxExtent.x, dx)
-            maxExtent.y = math.max(maxExtent.y, dy)
-            maxExtent.z = math.max(maxExtent.z, dz)
-        end
-    end
-
-    return maxExtent
-end
 
 local function drawVariantsTooltip()
     ImGui.SameLine()
@@ -177,6 +158,30 @@ local function loadSavedGroupBlob(group)
     end
 
     return config.loadFile(path)
+end
+
+---Computes an export-list entry's streaming box from its saved project, as the export does.
+---@param group table Export-list entry.
+---@param applyExtents boolean Also replace `streamingX/Y/Z` with the Auto extents.
+---@return boolean computed False when the project is missing or has no exported element.
+function exportUI.computeStreamingBox(group, applyExtents)
+    local blob = loadSavedGroupBlob(group)
+    if not blob then return false end
+
+    local root = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
+    root:load(blob, true)
+
+    local elements = streamingBox.collectExported(root)
+    local center = streamingBox.getContentCenter(elements)
+    if not center then return false end
+
+    group.streamingCenter = center
+    if applyExtents then
+        local extents = streamingBox.getAutoExtents(center, elements)
+        group.streamingX, group.streamingY, group.streamingZ = extents.x, extents.y, extents.z
+    end
+
+    return true
 end
 
 ---@param entry table?
@@ -254,10 +259,11 @@ local function resolveGroupCenter(blob, fallback)
     return { x = 0, y = 0, z = 0 }
 end
 
+---Center of the group's streaming box: the last one computed from its exported content, else the group position.
 ---@param group table
 ---@return Vector4?
 local function getGroupCenterVector(group)
-    local center = group and group.center
+    local center = group and (group.streamingCenter or group.center)
     if not center then
         return nil
     end
@@ -467,7 +473,7 @@ function exportUI.drawGroups()
                 end
 
                 if ImGui.TreeNodeEx("Streaming Box", ImGuiTreeNodeFlags.SpanFullWidth) then
-                    local streamingPropertiesWidth = utils.getTextMaxWidth({ "Visualize", "Distance Preset", "Box Extents" }) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
+                    local streamingPropertiesWidth = utils.getTextMaxWidth({ "Visualize", "Distance Preset", "Auto on Export", "Box Extents" }) + ImGui.GetStyle().ItemSpacing.x + ImGui.GetCursorPosX()
 
                     style.mutedText("Visualize")
                     style.tooltip("Draw a projected wireframe of this group's streaming box in the world view.")
@@ -488,26 +494,27 @@ function exportUI.drawGroups()
                             group.streamingX = preset.x
                             group.streamingY = preset.y
                             group.streamingZ = preset.z
+                            group.streamingAuto = false
                         end
                     end
-                    style.tooltip("Apply the selected preset to Streaming Box Extents.")
+                    style.tooltip("Apply the selected preset to Streaming Box Extents.\nTurns off Auto on Export.")
+
+                    style.mutedText("Auto on Export")
+                    style.tooltip("Recompute Box Extents from the group's content on every export.\nThe X/Y/Z fields then show the last computed values.")
+                    ImGui.SameLine()
+                    ImGui.SetCursorPosX(streamingPropertiesWidth)
+                    group.streamingAuto, _ = ImGui.Checkbox("##streamingAuto", group.streamingAuto == true)
 
                     style.mutedText("Box Extents")
-                    style.tooltip("Change the size of the streaming box for the sector, extends the given amount on each axis in both directions")
+                    style.tooltip("Size of the sector's streaming box, extending the given amount on each axis in both directions.\nThe box is centered on the group's exported content.")
                     ImGui.SameLine()
                     ImGui.SetCursorPosX(streamingPropertiesWidth)
                     if ImGui.Button("Auto") then
-                        local blob = loadSavedGroupBlob(group)
-                        local g = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
-                        g:load(blob, true)
-
-                        local extents = calculateExtents(group.center, g:getPathsRecursive(false))
-                        group.streamingX = extents.x * 1.2
-                        group.streamingY = extents.y * 1.2
-                        group.streamingZ = extents.z * 1.2
+                        exportUI.computeStreamingBox(group, true)
                     end
-                    style.tooltip("Auto-computes box extents from the group's content.\nUses each spawned element's distance from group center (minimum 250), then applies a 20% safety margin.\nOnly spawnable elements are considered.\nThis replaces current X/Y/Z values.")
+                    style.tooltip(string.format("Compute box extents from the group's saved content.\nCovers each exported element's position plus its streaming range (capped at %d), with a %d%% margin.\nReplaces the current X/Y/Z values.", streamingBox.rangeCap, math.floor((streamingBox.margin - 1) * 100 + 0.5)))
                     ImGui.SameLine()
+                    ImGui.BeginDisabled(group.streamingAuto == true)
                     group.streamingX, _, _ = field.advancedTrackedFloat(nil, "##x", group.streamingX, {
                         step = 0.25,
                         min = 0,
@@ -534,6 +541,7 @@ function exportUI.drawGroups()
                         width = 84,
                         suffix = " Z Size"
                     })
+                    ImGui.EndDisabled()
                     ImGui.SameLine()
 
                     local player = GetPlayer()
@@ -618,6 +626,7 @@ function exportUI.loadTemplate(data)
                 streamingX = group.streamingX or 150,
                 streamingY = group.streamingY or 150,
                 streamingZ = group.streamingZ or 100,
+                streamingAuto = group.streamingAuto == true,
                 center = resolveGroupCenter(blob, group.center),
                 prefabRef = group.prefabRef or "",
                 variantRef = group.variantRef or "",
@@ -1530,6 +1539,8 @@ function exportUI.addGroup(name, fileName)
         streamingX = 150,
         streamingY = 150,
         streamingZ = 100,
+        streamingAuto = false,
+        streamingCenter = nil,
         center = nil,
         prefabRef = "",
         variantRef = "",
@@ -1632,6 +1643,9 @@ function exportUI.syncGroupFromData(fileName, blob)
         if exportUI.resolveGroupFileName(group) == fileName or group.name == fileName then
             group.variantData = buildVariantDataFromBlob(blob, group.variantData)
             group.center = resolveGroupCenter(blob, group.center)
+            if blob.streamingCenter then
+                group.streamingCenter = blob.streamingCenter
+            end
             updated = updated + 1
         end
     end
@@ -2230,24 +2244,8 @@ function exportUI.handleCommunities(projectName, communities, spotNodes, nodeRef
     }
 end
 
-local function isExportDisabled(node)
-    while node do
-        if node.exportDisabled == true then
-            return true
-        end
-        node = node.parent
-    end
-
-    return false
-end
-
-local function shouldExportNode(node)
-    if isExportDisabled(node) then
-        return false
-    end
-
-    return not utils.isA(node.parent, "randomizedGroup") or node.visible
-end
+local isExportDisabled = streamingBox.isExportDisabled
+local shouldExportNode = streamingBox.shouldExportNode
 
 function exportUI.exportGroup(group)
     local data = loadSavedGroupBlob(group)
@@ -2256,9 +2254,9 @@ function exportUI.exportGroup(group)
     local g = require("modules/classes/editor/positionableGroup"):new(exportUI.spawner.baseUI.spawnedUI)
     g:load(data, true)
 
-    local center = g:getPosition()
-    local min = { x = center.x - group.streamingX, y = center.y - group.streamingY, z = center.z - group.streamingZ }
-    local max = { x = center.x + group.streamingX, y = center.y + group.streamingY, z = center.z + group.streamingZ }
+    local center, extents = streamingBox.resolve(group, streamingBox.collectExported(g), g:getPosition())
+    local min = { x = center.x - extents.x, y = center.y - extents.y, z = center.z - extents.z }
+    local max = { x = center.x + extents.x, y = center.y + extents.y, z = center.z + extents.z }
 
     local exported = {
         name = utils.createFileName(group.name):lower():gsub(" ", "_"),

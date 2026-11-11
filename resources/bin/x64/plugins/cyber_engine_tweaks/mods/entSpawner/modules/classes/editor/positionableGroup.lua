@@ -345,6 +345,7 @@ function positionableGroup:new(sUI)
 	o.autoCenterCacheCenter = nil
 	o.autoCenterCacheLeafCount = nil
 	o.autoCenterCacheBounded = nil
+	o.autoCenterCacheLockedOnly = false
 	o.class = utils.combine(o.class, { "positionableGroup" })
 	o.quickOperations = {
 		[IconGlyphs.ContentSaveOutline] = {
@@ -476,8 +477,9 @@ end
 ---@param max Vector4
 ---@param state {leafs: integer, bounded: boolean} Accumulator: how many unlocked leafs were seen, and
 ---whether any of them actually contributed bounds.
-local function accumulateWorldMinMax(entry, min, max, state)
-	if entry:isLocked() then
+---@param includeLocked boolean? Also count locked entries; bypasses group caches, which exclude them.
+local function accumulateWorldMinMax(entry, min, max, state, includeLocked)
+	if not includeLocked and entry:isLocked() then
 		return
 	end
 
@@ -508,7 +510,12 @@ local function accumulateWorldMinMax(entry, min, max, state)
 	if utils.isA(entry, "positionableGroup") then
 		-- A group that already knows its own bounds is folded in wholesale instead of re-walking it,
 		-- which keeps a full-tree serialize from costing O(n * depth).
-		if entry.autoCenterCacheValid and entry.autoCenterCacheLeafCount ~= nil then
+		if not includeLocked and entry.autoCenterCacheValid and entry.autoCenterCacheLeafCount ~= nil then
+			-- Bounds measured from locked content only stay private to that group.
+			if entry.autoCenterCacheLockedOnly then
+				return
+			end
+
 			state.leafs = state.leafs + entry.autoCenterCacheLeafCount
 
 			if entry.autoCenterCacheBounded and entry.autoCenterCacheMin and entry.autoCenterCacheMax then
@@ -529,7 +536,7 @@ local function accumulateWorldMinMax(entry, min, max, state)
 		end
 
 		for _, child in pairs(entry.childs) do
-			accumulateWorldMinMax(child, min, max, state)
+			accumulateWorldMinMax(child, min, max, state, includeLocked)
 		end
 	end
 end
@@ -664,6 +671,16 @@ function positionableGroup:getWorldMinMax()
 	for _, entry in pairs(self.childs) do
 		accumulateWorldMinMax(entry, min, max, state)
 	end
+
+	-- Everything locked (e.g. a locked group): use the locked content rather than the stale origin.
+	local lockedOnly = false
+	if state.leafs == 0 then
+		for _, entry in pairs(self.childs) do
+			accumulateWorldMinMax(entry, min, max, state, true)
+		end
+		lockedOnly = state.leafs > 0
+	end
+	self.autoCenterCacheLockedOnly = lockedOnly
 
 	if state.leafs == 0 then
 		local fallback = getFallbackOrigin()

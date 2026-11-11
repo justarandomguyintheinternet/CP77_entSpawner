@@ -120,9 +120,16 @@ function groupExportSidecar.buildGroupSignature(group, options)
     table.insert(parts, "fileName=" .. groupExportSidecar.resolveGroupFileName(group))
     table.insert(parts, "category=" .. tostring(group and group.category or ""))
     table.insert(parts, "level=" .. tostring(group and group.level or ""))
-    table.insert(parts, "streamingX=" .. normalizeNumber(group and group.streamingX))
-    table.insert(parts, "streamingY=" .. normalizeNumber(group and group.streamingY))
-    table.insert(parts, "streamingZ=" .. normalizeNumber(group and group.streamingZ))
+    -- Bumped when the box derivation changes, so sectors exported with the old box are rebuilt.
+    table.insert(parts, "streamingBox=2")
+    if group and group.streamingAuto == true then
+        -- Extents are derived from the content, which `sourceRevision` already covers.
+        table.insert(parts, "streamingAuto=true")
+    else
+        table.insert(parts, "streamingX=" .. normalizeNumber(group and group.streamingX))
+        table.insert(parts, "streamingY=" .. normalizeNumber(group and group.streamingY))
+        table.insert(parts, "streamingZ=" .. normalizeNumber(group and group.streamingZ))
+    end
     table.insert(parts, "prefabRef=" .. tostring(group and group.prefabRef or ""))
     table.insert(parts, "variantRef=" .. tostring(group and group.variantRef or ""))
     table.insert(parts, "variantCount=" .. tostring(#variantKeys))

@@ -4,6 +4,7 @@ local Cron = require("modules/utils/vendor/Cron")
 local pipelineCommon = require("modules/utils/pipeline/common")
 local groupExportSidecar = require("modules/utils/pipeline/groupExportSidecar")
 local bendedCollisionExport = require("modules/utils/pipeline/bendedCollisionExport")
+local streamingBox = require("modules/utils/pipeline/streamingBox")
 local nodeStreaming = require("modules/utils/data/nodeStreaming")
 local logger = require("modules/utils/core/logger")
 
@@ -613,6 +614,30 @@ local function isExportDisabled(runtime, node)
     return check and check(node) or false
 end
 
+---Sets the sector's streaming box from the exported nodes, and reports it back to the Export-tab entry.
+---@param current table
+---@param group table Mapped export group; `source` is the Export-tab entry.
+---@param root element
+local function applyStreamingBox(current, group, root)
+    local elements = {}
+    for _, object in ipairs(current.nodes) do
+        table.insert(elements, object.ref)
+    end
+
+    local center, extents = streamingBox.resolve(group, elements, root:getPosition())
+
+    current.exported.min = { x = center.x - extents.x, y = center.y - extents.y, z = center.z - extents.z }
+    current.exported.max = { x = center.x + extents.x, y = center.y + extents.y, z = center.z + extents.z }
+
+    local source = group.source
+    if source then
+        source.streamingCenter = { x = center.x, y = center.y, z = center.z }
+        if group.streamingAuto == true then
+            source.streamingX, source.streamingY, source.streamingZ = extents.x, extents.y, extents.z
+        end
+    end
+end
+
 local function prepareCurrentGroupForExport(runtime)
     local current = runtime.current
     if not current or not current.root then
@@ -621,21 +646,12 @@ local function prepareCurrentGroupForExport(runtime)
 
     local group = current.group
     local root = current.root
-    local center = root:getPosition()
     local sectorCategory = runtime.request.sectorCategory
 
     current.exported = {
         name = utils.createFileName(group.name):lower():gsub(" ", "_"),
-        min = {
-            x = center.x - group.streamingX,
-            y = center.y - group.streamingY,
-            z = center.z - group.streamingZ
-        },
-        max = {
-            x = center.x + group.streamingX,
-            y = center.y + group.streamingY,
-            z = center.z + group.streamingZ
-        },
+        min = { x = 0, y = 0, z = 0 },
+        max = { x = 0, y = 0, z = 0 },
         category = sectorCategory[group.category + 1],
         level = group.level,
         nodes = {},
@@ -709,6 +725,8 @@ local function prepareCurrentGroupForExport(runtime)
         })
         index = index + 1
     end
+
+    applyStreamingBox(current, group, root)
 
     current.nodeRefMap = {}
     for _, object in ipairs(current.nodes) do
@@ -1229,6 +1247,8 @@ function groupExportManager.start(request)
             streamingX = group.streamingX,
             streamingY = group.streamingY,
             streamingZ = group.streamingZ,
+            streamingAuto = group.streamingAuto == true,
+            source = group,
             prefabRef = group.prefabRef,
             variantRef = group.variantRef,
             variantData = utils.deepcopy(group.variantData or {}),

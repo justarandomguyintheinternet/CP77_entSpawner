@@ -8,6 +8,7 @@ local history = require("modules/utils/project/history")
 local projectFiles = require("modules/utils/project/projectFiles")
 local projectLinkPopup = require("modules/utils/ui/projectLinkPopup")
 local pipelineCommon = require("modules/utils/pipeline/common")
+local streamingBox = require("modules/utils/pipeline/streamingBox")
 local groupLoadManager = require("modules/utils/pipeline/groupLoadManager")
 local groupExportManager = require("modules/utils/pipeline/groupExportManager")
 local groupAMMImportManager = require("modules/utils/pipeline/groupAMMImportManager")
@@ -269,7 +270,13 @@ local function buildSummary(job)
         pos = { x = position.x, y = position.y, z = position.z, w = position.w or 0 }
     end
 
+    local okCenter, streamingCenter = pcall(function ()
+        return streamingBox.getContentCenter(streamingBox.collectExported(root))
+    end)
+
     return {
+        -- Read by the Export tab, whose streaming box is centered on the exported content.
+        streamingCenter = okCenter and streamingCenter or nil,
         name = root.name,
         elementCount = job.build.result.elementCount,
         lastEditedAt = os.date("%Y-%m-%d %H:%M:%S"),
