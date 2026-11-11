@@ -476,6 +476,26 @@ deviceOperations.TEMPLATES = {
         end
     },
     {
+        id = "meshAppearanceOnOff",
+        label = "Mesh appearance on ON / OFF",
+        description = "Switches the mesh appearance when the device turns on and when it turns off. Pick both appearances afterwards.\n"
+            .. "The mesh turns invisible unless its .mesh keeps every appearance loaded (forceLoadAllAppearances).",
+        build = function (prefix)
+            prefix = prefix ~= "" and prefix or "mesh"
+            local onName, offName = prefix .. "_on", prefix .. "_off"
+            return {
+                operations = {
+                    { class = "MeshAppearanceDeviceOperation", name = onName },
+                    { class = "MeshAppearanceDeviceOperation", name = offName }
+                },
+                triggers = {
+                    { class = "BaseStateOperationsTrigger", values = { { path = { "state" }, value = "ON" } }, runs = { onName } },
+                    { class = "BaseStateOperationsTrigger", values = { { path = { "state" }, value = "OFF" } }, runs = { offName } }
+                }
+            }
+        end
+    },
+    {
         id = "factRelay",
         label = "Write a quest fact on ON",
         description = "Sets a fact when the device turns on. Another device reads it with a Quest fact trigger, which is the only supported way to make one device affect another.",
