@@ -1021,6 +1021,14 @@ function history.isBusy()
     return history.active ~= nil
 end
 
+local immediateDepth = 0
+
+---Whether an undo/redo is currently being applied, queued or immediate.
+---@return boolean
+function history.isReplaying()
+    return history.active ~= nil or immediateDepth > 0
+end
+
 ---Get total queued history work count (pending + in-flight).
 ---@return number count
 function history.getPendingCount()
@@ -1201,7 +1209,9 @@ function history.undo()
 
     local action = history.actions[history.index]
     local selection = captureSelection()
+    immediateDepth = immediateDepth + 1
     local success = runActionImmediate(action, "undo")
+    immediateDepth = immediateDepth - 1
     if success then
         history.index = history.index - 1
     end
@@ -1221,7 +1231,9 @@ function history.redo()
 
     local action = history.actions[history.index + 1]
     local selection = captureSelection()
+    immediateDepth = immediateDepth + 1
     local success = runActionImmediate(action, "redo")
+    immediateDepth = immediateDepth - 1
     if success then
         history.index = history.index + 1
     end

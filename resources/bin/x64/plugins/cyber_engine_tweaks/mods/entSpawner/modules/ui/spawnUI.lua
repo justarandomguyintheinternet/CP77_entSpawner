@@ -3429,6 +3429,7 @@ function spawnUI.spawnNew(entry, class, isFavorite, options)
             targetParent = parent,
             clearLocks = true,
             captureBaseTransform = "prefab",
+            styleNames = true,
             selectLoaded = not loadHidden,
             loadHidden = loadHidden,
             initialPosition = pos,

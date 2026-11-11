@@ -89,6 +89,7 @@ local config = require("modules/utils/core/config")
 ---@field public previewTimelineSnapSec number
 ---@field public actionLabelDisplayMode integer
 ---@field public stickyRowsEnabled boolean
+---@field public underscoreNames boolean Replace spaces with `_` in element names when edited, added or generated.
 ---@field public speedUnit integer
 ---@field public speedTimelineDockBottom boolean
 ---@field public speedTimelineDockHeight number
@@ -194,6 +195,7 @@ local settingsData = {
     previewTimelineSnapSec = 0.1,
     actionLabelDisplayMode = 2,
     stickyRowsEnabled = false,
+    underscoreNames = false,
     speedUnit = 1,
     speedTimelineDockBottom = false,
     speedTimelineDockHeight = 300,

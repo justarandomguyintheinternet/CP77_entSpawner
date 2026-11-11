@@ -171,6 +171,7 @@ local function finishQueuedGroupLoad()
     local onFinished = state.onFinished
     local projectFile = state.projectFile
     local suppressHistory = state.suppressHistory
+    local styleNames = state.styleNames
 
     -- Bind before releasing suppression, so the group is already known to be a faithful copy of its
     -- file by the time anything can mark it modified.
@@ -180,6 +181,12 @@ local function finishQueuedGroupLoad()
 
     releaseSuppress(state)
     groupLoadManager.state = createLoadState(state)
+
+    -- Before the insert action, so history records the styled names.
+    if styleNames then
+        require("modules/classes/editor/element").styleNewNames(loadedGroup)
+        saveState.markDirty(loadedGroup)
+    end
 
     if not suppressHistory then
         history.addAction(history.getInsert({ loadedGroup }))
@@ -444,6 +451,8 @@ end
 ---saved project (favorites, prefabs, session blobs).
 ---@field suppressHistory boolean? Skip the insert action on finish. Used when restoring several
 ---groups at once, where one history entry per group would be noise.
+---@field styleNames boolean? Apply the `underscoreNames` setting to the loaded tree on finish, for
+---content added rather than restored (prefabs).
 ---@field chunkSize number?
 ---@field buildChunkSize number?
 ---@field enqueueChunkSize number?
@@ -471,6 +480,7 @@ function groupLoadManager.start(request)
     state.onFinished = request.onFinished
     state.projectFile = request.projectFile
     state.suppressHistory = request.suppressHistory == true
+    state.styleNames = request.styleNames == true
 
     acquireSuppress(state)
 

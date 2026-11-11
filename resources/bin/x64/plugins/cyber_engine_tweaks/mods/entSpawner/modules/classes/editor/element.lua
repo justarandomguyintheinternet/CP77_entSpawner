@@ -6,6 +6,10 @@ local saveState = require("modules/utils/project/saveState")
 local projectFiles = require("modules/utils/project/projectFiles")
 local projectLinkPopup = require("modules/utils/ui/projectLinkPopup")
 local style = require("modules/ui/style")
+local settings = require("modules/utils/core/settings")
+
+-- Depth of `element:load` calls in progress; children attached while loading keep their stored names.
+local loadDepth = 0
 
 ---Base class for hierchical elements, such as groups and objects
 ---@class element
@@ -221,12 +225,17 @@ function element:load(data, silent)
 
 	self.childs = {}
 	if data.childs then
-		for _, child in pairs(data.childs) do
-			local modulePath = child.modulePath or self:getModulePathByType(child)
-			local new = require(modulePath):new(self.sUI)
-			new:load(child, silent)
-			new:setParent(self)
-		end
+		loadDepth = loadDepth + 1
+		local ok, err = pcall(function ()
+			for _, child in pairs(data.childs) do
+				local modulePath = child.modulePath or self:getModulePathByType(child)
+				local new = require(modulePath):new(self.sUI)
+				new:load(child, silent)
+				new:setParent(self)
+			end
+		end)
+		loadDepth = loadDepth - 1
+		if not ok then error(err, 0) end
 	end
 
 	restoreSubtreeSelection(self, subtreeSelection)
@@ -268,7 +277,57 @@ function element.sanitizeDisplayName(name)
 	local cleaned = tostring(name or ""):gsub("[/\\]", "_")
 	cleaned = cleaned:match("^%s*(.-)%s*$")
 
-	return cleaned
+	return element.applyNameStyle(cleaned)
+end
+
+---Applies the `underscoreNames` setting to a name.
+---@param name string
+---@return string
+function element.applyNameStyle(name)
+	if not settings.underscoreNames then return name end
+
+	return (tostring(name or ""):gsub(" ", "_"))
+end
+
+---Whether an element attached now counts as newly added, as opposed to loaded, restored or replayed.
+---@return boolean
+local function shouldStyleNewNames()
+	return settings.underscoreNames
+		and loadDepth == 0
+		and not saveState.isSuppressed()
+		and not history.isReplaying()
+end
+
+local function styleChildNames(entry)
+	for _, child in ipairs(entry.childs) do
+		if not child.lockedRename then
+			local styled = element.applyNameStyle(child.name)
+			if styled ~= child.name then
+				child.name = styled
+				generateUniqueName(child, entry.childs)
+				child.newName = child.name
+			end
+		end
+
+		styleChildNames(child)
+	end
+end
+
+---Applies the `underscoreNames` setting to a newly added element and its whole subtree, keeping
+---sibling names unique. Structural elements (`lockedRename`) keep their names.
+---@param entry element
+function element.styleNewNames(entry)
+	if not settings.underscoreNames then return end
+
+	if not entry.lockedRename then
+		entry.name = element.applyNameStyle(entry.name)
+		if entry.parent then
+			generateUniqueName(entry, entry.parent.childs)
+		end
+		entry.newName = entry.name
+	end
+
+	styleChildNames(entry)
 end
 
 ---The name this element would end up with if renamed to `name`: sanitized, and suffixed until no
@@ -352,11 +411,15 @@ end
 ---@param index number?
 function element:setParent(parent, index)
 	if self.lockedRemove then return end
+	local isNew = self.parent == nil
 	if self.parent then
 		self.parent:removeChild(self)
 	end
 
 	self.parent = parent
+	if isNew and shouldStyleNewNames() then
+		element.styleNewNames(self)
+	end
 	parent:addChild(self, index)
 	invalidateSUI(self, true)
 end

@@ -166,6 +166,7 @@ local settingsSectionSearchText = {
         "Sort saved projects groups order",
         table.concat(savedSortModes, " "),
         "Sticky Hierarchy Rows",
+        "Replace spaces with _ in names underscore group element rename",
         "Balance between icons and text",
         "Preferred icon Icon and text Preferred text"
     }, " "),
@@ -1612,6 +1613,13 @@ function settingsUI.draw(spawner)
         ImGui.SameLine()
         style.styledText(IconGlyphs.Flask, style.activeColor)
         style.tooltip("-{ Experimental feature }-\nInterface may bug when scrolling at the bottom of the hierarchy.")
+
+        local underscoreNames, underscoreNamesChanged = ImGui.Checkbox("Replace spaces with _ in names", settings.underscoreNames)
+        if underscoreNamesChanged then
+            settings.underscoreNames = underscoreNames
+            settings.save()
+        end
+        style.tooltip("Group and element names get \"_\" instead of spaces when renamed, added, pasted or generated.\nNames of loaded projects are left as they are.")
 
         local parentChain, parentChainChanged = ImGui.Checkbox("Show what a component is attached to", settings.componentParentChain)
         if parentChainChanged then
