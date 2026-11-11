@@ -40,7 +40,7 @@ local COLLISION_PREVIEW_ARCHIVE = "scc_collision.archive"
 
 local about = {
     name = "World Builder",
-    version = "2.0.0",
+    version = "2.0.1",
     author = "NexusGuy999",
     maintainer = "Akiway",
     contributors = { "spiritualspirit", "tordalor", "Spuddeh", "MisterChedda", "SunliveQ", "theCyanideX" },
