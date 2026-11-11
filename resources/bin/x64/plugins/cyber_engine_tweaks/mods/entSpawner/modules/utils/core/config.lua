@@ -18,22 +18,76 @@ config = {}
 ---@field spawnData string raw spawn path read from a `.txt` line
 ---@field deviceClassName string? optional device class name parsed from list line (`{className} {path}`)
 
+---@param err any Error returned by `io.open`.
+---@return boolean
+function config.isHandleLimitError(err)
+    return type(err) == "string" and err:lower():find("too many open files", 1, true) ~= nil
+end
+
+---Readable reason for a failed `io.open` of `path`, without the path itself.
+---@param path string
+---@param err any Error returned by `io.open`.
+---@return string
+function config.describeOpenErrorReason(path, err)
+    if config.isHandleLimitError(err) then
+        return "the game process has reached its open-file limit, which is shared by all mods "
+            .. "(usually another mod not closing its files). Existing files are unchanged; restarting the game clears it"
+    end
+
+    local text = tostring(err)
+    local prefix = path .. ": "
+    if text:sub(1, #prefix) == prefix then
+        text = text:sub(#prefix + 1)
+    end
+
+    return text
+end
+
+---@param path string
+---@param err any Error returned by `io.open`.
+---@return string
+function config.describeOpenError(path, err)
+    return "could not open " .. path .. ": " .. config.describeOpenErrorReason(path, err)
+end
+
+---`io.open` that, on hitting the open-file limit, finalizes leaked Lua file handles and retries once.
+---@param path string
+---@param mode string?
+---@return file*? file
+---@return string? err
+function config.openFile(path, mode)
+    local file, err = io.open(path, mode)
+    if not file and config.isHandleLimitError(err) then
+        collectgarbage("collect")
+        file, err = io.open(path, mode)
+    end
+
+    return file, err
+end
+
 ---Checks whether a file can be opened for reading.
 ---@param filename string Relative or absolute file path.
 ---@return boolean exists `true` when the file exists and is readable.
+---@return string? err Open error when it does not; check `config.isHandleLimitError` before treating it as missing.
 function config.fileExists(filename)
-    local f=io.open(filename,"r")
-    if (f~=nil) then io.close(f) return true else return false end
+    local f, err = config.openFile(filename, "r")
+    if f then
+        io.close(f)
+        return true
+    end
+
+    return false, err
 end
 
 ---Reads the full text content of a file.
 ---Unlike `config.loadRaw`, this returns `nil` instead of erroring when the file is missing.
 ---@param path string Relative or absolute file path.
 ---@return string? content Full file content, or `nil` when the file cannot be opened.
+---@return string? err Open error when `content` is `nil`.
 function config.readAll(path)
-    local file = io.open(path, "r")
+    local file, err = config.openFile(path, "r")
     if not file then
-        return nil
+        return nil, err
     end
 
     local content = file:read("*a")
@@ -95,11 +149,11 @@ end
 ---@param path string Relative or absolute destination path.
 ---@param content string Raw text to write.
 ---@return boolean success `true` when write completes.
----@return string? err Error code/message when write fails (`open_failed` or runtime error text).
+---@return string? err Error message when write fails.
 local function writeAll(path, content)
-    local file = io.open(path, "w")
+    local file, openErr = config.openFile(path, "w")
     if not file then
-        return false, "open_failed"
+        return false, config.describeOpenErrorReason(path, openErr)
     end
 
     local ok, err = pcall(function ()
@@ -208,43 +262,12 @@ function config.beginAtomicWrite(path)
     recoverSwapFile(path)
     os.remove(tmpPath)
 
-    local file, err = io.open(tmpPath, "w")
-    if not file and config.isHandleLimitError(err) then
-        -- Finalizes file handles left unclosed in the Lua state, then retries once.
-        collectgarbage("collect")
-        file, err = io.open(tmpPath, "w")
-    end
-
+    local file, err = config.openFile(tmpPath, "w")
     if not file then
         return nil, tmpPath, tostring(err)
     end
 
     return file, tmpPath, nil
-end
-
----@param err any Error returned by `io.open`.
----@return boolean
-function config.isHandleLimitError(err)
-    return type(err) == "string" and err:lower():find("too many open files", 1, true) ~= nil
-end
-
----Readable reason for a failed `io.open` of `path`.
----@param path string
----@param err any Error returned by `io.open`.
----@return string
-function config.describeOpenError(path, err)
-    if config.isHandleLimitError(err) then
-        return "could not open " .. path .. ": the game process has reached its open-file limit, which is shared by all mods "
-            .. "(usually another mod not closing its files). The existing file is unchanged; restarting the game clears it"
-    end
-
-    local text = tostring(err)
-    local prefix = path .. ": "
-    if text:sub(1, #prefix) == prefix then
-        text = text:sub(#prefix + 1)
-    end
-
-    return "could not open " .. path .. ": " .. text
 end
 
 ---Throws away an in-progress streamed write. The destination file is left exactly as it was.
@@ -303,9 +326,13 @@ end
 function config.loadFile(path)
     recoverSwapFile(path)
 
-    local raw = readAll(path)
+    local raw, openErr = readAll(path)
     if raw == nil then
-        logger:warn("Failed to load file: " .. path .. ", restoring empty state")
+        if config.isHandleLimitError(openErr) then
+            logger:error("Failed to load file: " .. config.describeOpenError(path, openErr))
+        else
+            logger:warn("Failed to load file: " .. path .. ", restoring empty state")
+        end
         return {}
     end
 

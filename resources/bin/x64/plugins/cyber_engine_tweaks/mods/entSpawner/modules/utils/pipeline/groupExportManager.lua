@@ -54,9 +54,9 @@ groupExportManager.state = createExportRuntime()
 groupExportManager.pendingToasts = {}
 
 local function appendExportErrorLog(line)
-    local file, openErr = io.open(EXPORT_ERROR_LOG_PATH, "a")
+    local file, openErr = config.openFile(EXPORT_ERROR_LOG_PATH, "a")
     if not file then
-        logger:error(string.format("[Group Export Manager] Failed to open export log \"%s\": %s", EXPORT_ERROR_LOG_PATH, tostring(openErr)))
+        logger:error("[Group Export Manager] Failed to write export log: " .. config.describeOpenError(EXPORT_ERROR_LOG_PATH, openErr))
         return
     end
 
@@ -427,11 +427,19 @@ local function prepareIncrementalRuntime(runtime)
     local exportPath = runtime.projectPath
     local sidecarPath = runtime.sidecarPath
 
-    if not config.fileExists(exportPath) then
+    local exportExists, exportErr = config.fileExists(exportPath)
+    if not exportExists then
+        if config.isHandleLimitError(exportErr) then
+            return false, config.describeOpenError(exportPath, exportErr)
+        end
         return false, "base export file not found"
     end
 
-    if not config.fileExists(sidecarPath) then
+    local sidecarExists, sidecarErr = config.fileExists(sidecarPath)
+    if not sidecarExists then
+        if config.isHandleLimitError(sidecarErr) then
+            return false, config.describeOpenError(sidecarPath, sidecarErr)
+        end
         return false, "sidecar metadata file not found"
     end
 
@@ -971,7 +979,14 @@ beginNextGroup = function (runtime)
     -- The project file, not the group's name: since the two were split, a renamed group would
     -- otherwise look like a missing project and be skipped.
     local path = "data/objects/" .. groupExportSidecar.resolveGroupFileName(group)
-    if not config.fileExists(path) then
+    local exists, existsErr = config.fileExists(path)
+    if not exists and config.isHandleLimitError(existsErr) then
+        -- The file is there but cannot be opened; skipping it would silently drop the group from the export.
+        abortExport(runtime, "prepare_group", config.describeOpenError(path, existsErr))
+        return
+    end
+
+    if not exists then
         queueToast("warning", 3500, string.format("Skipped missing group \"%s\"", tostring(group.name)))
         advanceGroup(runtime, false)
         return
