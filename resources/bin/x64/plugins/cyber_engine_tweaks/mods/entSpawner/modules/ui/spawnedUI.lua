@@ -2033,6 +2033,13 @@ function spawnedUI.drawContextMenu(element, path)
                 { icon = IconGlyphs.HospitalMarker, label = "Show all", onClick = function() setChildrenVisualization(true) end },
                 { icon = IconGlyphs.MapMarkerOffOutline, label = "Hide all", onClick = function() setChildrenVisualization(false) end }
             }, { id = "childrenVisualization" })
+
+            if ImGui.MenuItem(style.resolveActionLabelNoIconOnly(IconGlyphs.Export, "Exclude hidden children from export", "excludeHiddenFromExport")) then
+                applyElementChangesBatched({ element }, function(entry)
+                    entry:excludeHiddenDescendantsFromExport(true)
+                end)
+            end
+            style.tooltip("Excludes every hidden child from export.\nHidden groups are excluded as a whole.")
             ImGui.EndDisabled()
             ImGui.BeginDisabled(isLocked)
 

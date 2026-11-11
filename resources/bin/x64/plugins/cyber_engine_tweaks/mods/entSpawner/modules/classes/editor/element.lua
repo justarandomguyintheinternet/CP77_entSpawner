@@ -804,13 +804,36 @@ end
 ---Sets whether this element is excluded from export. Parent exclusion is resolved by the exporter,
 ---so a group never overwrites its descendants' own state.
 ---@param state boolean
-function element:setExportDisabled(state)
+---@param fromRecursive boolean? Skip the history entry; the caller records it
+function element:setExportDisabled(state, fromRecursive)
 	if self.exportDisabled == state then return end
 
-	history.addAction(history.getElementChange(self))
+	if not fromRecursive then
+		history.addAction(history.getElementChange(self))
+	end
 	saveState.markDirty(self)
 	self.exportDisabled = state
 	invalidateSUI(self, false)
+end
+
+---Excludes from export the topmost hidden descendants; their subtrees inherit the exclusion.
+---@param fromRecursive boolean? Skip history entries; the caller records them
+---@return integer count Number of elements newly excluded
+function element:excludeHiddenDescendantsFromExport(fromRecursive)
+	local count = 0
+
+	for _, child in pairs(self.childs) do
+		if not child.visible or child.hiddenByParent then
+			if child.exportDisabled ~= true then
+				child:setExportDisabled(true, fromRecursive)
+				count = count + 1
+			end
+		else
+			count = count + child:excludeHiddenDescendantsFromExport(fromRecursive)
+		end
+	end
+
+	return count
 end
 
 function element:setSilent(state)
