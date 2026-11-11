@@ -209,11 +209,42 @@ function config.beginAtomicWrite(path)
     os.remove(tmpPath)
 
     local file, err = io.open(tmpPath, "w")
+    if not file and config.isHandleLimitError(err) then
+        -- Finalizes file handles left unclosed in the Lua state, then retries once.
+        collectgarbage("collect")
+        file, err = io.open(tmpPath, "w")
+    end
+
     if not file then
         return nil, tmpPath, tostring(err)
     end
 
     return file, tmpPath, nil
+end
+
+---@param err any Error returned by `io.open`.
+---@return boolean
+function config.isHandleLimitError(err)
+    return type(err) == "string" and err:lower():find("too many open files", 1, true) ~= nil
+end
+
+---Readable reason for a failed `io.open` of `path`.
+---@param path string
+---@param err any Error returned by `io.open`.
+---@return string
+function config.describeOpenError(path, err)
+    if config.isHandleLimitError(err) then
+        return "could not open " .. path .. ": the game process has reached its open-file limit, which is shared by all mods "
+            .. "(usually another mod not closing its files). The existing file is unchanged; restarting the game clears it"
+    end
+
+    local text = tostring(err)
+    local prefix = path .. ": "
+    if text:sub(1, #prefix) == prefix then
+        text = text:sub(#prefix + 1)
+    end
+
+    return "could not open " .. path .. ": " .. text
 end
 
 ---Throws away an in-progress streamed write. The destination file is left exactly as it was.

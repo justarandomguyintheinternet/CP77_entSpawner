@@ -222,7 +222,7 @@ local function openWriteTarget(job)
     job.tmpPath = tmpPath
 
     if not file then
-        record.lastError = "could not open " .. tmpPath .. ": " .. tostring(err)
+        record.lastError = config.describeOpenError(tmpPath, err)
         logger:error("[Persistence] " .. record.lastError)
         return false
     end

@@ -437,7 +437,7 @@ local function beginJob()
         -- Stays pending so the next quiet window retries. Giving up permanently would mean a transient
         -- problem (the file briefly locked, a full disk) silently disabled crash recovery for the rest
         -- of the session.
-        reportWriteFailure("could not open " .. tmpPath .. ": " .. tostring(err))
+        reportWriteFailure(config.describeOpenError(tmpPath, err) .. " (crash-recovery snapshot will retry)")
         return false
     end
 
