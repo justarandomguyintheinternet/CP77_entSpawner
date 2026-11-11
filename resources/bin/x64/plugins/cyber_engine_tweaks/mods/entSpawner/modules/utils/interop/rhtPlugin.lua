@@ -130,6 +130,89 @@ local function getNativeNode(node, probe)
     return native
 end
 
+---Inner node a cooked target points at (game 2.5, Red Hot Tools 1.3+).
+---@param node any
+---@return any?
+local function getInnerNode(node)
+    local definition = node and node.nodeDefinition
+    local index = node and tonumber(node.innerIndex)
+    if not definition or not index or index < 0 then
+        return nil
+    end
+
+    local ok, inner = pcall(function()
+        if definition:IsA("worldInstancedMeshNode") then
+            return definition.cookedInstances[index + 1]
+        end
+        return definition:GetInnerNode(index)
+    end)
+
+    return ok and inner or nil
+end
+
+-- Spawn lists hashed to resolve resources the game's name table lacks.
+local PATH_LISTS = {
+    "data/spawnables/visual/decals/paths_mi.txt"
+}
+
+local pathsByHash = nil
+
+---@param hash any
+---@return string
+local function hashKey(hash)
+    return (tostring(hash):gsub("ULL", ""))
+end
+
+---Depot path of a resource hash, from the game's name table, then from the spawn lists.
+---@param hash any ResRef hash, or its decimal text.
+---@return string
+local function resolveDepotPath(hash)
+    if hash == nil then
+        return ""
+    end
+
+    if type(hash) ~= "string" then
+        local ok, path = pcall(function()
+            return ResRef.FromHash(hash):ToString()
+        end)
+        if ok and type(path) == "string" and path ~= "" then
+            return path
+        end
+    end
+
+    if not pathsByHash then
+        pathsByHash = {}
+        for _, list in ipairs(PATH_LISTS) do
+            local ok, lines = pcall(io.lines, list)
+            if ok then
+                for line in lines do
+                    local path = line:gsub("\r", "")
+                    if path ~= "" then
+                        pathsByHash[hashKey(FNV1a64(path))] = path
+                    end
+                end
+            end
+        end
+    end
+
+    return pathsByHash[hashKey(hash)] or ""
+end
+
+---Path text from Red Hot Tools, which gives the decimal hash for resources it cannot name.
+---@param value any
+---@return string
+local function toDepotPath(value)
+    if type(value) ~= "string" then
+        return ""
+    end
+
+    if value:match("^%d+$") then
+        return resolveDepotPath(value)
+    end
+
+    return value
+end
+
 -- Notifier class -> the trigger type the editor lists it under. Only the ones the Trigger Area
 -- variant can actually author: an area whose notifier is missing here keeps its class default,
 -- which is what Ambient and Conversation areas rely on.
@@ -247,12 +330,9 @@ local MESH_SHADOW_FIELDS = {
 ---@param native any? Node object behind the target, or nil when it could not be resolved.
 ---@return table? nil when there is no mesh to clone.
 local function readMeshAsset(node, native)
-    local meshPath = type(node and node.meshPath) == "string" and node.meshPath or ""
+    local meshPath = toDepotPath(node and node.meshPath)
     if meshPath == "" then
-        local hash = safeGet(safeGet(native, "mesh"), "hash")
-        if hash then
-            meshPath = ResRef.FromHash(hash):ToString()
-        end
+        meshPath = resolveDepotPath(safeGet(safeGet(native, "mesh"), "hash"))
     end
 
     if meshPath == "" then
@@ -350,25 +430,15 @@ local function toClothCollisionType(mask, defaultValue)
     return defaultValue
 end
 
----Data of a `worldBendedMeshNode`, in the shape the Bended Mesh spawnable loads. What makes the
----node more than a static mesh is its deformation: one matrix per path point, which the
----spawnable's own converter reads back into the path it edits. The deformed box comes across as
----authored, even though the spawnable refits it to that path once the mesh bounds are known.
----@param node any
----@return table?
-local function readBendedMeshData(node)
-    -- worldBendedMeshNode derives from worldNode, not from worldMeshNode, so only the asset is
-    -- shared with the mesh subtypes; the flags it does carry are its own and read below.
-    local native = getNativeNode(node, "deformationData")
-    local data = readMeshAsset(node, native)
-
-    if not data or not native then
-        return data
-    end
-
+---Adds a bended mesh's deformation and flags to `data`, in the shape the Bended Mesh spawnable loads.
+---@param data table Mesh asset data.
+---@param native any Node or cooked inner node carrying the flags.
+---@param matrices table? One deformation matrix per path point.
+---@param box any? Deformed box.
+---@return table
+local function readBendedFields(data, native, matrices, box)
     -- A deformation that cannot be read must not cost the clone its mesh, so the path falls back
     -- to the default the spawnable derives from the mesh itself.
-    local matrices = safeGet(native, "deformationData")
     if type(matrices) == "table" and #matrices > 0 then
         local rebuild = require("modules/classes/spawn/mesh/bendedMesh").pathPointsFromMatrices
         local ok, pathPoints = pcall(rebuild, matrices)
@@ -395,8 +465,8 @@ local function readBendedMeshData(node)
         end
     end
 
-    local boxMin = safeGet(safeGet(native, "deformedBox"), "Min")
-    local boxMax = safeGet(safeGet(native, "deformedBox"), "Max")
+    local boxMin = safeGet(box, "Min")
+    local boxMax = safeGet(box, "Max")
     if boxMin and boxMax then
         data.deformedBox = {
             min = { x = boxMin.x, y = boxMin.y, z = boxMin.z, w = 1 },
@@ -423,6 +493,145 @@ local function readBendedMeshData(node)
     local navmeshImpact = safeGet(safeGet(native, "navigationSetting"), "navmeshImpact")
     if navmeshImpact ~= nil then
         data.navigationImpact = getEnumIndex("NavGenNavmeshImpact", navmeshImpact)
+    end
+
+    return data
+end
+
+---Data of a `worldBendedMeshNode`.
+---@param node any
+---@return table?
+local function readBendedMeshData(node)
+    local native = getNativeNode(node, "deformationData")
+    local data = readMeshAsset(node, native)
+
+    if not data or not native then
+        return data
+    end
+
+    return readBendedFields(data, native, safeGet(native, "deformationData"), safeGet(native, "deformedBox"))
+end
+
+---Data of one inner node of a `worldCookedBendedMeshNode`, whose deformation is a slice of the
+---cooked node's shared matrix array.
+---@param node any
+---@return table?
+local function readCookedBendedMeshData(node)
+    local inner = getInnerNode(node)
+    local data = readMeshAsset(node, inner)
+
+    if not data or not inner then
+        return data
+    end
+
+    local definition = node.nodeDefinition
+    local all = safeGet(definition, "deformationData")
+    local start = utils.toNumber(safeGet(inner, "deformationDataStartIndex"), 0)
+    local count = utils.toNumber(safeGet(inner, "deformationDataCount"), 0)
+
+    local matrices = {}
+    if type(all) == "table" then
+        for index = 1, count do
+            matrices[index] = all[start + index]
+        end
+    end
+
+    local boxIndex = utils.toNumber(safeGet(inner, "deformedBoxIndex"), 0)
+    local box = safeGet(safeGet(definition, "deformedBoxes"), boxIndex + 1)
+
+    data = readBendedFields(data, inner, matrices, box)
+
+    -- The two flags are swapped in the inner node's RTTI layout (Red Hot Tools 1.3, RED4ext.SDK).
+    data.isBendedRoad = utils.toBoolean(safeGet(inner, "removeFromRainMap"), true)
+    data.removeFromRainMap = utils.toBoolean(safeGet(inner, "isBendedRoad"), false)
+
+    return data
+end
+
+---Data of a cooked mesh target (`worldCookedMeshNode`, `worldInstancedMeshNode`).
+---@param node any
+---@return table?
+local function readCookedMeshData(node)
+    return readMeshNodeData(node, getInnerNode(node))
+end
+
+---Data of a proxy mesh node or cooked proxy inner node.
+---@param node any
+---@param native any?
+---@return table?
+local function readProxyMeshData(node, native)
+    local meshPath = toDepotPath(node and node.meshPath)
+    if meshPath == "" then
+        return nil
+    end
+
+    local data = { spawnData = meshPath }
+
+    local distance = utils.toNumber(safeGet(native, "nearAutoHideDistance"))
+    if distance then
+        data.nearAutoHideDistance = distance
+    end
+
+    return data
+end
+
+-- Bits of a cooked decal inner node's `flags`.
+local DECAL_FLAG_BITS = {
+    isStretchingEnabled = 1,
+    verticalFlip = 2,
+    horizontalFlip = 4
+}
+
+---Data of a decal node, or of a cooked decal inner node when `cooked` is its cooked node.
+---@param node any
+---@param native any?
+---@param cooked any?
+---@return table?
+local function readDecalData(node, native, cooked)
+    local material = toDepotPath(node and node.materialPath)
+    if material == "" then
+        material = resolveDepotPath(safeGet(safeGet(native, "material"), "hash"))
+    end
+
+    if material == "" then
+        return nil
+    end
+
+    local data = { spawnData = material }
+    if not native then
+        return data
+    end
+
+    data.alpha = utils.toNumber(safeGet(native, "alpha"), 1)
+    data.autoHideDistance = utils.toNumber(safeGet(native, "autoHideDistance"), 20)
+    data.orderNo = utils.toNumber(safeGet(native, "orderNo"), 0)
+    data.normalThreshold = utils.toNumber(safeGet(native, "normalThreshold"), 1)
+    data.roughnessScale = utils.toNumber(safeGet(native, "roughnessScale"), 1)
+
+    local color
+    if cooked then
+        local flags = utils.toNumber(safeGet(native, "flags"), 0)
+        for field, bit in pairs(DECAL_FLAG_BITS) do
+            data[field] = math.floor(flags / bit) % 2 == 1
+        end
+
+        local colorIndex = utils.toNumber(safeGet(native, "diffuseColorScaleIndex"), 0)
+        color = safeGet(safeGet(cooked, "diffuseColorScales"), colorIndex + 1)
+    else
+        data.horizontalFlip = utils.toBoolean(safeGet(native, "horizontalFlip"), false)
+        data.verticalFlip = utils.toBoolean(safeGet(native, "verticalFlip"), false)
+        data.isStretchingEnabled = utils.toBoolean(safeGet(native, "isStretchingEnabled"), false)
+        color = safeGet(native, "diffuseColorScale")
+    end
+
+    -- HDRColor channels are already normalized, unlike the 0-255 Color a light node carries.
+    if color then
+        data.diffuseColorScale = {
+            utils.toNumber(safeGet(color, "Red"), 1),
+            utils.toNumber(safeGet(color, "Green"), 1),
+            utils.toNumber(safeGet(color, "Blue"), 1),
+            utils.toNumber(safeGet(color, "Alpha"), 1)
+        }
     end
 
     return data
@@ -496,6 +705,40 @@ local TYPE_MAP = {
         dataRetrieval = readBendedMeshData,
         category = "Mesh",
         sub = "Bended Mesh",
+        replacer = true
+    },
+    ["worldCookedBendedMeshNode"] = {
+        dataRetrieval = readCookedBendedMeshData,
+        category = "Mesh",
+        sub = "Bended Mesh",
+        replacer = true
+    },
+    ["worldCookedStaticMeshNode"] = {
+        dataRetrieval = readCookedMeshData,
+        category = "Mesh",
+        sub = "Static Mesh",
+        replacer = true
+    },
+    ["worldCookedPrefabProxyMeshNode"] = {
+        dataRetrieval = function(node)
+            return readProxyMeshData(node, getInnerNode(node))
+        end,
+        category = "Mesh",
+        sub = "Proxy Mesh",
+        replacer = true
+    },
+    ["worldCookedMeshNode"] = {
+        dataRetrieval = readCookedMeshData,
+        category = "Mesh",
+        sub = "Static Mesh",
+        replacer = true
+    },
+    ["worldCookedStaticDecalNode"] = {
+        dataRetrieval = function(node)
+            return readDecalData(node, getInnerNode(node), node and node.nodeDefinition)
+        end,
+        category = "Deco",
+        sub = "Decals",
         replacer = true
     },
     -- The three worldMeshNode subtypes below are probed on the property that defines them, so a
@@ -613,7 +856,7 @@ local TYPE_MAP = {
         replacer = true
     },
     ["worldInstancedMeshNode"] = {
-        data = "meshPath",
+        dataRetrieval = readCookedMeshData,
         category = "Mesh",
         sub = "Static Mesh",
         replacer = true
@@ -628,27 +871,7 @@ local TYPE_MAP = {
     -- Matched via IsA before worldMeshNode so proxies clone as a Proxy Mesh instead of a plain Static Mesh.
     ["worldPrefabProxyMeshNode"] = {
         dataRetrieval = function(node)
-            local meshPath = node and node.meshPath or ""
-            if type(meshPath) ~= "string" or meshPath == "" then
-                return nil
-            end
-
-            local data = { spawnData = meshPath }
-
-            local native = node.nodeDefinition
-            if native then
-                local ok, value = pcall(function()
-                    return native.nearAutoHideDistance
-                end)
-                if ok and value ~= nil then
-                    local numeric = type(value) == "number" and value or tonumber(tostring(value))
-                    if numeric then
-                        data.nearAutoHideDistance = numeric
-                    end
-                end
-            end
-
-            return data
+            return readProxyMeshData(node, node and node.nodeDefinition)
         end,
         category = "Mesh",
         sub = "Proxy Mesh",
@@ -656,47 +879,7 @@ local TYPE_MAP = {
     },
     ["worldStaticDecalNode"] = {
         dataRetrieval = function(node)
-            local native = getNativeNode(node, "isStretchingEnabled")
-
-            -- Red Hot Tools resolves the material itself; reading the node is the fallback.
-            local material = type(node and node.materialPath) == "string" and node.materialPath or ""
-            if material == "" then
-                local hash = safeGet(safeGet(native, "material"), "hash")
-                if hash then
-                    material = ResRef.FromHash(hash):ToString()
-                end
-            end
-
-            if material == "" then
-                return nil
-            end
-
-            local data = { spawnData = material }
-            if not native then
-                return data
-            end
-
-            data.alpha = utils.toNumber(safeGet(native, "alpha"), 1)
-            data.autoHideDistance = utils.toNumber(safeGet(native, "autoHideDistance"), 20)
-            data.horizontalFlip = utils.toBoolean(safeGet(native, "horizontalFlip"), false)
-            data.verticalFlip = utils.toBoolean(safeGet(native, "verticalFlip"), false)
-            data.isStretchingEnabled = utils.toBoolean(safeGet(native, "isStretchingEnabled"), false)
-            data.orderNo = utils.toNumber(safeGet(native, "orderNo"), 0)
-            data.normalThreshold = utils.toNumber(safeGet(native, "normalThreshold"), 1)
-            data.roughnessScale = utils.toNumber(safeGet(native, "roughnessScale"), 1)
-
-            -- HDRColor channels are already normalized, unlike the 0-255 Color a light node carries.
-            local color = safeGet(native, "diffuseColorScale")
-            if color then
-                data.diffuseColorScale = {
-                    utils.toNumber(safeGet(color, "Red"), 1),
-                    utils.toNumber(safeGet(color, "Green"), 1),
-                    utils.toNumber(safeGet(color, "Blue"), 1),
-                    utils.toNumber(safeGet(color, "Alpha"), 1)
-                }
-            end
-
-            return data
+            return readDecalData(node, getNativeNode(node, "isStretchingEnabled"))
         end,
         category = "Deco",
         sub = "Decals",
@@ -1003,6 +1186,7 @@ local TYPE_PRIORITY = {
     "worldBakedDestructionNode",
     "worldInstancedDestructibleMeshNode",
     "worldBendedMeshNode",
+    "worldCookedBendedMeshNode",
     "worldStaticOccluderMeshNode",
     "worldFoliageNode",
     -- Cloth, rotating and dynamic meshes derive from worldMeshNode, so they come before it and
@@ -1014,7 +1198,12 @@ local TYPE_PRIORITY = {
     "worldInstancedMeshNode",
     "worldPrefabProxyMeshNode",
     "worldMeshNode",
+    -- Cooked proxies derive from worldCookedMeshNode, so they come before it.
+    "worldCookedStaticMeshNode",
+    "worldCookedPrefabProxyMeshNode",
+    "worldCookedMeshNode",
     "worldStaticDecalNode",
+    "worldCookedStaticDecalNode",
     "worldStaticParticleNode",
     "worldEffectNode",
     "worldStaticLightNode",
@@ -1402,7 +1591,7 @@ local function insertRemovalInMemory(removalEditor, node)
         type = node.nodeType,
         index = node.instanceIndex,
         nodeRef = node.nodeRef or "",
-        resource = node.meshPath or node.templatePath or node.materialPath or node.effectPath or node.recordID or node.workspotPath or "",
+        resource = toDepotPath(node.meshPath or node.templatePath or node.materialPath or node.effectPath or node.recordID or node.workspotPath),
         debugName = node.debugName or ""
     }
 
@@ -1417,8 +1606,9 @@ local function insertRemovalInMemory(removalEditor, node)
                     return type(nodeDefinition.IsA) == "function" and nodeDefinition:IsA("worldInstancedMeshNode")
                 end)
                 if okInstanced and isInstanced then
-                    local transformsBuffer = safeGet(nodeDefinition, "worldTransformsBuffer")
-                    local elements = tonumber(safeGet(transformsBuffer, "numElements"))
+                    local innerIndex = tonumber(node.innerIndex) or 0
+                    local range = safeGet(safeGet(nodeDefinition, "transformRanges"), innerIndex + 1)
+                    local elements = tonumber(safeGet(range, "numTransforms"))
                     if elements and elements > 0 then
                         diff = elements
                     end
@@ -1600,8 +1790,12 @@ function rht.sendToSearch(node)
 
     -- Table-returning resolvers (e.g. Proxy Mesh, AI Spot) don't hand back a plain path, but
     -- the node still carries the one the browser is filtered by.
-    if searchText == "" and type(node.meshPath) == "string" then
-        searchText = node.meshPath
+    if searchText == "" and type(resolved) == "table" and type(resolved.spawnData) == "string" then
+        searchText = resolved.spawnData
+    end
+
+    if searchText == "" then
+        searchText = toDepotPath(node.meshPath)
     end
 
     if searchText == "" and type(node.workspotPath) == "string" then
@@ -1648,15 +1842,16 @@ function rht.copyAXLNodeMutation(node)
 
     local definition = getDefinition(node)
     local resolvedResource = resolveData(node, definition)
-    local resource = type(resolvedResource) == "string" and resolvedResource or nil
-    resource = resource
+    local resource = type(resolvedResource) == "string" and resolvedResource
+        or type(resolvedResource) == "table" and resolvedResource.spawnData
+        or nil
+    resource = toDepotPath(resource
         or node.meshPath
         or node.templatePath
         or node.materialPath
         or node.effectPath
         or node.recordID
-        or node.workspotPath
-        or ""
+        or node.workspotPath)
 
     local position = isRHTNodePositionVisible(node.nodePosition) and node.nodePosition or node.entityPosition
     local orientation = isRHTNodeOrientationVisible(node.nodeOrientation) and node.nodeOrientation or node.entityOrientation
@@ -1804,6 +1999,36 @@ local function getCloneDefinition(definition)
     return definition
 end
 
+---Scale of one instance of a `worldInstancedMeshNode`, which Red Hot Tools does not report.
+---@param node any
+---@param actorIndex number? Instance within the inner node's transform range; nil picks a lone instance only.
+---@return Vector4?
+local function getInstanceScale(node, actorIndex)
+    local definition = node and node.nodeDefinition
+    local innerIndex = node and tonumber(node.innerIndex)
+    if not definition or not innerIndex then
+        return nil
+    end
+
+    local ok, scale = pcall(function()
+        if not definition:IsA("worldInstancedMeshNode") then
+            return nil
+        end
+
+        local range = definition.transformRanges[innerIndex + 1]
+        local count = range and range.numTransforms or 0
+        local index = actorIndex or (count == 1 and 0 or nil)
+        if not index or index >= count then
+            return nil
+        end
+
+        local value = definition:GetTransform(range.transformStartIndex + index).scale
+        return Vector4.new(value.x, value.y, value.z, 1)
+    end)
+
+    return ok and scale or nil
+end
+
 local function spawnClone(node, definition)
     if not rht.spawnUI then
         return nil
@@ -1865,7 +2090,8 @@ local function spawnClone(node, definition)
         or node.nodePosition or node.entityPosition or node.position) or nil
     local rotation = node and ((hasResolvedActor and node.orientation)
         or node.nodeOrientation or node.entityOrientation or node.orientation) or nil
-    local scale = node and (node.nodeScale or Vector4.new(1, 1, 1, 1)) or nil
+    local scale = node and (getInstanceScale(node, hasResolvedActor and actorIndex or nil)
+        or node.nodeScale or Vector4.new(1, 1, 1, 1)) or nil
 
     -- The node in the world is what this clone is a copy of, so its transform is the one the
     -- transform reset actions in the Spawned tab restore to.
