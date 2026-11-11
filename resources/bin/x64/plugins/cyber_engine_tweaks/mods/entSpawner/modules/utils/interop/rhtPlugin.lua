@@ -539,13 +539,7 @@ local function readCookedBendedMeshData(node)
     local boxIndex = utils.toNumber(safeGet(inner, "deformedBoxIndex"), 0)
     local box = safeGet(safeGet(definition, "deformedBoxes"), boxIndex + 1)
 
-    data = readBendedFields(data, inner, matrices, box)
-
-    -- The two flags are swapped in the inner node's RTTI layout (Red Hot Tools 1.3, RED4ext.SDK).
-    data.isBendedRoad = utils.toBoolean(safeGet(inner, "removeFromRainMap"), true)
-    data.removeFromRainMap = utils.toBoolean(safeGet(inner, "isBendedRoad"), false)
-
-    return data
+    return readBendedFields(data, inner, matrices, box)
 end
 
 ---Data of a cooked mesh target (`worldCookedMeshNode`, `worldInstancedMeshNode`).
