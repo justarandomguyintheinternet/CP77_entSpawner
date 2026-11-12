@@ -290,7 +290,7 @@ function componentTransform:placeArrows(reset)
     local parentPosition, parentOrientation
     local binding = arrows.parentTransform
     local parent = binding and binding.bindName and entity:FindComponentByName(binding.bindName)
-    if parent then
+    if parent and parent:IsA("entIPlacedComponent") then
         local parentToWorld = parent:GetLocalToWorld()
         parentPosition = parentToWorld:GetTranslation()
         parentOrientation = parentToWorld:GetRotation():ToQuat()
