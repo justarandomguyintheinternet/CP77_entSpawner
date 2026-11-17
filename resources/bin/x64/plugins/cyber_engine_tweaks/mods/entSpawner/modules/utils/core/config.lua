@@ -648,10 +648,12 @@ end
 --- - ` {path}` (explicit empty class name)
 ---@param path string Directory path (callers pass a trailing `/`).
 ---@param paths ConfigSpawnPathEntry[]? Optional accumulator for recursive calls.
+---@param rootPath string? Directory of the outermost call, set by the recursion.
 ---@return ConfigSpawnPathEntry[] paths Sorted by `name` in ascending order.
-function config.loadLists(path, paths)
+function config.loadLists(path, paths, rootPath)
     local utils = require("modules/utils/core/utils")
     local paths = paths or {}
+    rootPath = rootPath or path
 
     ---Parses one list line into optional class name + spawn path.
     ---@param line string
@@ -709,9 +711,9 @@ function config.loadLists(path, paths)
             end
 
             data:close()
-            pathOrigin.registerList(path .. file.name, paths, firstIndex)
+            pathOrigin.registerList(path .. file.name, paths, firstIndex, rootPath)
         elseif file.type == "directory" then
-            config.loadLists(path .. file.name .. "/", paths)
+            config.loadLists(path .. file.name .. "/", paths, rootPath)
         end
     end
 

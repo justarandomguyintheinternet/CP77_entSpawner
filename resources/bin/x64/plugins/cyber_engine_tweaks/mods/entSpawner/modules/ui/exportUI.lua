@@ -9,6 +9,7 @@ local groupExportManager = require("modules/utils/pipeline/groupExportManager")
 local pipelineCommon = require("modules/utils/pipeline/common")
 local streamingBox = require("modules/utils/pipeline/streamingBox")
 local soundSystemData = require("modules/utils/data/soundSystem")
+local moddedAssetsUI = require("modules/ui/moddedAssetsUI")
 
 local minScriptVersion = "1.0.5"
 local sectorCategory
@@ -1470,6 +1471,11 @@ function exportUI.draw()
         ImGui.Spacing()
     end
 
+    if #exportUI.groups > 0 then
+        moddedAssetsUI.draw(exportUI.groups, exportUI.resolveGroupFileName)
+        ImGui.Spacing()
+    end
+
     style.pushGreyedOut(#exportUI.groups == 0 or exportUI.projectName == "" or exporting)
     local fullExportLabel = "Full export"
     local updateChangedLabel = "Update existing export"
@@ -1638,9 +1644,11 @@ function exportUI.syncGroupFromData(fileName, blob)
     if not blob then return 0 end
 
     local updated = 0
+    moddedAssetsUI.invalidate(fileName)
 
     for _, group in ipairs(exportUI.groups) do
         if exportUI.resolveGroupFileName(group) == fileName or group.name == fileName then
+            moddedAssetsUI.invalidate(exportUI.resolveGroupFileName(group))
             group.variantData = buildVariantDataFromBlob(blob, group.variantData)
             group.center = resolveGroupCenter(blob, group.center)
             if blob.streamingCenter then
