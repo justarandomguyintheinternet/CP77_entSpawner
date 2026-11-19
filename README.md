@@ -88,3 +88,17 @@
    - Build file, if bug is related to specifc build (Found in `Cyberpunk 2077\bin\x64\plugins\cyber_engine_tweaks\mods\entSpawner\data\objects`)
    - Game version, tool version, requirements versions
    - Any images or videos of the bug
+
+
+## Navigation Area
+
+In **Spawn New → Area → Navigation Area**, place an area over streamed
+collision. Move, rotate or resize it with the usual gizmo. In the object's
+properties, click **Fit to Ground**. The viewport shows the footprint,
+fitted triangle edges and rejected cells. Save the group, add it to Export,
+then import the normal JSON with WolvenKit Resources importer 1.0.7 or later.
+
+One additive Human tile per export is supported. The footprint must be 2–16 m
+per side and fit within one 32.4 m tile. Fit again after changing the area's
+transform or tile layer. Remove the area from its group and re-export to
+remove its streaming registration on the next import.
