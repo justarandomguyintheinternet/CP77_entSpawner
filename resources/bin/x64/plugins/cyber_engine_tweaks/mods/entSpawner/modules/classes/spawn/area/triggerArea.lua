@@ -364,8 +364,11 @@ local function getExportTrigger(trigger)
     return data
 end
 
-function triggerArea:export()
-    local data = area.export(self)
+-- Outline z offset: keeps local z = 0 strictly inside the volume (engine inner-area point test).
+local OUTLINE_Z_OFFSET = -0.01
+
+function triggerArea:export(key, length, markersZOffset)
+    local data = area.export(self, key, length, markersZOffset or OUTLINE_Z_OFFSET)
     data.type = "worldTriggerAreaNode"
 
     local trigger = getExportTrigger(self.trigger)
