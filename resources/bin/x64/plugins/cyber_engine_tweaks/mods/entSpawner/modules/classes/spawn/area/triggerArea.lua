@@ -2,6 +2,7 @@ local area = require("modules/classes/spawn/area/area")
 local utils = require("modules/utils/core/utils")
 local style = require("modules/ui/style")
 local history = require("modules/utils/project/history")
+local settings = require("modules/utils/core/settings")
 
 ---Class for worldTriggerAreaNode
 ---@class triggerArea : area
@@ -180,11 +181,46 @@ function triggerArea:drawPrevention(changed)
     end
 end
 
+-- worldVehicleForbiddenAreaNotifier RTTI defaults, used when a field is absent (projects saved before it was exported).
+local VEHICLE_FORBIDDEN_DEFAULT_AREA_LIMIT = 30
+local VEHICLE_FORBIDDEN_DEFAULT_NULL_AREA = true
+
+-- Speed presets: `inner` = innerAreaSpeedLimit, `area` = areaSpeedLimit (m/s).
+local vehicleForbiddenPresets = {
+    { label = "Hard stop", inner = 0, area = 30, tooltip = "Vehicles are stopped inside the area (vanilla forbidden zones)." },
+    { label = "Slow zone", inner = 10, area = 10, tooltip = "10 m/s limit inside the area (vanilla apartment garages)." },
+    { label = "Custom" }
+}
+local vehicleForbiddenPresetLabels = {}
+local vehicleForbiddenPresetTooltipLines = {}
+for index, preset in ipairs(vehicleForbiddenPresets) do
+    vehicleForbiddenPresetLabels[index] = preset.label
+    if preset.tooltip then
+        table.insert(vehicleForbiddenPresetTooltipLines, preset.label .. ": " .. preset.tooltip)
+    end
+end
+local vehicleForbiddenPresetTooltip = table.concat(vehicleForbiddenPresetTooltipLines, "\n")
+
+---@param inner number
+---@param area number
+---@return integer index 1-based preset index, the last one (Custom) when no preset matches.
+local function getVehicleForbiddenPresetIndex(inner, area)
+    for index, preset in ipairs(vehicleForbiddenPresets) do
+        if preset.inner == inner and preset.area == area then
+            return index
+        end
+    end
+    return #vehicleForbiddenPresets
+end
+
 function triggerArea:drawVehicleForbidden(changed)
     if changed then
+        local preset = vehicleForbiddenPresets[1]
         self.trigger = {
             ["$type"] = "worldVehicleForbiddenAreaNotifier",
-            innerAreaSpeedLimit = 30,
+            innerAreaSpeedLimit = preset.inner,
+            areaSpeedLimit = preset.area,
+            enableNullArea = false,
             dismount = false,
             enableSummoning = false,
             innerAreaBoundToOuterArea = true
@@ -193,22 +229,76 @@ function triggerArea:drawVehicleForbidden(changed)
         return
     end
 
-    local max = utils.getTextMaxWidth({"Speed Limit", "Dismount", "Enable Summoning"}) + 8 * ImGui.GetStyle().ItemSpacing.x
+    local max = utils.getTextMaxWidth({"Preset", "Speed Limit", "Approach Limit", "Null Area", "Dismount", "Enable Summoning"}) + 8 * ImGui.GetStyle().ItemSpacing.x
+    local areaLimit = self.trigger.areaSpeedLimit or VEHICLE_FORBIDDEN_DEFAULT_AREA_LIMIT
+
+    style.mutedText("Preset")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(max)
+    local presetIndex, presetChanged = style.trackedCombo(self.object, "##vehicleForbiddenPreset", getVehicleForbiddenPresetIndex(self.trigger.innerAreaSpeedLimit, areaLimit) - 1, vehicleForbiddenPresetLabels, {
+        width = 90,
+        tooltip = vehicleForbiddenPresetTooltip,
+        disabledOptions = { [#vehicleForbiddenPresets] = true },
+        disabledTooltip = "Shown when the limits below match no preset."
+    })
+    local preset = vehicleForbiddenPresets[presetIndex + 1]
+    if presetChanged and preset.inner then
+        self.trigger.innerAreaSpeedLimit = preset.inner
+        self.trigger.areaSpeedLimit = preset.area
+        areaLimit = preset.area
+    end
 
     style.mutedText("Speed Limit")
     ImGui.SameLine()
     ImGui.SetCursorPosX(max)
-    self.trigger.innerAreaSpeedLimit, _ = style.trackedDragFloat(self.object, "##innerAreaSpeedLimit", self.trigger.innerAreaSpeedLimit, 0.1, 0, 9999, "%.1f Limit", 90)
+    local previousInner = self.trigger.innerAreaSpeedLimit
+    local innerChanged
+    self.trigger.innerAreaSpeedLimit, innerChanged = style.trackedDragFloat(self.object, "##innerAreaSpeedLimit", self.trigger.innerAreaSpeedLimit, 0.1, 0, 9999, "%.1f m/s", 90)
+    style.tooltip("Max speed inside the area. 0 stops the vehicle.")
+    ImGui.SameLine()
+    style.mutedText(settings.formatSpeed(self.trigger.innerAreaSpeedLimit))
+
+    -- Approach limit follows the speed limit while both are equal.
+    if innerChanged and areaLimit == previousInner then
+        self.trigger.areaSpeedLimit = self.trigger.innerAreaSpeedLimit
+        areaLimit = self.trigger.areaSpeedLimit
+    end
+
+    style.mutedText("Approach Limit")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(max)
+    local areaChanged
+    areaLimit, areaChanged = style.trackedDragFloat(self.object, "##areaSpeedLimit", areaLimit, 0.1, 0, 9999, "%.1f m/s", 90)
+    if areaChanged then
+        self.trigger.areaSpeedLimit = areaLimit
+    end
+    style.tooltip("Max speed at the outer edge of the approach band, blending down to the speed limit at the area outline.\nSame value as the speed limit for a plain limit.")
+    ImGui.SameLine()
+    style.mutedText(settings.formatSpeed(areaLimit))
+
+    style.mutedText("Null Area")
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(max)
+    local nullArea = self.trigger.enableNullArea
+    if nullArea == nil then nullArea = VEHICLE_FORBIDDEN_DEFAULT_NULL_AREA end
+    local nullAreaChanged
+    nullArea, nullAreaChanged = style.trackedCheckbox(self.object, "##enableNullArea", nullArea)
+    if nullAreaChanged then
+        self.trigger.enableNullArea = nullArea
+    end
+    style.tooltip("Removes the ambient crowd inside the area.")
 
     style.mutedText("Dismount")
     ImGui.SameLine()
     ImGui.SetCursorPosX(max)
     self.trigger.dismount, _ = style.trackedCheckbox(self.object, "##dismount", self.trigger.dismount)
+    style.tooltip("Ejects the occupants. The vehicle is teleported away once out of sight.")
 
     style.mutedText("Enable Summoning")
     ImGui.SameLine()
     ImGui.SetCursorPosX(max)
     self.trigger.enableSummoning, _ = style.trackedCheckbox(self.object, "##enableSummoning", self.trigger.enableSummoning)
+    style.tooltip("Unchecked: vehicle summoning is blocked inside the area.")
 end
 
 function triggerArea:drawContentBlock(changed)

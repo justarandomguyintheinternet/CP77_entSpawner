@@ -688,7 +688,7 @@ local function drawCanvas(spline)
                     ImGui.ImDrawListAddRectFilled(drawList, sx1, sy1, sx2, sy2, fill, 4)
                     ImGui.ImDrawListAddRect(drawList, sx1, sy1, sx2, sy2, border, 4, 0, selected and 2 or 1)
 
-                    local labelText = string.format("S%d  %s", index, spline:formatDisplaySpeed(section.speed))
+                    local labelText = string.format("S%d  %s", index, settings.formatSpeed(section.speed))
                     local titleX, titleY = toTimeline(barX + 5 * vs, barY + barH * 0.5 - ImGui.GetFontSize() * 0.4)
                     ImGui.ImDrawListAddText(drawList, ImGui.GetFontSize() * 0.8, titleX, titleY, 0xFFF5F5F5, fitText(labelText, barW - 8 * vs, 0.8))
 
@@ -816,7 +816,7 @@ local function drawCanvas(spline)
 
             -- Readout badge near the cursor (a tooltip can't be used here: there is no owning item).
             local speed = spline:getSpeedAtDistance(distance)
-            local readout = string.format("%s   %s", formatMeters(distance), speed and spline:formatDisplaySpeed(speed) or "no speed set")
+            local readout = string.format("%s   %s", formatMeters(distance), speed and settings.formatSpeed(speed) or "no speed set")
             local textW, textH = ImGui.CalcTextSize(readout)
             local pad = 4 * vs
             local badgeX = math.min(mouseX + 14 * vs, timelineRightScreen - textW - 2 * pad)

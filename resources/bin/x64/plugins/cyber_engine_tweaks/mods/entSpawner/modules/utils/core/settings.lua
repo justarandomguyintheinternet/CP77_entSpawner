@@ -280,9 +280,25 @@ function settingsFNs.save()
     config.saveFile("data/config.json", settingsData)
 end
 
+-- Display units for speed, matching the `speedUnit` setting (1 = km/h, 2 = mph).
+local speedUnitLabels = { "km/h", "mph" }
+local speedUnitFactors = { 3.6, 2.2369363 } -- m/s -> unit
+
+---Formats a speed (m/s) using the unit chosen in the appearance settings.
+---@param speedMetersPerSecond number
+---@return string
+function settingsFNs.formatSpeed(speedMetersPerSecond)
+    local unit = tonumber(settingsData.speedUnit) or 1
+    if unit ~= 1 and unit ~= 2 then
+        unit = 1
+    end
+    return string.format("%.0f %s", speedMetersPerSecond * speedUnitFactors[unit], speedUnitLabels[unit])
+end
+
 local settings = {
     load = settingsFNs.load,
     save = settingsFNs.save,
+    formatSpeed = settingsFNs.formatSpeed,
     -- Real key on the proxy rather than on `settingsData`, so the labels are not written to disk.
     dropToFloorModes = { "Asset origin", "Bounding box bottom" }
 }

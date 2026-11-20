@@ -83,21 +83,6 @@ local function getPointLabelPalette()
     return pointLabelColors[styleIndex], pointLabelTextColors[styleIndex]
 end
 
--- Display units for speed, matching the `speedUnit` setting (1 = km/h, 2 = mph).
-local speedUnitLabels = { "km/h", "mph" }
-local speedUnitFactors = { 3.6, 2.2369363 } -- m/s -> unit
-
----Formats a speed (m/s) using the unit chosen in the appearance settings.
----@param speedMetersPerSecond number
----@return string
-local function formatDisplaySpeed(speedMetersPerSecond)
-    local unit = tonumber(settings.speedUnit) or 1
-    if unit ~= 1 and unit ~= 2 then
-        unit = 1
-    end
-    return string.format("%.0f %s", speedMetersPerSecond * speedUnitFactors[unit], speedUnitLabels[unit])
-end
-
 ---Returns the world position and spline travel direction at a given distance (m) along a polyline.
 ---@param points table[] Ordered {x,y,z} points forming the polyline.
 ---@param distance number Distance in meters measured from the first point.
@@ -339,13 +324,6 @@ function speedSpline:getMarkerOrderedPathPoints()
     return points
 end
 
----Formats a speed (m/s) using the unit chosen in the appearance settings (km/h or mph).
----@param speedMetersPerSecond number
----@return string
-function speedSpline:formatDisplaySpeed(speedMetersPerSecond)
-    return formatDisplaySpeed(speedMetersPerSecond)
-end
-
 ---Target speed (m/s) that the performer holds at a given distance along the spline, derived
 ---from the speed change sections. Each section ramps linearly from the previously held speed to
 ---its target across [start, end]; between sections the speed holds at the last target. The
@@ -525,7 +503,7 @@ function speedSpline:drawViewportOverlay(screen, drawList)
 
     for index, section in ipairs(self.speedChangeSections) do
         drawLabel(section.start, colors.speed, string.format("S%d start", index))
-        drawLabel(section.endPos, colors.speed, string.format("S%d  %s", index, formatDisplaySpeed(section.speed)))
+        drawLabel(section.endPos, colors.speed, string.format("S%d  %s", index, settings.formatSpeed(section.speed)))
     end
 
     -- Rotation points are previewed with in-world prism gizmos (see updateRotationGizmos), not labels.
@@ -540,7 +518,7 @@ function speedSpline:drawViewportOverlay(screen, drawList)
         local world = positionAlongPolyline(points, self._timelineHoverDistance)
         if world then
             local speed = self:getSpeedAtDistance(self._timelineHoverDistance)
-            local text = speed and formatDisplaySpeed(speed) or "no speed"
+            local text = speed and settings.formatSpeed(speed) or "no speed"
             projectedWireframe.drawWorldMarker(drawList, screen, Vector4.new(world.x, world.y, world.z, 0), {
                 color = rgba(0, 214, 255),
                 labelColor = textColor,
@@ -667,7 +645,7 @@ function speedSpline:drawSpeedControlSection()
         style.tooltip("Desired speed inside this range, in meters per second.")
 
         ImGui.SameLine()
-        style.mutedText(string.format("(%s)", formatDisplaySpeed(section.speed)))
+        style.mutedText(string.format("(%s)", settings.formatSpeed(section.speed)))
 
         if drawRowDeleteButton() then
             removeIndex = index
@@ -860,7 +838,7 @@ function speedSpline:drawTimelineEventEditor(track, index)
         style.tooltip("Target speed reached at the end of this range, in meters per second.")
 
         ImGui.SameLine()
-        style.mutedText(string.format("(%s)", formatDisplaySpeed(section.speed)))
+        style.mutedText(string.format("(%s)", settings.formatSpeed(section.speed)))
 
         if self:speedRangeOverlaps(index) then
             ImGui.SameLine()
