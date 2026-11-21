@@ -112,7 +112,8 @@ local types = {
             ["Crowd Null Area"] = { class = require("modules/classes/spawn/area/crowdNull"), index = 6 },
             ["Dummy Area"] = { class = require("modules/classes/spawn/area/dummyArea"), index = 7 },
             ["World Boundary"] = { class = require("modules/classes/spawn/area/worldBoundary"), index = 8 },
-            ["Navigation Area"] = { class = require("modules/classes/spawn/area/navigationArea"), index = 9 }
+            ["Navigation Area"] = { class = require("modules/classes/spawn/area/navigationArea"), index = 9 },
+            ["Navigation Link"] = { class = require("modules/classes/spawn/area/navigationLink"), index = 10 }
         },
         index = 8
     },

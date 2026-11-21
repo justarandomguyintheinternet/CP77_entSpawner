@@ -102,3 +102,11 @@ One additive Human tile per export is supported. The footprint must be 2–16 m
 per side and fit within one 32.4 m tile. Fit again after changing the area's
 transform or tile layer. Remove the area from its group and re-export to
 remove its streaming registration on the next import.
+
+### Connect to an existing navmesh
+
+Put a **Navigation Link** from **Spawn New → Area** on the fitted surface.
+Stand on the existing Human navmesh and click **Set end from V**. The two
+points should be near walkable ground in the same or neighboring tiles.
+Keep the connection short and physically traversable. Save and export the link
+with the fitted Navigation Area, then import with Object Spawner importer 1.0.9.

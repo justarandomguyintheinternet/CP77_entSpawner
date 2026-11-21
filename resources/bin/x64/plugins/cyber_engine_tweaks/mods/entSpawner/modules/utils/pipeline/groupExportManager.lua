@@ -11,6 +11,7 @@ local logger = require("modules/utils/core/logger")
 local groupExportManager = {}
 local navigationScriptVersion = "1.0.7"
 local tiledNavigationScriptVersion = "1.0.8"
+local navigationLinkScriptVersion = "1.0.9"
 local EXPORT_ERROR_LOG_PATH = "data/export_errors.log"
 
 local function createExportRuntime(previous)
@@ -196,7 +197,8 @@ local function registerGroupContribution(runtime, group, contribution)
         communities = utils.deepcopy(contribution and contribution.communities or {}),
         spotNodes = utils.deepcopy(contribution and contribution.spotNodes or {}),
         nodeRefs = utils.deepcopy(contribution and contribution.nodeRefs or {}),
-        navigation = contribution and contribution.navigation
+        navigation = contribution and contribution.navigation,
+        navigationLinks = contribution and contribution.navigationLinks
     }
 end
 
@@ -335,6 +337,7 @@ local function mergeGroupExportData(runtime, group, data, devices, psEntries, su
 
     local contribution = groupExportSidecar.buildContribution(data, devices, psEntries, subChilds, communities, spots)
     contribution.navigation = group.navigation
+    contribution.navigationLinks = group.navigationLinks
     registerGroupContribution(runtime, group, contribution)
 end
 
@@ -454,7 +457,8 @@ local function prepareIncrementalRuntime(runtime)
     end
     local existingVersion = existingProject.version
     if existingVersion ~= runtime.project.version
-        and not ((existingVersion == navigationScriptVersion or existingVersion == tiledNavigationScriptVersion) and existingProject.navigation) then
+        and not ((existingVersion == navigationScriptVersion or existingVersion == tiledNavigationScriptVersion
+            or existingVersion == navigationLinkScriptVersion) and existingProject.navigation) then
         return false, "base export version mismatch"
     end
 
@@ -522,6 +526,7 @@ local function mergeReusedGroupExportData(runtime, group)
     local duplicateNodes = utils.deepcopy(entry.nodeRefs or {})
 
     group.navigation = entry.navigation
+    group.navigationLinks = entry.navigationLinks
     mergeGroupExportData(
         runtime,
         group,
@@ -706,14 +711,20 @@ local function prepareCurrentGroupForExport(runtime)
     end
 
     for _, node in ipairs(current.spawnables) do
-        if node.spawnable.getFittedNavigation and shouldExportNode(runtime, node) then
+        if (node.spawnable.getFittedNavigation or node.spawnable.getFittedNavigationLink)
+            and shouldExportNode(runtime, node) then
             local top = node.parent ~= root and getTopRootChild(root, node)
             local variant = top and group.variantData and group.variantData[top.name]
             if variant and not select(2, pipelineCommon.normalizeVariantName(variant.name)) then
-                error("Navigation Areas must be in the default sector variant.")
+                error(node.spawnable.dataType .. " must be in the default sector variant.")
             end
-            if group.navigation then error("Export supports one Navigation Area per project.") end
-            group.navigation = node.spawnable:getFittedNavigation()
+            if node.spawnable.getFittedNavigationLink then
+                group.navigationLinks = group.navigationLinks or {}
+                table.insert(group.navigationLinks, node.spawnable:getFittedNavigationLink())
+            else
+                if group.navigation then error("Export supports one Navigation Area per project.") end
+                group.navigation = node.spawnable:getFittedNavigation()
+            end
         elseif not node.spawnable.noExport and isExportDisabled(runtime, node) then
             runtime.disabledNodeCount = runtime.disabledNodeCount + 1
         elseif not node.spawnable.noExport and shouldExportNode(runtime, node) then
@@ -851,12 +862,19 @@ local function finalizeExportRuntime(runtime)
 
     local ok, err = pcall(function ()
         if not runtime.finalizePrepared then
+            local navigationLinks = {}
             for _, group in ipairs(runtime.groups) do
                 if group.navigation then
                     if runtime.project.navigation then error("Export supports one Navigation Area per project.") end
                     runtime.project.navigation = group.navigation
                     runtime.project.version = group.navigation.version == 2 and tiledNavigationScriptVersion or navigationScriptVersion
                 end
+                utils.combine(navigationLinks, group.navigationLinks or {})
+            end
+            if #navigationLinks > 0 then
+                if not runtime.project.navigation then error("Navigation Links require a fitted Navigation Area in the same export.") end
+                runtime.project.navigationLinks = navigationLinks
+                runtime.project.version = navigationLinkScriptVersion
             end
             finalizeDeviceParents(runtime.project, runtime.state.childs)
 
