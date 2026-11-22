@@ -35,6 +35,7 @@ local rht = require("modules/utils/interop/rhtPlugin")
 local preview = require("modules/utils/preview/previewUtils")
 local previewSyncManager = require("modules/utils/preview/previewSyncManager")
 local bendedPool = require("modules/utils/preview/bendedPool")
+local probePool = require("modules/utils/preview/probePool")
 local bendedCollisionPreview = require("modules/utils/preview/bendedCollisionPreview")
 
 ---@class spawner
@@ -155,6 +156,7 @@ function spawner:new()
             self.runtimeData.inGame = true
             previewSyncManager.reset()
             bendedPool.reset()
+            probePool.reset()
             bendedCollisionPreview.reset()
             setRootVisible(true)
             preview.addHUD()
@@ -166,6 +168,7 @@ function spawner:new()
             preview.elements = {}
             previewSyncManager.reset()
             bendedPool.reset()
+            probePool.reset()
             bendedCollisionPreview.reset()
         end)
 
@@ -184,6 +187,7 @@ function spawner:new()
             Cron.Update(dt)
             previewSyncManager.update(dt)
             bendedPool.update()
+            probePool.update()
             bendedCollisionPreview.update(dt)
         end
 
