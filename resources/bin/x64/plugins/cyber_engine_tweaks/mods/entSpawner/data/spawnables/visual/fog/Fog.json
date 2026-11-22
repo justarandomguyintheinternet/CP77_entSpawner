@@ -7,13 +7,17 @@
         },
         "color": [
             1,
-            0,
-            0
+            1,
+            1
         ],
-        "absorption": 0.05,
+        "absolute": true,
+        "absorption": -1,
         "blendFalloff": 0,
-        "densityFactor": 2.5,
+        "densityFactor": 0.05,
         "densityFalloff": 0,
+        "applyHeightFalloff": true,
+        "ambientScale": 1,
+        "priority": 5,
         "modulePath": "visual/fog",
         "dataType": "Fog Volume"
     },

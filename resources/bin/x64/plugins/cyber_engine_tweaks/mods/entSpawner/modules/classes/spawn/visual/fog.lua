@@ -7,21 +7,33 @@ local lcHelper = require("modules/utils/ui/lightChannelHelper")
 
 local propertyNames = {
     "Color",
+    "Absolute Density",
     "Density Factor",
     "Density Falloff",
+    "Height Falloff",
     "Absorption",
-    "Blend Falloff"
+    "Blend Falloff",
+    "Ambient Scale",
+    "Priority"
 }
+
+-- What projects saved before these fields existed exported.
+local LEGACY_PRIORITY = 255
+local LEGACY_ABSOLUTE = false
 
 ---Class for worldStaticFogVolumeNode
 ---@class fog : visualized
 ---@field public scale {x: number, y: number, z: number}
 ---@field private previewed boolean
----@field public absorption number
+---@field public absolute boolean Density in absolute units instead of a factor of the area's global fog.
+---@field public absorption number Negative uses the engine default.
 ---@field public blendFalloff number
----@field public color {r: number, g: number, b: number}
+---@field public color number[] RGB, 0 to 1.
 ---@field public densityFactor number
 ---@field public densityFalloff number
+---@field public applyHeightFalloff boolean
+---@field public ambientScale number
+---@field public priority integer
 ---@field private maxPropertyWidth number
 ---@field public lightChannels boolean[]
 local fog = setmetatable({}, { __index = visualized })
@@ -39,12 +51,17 @@ function fog:new()
     o.icon = IconGlyphs.WeatherFog
     o.maxPropertyWidth = nil
 
+    -- Vanilla-like defaults: absolute 81%, absorption -1 46%, priority 5 56%, height falloff 74%.
     o.scale = { x = 5, y = 5, z = 5 }
-    o.absorption = 1
-    o.blendFalloff = 1
+    o.absolute = true
+    o.absorption = -1
+    o.blendFalloff = 0
     o.color = { 1, 1, 1 }
-    o.densityFactor = 1
-    o.densityFalloff = 1
+    o.densityFactor = 0.05
+    o.densityFalloff = 0
+    o.applyHeightFalloff = true
+    o.ambientScale = 1
+    o.priority = 5
     o.lightChannels = { true, true, true, true, true, true, true, true, true, false, false, false }
 
     o.previewed = true
@@ -86,9 +103,25 @@ function fog:save()
     data.color = { self.color[1], self.color[2], self.color[3] }
     data.densityFactor = self.densityFactor
     data.densityFalloff = self.densityFalloff
+    data.absolute = self.absolute
+    data.applyHeightFalloff = self.applyHeightFalloff
+    data.ambientScale = self.ambientScale
+    data.priority = self.priority
     data.lightChannels = utils.deepcopy(self.lightChannels)
 
     return data
+end
+
+function fog:loadSpawnData(data, position, rotation)
+    visualized.loadSpawnData(self, data, position, rotation)
+
+    if data.priority == nil then self.priority = LEGACY_PRIORITY end
+    if data.absolute == nil then self.absolute = LEGACY_ABSOLUTE end
+
+    -- loadSpawnData shares tables with its long-lived payload.
+    self.scale = utils.deepcopy(self.scale)
+    self.color = utils.deepcopy(self.color)
+    self.lightChannels = utils.deepcopy(self.lightChannels)
 end
 
 ---@protected
@@ -102,6 +135,14 @@ function fog:getSize()
     return self.scale
 end
 
+---Draws a muted label and moves the cursor to the property column.
+---@param label string
+function fog:propertyLabel(label)
+    style.mutedText(label)
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(self.maxPropertyWidth)
+end
+
 function fog:draw()
     spawnable.draw(self)
 
@@ -111,35 +152,52 @@ function fog:draw()
         self.maxPropertyWidth = utils.getTextMaxWidth(propertyNames) + 4 * ImGui.GetStyle().ItemSpacing.x
     end
 
-    style.mutedText("Color")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
+    local finished, changed
+
+    self:propertyLabel("Color")
     self.color, _, finished = style.trackedColor(self.object, "##color", self.color, 60)
     self:updateScale(finished)
 
-    style.mutedText("Density Factor")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.densityFactor, _, finished = style.trackedDragFloat(self.object, "##densityFactor", self.densityFactor, 0.1, 0, 9999, "%.2f", 60)
+    self:propertyLabel("Absolute Density")
+    self.absolute, changed = style.trackedCheckbox(self.object, "##absolute", self.absolute)
+    style.tooltip("On: Density Factor is the fog density itself.\nOff: it multiplies the global fog density of the area, so the volume can vanish where that fog is thin.")
+    self:updateScale(changed)
+
+    self:propertyLabel("Density Factor")
+    self.densityFactor, _, finished = style.trackedDragFloat(self.object, "##densityFactor", self.densityFactor, 0.001, 0, 9999, "%.3f", 60)
+    style.tooltip("Vanilla volumes mostly use 0.01 to 0.05.")
     self:updateScale(finished)
 
-    style.mutedText("Density Falloff")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.densityFalloff, _, finished = style.trackedDragFloat(self.object, "##densityFalloff", self.densityFalloff, 0.1, 0, 9999, "%.2f", 60)
+    self:propertyLabel("Density Falloff")
+    self.densityFalloff, _, finished = style.trackedDragFloat(self.object, "##densityFalloff", self.densityFalloff, 0.01, 0, 9999, "%.2f", 60)
     self:updateScale(finished)
 
-    style.mutedText("Absorption")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.absorption, _, finished = style.trackedDragFloat(self.object, "##absorption", self.absorption, 0.1, 0, 9999, "%.2f", 60)
+    self:propertyLabel("Height Falloff")
+    self.applyHeightFalloff, changed = style.trackedCheckbox(self.object, "##applyHeightFalloff", self.applyHeightFalloff)
+    self:updateScale(changed)
+
+    self:propertyLabel("Absorption")
+    local absorptionFormat = self.absorption < 0 and "Default" or "%.2f"
+    self.absorption, _, finished = style.trackedDragFloat(self.object, "##absorption", self.absorption, 0.01, -1, 9999, absorptionFormat, 60)
+    style.tooltip("Below 0 uses the engine's default absorption, like most vanilla volumes.")
+    if finished and self.absorption < 0 then
+        self.absorption = -1
+    end
     self:updateScale(finished)
 
-    style.mutedText("Blend Falloff")
-    ImGui.SameLine()
-    ImGui.SetCursorPosX(self.maxPropertyWidth)
-    self.blendFalloff, _, finished = style.trackedDragFloat(self.object, "##blendFalloff", self.blendFalloff, 0.1, 0, 9999, "%.2f", 60)
+    self:propertyLabel("Blend Falloff")
+    self.blendFalloff, _, finished = style.trackedDragFloat(self.object, "##blendFalloff", self.blendFalloff, 0.01, 0, 9999, "%.2f", 60)
     self:updateScale(finished)
+
+    self:propertyLabel("Ambient Scale")
+    self.ambientScale, _, finished = style.trackedDragFloat(self.object, "##ambientScale", self.ambientScale, 0.01, 0, 10, "%.2f", 60)
+    self:updateScale(finished)
+
+    self:propertyLabel("Priority")
+    self.priority, changed, finished = style.trackedIntInput(self.object, "##priority", self.priority, 0, 255, 80, 1, 5)
+    style.tooltip("Order among overlapping volumes. Vanilla uses 1 to 10, mostly 5.")
+    -- A step button click changes the value without a deactivation.
+    self:updateScale(finished or (changed and not ImGui.IsItemActive()))
 
     if ImGui.TreeNodeEx("Light Channels") then
         self.lightChannels = style.drawLightChannelsSelector(self.object, self.lightChannels)
@@ -204,12 +262,15 @@ function fog:export()
             ["Blue"] = math.floor(self.color[3] * 255),
             ["Alpha"] = 255
         },
+        absolute = self.absolute and 1 or 0,
         absorption = self.absorption,
         blendFalloff = self.blendFalloff,
         densityFactor = self.densityFactor,
         densityFalloff = self.densityFalloff,
+        applyHeightFalloff = self.applyHeightFalloff and 1 or 0,
+        ambientScale = self.ambientScale,
         lightChannels = utils.buildBitfieldString(self.lightChannels, style.lightChannelEnum),
-        priority = 255,
+        priority = math.floor(self.priority),
         streamingDistance = self.primaryRange
     }
 
