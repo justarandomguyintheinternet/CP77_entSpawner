@@ -71,6 +71,9 @@ function spawnableElement:load(data, silent)
 
 	self.spawnable = utils.requireSpawnable(data.spawnable.modulePath):new()
     self.spawnable.object = self
+    if data.scaleLocked == nil and self.spawnable.defaultScaleLocked ~= nil then
+        self.scaleLocked = self.spawnable.defaultScaleLocked
+    end
     self.spawnable:loadSpawnData(data.spawnable, ToVector4(data.spawnable.position), ToEulerAngles(data.spawnable.rotation))
 	self.icon = self.spawnable.icon
     self.secondaryIcon = self.spawnable.secondaryIcon or ""

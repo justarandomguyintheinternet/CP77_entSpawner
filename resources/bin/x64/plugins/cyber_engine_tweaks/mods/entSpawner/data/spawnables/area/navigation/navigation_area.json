@@ -1,0 +1,30 @@
+{
+    "name": "Navigation Area",
+    "modulePath": "modules/classes/editor/spawnableElement",
+    "spawnable": {
+        "modulePath": "area/navigationArea",
+        "dataType": "Navigation Area",
+        "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "w": 0
+        },
+        "rotation": {
+            "roll": 0,
+            "pitch": 0,
+            "yaw": 0
+        }
+    },
+    "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "w": 0
+    },
+    "childs": [],
+    "visible": true,
+    "scaleLocked": false,
+    "transformExpanded": true,
+    "isUsingSpawnables": true
+}
